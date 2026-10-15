@@ -10,6 +10,7 @@ import {
   progressStart,
   type Event,
   type Issue,
+  type IssueComment,
   type Label,
   type Lane,
   type Repo,
@@ -145,6 +146,13 @@ export class GitHub {
     return this.all<Repo>(
       "/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member",
     );
+  }
+  issueComments(repoFullName: string, issueNumber: number) {
+    const parts = repoFullName.split("/");
+    if (parts.length !== 2 || parts.some(part => !/^[\w.-]+$/.test(part)) ||
+      !Number.isSafeInteger(issueNumber) || issueNumber < 1)
+      throw new Error(t("Ogiltig API-adress."));
+    return this.all<IssueComment>(`/repos/${repoFullName}/issues/${issueNumber}/comments?per_page=100`);
   }
   private async startTime(
     repo: Repo,

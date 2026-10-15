@@ -3,6 +3,13 @@ export interface Label {
   name: string;
   color: string;
 }
+export interface IssueComment {
+  id: number;
+  body: string | null;
+  html_url: string;
+  created_at: string;
+  user: { login: string } | null;
+}
 export interface Issue {
   id: number;
   number: number;

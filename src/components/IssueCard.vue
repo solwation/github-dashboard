@@ -19,6 +19,7 @@ import {
   duration,
   priority,
   type Issue,
+  type IssueComment,
   type Rules,
 } from "../lib/model";
 const props = defineProps<{
@@ -28,6 +29,8 @@ const props = defineProps<{
   demo?: boolean;
   celebrate?: boolean;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
+  loadComments?: (issue: Issue) => Promise<IssueComment[]>;
+  commentsSession?: number;
   commitRetry?: number;
   recentMove?: boolean;
 }>();
@@ -149,7 +152,7 @@ const visibleLabels = computed(() =>
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </div>
-    <IssueDetails :body="issue.body" :comments="issue.comments" @read="emit('read')" />
+    <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
     <div class="card-bottom">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })">

@@ -27,7 +27,7 @@ test("shows comment counts and expands safe Markdown inside an issue card", asyn
   await page.getByLabel("sample/details-project").check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
   const card = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Detailed task" }) });
-  await expect(card.getByRole("img", { name: "7 kommentarer" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "7 kommentarer" })).toBeVisible();
   await expect(card.getByRole("heading", { name: "Implementation plan" })).toHaveCount(0);
   await card.getByRole("button", { name: "Läs mer", exact: true }).focus();
   await page.keyboard.press("Enter");
@@ -47,7 +47,7 @@ test("shows comment counts and expands safe Markdown inside an issue card", asyn
   await expect(card.getByRole("button", { name: "Läs mer", exact: true })).toHaveAttribute("aria-expanded", "false");
   await expect(card.locator(".details-panel")).toHaveCount(0);
   const empty = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Empty task" }) });
-  await expect(empty.getByRole("img", { name: "0 kommentarer" })).toBeVisible();
+  await expect(empty.getByRole("button", { name: "0 kommentarer" })).toBeVisible();
   await empty.getByRole("button", { name: "Läs mer", exact: true }).click();
   await expect(empty.getByText("Ingen beskrivning har lagts till.")).toBeVisible();
 });

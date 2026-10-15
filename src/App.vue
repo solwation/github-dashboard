@@ -334,6 +334,15 @@ function laneIssues(lane: Lane) {
 function items(lane: Lane, key: string) {
   return sortedIssues(laneIssues(lane), key, rules.value[lane.repo.full_name]);
 }
+function commentsLoader(repo: string) {
+  const client = api;
+  const run = generation;
+  return client ? async (issue: Issue) => {
+    const result = await client.issueComments(repo, issue.number);
+    if (client !== api || run !== generation) throw new Error("Session changed");
+    return result;
+  } : undefined;
+}
 function commitLoader(repo: string) {
   const client = api;
   const run = generation;
@@ -1290,6 +1299,8 @@ onMounted(async () => {
                     isDemo ? undefined : commitLoader(lane.repo.full_name)
                   "
                   :demo="isDemo"
+                  :load-comments="isDemo ? undefined : commentsLoader(lane.repo.full_name)"
+                  :comments-session="generation"
                   :commit-retry="commitRetry"
                   :recent-move="activity.moved(lane.repo.full_name, issue, now)"
                   @read="readIssue(lane.repo.full_name, issue)"

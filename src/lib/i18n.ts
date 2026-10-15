@@ -354,6 +354,18 @@ export const english: Record<string, string> = {
   "Den sparade inloggningen kunde inte låsas upp. Logga in igen.":
     "Could not unlock the saved sign-in. Sign in again.",
   "Instruktioner för issueflödet": "Issue workflow instructions",
+  "Kommentarer för #{number}": "Comments for #{number}",
+  "Stäng kommentarer": "Close comments",
+  "Okänd tid": "Unknown time",
+  "Kommentarer visas inte i demon. Anslut GitHub för att läsa dina issuediskussioner.":
+    "Comments are not shown in the demo. Connect GitHub to read your issue discussions.",
+  "Hämtar kommentarer…": "Loading comments…",
+  "Kommentarerna kunde inte hämtas. Kontrollera anslutningen och din åtkomst till repot.":
+    "Comments could not be loaded. Check your connection and access to the repository.",
+  "Inga kommentarer ännu.": "No comments yet.",
+  "Raderad användare": "Deleted user",
+  "Visa på GitHub": "View on GitHub",
+  "Kommentaren saknar text.": "This comment has no text.",
   "Dela den publika guiden med din AI-assistent eller lägg den i ditt projekt. Ingen inloggning krävs.":
     "Share the public guide with your AI assistant or add it to your project. No sign-in is required.",
   "Hänvisning för din AI-assistent": "Reference for your AI assistant",

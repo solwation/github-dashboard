@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, useId } from "vue";
-import { ChevronDown, ChevronUp, MessageCircle } from "@lucide/vue";
+import { ChevronDown, ChevronUp } from "@lucide/vue";
+import IssueComments from "./IssueComments.vue";
+import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
 import { renderMarkdown } from "../lib/markdown";
 
-const props = defineProps<{ body?: string | null; comments?: number }>();
+const props = defineProps<{ body?: string | null; comments?: number; issue: Issue; demo?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: [] }>();
 function toggle() { expanded.value = !expanded.value; if (expanded.value) emit("read"); }
 const { t } = useLanguage();
@@ -19,7 +21,7 @@ const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : ""
       <button type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>
-      <span class="comment-count" :title="t('{count} kommentarer', { count })" role="img" :aria-label="t('{count} kommentarer', { count })"><MessageCircle :size="13" aria-hidden="true" />{{ count }}</span>
+      <IssueComments :issue="issue" :count="count" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <section v-if="expanded" :id="panelId" class="details-panel" :aria-label="t('Beskrivning')">
       <div v-if="body?.trim()" class="issue-markdown" v-html="rendered" />
@@ -32,7 +34,6 @@ const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : ""
 .details-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .details-toggle { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem 0; border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: .72rem; font-weight: 600; }
 .details-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
-.comment-count { display: inline-flex; align-items: center; gap: .3rem; color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
 .details-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); min-width: 0; max-width: 100%; }
 .issue-markdown, .empty-description { font-size: .78rem; line-height: 1.6; overflow-wrap: anywhere; }
 .empty-description { color: var(--muted); margin: 0; }
