@@ -13,6 +13,9 @@ test("demo works at desktop and mobile widths", async ({ page }) => {
   await expect(page.locator(".issue-card")).toHaveCount(1);
   await page.getByRole("textbox", { name: "Sök issues" }).fill("");
   await page.screenshot({ path: "test-results/desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 2560, height: 1440 });
+  const bounds = await page.locator('main').boundingBox();
+  expect(bounds!.x + bounds!.width).toBeGreaterThan(2500);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".repo-lane").first()).toBeVisible();
   expect(
