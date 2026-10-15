@@ -1,0 +1,102 @@
+# Setup and technical guide
+
+Detailed setup, security and behavior for [Issueflow](../README.md).
+
+**Site:** https://solwation.github.io/github-dashboard/
+
+## Run locally
+
+```sh
+npm ci
+npm run dev
+npm test
+npx playwright install chromium # first time only
+npm run build
+npm run test:e2e
+```
+
+Node 22.20+ recommended. The frontend builds to `dist/`. Pushes to `main` test, build and deploy using `.github/workflows/pages.yml`. Pages must use **GitHub Actions** as its source (configured for this repository).
+
+## Connect your account
+
+The site supports a personal access token without a backend. Create a fine-grained token with **Issues: read** and **Metadata: read** for the repositories you want to follow. Add **Contents: read** and **Pull requests: read** if you want closing commit / merged-PR links and line-change statistics for private repositories. Organization restrictions and SSO may limit access.
+
+Validated tokens are encrypted with **AES-256-GCM**, a random 12-byte IV and a non-exportable Web Crypto key in **IndexedDB**. Sign-in survives normal reload, Ctrl+Shift+R, app restarts and automatic version updates. Each replacement generates a new key and IV. Logout requires confirmation, then deletes the credential record; transient API failures and reloads do not erase it. Browser/site-data clearing can still remove IndexedDB independently of the app. Encryption protects stored bytes, but scripts already running on this origin can use the stored key; it is not protection against compromised frontend code.
+
+Repository selections, custom label rules, language and notification preferences are local settings. Private content is never bundled into Pages or cached by the service worker or browser HTTP cache. Browser API requests use `cache: no-store`.
+
+The latest identity, repository list, issue lanes and up to 100 GET responses with ETags are cached as AES-GCM ciphertext in IndexedDB, using the saved credential's non-exportable key and a fresh IV for each snapshot. Cached content is bound to that credential, capped at 8 MiB and accepted for up to 24 hours. The board takes priority within that budget; only the newest optional API responses that fit are retained, so large duplicate response data does not prevent saving the board. Essential boards above 8 MiB are gzip-compressed before encryption without dropping issues; compressed payloads remain capped at 8 MiB and expanded snapshots at 64 MiB. Legacy uncompressed snapshots remain readable. Cache warnings distinguish capacity, compression and browser storage failures, including exhausted storage space, and clear after a successful write. Reloads and upgrades show the saved board immediately, labelled with its last verified time, while GitHub is revalidated in the background. Conditional GET requests reuse saved ETags and 304 responses, reducing response traffic across reloads; calls still go to GitHub to check freshness. The 30-day closed-issue request uses a day-stable URL for ETag reuse and filters the exact window locally. A failed refresh preserves the saved board and shows its cached status; cache write failures are reported without breaking the board. Revalidating the same token retains its encryption key; replacing the token clears previous cached content and generates a new key/IV. Confirmed logout atomically removes both credential and content cache, including protection against pending cache writes. Closing commit metadata remains session-local because GraphQL POSTs are not ETag-cacheable. See [GitHub conditional request guidance](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests-if-appropriate).
+
+Repeated failures to load closing commit information are grouped in one notice with an affected-issue count rather than repeated on each card. **Read more** opens the **Problem report**, also always available under **Settings** while signed in. It lists affected issues, explains possible causes and lets you retry visible failed cards. **Don't show again** persists only the preference to hide this type of notice; the report remains accessible and its checkbox can re-enable notices. Reports contain only failures observed in the current session for issues still present and closed in the selected board; private report details are kept in memory and cleared on account change or logout.
+The dashboard only reads GitHub. Open an issue card to change its labels or state on GitHub. An unconnected demo contains fictional public examples, never a snapshot of private repositories.
+
+## Enable GitHub OAuth sign-in
+
+GitHub Pages cannot execute server code. GitHub's authorization code exchange requires a client secret, so `auth/worker.ts` is a small, separate Cloudflare Worker. The application remains on Pages. See [GitHub's OAuth documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps).
+
+1. Register an [OAuth App](https://github.com/settings/applications/new). Use homepage and callback URL `https://solwation.github.io/github-dashboard/` (including the trailing slash).
+2. Put the public client ID in `auth/wrangler.toml`. Verify `ALLOWED_ORIGIN` and `REDIRECT_URI`. For local OAuth, use a separate app and worker with the local origin and exact callback URL.
+3. From `auth/`, run `npx wrangler secret put GITHUB_CLIENT_SECRET`, then `npx wrangler deploy`. Store the secret only with Cloudflare. Never add it to a `VITE_` variable, source file or GitHub Pages build.
+4. Set repository **Actions variables** `VITE_GITHUB_CLIENT_ID` and `VITE_AUTH_URL` (the Worker's HTTPS origin, without `/exchange`), then rerun the Pages workflow. For development copy `.env.example` to `.env.local` and fill in these same public values.
+
+The frontend verifies a random, expiring, single-use OAuth state and uses PKCE S256. The Worker accepts JSON requests only from the configured origin and exchanges codes using a fixed callback URL. Tokens are not logged; successful OAuth sign-in uses the same encrypted client vault. Expiring tokens require signing in again. The OAuth app requests `repo read:user` to support private repositories. GitHub OAuth's `repo` scope is broader than this dashboard's read-only operations; use a fine-grained token if you prefer narrowly scoped read access.
+
+OAuth is implemented but requires your OAuth App registration and Worker deployment before its sign-in button is enabled. No credentials are included in this repository.
+
+## Board behavior
+
+- Each selected repository has **Backlog**, **In progress**, and **Closed** columns. Reorder projects using the sidebar or repository-header drag handles, keyboard up/down arrows on a handle, or the up/down buttons (also available on phones). The same order applies to the sidebar and board. Collapse a repository to keep its header and status totals visible, then expand it again with the header toggle. Order and collapse state are saved per account on this device; newly discovered projects append alphabetically.
+- Backlog sorts high → medium → low, then oldest first within each level. Missing priority defaults to medium. Cards show a live creation age in seconds, minutes, hours, days, months or years, with the exact creation date/time in a semantic time element and tooltip.
+- Automatic priority detection accepts `priority:high`, `priority: high`, `high priority`, critical/urgent, `P0`/`P1` (high), `P2` (medium), and `P3`/`P4` (low). `reviewer-filed` falls below normal work unless an explicit higher priority is present. `sp-N` is effort, not priority.
+- Work detection accepts `in-progress`, spacing/underscore variants, `status: in-progress`, `wip`, `doing`, `working` and `pågår`. A closed state always wins over a stale work label.
+- Per-repository settings override exact work and priority label names. Unknown arbitrary conventions are not inferred from label color or issue text.
+- Timers use the fully paginated issue event history. Removing and reapplying a work label starts a new interval. Closure/reopening clears the previous interval. No timer is fabricated from `updated_at`; unknown or inaccessible history is shown explicitly. Timers tick every second, and synchronization uses the adaptive schedule described below.
+- Closed shows issues **closed in the last 30 days**, newest closure first. Open issues and matching recent closed issues are fully paginated; pull requests are excluded. Counts represent this window, not lifetime completion. Six cards initially appear in each column. **Settings → Show max work items per column** changes this default to 1–100; each repository's settings can override it or inherit the global value by leaving its field blank. Limits are saved per account on this device (demo changes last only for that session). **Visa fler** reveals another batch of the effective size; column counts still include every matching issue.
+- Newly closed issues slide into Closed and briefly glow green. Reduced-motion preferences use a static highlight instead. Initial loads and repeated refreshes do not replay old closures; reclosures are detected by their new closure timestamp. For the first six hours, closed cards show a live elapsed time (seconds, minutes or hours/minutes), ticking without API requests; older closures show local date and time. The full timestamp is always available in the tooltip and semantic time element.
+- The bell in each repository header toggles browser notifications for that repository. Preferences are stored per GitHub account on this device. Permission is requested only when enabling notifications. Blocked/unsupported browsers get an explanation; notifications that cannot be delivered are disabled rather than silently failing. Background polling continues for selected subscribed repositories, but browsers may throttle it. Notifications require the dashboard to remain open; this is not server-side push. Coordination filtering applies, search filtering does not suppress notifications. Installed/mobile browsers use service-worker notifications when available. See [Notifications API browser support](https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API).
+- Coordination issues (`agent-coordination`, exactly `orkester`) are hidden by default. `orkester: …` is ownership metadata and does not hide active work. `blocked`, `awaiting-owner`, and `needs-deploy` stay visible as labels; they do not pretend to be active work.
+- API errors are isolated per repository. On refresh failure, previously fetched lane data remains visible with a warning. Timer-history failures do not prevent the rest of the lane from loading. GitHub API rate limits still apply, particularly for large selections. Server retry delays and rate-limit resets are respected.
+
+## Project research
+
+Read-only inspection of the local CLAUDE.md files and live GitHub label definitions identified Lunden's `priority: high/medium/low` convention and Untappdbolaget's `high priority`, `reviewer-filed`, `in-progress`, coordination, waiting and deployment labels. Only those conventions inform the generic detection rules; no private issue titles, descriptions or account tokens are bundled into the frontend.
+
+## Install as an app
+
+Use **Installera app** in the header, or Chrome/Edge’s install action in the address bar. On iOS use Safari → Share → Add to Home Screen. The manifest uses this repository’s Pages path and provides standalone mode, desktop/mobile icons and an offline public app shell. Installation prompts depend on browser support and eligibility. See [PWA installation requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).
+
+The build generates a versioned service worker that caches only an explicit allowlist of public app files. GitHub API responses, authenticated requests and query-bearing OAuth callbacks are never cached by this service worker. On phones (up to 650 px wide), each repository stacks Backlog, In progress and Closed vertically, so all columns are reachable without sideways scrolling. Larger screens keep the columns side by side.
+
+## Mobile sign-in by QR
+
+Choose **Open on mobile** while signed in. The QR is rendered locally and carries the same token, selected repositories and custom label rules in the URL **fragment**, never the query string or a QR service request. The receiving app scrubs the fragment before decoding/authentication, validates the five-minute acceptance window and validates repo access through GitHub. Successful mobile sign-in is saved to that device’s encrypted vault.
+
+An installed phone app may have a different storage container from the browser. Open the installed app and choose **Sign in with QR code** on its welcome screen, then scan the desktop code. The app decodes the QR locally and imports the token and settings directly into its own encrypted vault without opening a browser or navigating to the scanned link. Camera access is requested only after opening this flow, prefers the rear camera and stops on success, cancel, error or leaving the app. Use **Choose QR image** as a local fallback when camera access is unavailable or denied (images up to 12 MB). Only valid, unexpired links for the current Issueflow origin and app path are accepted. Manual PAT sign-in remains available. Live camera and image decoding use the bundled [jsQR decoder](https://github.com/cozmo/jsQR); no images are uploaded. Camera access requires a secure context and user permission; see [getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia).
+
+Anyone who obtains the QR or link can obtain the token’s permissions. Show it privately. The five-minute limit is enforced by Issueflow, not GitHub: it is not a single-use transfer and does not expire/revoke the underlying token. Closing the dialog removes the visible QR; it cannot revoke copies. Invalid and expired transfers are rejected. See [URI fragment behavior](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment).
+
+## Live updates and synchronization
+
+A new app service worker triggers a **10-second countdown**, with **Reload now** for immediate activation. The latest worker takes control before reloading. Offline and activation failures are handled without reload loops; each open tab receives its own countdown when another tab activates an update. The encrypted vault restores sign-in after reload. Browser install dialogs themselves cannot be fully automated; production tests cover manifest, icons, service worker and offline shell, plus a simulated install prompt.
+
+GitHub synchronization checks active issues individually about **every 15 seconds**. Repository changes are reconciled incrementally about **every two minutes** when work is active, or **every five minutes** when idle. A full reconciliation runs at least every 30 minutes, and the Refresh button forces a full fetch. Focus/online changes wake synchronization; hidden tabs pause unless a selected project has notifications enabled. The scheduler prevents overlapping work and backs off on errors. GET responses with ETags are kept in each authenticated API instance’s memory and in the bounded encrypted startup cache; 304 responses reuse their saved data. GraphQL POSTs bypass that transport cache.
+
+This remains adaptive polling. True webhook delivery needs an external webhook receiver and authenticated browser relay; Pages itself cannot receive GitHub webhook POSTs. No completion times are guessed. See [GitHub’s webhook delivery guide](https://docs.github.com/en/webhooks/using-webhooks/handling-webhook-deliveries) and [conditional request guidance](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
+
+## Language and project overview
+
+Swedish and English are supported. The first supported browser language is the default; unsupported languages fall back to English. **Settings → Language** lets you select automatic, Swedish or English and remembers that choice. Date/time formatting follows the selected language; issue content and label names remain as authored.
+
+The left repository menu shows backlog, active and closed counts, independent of text search. Closed uses the same 30-day window as the board. An unread recent-activity indicator lasts up to two minutes or until its changes are read; the repository tooltip gives the last-update time. The dashboard uses the full available desktop width, with vertically stacked columns in each phone swimlane.
+
+Observed movements between backlog, in progress and closed get a prominent static card outline and a **Moved to …** badge for up to two minutes. Open the issue description, follow its GitHub title link or click the badge to mark that issue’s current change as read. The repository’s unread activity dot disappears when no unread recent changes remain, even if its last-update time is still recent. The initial load does not invent movements; workflow-setting changes are not treated as movements. Read acknowledgements (bounded issue IDs and version timestamps, without titles or bodies) are saved with per-account preferences so reloads do not resurrect read activity. Only newly observed movements get card markers; baseline recent updates may show the sidebar dot until read or expired. The strong marker does not depend on animation and works with reduced motion.
+
+Closed cards lazily fetch the latest matching GitHub ClosedEvent.closer via GraphQL, showing the exact closing commit or merged pull request, short SHA and additions/deletions when available. Manual closures without a linked commit are explicit. Reopened/reclosed issues use the current closure timestamp. Requests are concurrency-limited and cached only in memory.
+
+## Development workflow
+
+Read [AI.md](../AI.md). All changes use GitHub issues with exactly one `priority: high`, `priority: medium`, or `priority: low` label, and `in-progress` during active work. When creating issues, agents automatically assess priority from impact, severity and urgency and include a short rationale; blocking bugs and significant regressions normally take precedence over feature work, while minor polish is low priority. Explicit user priorities take precedence, and existing priorities require user direction to change. Direct commits/pushes to main are authorized. `/orkester` starts coordinated parallel work, documented in [.agents/skills/orkester/SKILL.md](../.agents/skills/orkester/SKILL.md) and exposed as a Claude command. Codex supports the repository skill as `$orkester`; clients that reserve slash commands can use that form or a plain-language workflow request. See [OpenAI’s skills documentation](https://learn.chatgpt.com/docs/build-skills).
+
+**Settings → Issue workflow instructions** provides a public [ISSUEFLOW.md guide](https://solwation.github.io/github-dashboard/ISSUEFLOW.md), a copyable reference for an AI assistant, and a download for adding the file to a project. No sign-in is required to read the guide. It documents compatible priorities, active-work labels, issue lifecycle, timing and detection limits. If clipboard access is unavailable, the app selects the reference for manual copying. Keep the guide synchronized with changes to detection rules.
+
+Click an issue card's comment count to read its discussion in a dialog. Comments load on demand from GitHub, including all pages, and show the author, timestamp, safe Markdown and original comment link. Loading failures can be retried; closing the dialog or changing accounts discards its displayed comments and ignores pending old responses. The dialog is read-only and supports keyboard, Escape and mobile layouts. Demo comments show an explanation without making authenticated requests. Issue cards also offer **Read more / Show less** for the description. Markdown is rendered with raw HTML disabled and unsafe URL schemes rejected. Task checkboxes are read-only; long code blocks and tables scroll inside the card. Expanding an issue never writes to GitHub.
