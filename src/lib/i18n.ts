@@ -256,6 +256,9 @@ export const english: Record<string, string> = {
   "Språkvalet sparas på den här enheten.":
     "Your language preference is saved on this device.",
   "Öppna på mobilen": "Open on mobile",
+  "Okänd ålder": "Unknown age",
+  "Skapad {age}": "Created {age}",
+  "Skapad {time}": "Created {time}",
   "Oläst aktivitet": "Unread activity",
   "Nyligen flyttad. Markera som läst": "Recently moved. Mark as read",
   "Flyttad till {column}": "Moved to {column}",

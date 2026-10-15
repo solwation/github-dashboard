@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import IssueDetails from "./IssueDetails.vue";
-import { closedTimeLabel } from "../lib/time";
+import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useLanguage } from "../lib/i18n";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
@@ -150,9 +150,14 @@ const visibleLabels = computed(() =>
       >
     </div>
     <IssueDetails :body="issue.body" :comments="issue.comments" @read="emit('read')" />
-    <div v-if="col !== 'backlog' || issue.assignees.length" class="card-bottom">
+    <div class="card-bottom">
+      <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
+        :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })">
+        {{ backlogAgeLabel(issue.created_at, now, locale) }}
+      </time>
+      <span v-else-if="col === 'backlog'" class="backlog-age">{{ t("Okänd ålder") }}</span>
       <span
-        v-if="col === 'progress'"
+        v-else-if="col === 'progress'"
         class="timer"
         :title="
           issue.startedAt

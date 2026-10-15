@@ -45,7 +45,7 @@ OAuth is implemented but requires your OAuth App registration and Worker deploym
 ## Board behavior
 
 - Each selected repository has **Backlog**, **In progress**, and **Closed** columns.
-- Backlog sorts high → medium → low, then oldest first within each level. Missing priority defaults to medium.
+- Backlog sorts high → medium → low, then oldest first within each level. Missing priority defaults to medium. Cards show a live creation age in seconds, minutes, hours, days, months or years, with the exact creation date/time in a semantic time element and tooltip.
 - Automatic priority detection accepts `priority:high`, `priority: high`, `high priority`, critical/urgent, `P0`/`P1` (high), `P2` (medium), and `P3`/`P4` (low). `reviewer-filed` falls below normal work unless an explicit higher priority is present. `sp-N` is effort, not priority.
 - Work detection accepts `in-progress`, spacing/underscore variants, `status: in-progress`, `wip`, `doing`, `working` and `pågår`. A closed state always wins over a stale work label.
 - Per-repository settings override exact work and priority label names. Unknown arbitrary conventions are not inferred from label color or issue text.
