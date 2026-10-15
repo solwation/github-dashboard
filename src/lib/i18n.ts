@@ -35,6 +35,12 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Visa max work items per kolumn": "Maximum work items shown per column",
+  "Ärv global inställning ({count})": "Inherit global setting ({count})",
+  "Antal som visas först. Visa fler visar nästa omgång; kolumnens antal omfattar alla work items.": "Number shown initially. Show more reveals the next batch; column totals include all work items.",
+  "Lämna tomt för att ärva den globala inställningen ({count}).": "Leave empty to inherit the global setting ({count}).",
+  "Ange ett heltal mellan 1 och 100.": "Enter a whole number between 1 and 100.",
+  "Logga in för att spara inställningen för ditt konto, eller prova i demoläget.": "Sign in to save this setting for your account, or try it in demo mode.",
   "Ordna {name}": "Reorder {name}",
   "Ordna {name} med piltangenterna upp och ned, eller dra": "Reorder {name} with up and down arrow keys, or drag",
   "Dra för att ordna. Använd upp- och nedpilarna med tangentbordet.": "Drag to reorder. Use the up and down arrow keys on the keyboard.",

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
-defineProps<{ canViewProblems?: boolean; problemCount?: number }>();
-const emit = defineEmits<{ openProblems: [] }>();
+defineProps<{ canViewProblems?: boolean; problemCount?: number; columnLimit: number; canEditLimit: boolean }>();
+const emit = defineEmits<{ openProblems: []; "update:columnLimit": [value: number | null] }>();
 const dialog = ref<HTMLDialogElement | null>(null);
 function change(event: Event) {
   setLanguage((event.target as HTMLSelectElement).value as LanguagePreference);
@@ -46,6 +47,9 @@ function change(event: Event) {
       <option value="en" lang="en">English</option>
     </select>
     <p>{{ t("Språkvalet sparas på den här enheten.") }}</p>
+    <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
+      @update:model-value="emit('update:columnLimit', $event)" />
+    <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
     <button v-if="canViewProblems" class="button" @click="dialog?.close(); emit('openProblems')">
       {{ t("Problemrapport") }}<span v-if="problemCount">({{ problemCount }})</span>
     </button>

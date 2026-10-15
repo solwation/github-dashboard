@@ -24,6 +24,8 @@ import {
   X,
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
+import ColumnLimitField from "./components/ColumnLimitField.vue";
+import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
 import VersionUpdate from "./components/VersionUpdate.vue";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import RepositoryOrderControls from "./components/RepositoryOrderControls.vue";
@@ -136,6 +138,31 @@ watch(picker, (open) => {
   if (open) pendingSelected.value = [...selected.value];
 });
 const visibleLimit = ref<Record<string, number>>({});
+const columnLimit = ref(defaultColumnLimit);
+const repositoryColumnLimits = ref<Record<string, number>>({});
+function initialLimit(repo: string) {
+  return effectiveColumnLimit(columnLimit.value, repositoryColumnLimits.value, repo);
+}
+function shownLimit(repo: string, column: string) {
+  return visibleLimit.value[repo + column] ?? initialLimit(repo);
+}
+function setColumnLimit(value: number | null) {
+  if (value === null) return;
+  columnLimit.value = value;
+  for (const lane of lanes.value) {
+    if (repositoryColumnLimits.value[lane.repo.full_name] === undefined) resetVisible(lane.repo.full_name);
+  }
+  save();
+}
+function resetVisible(repo: string) {
+  for (const column of ["backlog", "progress", "closed"]) delete visibleLimit.value[repo + column];
+}
+function setRepositoryColumnLimit(repo: string, value: number | null) {
+  if (value === null) delete repositoryColumnLimits.value[repo];
+  else repositoryColumnLimits.value[repo] = value;
+  resetVisible(repo);
+  save();
+}
 const authBusy = ref(false);
 const restoring = ref(true);
 const savedSession = ref(false);
@@ -352,6 +379,8 @@ function save() {
         projectOrder: projectOrder.value,
         collapsedRepos: collapsedRepos.value,
         rules: rules.value,
+        columnLimit: columnLimit.value,
+        repositoryColumnLimits: repositoryColumnLimits.value,
         notificationRepos: notificationRepos.value,
         activityRead: activity.acknowledgements(),
       }),
@@ -363,9 +392,15 @@ function save() {
 function restorePreferences(available: Repo[]) {
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
+    columnLimit.value = defaultColumnLimit;
+    repositoryColumnLimits.value = {};
+    visibleLimit.value = {};
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
+        const limits = restoreColumnLimits(saved, available.map(repo => repo.full_name));
+        columnLimit.value = limits.global;
+        repositoryColumnLimits.value = limits.overrides;
         const layout = restoreLayout(saved, available.map(repo => repo.full_name));
         projectOrder.value = layout.order;
         collapsedRepos.value = layout.collapsed;
@@ -545,6 +580,9 @@ function showDemo() {
   generation++;
   clearClosureFeedback();
   isDemo.value = true;
+  columnLimit.value = defaultColumnLimit;
+  repositoryColumnLimits.value = {};
+  visibleLimit.value = {};
   projectOrder.value = [];
   collapsedRepos.value = [];
   lanes.value = demo();
@@ -588,6 +626,9 @@ function logout() {
   collapsedRepos.value = [];
   layoutAnnouncement.value = "";
   rules.value = {};
+  columnLimit.value = defaultColumnLimit;
+  repositoryColumnLimits.value = {};
+  visibleLimit.value = {};
   isDemo.value = false;
   busy.value = false;
   error.value = "";
@@ -804,7 +845,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :can-view-problems="loggedIn" :problem-count="activeCommitProblems.length"
+        <LanguageSettings :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :can-view-problems="loggedIn" :problem-count="activeCommitProblems.length"
           @open-problems="problemReport?.open()" />
         <InstallApp />
         <button
@@ -1236,7 +1277,7 @@ onMounted(async () => {
                 <IssueCard
                   v-for="issue in items(lane, col.key).slice(
                     0,
-                    visibleLimit[lane.repo.full_name + col.key] || 6,
+                    shownLimit(lane.repo.full_name, col.key),
                   )"
                   :key="
                     issue.id +
@@ -1271,15 +1312,15 @@ onMounted(async () => {
                 <button
                   v-if="
                     items(lane, col.key).length >
-                    (visibleLimit[lane.repo.full_name + col.key] || 6)
+                    (shownLimit(lane.repo.full_name, col.key))
                   "
                   class="show-more"
                   @click="
                     visibleLimit[lane.repo.full_name + col.key] =
-                      (visibleLimit[lane.repo.full_name + col.key] || 6) + 20
+                      (shownLimit(lane.repo.full_name, col.key)) + initialLimit(lane.repo.full_name)
                   "
                 >
-                  Visa fler <ChevronDown :size="14" />
+                  {{ t("Visa fler") }} <ChevronDown :size="14" />
                 </button>
               </div>
             </section>
@@ -1397,6 +1438,8 @@ onMounted(async () => {
           v-model="rules[editing]![field[0]]"
           :placeholder="t('Automatiskt')"
       /></label>
+      <ColumnLimitField id="repository-column-limit" :model-value="repositoryColumnLimits[editing] ?? null"
+        :inherit="columnLimit" @update:model-value="setRepositoryColumnLimit(editing!, $event)" />
       <div class="modal-footer">
         <span>{{ t("Gäller bara din vy") }}</span
         ><button class="button primary">{{ t("Spara och hämta igen") }}</button>
