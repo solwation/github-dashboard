@@ -15,7 +15,7 @@ npm run build
 npm run test:e2e
 ```
 
-Node 22.20+ recommended. The frontend builds to `dist/`. Pushes to `main` test, build and deploy using `.github/workflows/pages.yml`. Pages must use **GitHub Actions** as its source (configured for this repository).
+Node 22.20+ recommended. The frontend builds to `dist/`. Run only the relevant tests locally before pushing, using `npx vitest run <affected test files>` or `npx playwright test <affected test files>`. Pushes to `main` build and deploy using `.github/workflows/pages.yml`; Actions does not run tests or install browsers. Pages must use **GitHub Actions** as its source (configured for this repository).
 
 ## Connect your account
 

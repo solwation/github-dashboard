@@ -21,6 +21,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 - Keep commits scoped to an issue. Reference it with `Fixes #N` when acceptance criteria are satisfied. Remove `in-progress` when closing it. Do not close an issue merely because implementation has started.
 - Before pushing, fetch `origin main`, inspect divergence, and rebase your own commits if necessary without overwriting someone else's changes. Never force-push `main`.
 - Verify appropriate behavior locally, then verify the GitHub Actions / Pages deployment after pushing. Resolve failures before reporting completion.
+- Run tests locally before pushing, selecting only behavior that the change can reasonably affect. Do not routinely run or repeat the full suite. GitHub Actions only builds and publishes Pages; do not add test runs or browser installation to the deployment workflow.
 
 ## Project and verification
 
@@ -30,6 +31,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 - The user requires encrypted persistent sign-in: store tokens only as AES-GCM ciphertext in IndexedDB with a non-exportable key, never plaintext in localStorage or published assets. Delete the credential only after explicit confirmed logout; preserve it on reload and transient API errors. The user also authorizes an encrypted, bounded IndexedDB content/ETag cache for immediate startup followed by GitHub revalidation. Bind cached content to the saved credential, never mix accounts, show cached status until verified, and clear the cache with confirmed logout or changed credentials. Credential-bearing QR transfers are generated locally on demand and must never be committed or cached. Do not commit tokens, client secrets, or private issue snapshots. Keep private content out of service-worker/HTTP caches and plaintext storage.
 - Keep keyboard access, accessible names, mobile layouts and `prefers-reduced-motion` support when changing UI behavior.
 - `npm test` checks pure logic and transport behavior. `npm run test:e2e` checks browser flows; run `npx playwright install chromium` once if needed. `npm run build` checks types and production output. Run the checks appropriate to the issue; avoid redundant tests that only mirror implementation.
+- For targeted checks use `npx vitest run <affected test files>` and `npx playwright test <affected test files>`. The npm test scripts run entire suites and are appropriate only when the scope justifies them.
 - Update `README.md` when behavior or setup changes. Keep this file current when the project workflow changes.
 
 ## /orkester

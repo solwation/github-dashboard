@@ -26,7 +26,7 @@ npm ci
 npm run dev
 ```
 
-Check changes with `npm test` and `npm run build`. For browser tests, install Chromium once with `npx playwright install chromium`, then run `npm run test:e2e`.
+Run affected tests locally before pushing; use `npm run build` for code changes. Browser tests need a one-time `npx playwright install chromium`. Actions only builds and publishes.
 
 ## Documentation
 
