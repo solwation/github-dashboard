@@ -831,10 +831,11 @@ onMounted(async () => {
         ><small>a github projekt dashboard</small></span
       ></a
     ><span class="nav-caption">WORKSPACE</span>
-    <div class="nav-item active">
+    <a class="nav-item active" href="#overview" :aria-label="t('Översikt')"
+      :aria-current="loggedIn || isDemo ? 'page' : undefined">
       <LayoutDashboard :size="18" /> {{ t("Översikt") }}
       <span class="nav-count">{{ lanes.length }}</span>
-    </div>
+    </a>
     <SidebarRepositories
       :repos="sidebarRepos"
       :now="now"
@@ -896,7 +897,7 @@ onMounted(async () => {
         </button>
       </div>
     </header>
-    <main>
+    <main id="overview" tabindex="-1">
       <div v-if="showingCache" class="notice cached-content" role="status">
         {{ t("Visar sparad vy från {time}. Hämtar senaste från GitHub när anslutningen fungerar.", {
           time: refreshed ? new Date(refreshed).toLocaleString(locale) : t('okänd tid') }) }}
