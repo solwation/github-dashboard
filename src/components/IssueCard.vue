@@ -236,6 +236,10 @@ const visibleLabels = computed(() =>
 </template>
 
 <style scoped>
+.backlog-age {
+  font-size: 9px;
+  color: #87929a;
+}
 .issue-card.unread-move { border-color: #2875ba; box-shadow: 0 0 0 2px #2875ba55; background: #f1f8ff; }
 .movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
