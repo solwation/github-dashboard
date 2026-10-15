@@ -46,6 +46,9 @@ test("phone swimlanes stack every status and keep controls reachable without sid
         expect(bounds.y).toBeGreaterThanOrEqual(previousBottom - 1);
         previousBottom = bounds.y + bounds.height;
         expect(await column.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      }
+      // Measure the full layout before scrolling changes viewport-relative bounds.
+      for (const column of await columns.all()) {
         const heading = column.locator(".column-heading");
         await heading.scrollIntoViewIfNeeded();
         await expect(heading).toBeInViewport();
