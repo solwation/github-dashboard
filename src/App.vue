@@ -844,12 +844,12 @@ onMounted(async () => {
       @reorder="reorderProject"
     />
     <div class="sidebar-footer">
-      <Github :size="19" />
+      <Github :size="19" aria-hidden="true" />
       <div>
-        {{ t("Byggt för ditt flöde")
-        }}<small>{{ t("Drivs av GitHub Issues") }}</small>
+        <a href="https://github.com/solwation" target="_blank" rel="noopener noreferrer">Olof Wingren</a>
+        <small><a href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a></small>
       </div>
-      <ExternalLink :size="13" />
+      <ExternalLink :size="13" aria-hidden="true" />
     </div>
   </aside>
   <div class="workspace">

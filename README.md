@@ -33,3 +33,5 @@ Check changes with `npm test` and `npm run build`. For browser tests, install Ch
 - [Setup, OAuth, security and board behavior](docs/guide.md)
 - [Issue workflow instructions for AI assistants](public/ISSUEFLOW.md)
 - [Repository development workflow](AI.md)
+
+[MIT License](LICENSE) · © 2026 [Olof Wingren](https://github.com/solwation)
