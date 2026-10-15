@@ -45,7 +45,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       caches
         .open(CACHE)
-        .then(async (cache) => (await cache.match(request)) || fetch(request)),
+        .then(async (cache) => (await cache.match(request, { ignoreVary: true })) || fetch(request)),
     );
 });
 self.addEventListener("notificationclick", (event) => {
