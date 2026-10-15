@@ -95,6 +95,9 @@ test("corruption reports an unlock error and preserves the record for explicit l
     try { await api.loadToken(); } catch (error) { return (error as { code: string }).code; }
   });
   expect(code).toBe("decrypt");
+  await page.reload();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /Återställer sparad inloggning|Restoring saved sign-in/ })).toHaveCount(0);
   expect(await recordInfo(page)).not.toBeNull();
   await vault(page, "clear");
   expect(await recordInfo(page)).toBeNull();

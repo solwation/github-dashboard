@@ -1,5 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function expectNoStartupNotices(page: Page) {
+  await expect(page.getByRole("status").filter({ hasText: /Visar sparad vy|Återställer sparad inloggning|Showing a saved view|Restoring saved sign-in/ })).toHaveCount(0);
+}
+
 async function cacheExists(page: Page) {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>(resolve => { const request = indexedDB.open("issueflow-vault", 1); request.onsuccess = () => resolve(request.result); });
@@ -54,11 +58,12 @@ test("renders encrypted content before GitHub responds, then revalidates using p
   const cdp = await page.context().newCDPSession(page); await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
   await page.reload();
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
-  await expect(page.locator(".cached-content")).toContainText("Visar sparad vy");
+  await expect(page.locator(".username")).toHaveText("cache-test");
+  await expectNoStartupNotices(page);
   await expect(page.getByRole("heading", { name: "Hämtar ditt flöde", exact: true })).toHaveCount(0);
   state.release();
   await expect(page.locator(".issue-title")).toContainText("Fresh private fixture");
-  await expect(page.locator(".cached-content")).toHaveCount(0);
+  await expectNoStartupNotices(page);
   expect(state.conditional()).toBeGreaterThanOrEqual(4);
 });
 
@@ -66,7 +71,9 @@ test("keeps a cached board during API failure and removes all cached content on 
   const state = await setup(page); state.offline();
   await page.reload();
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
-  await expect(page.locator(".cached-content")).toBeVisible();
+  await expectNoStartupNotices(page);
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
   await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("cache");
@@ -102,7 +109,7 @@ test("damaged ciphertext is ignored while the saved PAT still signs in", async (
   });
   await page.reload();
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
-  await expect(page.locator(".cached-content")).toHaveCount(0);
+  await expectNoStartupNotices(page);
   await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeVisible();
 });
 
@@ -120,9 +127,10 @@ test("large optional API responses do not prevent encrypted board caching and st
   state.block();
   await page.reload();
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
-  await expect(page.locator(".cached-content")).toBeVisible();
+  await expectNoStartupNotices(page);
   state.release();
-  await expect(page.locator(".cached-content")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeEnabled();
+  await expectNoStartupNotices(page);
 });
 
 test("essential boards above 8MiB restore completely from bounded encrypted storage while offline", async ({ page }) => {
@@ -144,7 +152,7 @@ test("essential boards above 8MiB restore completely from bounded encrypted stor
   state.offline();
   await page.reload();
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
-  await expect(page.locator(".cached-content")).toBeVisible();
+  await expectNoStartupNotices(page);
   const bodyLength = await page.evaluate(async () => {
     const path = "/src/lib/vault.ts";
     const vault = await import(/* @vite-ignore */ path);

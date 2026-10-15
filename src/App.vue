@@ -898,10 +898,6 @@ onMounted(async () => {
       </div>
     </header>
     <main id="overview" tabindex="-1">
-      <div v-if="showingCache" class="notice cached-content" role="status">
-        {{ t("Visar sparad vy från {time}. Hämtar senaste från GitHub när anslutningen fungerar.", {
-          time: refreshed ? new Date(refreshed).toLocaleString(locale) : t('okänd tid') }) }}
-      </div>
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
       <div v-if="activeCommitProblems.length && !hideCommitNotice" class="notice commit-notice" role="status">
         <span>{{ t("Commit-information saknas för {count} issues.", { count: activeCommitProblems.length }) }}</span>
@@ -931,9 +927,6 @@ onMounted(async () => {
         >
           <X :size="16" />
         </button>
-      </div>
-      <div v-if="restoring" class="notice" role="status">
-        {{ t("Återställer sparad inloggning…") }}
       </div>
       <template v-if="!loggedIn && !isDemo"
         ><div class="welcome">
