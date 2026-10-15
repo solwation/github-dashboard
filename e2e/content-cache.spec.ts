@@ -167,6 +167,7 @@ test("genuine content storage errors warn without breaking the board and a succe
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
   const warning = page.getByRole("status").filter({ hasText: "Innehållscachen kunde inte sparas" });
   await expect(warning).toBeVisible();
+  await expect(warning).toContainText("Webbläsarens lagringsutrymme räcker inte till.");
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
   await page.evaluate(() => (window as unknown as { restoreCacheStorage: () => void }).restoreCacheStorage());
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();

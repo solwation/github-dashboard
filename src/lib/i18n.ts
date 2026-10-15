@@ -358,6 +358,14 @@ export const english: Record<string, string> = {
   "Hänvisningen har kopierats.": "The reference has been copied.",
   "Kopiera den markerade hänvisningen manuellt.": "Copy the selected reference manually.",
   "Ny version tillgänglig": "New version available",
+  "Översikten ryms inte i den krypterade cachen. Välj färre repositories och försök igen.":
+    "The board exceeds the encrypted cache limit. Select fewer repositories and try again.",
+  "Webbläsaren kunde inte komprimera översikten. Uppdatera webbläsaren och försök igen.":
+    "The browser could not compress the board. Update your browser and try again.",
+  "Webbläsarens lagringsutrymme räcker inte till. Frigör utrymme och försök igen.":
+    "The browser does not have enough storage space. Free up space and try again.",
+  "Webbläsaren kunde inte skriva till den säkra lagringen. Kontrollera webbplatsens lagringsbehörigheter och försök igen.":
+    "The browser could not write to secure storage. Check this site's storage permissions and try again.",
   "Uppdaterar om {seconds} sekunder…": "Updating in {seconds} seconds…",
   "Uppdaterar…": "Updating…",
   "Kunde inte uppdatera. Försök igen.": "Could not update. Please try again.",

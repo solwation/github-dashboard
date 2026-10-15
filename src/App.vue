@@ -37,6 +37,7 @@ import ProblemReport from "./components/ProblemReport.vue";
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
+import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
 import Github from "./components/GithubIcon.vue";
@@ -111,15 +112,15 @@ const error = ref("");
 const now = ref(Date.now());
 const refreshed = ref<number | null>(null);
 const showingCache = ref(false);
-const cacheWarning = ref(false);
+const cacheWarning = ref("");
 async function persistContent() {
   if (!user.value || !sessionToken.value || !api || isDemo.value) return;
   const run = generation;
   try {
     await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value,
       syncedAt: refreshed.value, responses: api.exportResponses() });
-    if (run === generation) cacheWarning.value = false;
-  } catch { if (run === generation) cacheWarning.value = true; }
+    if (run === generation) cacheWarning.value = "";
+  } catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
 }
 const syncError = ref("");
 const lastSynced = new Map<string, number>();
@@ -566,7 +567,7 @@ async function confirmLogout() {
 }
 function logout() {
   showingCache.value = false;
-  cacheWarning.value = false;
+  cacheWarning.value = "";
   tokenInput.value = "";
   tokenPanel.value = false;
   lastSynced.clear();
@@ -846,7 +847,7 @@ onMounted(async () => {
         {{ t("Visar sparad vy från {time}. Hämtar senaste från GitHub när anslutningen fungerar.", {
           time: refreshed ? new Date(refreshed).toLocaleString(locale) : t('okänd tid') }) }}
       </div>
-      <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }}</div>
+      <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
       <div v-if="activeCommitProblems.length && !hideCommitNotice" class="notice commit-notice" role="status">
         <span>{{ t("Commit-information saknas för {count} issues.", { count: activeCommitProblems.length }) }}</span>
         <button class="button small" @click="problemReport?.open()">{{ t("Läs mer") }}</button>
