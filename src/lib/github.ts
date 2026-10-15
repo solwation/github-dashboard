@@ -1,4 +1,5 @@
 import { t, locale } from "./i18n";
+import { ClosingCommitCache, closingQuery, parseClosingCommit, type ClosingResponse } from "./commits";
 import {
   column,
   progressStart,
@@ -10,16 +11,30 @@ import {
   type Rules,
 } from "./model";
 export class GitHub {
+  private readonly commits = new ClosingCommitCache(async (repo, issue) => {
+    const [owner, name] = repo.split("/");
+    if (!owner || !name) throw new Error(t("Ogiltig API-adress."));
+    const response = await this.request<ClosingResponse>("/graphql", {
+      method: "POST",
+      body: JSON.stringify({ query: closingQuery, variables: { owner, name, number: issue.number } }),
+    });
+    return parseClosingCommit(response.data, issue);
+  });
   constructor(private token: string) {}
-  async request<T>(path: string): Promise<{ data: T; next: string | null }> {
+  closingCommit(repoFullName: string, issue: Issue) {
+    return this.commits.get(repoFullName, issue);
+  }
+  async request<T>(path: string, options: { method?: "GET" | "POST"; body?: string } = {}): Promise<{ data: T; next: string | null }> {
     const url = new URL(path, "https://api.github.com");
     if (url.origin !== "https://api.github.com")
       throw new Error("Ogiltig API-adress.");
     const response = await fetch(url, {
+      ...options,
       headers: {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${this.token}`,
         "X-GitHub-Api-Version": "2022-11-28",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
       },
     });
     if (!response.ok) {
