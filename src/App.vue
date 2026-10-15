@@ -1058,16 +1058,6 @@ onMounted(async () => {
               {{ t("Från backlog till klart. Håll koll på vad som rör sig.") }}
             </p>
           </div>
-          <div class="heading-actions">
-            <button
-              v-if="loggedIn"
-              class="button primary"
-              :disabled="busy"
-              @click="picker = true"
-            >
-              <Plus :size="16" /> {{ t("Välj repositories") }}
-            </button>
-          </div>
         </section>
         <div v-if="isDemo" class="notice demo-notice">
           <span>{{
@@ -1080,7 +1070,7 @@ onMounted(async () => {
           </button>
         </div>
         <section class="stats" :aria-label="t('Sammanfattning')">
-          <div class="stat">
+          <div class="stat repository-stat">
             <span class="stat-icon repos"><Layers3 :size="20" /></span>
             <div>
               <span class="stat-label">Repositories</span
@@ -1089,6 +1079,16 @@ onMounted(async () => {
                 }}<small>{{ t("i din översikt") }}</small></strong
               >
             </div>
+            <button
+              v-if="loggedIn"
+              class="icon-button repository-stat-action"
+              :aria-label="t('Välj repositories')"
+              :title="t('Välj repositories')"
+              :disabled="busy"
+              @click="picker = true"
+            >
+              <Plus :size="16" aria-hidden="true" />
+            </button>
           </div>
           <div class="stat">
             <span class="stat-icon backlog"
