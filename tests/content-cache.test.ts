@@ -38,10 +38,11 @@ describe("bounded content snapshot", () => {
     await writeSnapshot("fixture", input);
     expect(save.mock.calls[0]![1].responses).toEqual([input.responses[1]]);
   });
-  it("still rejects an oversized essential board and propagates genuine persistence failures", async () => {
-    const vault = await vi.importActual<typeof import("../src/lib/vault")>("../src/lib/vault");
-    save.mockImplementationOnce(vault.saveContent);
-    await expect(writeSnapshot("fixture", { ...snapshot(), user: { login: "x".repeat(MAX_CONTENT_BYTES), avatar_url: "" } })).rejects.toThrow("Content cache limit exceeded");
+  it("keeps an oversized essential board complete for vault compression and propagates persistence failures", async () => {
+    const input = { ...snapshot(), user: { login: "x".repeat(MAX_CONTENT_BYTES), avatar_url: "" }, responses: [response("optional", "value")] };
+    await writeSnapshot("fixture", input);
+    expect(save.mock.calls[0]![1].user).toEqual(input.user);
+    expect(save.mock.calls[0]![1].responses).toEqual([]);
     const failure = new Error("Storage quota exceeded");
     save.mockRejectedValueOnce(failure);
     await expect(writeSnapshot("fixture", snapshot())).rejects.toBe(failure);

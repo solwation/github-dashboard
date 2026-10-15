@@ -1,11 +1,14 @@
 /** Encrypted, origin-local credentials. Only clearToken explicitly removes a token.
  * The non-exportable key protects stored bytes; same-origin scripts can still use it.
  */
+import { ContentCacheError, decodeContent, encodeContent, MAX_CONTENT_BYTES } from "./content-codec";
+export { ContentCacheError, MAX_CONTENT_BYTES, MAX_EXPANDED_CONTENT_BYTES } from "./content-codec";
+export type { ContentCacheErrorCode } from "./content-codec";
+
 export const VAULT_DATABASE = "issueflow-vault";
 const STORE = "credentials";
 const RECORD = "github";
 const CONTENT = "content";
-export const MAX_CONTENT_BYTES = 8 * 1024 * 1024;
 export type VaultErrorCode =
   "unavailable" | "blocked" | "read" | "write" | "decrypt";
 const messages: Record<VaultErrorCode, string> = {
@@ -69,20 +72,21 @@ function openDatabase(): Promise<IDBDatabase> {
 
 async function transact<T>(
   mode: IDBTransactionMode,
-  operation: (store: IDBObjectStore) => IDBRequest<T>,
+  operation: (store: IDBObjectStore, abort: (cause: unknown) => void) => IDBRequest<T>,
 ): Promise<T> {
   const db = await openDatabase();
   const code = mode === "readonly" ? "read" : "write";
   try {
     return await new Promise<T>((resolve, reject) => {
       const tx = db.transaction(STORE, mode);
-      const request = operation(tx.objectStore(STORE));
+      let operationError: unknown;
+      const request = operation(tx.objectStore(STORE), cause => { operationError = cause; tx.abort(); });
       // Wait for commit; a successful request can still belong to an aborted transaction.
       tx.oncomplete = () => resolve(request.result);
       tx.onabort = () =>
-        reject(new VaultError(code, { cause: tx.error ?? request.error }));
+        reject(new VaultError(code, { cause: operationError ?? tx.error ?? request.error }));
       tx.onerror = () =>
-        reject(new VaultError(code, { cause: tx.error ?? request.error }));
+        reject(new VaultError(code, { cause: operationError ?? tx.error ?? request.error }));
     });
   } catch (cause) {
     throw cause instanceof VaultError ? cause : new VaultError(code, { cause });
@@ -138,23 +142,26 @@ async function decryptToken(record: Credential): Promise<string> {
 export function saveContent(token: string, value: unknown): Promise<void> {
   // Snapshot now, before later reactive UI mutations or queued operations.
   const plaintext = new TextEncoder().encode(JSON.stringify(value));
-  if (plaintext.byteLength > MAX_CONTENT_BYTES) return Promise.reject(new Error("Content cache limit exceeded"));
   return serialize(async () => {
     const credential = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
     if (!credential || await decryptToken(credential) !== token) return;
+    const payload = await encodeContent(plaintext);
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, plaintext);
-    await transact("readwrite", store => {
+    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, payload);
+    await transact("readwrite", (store, abort) => {
       const request = store.get(RECORD);
       request.onsuccess = () => {
         const current = request.result as Credential | undefined;
         // A different tab may have logged out or replaced the token during encryption.
         const bytes = new Uint8Array(credential.ciphertext);
-        if (current && bytes.length === current.ciphertext.byteLength && bytes.every((byte, i) => byte === new Uint8Array(current.ciphertext)[i]))
-          store.put({ iv, ciphertext }, CONTENT);
+        if (current && bytes.length === current.ciphertext.byteLength && bytes.every((byte, i) => byte === new Uint8Array(current.ciphertext)[i])) {
+          try { store.put({ iv, ciphertext }, CONTENT); } catch (cause) { abort(cause); }
+        }
       };
       return request;
     });
+  }).catch(cause => {
+    throw cause instanceof ContentCacheError ? cause : new ContentCacheError("storage", { cause });
   });
 }
 
@@ -163,10 +170,10 @@ export function loadContent<T>(token: string): Promise<T | null> {
     const credential = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
     if (!credential || await decryptToken(credential) !== token) return null;
     const record = await transact<Omit<Credential, "key"> | undefined>("readonly", store => store.get(CONTENT));
-    if (!record || record.ciphertext.byteLength > MAX_CONTENT_BYTES + 32) return null;
+    if (!record || record.ciphertext.byteLength > MAX_CONTENT_BYTES + 16) return null;
     try {
       const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, record.ciphertext);
-      return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+      return await decodeContent(new Uint8Array(plaintext)) as T;
     } catch { return null; } // Damaged cache must never prevent sign-in.
   });
 }

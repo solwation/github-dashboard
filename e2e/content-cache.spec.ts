@@ -8,7 +8,7 @@ async function cacheExists(page: Page) {
     } finally { db.close(); }
   });
 }
-async function setup(page: Page, oversizedResponse = false) {
+async function setup(page: Page, oversizedResponse: boolean | "large-board" = false) {
   const repo = { id: 1, name: "test", full_name: "sample/test", private: true, description: "Fixture", html_url: "https://github.com/sample/test", owner: { login: "sample" } };
   let title = "Cached private fixture";
   let blocked = false;
@@ -23,12 +23,12 @@ async function setup(page: Page, oversizedResponse = false) {
     const etag = '"' + url.pathname + (url.pathname.endsWith("/issues") ? title : "stable") + '"';
     if (route.request().headers()["if-none-match"]) conditional++;
     if (route.request().headers()["if-none-match"] === etag) { await route.fulfill({ status: 304 }); return; }
-    if (oversizedResponse && url.pathname.endsWith("/issues") && url.searchParams.get("state") === "closed") {
+    if (oversizedResponse === true && url.pathname.endsWith("/issues") && url.searchParams.get("state") === "closed") {
       // GitHub's issues endpoint also returns PRs, which do not belong on the board.
       await route.fulfill({ headers: { etag, "access-control-expose-headers": "etag" }, json: [{ pull_request: {}, closed_at: new Date().toISOString(), body: "x".repeat(9 * 1024 * 1024) }] });
       return;
     }
-    await route.fulfill({ headers: { etag, "access-control-expose-headers": "etag" }, json: url.pathname === "/user" ? { login: "cache-test", avatar_url: "" } : url.pathname === "/user/repos" ? [repo] : url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open" ? [{ id: 1, number: 1, title, body: "Private cached fixture description", comments: 0, state: "open", closed_at: null, created_at: "2026-01-01T12:00:00Z", updated_at: new Date().toISOString(), html_url: `${repo.html_url}/issues/1`, labels: [], assignees: [] }] : [] });
+    await route.fulfill({ headers: { etag, "access-control-expose-headers": "etag" }, json: url.pathname === "/user" ? { login: "cache-test", avatar_url: "" } : url.pathname === "/user/repos" ? [repo] : url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open" ? [{ id: 1, number: 1, title, body: oversizedResponse === "large-board" ? "Private cached fixture description. ".repeat(300_000) : "Private cached fixture description", comments: 0, state: "open", closed_at: null, created_at: "2026-01-01T12:00:00Z", updated_at: new Date().toISOString(), html_url: `${repo.html_url}/issues/1`, labels: [], assignees: [] }] : [] });
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
@@ -84,7 +84,7 @@ test("changed credentials invalidate cached content and pending writes cannot un
     await vault.saveToken("another-fixture-token");
     if (await vault.loadContent("fixture-cache-token") !== null) throw new Error("Credential isolation failed");
     if (await vault.loadContent("another-fixture-token") !== null) throw new Error("Old cache retained");
-    await Promise.all([vault.saveContent("another-fixture-token", { fixture: true }), vault.clearToken()]);
+    await Promise.all([vault.saveContent("another-fixture-token", { fixture: "x".repeat(9 * 1024 * 1024) }), vault.clearToken()]);
     if (await vault.loadToken() !== null) throw new Error("Logout lost");
   });
   expect(await cacheExists(page)).toBe(false);
@@ -124,7 +124,37 @@ test("large optional API responses do not prevent encrypted board caching and st
   await expect(page.locator(".cached-content")).toHaveCount(0);
 });
 
+test("essential boards above 8MiB restore completely from bounded encrypted storage while offline", async ({ page }) => {
+  const state = await setup(page, "large-board");
+  const cached = await page.evaluate(async () => {
+    const path = "/src/lib/vault.ts";
+    const vault = await import(/* @vite-ignore */ path);
+    const snapshot = await vault.loadContent("fixture-cache-token");
+    const db = await new Promise<IDBDatabase>(resolve => { const request = indexedDB.open("issueflow-vault", 1); request.onsuccess = () => resolve(request.result); });
+    try {
+      const record = await new Promise<{ ciphertext: ArrayBuffer }>(resolve => { const request = db.transaction("credentials").objectStore("credentials").get("content"); request.onsuccess = () => resolve(request.result); });
+      return { expanded: new TextEncoder().encode(JSON.stringify(snapshot)).byteLength, encrypted: record.ciphertext.byteLength, body: snapshot.lanes[0].issues[0].body.length };
+    } finally { db.close(); }
+  });
+  expect(cached.expanded).toBeGreaterThan(8 * 1024 * 1024);
+  expect(cached.encrypted).toBeLessThanOrEqual(8 * 1024 * 1024 + 16);
+  expect(cached.body).toBe("Private cached fixture description. ".length * 300_000);
+  await expect(page.getByRole("status").filter({ hasText: "Innehållscachen kunde inte sparas" })).toHaveCount(0);
+  state.offline();
+  await page.reload();
+  await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
+  await expect(page.locator(".cached-content")).toBeVisible();
+  const bodyLength = await page.evaluate(async () => {
+    const path = "/src/lib/vault.ts";
+    const vault = await import(/* @vite-ignore */ path);
+    return (await vault.loadContent("fixture-cache-token")).lanes[0].issues[0].body.length;
+  });
+  expect(bodyLength).toBe(cached.body);
+});
+
 test("genuine content storage errors warn without breaking the board and a successful retry clears the warning", async ({ page }) => {
+  const errors: Error[] = [];
+  page.on("pageerror", error => errors.push(error));
   await setup(page);
   await page.evaluate(() => {
     const put = IDBObjectStore.prototype.put;
@@ -141,4 +171,5 @@ test("genuine content storage errors warn without breaking the board and a succe
   await page.evaluate(() => (window as unknown as { restoreCacheStorage: () => void }).restoreCacheStorage());
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
   await expect(warning).toHaveCount(0);
+  expect(errors).toEqual([]);
 });

@@ -37,6 +37,7 @@ export function writeSnapshot(token: string, snapshot: Omit<ContentSnapshot, "ve
     bytes += addedBytes;
   }
   content.responses.reverse();
-  // saveContent still rejects oversized boards and real storage/encryption errors.
+  // Essential boards larger than this budget are compressed by the vault without
+  // dropping issues. The encrypted and expanded payloads remain independently bounded.
   return saveContent(token, content);
 }
