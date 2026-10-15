@@ -194,6 +194,6 @@ test("denied notification permission leaves project disabled and explains how to
   const toggle = page.getByRole("switch", { name: "Notiser för alpha" });
   await toggle.click();
   await expect(toggle).not.toBeChecked();
-  await expect(page.getByRole("status")).toContainText("Notiser är blockerade");
+  await expect(page.getByRole("status").filter({ hasText: "Notiser är blockerade" })).toBeVisible();
   expect(await count(page)).toBe(0);
 });
