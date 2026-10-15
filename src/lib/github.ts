@@ -38,6 +38,22 @@ export class GitHub {
     return parseClosingCommit(response.data, issue);
   });
   constructor(private token: string) {}
+  exportResponses() {
+    return [...this.responses.entries()].slice(-100);
+  }
+  restoreResponses(value: unknown) {
+    if (!Array.isArray(value)) return;
+    for (const entry of value.slice(-100)) {
+      if (!Array.isArray(entry) || entry.length !== 2) continue;
+      const [url, response] = entry;
+      try {
+        if (typeof url !== "string" || new URL(url).origin !== "https://api.github.com" ||
+          !response || typeof response !== "object" || typeof response.etag !== "string" || response.etag.length > 1024 ||
+          !("data" in response) || (response.next !== null && (typeof response.next !== "string" || new URL(response.next).origin !== "https://api.github.com"))) continue;
+        this.responses.set(url, { etag: response.etag, data: response.data, next: response.next });
+      } catch { /* Ignore malformed cache metadata. */ }
+    }
+  }
   closingCommit(repoFullName: string, issue: Issue) {
     return this.commits.get(repoFullName, issue);
   }
@@ -207,12 +223,14 @@ export class GitHub {
   async lane(repo: Repo, rules: Rules): Promise<Lane> {
     const root = `/repos/${repo.full_name}`;
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    // A day-stable request URL allows ETags to survive reloads. Filter by the exact window below.
+    const requestSince = new Date(Math.floor(Date.now() / 86400000) * 86400000 - 30 * 86400000).toISOString();
     const [open, closed, labels] = await Promise.all([
       this.all<Issue>(
         `${root}/issues?state=open&per_page=100&sort=created&direction=asc`,
       ),
       this.all<Issue>(
-        `${root}/issues?state=closed&per_page=100&sort=updated&direction=desc&since=${since}`,
+        `${root}/issues?state=closed&per_page=100&sort=updated&direction=desc&since=${requestSince}`,
       ),
       this.all<Label>(`${root}/labels?per_page=100`),
     ]);

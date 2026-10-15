@@ -38,6 +38,7 @@ function cancel(event?: Event) {
         )
       }}
     </p>
+    <p>{{ t("Sparat projekt- och issueinnehåll raderas också från appens cache.") }}</p>
     <div class="logout-actions">
       <button
         type="button"

@@ -33,6 +33,7 @@ import MobileHandoff from "./components/MobileHandoff.vue";
 import ProblemReport from "./components/ProblemReport.vue";
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
+import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
 import { consumeHandoff, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
 import Github from "./components/GithubIcon.vue";
@@ -67,6 +68,17 @@ const busy = ref(false);
 const error = ref("");
 const now = ref(Date.now());
 const refreshed = ref<number | null>(null);
+const showingCache = ref(false);
+const cacheWarning = ref(false);
+async function persistContent() {
+  if (!user.value || !sessionToken.value || !api || isDemo.value) return;
+  const run = generation;
+  try {
+    await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value,
+      syncedAt: refreshed.value, responses: api.exportResponses() });
+    if (run === generation) cacheWarning.value = false;
+  } catch { if (run === generation) cacheWarning.value = true; }
+}
 const syncError = ref("");
 const lastSynced = new Map<string, number>();
 const lastFullSynced = new Map<string, number>();
@@ -303,36 +315,7 @@ function save() {
     /* App remains usable without storage. */
   }
 }
-async function connect(token: string, imported?: HandoffSettings) {
-  if (authBusy.value) return;
-  authBusy.value = true;
-  error.value = "";
-  try {
-    const next = new GitHub(token);
-    const identity = await next.user();
-    const available = await next.repos();
-    let storageWarning = "";
-    try {
-      await saveToken(token);
-      savedSession.value = true;
-    } catch (cause) {
-      storageWarning = message(cause);
-    }
-    generation++;
-    lastSynced.clear();
-    lastFullSynced.clear();
-    sessionToken.value = token;
-    api = next;
-    user.value = identity;
-    repos.value = available;
-    lanes.value = [];
-    selected.value = [];
-    rules.value = {};
-    notificationRepos.value = [];
-    clearClosureFeedback();
-    isDemo.value = false;
-    tokenPanel.value = false;
-    tokenInput.value = "";
+function restorePreferences(available: Repo[]) {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
@@ -357,6 +340,53 @@ async function connect(token: string, imported?: HandoffSettings) {
     } catch {
       /* Ignore invalid preferences. */
     }
+}
+async function connect(token: string, imported?: HandoffSettings, cached?: ContentSnapshot | null) {
+  if (authBusy.value) return;
+  authBusy.value = true;
+  error.value = "";
+  try {
+    const next = new GitHub(token);
+    if (cached) {
+      generation++;
+      next.restoreResponses(cached.responses);
+      clearClosureFeedback();
+      api = next;
+      user.value = cached.user;
+      sessionToken.value = token;
+      repos.value = cached.repos;
+      restorePreferences(cached.repos);
+      lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
+      refreshed.value = cached.syncedAt;
+      showingCache.value = true;
+      activity.update(lanes.value, rules.value);
+      for (const lane of lanes.value) closureTracker.update(lane);
+    }
+    const identity = await next.user();
+    const available = await next.repos();
+    let storageWarning = "";
+    try {
+      await saveToken(token);
+      savedSession.value = true;
+    } catch (cause) {
+      storageWarning = message(cause);
+    }
+    if (!cached) generation++;
+    lastSynced.clear();
+    lastFullSynced.clear();
+    sessionToken.value = token;
+    api = next;
+    user.value = identity;
+    repos.value = available;
+    if (!cached || cached.user.login !== identity.login) lanes.value = [];
+    selected.value = [];
+    rules.value = {};
+    notificationRepos.value = [];
+    if (!cached || cached.user.login !== identity.login) clearClosureFeedback();
+    isDemo.value = false;
+    tokenPanel.value = false;
+    tokenInput.value = "";
+    restorePreferences(available);
     if (imported) {
       const accessible = new Set(available.map((repo) => repo.full_name));
       selected.value = imported.selected.filter((name) => accessible.has(name));
@@ -365,8 +395,9 @@ async function connect(token: string, imported?: HandoffSettings) {
       );
       save();
     }
+    lanes.value = lanes.value.filter(lane => selected.value.includes(lane.repo.full_name) && available.some(repo => repo.full_name === lane.repo.full_name));
     if (selected.value.length) await refresh();
-    else picker.value = true;
+    else { picker.value = true; showingCache.value = false; await persistContent(); }
     if (storageWarning) error.value = storageWarning;
   } catch (e) {
     error.value = message(e);
@@ -436,7 +467,11 @@ async function refresh(incremental = false) {
       closureTracker.retain(selected.value);
       closureFeedback(result);
       lanes.value = result;
-      refreshed.value = Date.now();
+      if (result.every(lane => !lane.error)) {
+        refreshed.value = Date.now();
+        showingCache.value = false;
+      }
+      await persistContent();
       if (incremental && result.some((lane) => lane.error))
         throw new Error(result.find((lane) => lane.error)!.error);
     }
@@ -479,6 +514,8 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  showingCache.value = false;
+  cacheWarning.value = false;
   tokenInput.value = "";
   tokenPanel.value = false;
   lastSynced.clear();
@@ -604,7 +641,8 @@ async function refreshActive() {
     if (run === generation) {
       closureFeedback(result);
       lanes.value = result;
-      refreshed.value = Date.now();
+      if (!showingCache.value) refreshed.value = Date.now();
+      await persistContent();
     }
     if (failure) throw failure;
   } finally {
@@ -665,7 +703,7 @@ onMounted(async () => {
     const remembered = await loadToken();
     if (remembered) {
       savedSession.value = true;
-      await connect(remembered);
+      await connect(remembered, undefined, await readSnapshot(remembered));
     }
   } catch (e) {
     if (e instanceof VaultError) savedSession.value = true;
@@ -748,6 +786,11 @@ onMounted(async () => {
       </div>
     </header>
     <main>
+      <div v-if="showingCache" class="notice cached-content" role="status">
+        {{ t("Visar sparad vy från {time}. Hämtar senaste från GitHub när anslutningen fungerar.", {
+          time: refreshed ? new Date(refreshed).toLocaleString(locale) : t('okänd tid') }) }}
+      </div>
+      <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }}</div>
       <div v-if="activeCommitProblems.length && !hideCommitNotice" class="notice commit-notice" role="status">
         <span>{{ t("Commit-information saknas för {count} issues.", { count: activeCommitProblems.length }) }}</span>
         <button class="button small" @click="problemReport?.open()">{{ t("Läs mer") }}</button>

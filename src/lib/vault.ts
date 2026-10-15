@@ -4,6 +4,8 @@
 export const VAULT_DATABASE = "issueflow-vault";
 const STORE = "credentials";
 const RECORD = "github";
+const CONTENT = "content";
+const MAX_CONTENT_BYTES = 8 * 1024 * 1024;
 export type VaultErrorCode =
   "unavailable" | "blocked" | "read" | "write" | "decrypt";
 const messages: Record<VaultErrorCode, string> = {
@@ -101,6 +103,10 @@ export function saveToken(token: string): Promise<void> {
   return serialize(async () => {
     if (!globalThis.crypto?.subtle) throw new VaultError("unavailable");
     try {
+      const previous = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
+      if (previous) {
+        try { if (await decryptToken(previous) === token) return; } catch { /* A fresh validated sign-in may replace a damaged credential. */ }
+      }
       const key = await crypto.subtle.generateKey(
         { name: "AES-GCM", length: 256 },
         false,
@@ -112,14 +118,56 @@ export function saveToken(token: string): Promise<void> {
         key,
         new TextEncoder().encode(token),
       );
-      await transact("readwrite", (store) =>
-        store.put({ key, iv, ciphertext } satisfies Credential, RECORD),
-      );
+      await transact("readwrite", (store) => {
+        store.clear(); // Changed credentials invalidate all cached private content.
+        return store.put({ key, iv, ciphertext } satisfies Credential, RECORD);
+      });
     } catch (cause) {
       throw cause instanceof VaultError
         ? cause
         : new VaultError("write", { cause });
     }
+  });
+}
+
+async function decryptToken(record: Credential): Promise<string> {
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv }, record.key, record.ciphertext));
+}
+
+/** Cache uses the credential's non-exportable key, with an authenticated record purpose. */
+export function saveContent(token: string, value: unknown): Promise<void> {
+  // Snapshot now, before later reactive UI mutations or queued operations.
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  if (plaintext.byteLength > MAX_CONTENT_BYTES) return Promise.reject(new Error("Content cache limit exceeded"));
+  return serialize(async () => {
+    const credential = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
+    if (!credential || await decryptToken(credential) !== token) return;
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, plaintext);
+    await transact("readwrite", store => {
+      const request = store.get(RECORD);
+      request.onsuccess = () => {
+        const current = request.result as Credential | undefined;
+        // A different tab may have logged out or replaced the token during encryption.
+        const bytes = new Uint8Array(credential.ciphertext);
+        if (current && bytes.length === current.ciphertext.byteLength && bytes.every((byte, i) => byte === new Uint8Array(current.ciphertext)[i]))
+          store.put({ iv, ciphertext }, CONTENT);
+      };
+      return request;
+    });
+  });
+}
+
+export function loadContent<T>(token: string): Promise<T | null> {
+  return serialize(async () => {
+    const credential = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
+    if (!credential || await decryptToken(credential) !== token) return null;
+    const record = await transact<Omit<Credential, "key"> | undefined>("readonly", store => store.get(CONTENT));
+    if (!record || record.ciphertext.byteLength > MAX_CONTENT_BYTES + 32) return null;
+    try {
+      const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, record.ciphertext);
+      return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+    } catch { return null; } // Damaged cache must never prevent sign-in.
   });
 }
 
@@ -145,6 +193,6 @@ export function loadToken(): Promise<string | null> {
 
 export function clearToken(): Promise<void> {
   return serialize(async () => {
-    await transact("readwrite", (store) => store.delete(RECORD));
+    await transact("readwrite", (store) => store.clear());
   });
 }

@@ -256,6 +256,13 @@ export const english: Record<string, string> = {
   "Språkvalet sparas på den här enheten.":
     "Your language preference is saved on this device.",
   "Öppna på mobilen": "Open on mobile",
+  "Sparat projekt- och issueinnehåll raderas också från appens cache.":
+    "Saved repository and issue content is also removed from the app cache.",
+  "Visar sparad vy från {time}. Hämtar senaste från GitHub när anslutningen fungerar.":
+    "Showing a saved view from {time}. Fetching the latest from GitHub when connected.",
+  "okänd tid": "an unknown time",
+  "Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.":
+    "Content could not be cached. The board still works, but the next launch may need to fetch its content again.",
   "Okänd ålder": "Unknown age",
   "Skapad {age}": "Created {age}",
   "Skapad {time}": "Created {time}",
