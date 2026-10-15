@@ -14,7 +14,7 @@ test("demo works at desktop and mobile widths", async ({ page }) => {
   await page.getByRole("textbox", { name: "Sök issues" }).fill("");
   await page.screenshot({ path: "test-results/desktop.png", fullPage: true });
   await page.setViewportSize({ width: 2560, height: 1440 });
-  const bounds = await page.locator('main').boundingBox();
+  const bounds = await page.locator("main").boundingBox();
   expect(bounds!.x + bounds!.width).toBeGreaterThan(2500);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".repo-lane").first()).toBeVisible();
@@ -105,7 +105,10 @@ test("connect, select, fetch events, customize work label, preserve data on API 
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("500");
   await expect(page.locator(".issue-card")).toHaveCount(1);
-  await page.getByRole("button", { name: "Logga ut" }).click();
+  await page.getByRole("button", { name: "Logga ut", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Logga ut och ta bort token", exact: true })
+    .click();
   await expect(page.locator(".repo-lane")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Anslut GitHub" }),

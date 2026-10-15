@@ -37,7 +37,7 @@ describe("GitHub transport", () => {
     expect(mock).toHaveBeenCalledTimes(2);
     await expect(
       new GitHub("test-token").request("https://example.com/steal"),
-    ).rejects.toThrow("Ogiltig");
+    ).rejects.toThrow(/Ogiltig|Invalid/);
     expect(mock).toHaveBeenCalledTimes(2);
   });
   it("keeps active issues when timeline access fails and marks the timer unavailable", async () => {

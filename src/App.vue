@@ -15,6 +15,7 @@ import {
   Layers3,
   LayoutDashboard,
   LogOut,
+  QrCode,
   Plus,
   RefreshCw,
   Search,
@@ -22,6 +23,14 @@ import {
   X,
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
+import VersionUpdate from "./components/VersionUpdate.vue";
+import SidebarRepositories from "./components/SidebarRepositories.vue";
+import { summarizeLanes } from "./lib/sidebar";
+import { createIssueSync } from "./lib/sync";
+import LogoutDialog from "./components/LogoutDialog.vue";
+import MobileHandoff from "./components/MobileHandoff.vue";
+import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
+import { consumeHandoff, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
@@ -40,6 +49,7 @@ import {
   sortedIssues,
   workflow,
   type Lane,
+  type Issue,
   type Repo,
   type Rules,
 } from "./lib/model";
@@ -54,6 +64,9 @@ const busy = ref(false);
 const error = ref("");
 const now = ref(Date.now());
 const refreshed = ref<number | null>(null);
+const syncError = ref("");
+const lastSynced = new Map<string, number>();
+const lastFullSynced = new Map<string, number>();
 const query = ref("");
 const repoQuery = ref("");
 const picker = ref(false);
@@ -66,6 +79,12 @@ watch(picker, (open) => {
 });
 const visibleLimit = ref<Record<string, number>>({});
 const authBusy = ref(false);
+const restoring = ref(true);
+const savedSession = ref(false);
+const sessionToken = ref("");
+const logoutPrompt = ref(false);
+const logoutBusy = ref(false);
+const handoffOpen = ref(false);
 const notificationRepos = ref<string[]>([]);
 const notificationNotice = ref("");
 const permission = ref(notificationPermission());
@@ -109,19 +128,29 @@ async function toggleNotifications(repo: string) {
       if (!notificationRepos.value.includes(repo))
         notificationRepos.value.push(repo);
       save();
-      notificationNotice.value = t("Notiser på för {repo}. Nya stängningar meddelas medan dashboarden är öppen, även i en bakgrundsflik. Webbläsaren kan fördröja uppdateringar i bakgrunden.", { repo });
+      notificationNotice.value = t(
+        "Notiser på för {repo}. Nya stängningar meddelas medan dashboarden är öppen, även i en bakgrundsflik. Webbläsaren kan fördröja uppdateringar i bakgrunden.",
+        { repo },
+      );
     } else {
       notificationNotice.value =
         result === "unsupported"
-          ? t("Den här webbläsaren stöder inte notiser här. Använd en datorwebbläsare med HTTPS.")
+          ? t(
+              "Den här webbläsaren stöder inte notiser här. Använd en datorwebbläsare med HTTPS.",
+            )
           : result === "denied"
-            ? t("Notiser är blockerade. Tillåt notiser för den här webbplatsen i webbläsarens inställningar och försök igen.")
-            : t("Notiser aktiverades inte. Du kan försöka igen med klockan vid projektet.");
+            ? t(
+                "Notiser är blockerade. Tillåt notiser för den här webbplatsen i webbläsarens inställningar och försök igen.",
+              )
+            : t(
+                "Notiser aktiverades inte. Du kan försöka igen med klockan vid projektet.",
+              );
     }
   } catch {
     if (run === generation)
-      notificationNotice.value =
-        t("Webbläsaren kunde inte aktivera notiser. Kontrollera webbplatsens behörigheter.");
+      notificationNotice.value = t(
+        "Webbläsaren kunde inte aktivera notiser. Kontrollera webbplatsens behörigheter.",
+      );
   } finally {
     if (run === generation) notificationPending.value = null;
   }
@@ -136,8 +165,10 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
       (name) => name !== lane.repo.full_name,
     );
     save();
-    notificationNotice.value =
-      t("Notiser kunde inte visas och har stängts av för {repo}. Kontrollera webbläsarens stöd och behörigheter.", { repo: lane.repo.name });
+    notificationNotice.value = t(
+      "Notiser kunde inte visas och har stängts av för {repo}. Kontrollera webbläsarens stöd och behörigheter.",
+      { repo: lane.repo.name },
+    );
   }
 }
 function closureFeedback(result: Lane[]) {
@@ -168,8 +199,16 @@ const filteredRepos = computed(() =>
 );
 const columns = computed(() => [
   { key: "backlog", title: "Backlog", hint: t("Högst prioritet först") },
-  { key: "progress", title: "In progress", hint: t("Tid sedan arbetet startade") },
-  { key: "closed", title: "Closed", hint: t("Senaste 30 dagarna · nyast först") },
+  {
+    key: "progress",
+    title: "In progress",
+    hint: t("Tid sedan arbetet startade"),
+  },
+  {
+    key: "closed",
+    title: "Closed",
+    hint: t("Senaste 30 dagarna · nyast först"),
+  },
 ]);
 function laneIssues(lane: Lane) {
   return lane.issues.filter(
@@ -184,6 +223,15 @@ function laneIssues(lane: Lane) {
 function items(lane: Lane, key: string) {
   return sortedIssues(laneIssues(lane), key, rules.value[lane.repo.full_name]);
 }
+function commitLoader(repo: string) {
+  const client = api;
+  return client
+    ? (issue: Issue) => client.closingCommit(repo, issue)
+    : undefined;
+}
+const sidebarRepos = computed(() =>
+  summarizeLanes(lanes.value, rules.value, hideCoordination.value),
+);
 const stats = computed(() => {
   const all = lanes.value.flatMap((l) =>
     laneIssues(l).map((i) => ({ i, r: rules.value[l.repo.full_name] })),
@@ -212,7 +260,7 @@ function save() {
     /* App remains usable without storage. */
   }
 }
-async function connect(token: string) {
+async function connect(token: string, imported?: HandoffSettings) {
   if (authBusy.value) return;
   authBusy.value = true;
   error.value = "";
@@ -220,7 +268,17 @@ async function connect(token: string) {
     const next = new GitHub(token);
     const identity = await next.user();
     const available = await next.repos();
+    let storageWarning = "";
+    try {
+      await saveToken(token);
+      savedSession.value = true;
+    } catch (cause) {
+      storageWarning = message(cause);
+    }
     generation++;
+    lastSynced.clear();
+    lastFullSynced.clear();
+    sessionToken.value = token;
     api = next;
     user.value = identity;
     repos.value = available;
@@ -255,8 +313,17 @@ async function connect(token: string) {
     } catch {
       /* Ignore invalid preferences. */
     }
+    if (imported) {
+      const accessible = new Set(available.map((repo) => repo.full_name));
+      selected.value = imported.selected.filter((name) => accessible.has(name));
+      rules.value = Object.fromEntries(
+        Object.entries(imported.rules).filter(([name]) => accessible.has(name)),
+      );
+      save();
+    }
     if (selected.value.length) await refresh();
     else picker.value = true;
+    if (storageWarning) error.value = storageWarning;
   } catch (e) {
     error.value = message(e);
   } finally {
@@ -264,9 +331,9 @@ async function connect(token: string) {
   }
 }
 function message(e: unknown) {
-  return e instanceof Error ? e.message : t("Något gick fel. Försök igen.");
+  return e instanceof Error ? t(e.message) : t("Något gick fel. Försök igen.");
 }
-async function refresh() {
+async function refresh(incremental = false) {
   if (!api || busy.value) return;
   const client = api;
   const run = generation;
@@ -279,7 +346,35 @@ async function refresh() {
       selected.value.includes(r.full_name),
     )) {
       try {
-        result.push(await client.lane(repo, rules.value[repo.full_name] || {}));
+        const started = Date.now();
+        const previous = lanes.value.find(
+          (lane) => lane.repo.full_name === repo.full_name,
+        );
+        const since = lastSynced.get(repo.full_name);
+        result.push(
+          incremental &&
+            previous &&
+            !previous.error &&
+            since &&
+            (lastFullSynced.get(repo.full_name) || 0) > started - 30 * 60000
+            ? await client.syncLane(
+                previous,
+                rules.value[repo.full_name] || {},
+                since,
+              )
+            : await client.lane(repo, rules.value[repo.full_name] || {}),
+        );
+        if (run === generation) {
+          lastSynced.set(repo.full_name, started);
+          if (
+            !incremental ||
+            !previous ||
+            previous.error ||
+            !since ||
+            (lastFullSynced.get(repo.full_name) || 0) <= started - 30 * 60000
+          )
+            lastFullSynced.set(repo.full_name, started);
+        }
       } catch (e) {
         const old = lanes.value.find(
           (l) => l.repo.full_name === repo.full_name,
@@ -298,6 +393,8 @@ async function refresh() {
       closureFeedback(result);
       lanes.value = result;
       refreshed.value = Date.now();
+      if (incremental && result.some((lane) => lane.error))
+        throw new Error(result.find((lane) => lane.error)!.error);
     }
   } finally {
     if (run === generation) busy.value = false;
@@ -323,7 +420,28 @@ function showDemo() {
   refreshed.value = Date.now();
   error.value = "";
 }
+async function confirmLogout() {
+  if (logoutBusy.value || authBusy.value) return;
+  logoutBusy.value = true;
+  try {
+    await clearToken();
+    logoutPrompt.value = false;
+    savedSession.value = false;
+    logout();
+  } catch (cause) {
+    error.value = message(cause);
+  } finally {
+    logoutBusy.value = false;
+  }
+}
 function logout() {
+  tokenInput.value = "";
+  tokenPanel.value = false;
+  lastSynced.clear();
+  lastFullSynced.clear();
+  syncError.value = "";
+  sessionToken.value = "";
+  handoffOpen.value = false;
   generation++;
   clearClosureFeedback();
   notificationRepos.value = [];
@@ -392,30 +510,124 @@ function trapFocus(event: KeyboardEvent) {
 onMounted(() => document.addEventListener("keydown", trapFocus));
 onUnmounted(() => document.removeEventListener("keydown", trapFocus));
 const tick = setInterval(() => (now.value = Date.now()), 1000);
-const poll = setInterval(() => {
-  if (
+async function refreshActive() {
+  if (!api || busy.value) return;
+  const client = api,
+    run = generation;
+  busy.value = true;
+  const result = lanes.value.map((lane) => ({
+    ...lane,
+    issues: [...lane.issues],
+  }));
+  let failure: unknown = null;
+  const tasks = result.flatMap((lane) =>
+    lane.issues
+      .filter(
+        (issue) =>
+          column(issue, rules.value[lane.repo.full_name]) === "progress" &&
+          (!hideCoordination.value || !isCoordination(issue)),
+      )
+      .map((issue) => ({ lane, issue })),
+  );
+  let cursor = 0;
+  try {
+    await Promise.all(
+      Array.from({ length: Math.min(3, tasks.length) }, async () => {
+        while (cursor < tasks.length) {
+          const { lane, issue } = tasks[cursor++]!;
+          try {
+            const updated = await client.activeIssue(
+              lane.repo,
+              issue,
+              rules.value[lane.repo.full_name] || {},
+            );
+            const index = lane.issues.findIndex(
+              (item) => item.id === updated.id,
+            );
+            if (index >= 0) lane.issues[index] = updated;
+            lane.timerWarning = lane.issues.some(
+              (item) =>
+                column(item, rules.value[lane.repo.full_name]) === "progress" &&
+                item.timerError,
+            );
+          } catch (cause) {
+            lane.error = message(cause);
+            failure = cause;
+          }
+        }
+      }),
+    );
+    if (run === generation) {
+      closureFeedback(result);
+      lanes.value = result;
+      refreshed.value = Date.now();
+    }
+    if (failure) throw failure;
+  } finally {
+    if (run === generation) busy.value = false;
+  }
+}
+const sync = createIssueSync({
+  canSync: () =>
+    Boolean(api) &&
+    loggedIn.value &&
+    selected.value.length > 0 &&
+    !authBusy.value &&
+    !restoring.value &&
+    !picker.value &&
+    !editing.value &&
+    navigator.onLine &&
     (!document.hidden ||
       (notificationPermission() === "granted" &&
-        selected.value.some((repo) =>
-          notificationRepos.value.includes(repo),
-        ))) &&
-    loggedIn.value &&
-    !picker.value &&
-    !editing.value
-  )
-    void refresh();
-}, 60000);
+        selected.value.some((repo) => notificationRepos.value.includes(repo)))),
+  hasActiveIssues: () =>
+    lanes.value.some((lane) =>
+      lane.issues.some(
+        (issue) =>
+          column(issue, rules.value[lane.repo.full_name]) === "progress" &&
+          (!hideCoordination.value || !isCoordination(issue)),
+      ),
+    ),
+  refreshActive,
+  reconcile: () => refresh(true),
+  retryAfterMs: () => api?.retryAfterMs(),
+  onError: (cause) => {
+    syncError.value = message(cause);
+  },
+  onSuccess: () => {
+    syncError.value = "";
+  },
+});
+onMounted(() => sync.start());
+
 onUnmounted(() => {
   clearInterval(tick);
-  clearInterval(poll);
+  sync.stop();
   clearClosureFeedback();
 });
 onMounted(async () => {
   try {
-    const token = await callback();
-    if (token) await connect(token);
+    // Remove recognized credential fragments before authentication or network calls.
+    const incoming = consumeHandoff();
+    if (incoming) {
+      await connect(incoming.token, incoming);
+      return;
+    }
+    const oauthToken = await callback();
+    if (oauthToken) {
+      await connect(oauthToken);
+      return;
+    }
+    const remembered = await loadToken();
+    if (remembered) {
+      savedSession.value = true;
+      await connect(remembered);
+    }
   } catch (e) {
+    if (e instanceof VaultError) savedSession.value = true;
     error.value = message(e);
+  } finally {
+    restoring.value = false;
   }
 });
 </script>
@@ -423,33 +635,27 @@ onMounted(async () => {
   <aside class="sidebar">
     <a class="brand" href="." :aria-label="t('Issueflow startsida')"
       ><span class="brand-icon"><Layers3 :size="23" /></span
-      ><span>issueflow<span class="brand-dot">.</span></span></a
+      ><span class="brand-copy"
+        >issueflow<span class="brand-dot">.</span
+        ><small>a github projekt dashboard</small></span
+      ></a
     ><span class="nav-caption">WORKSPACE</span>
     <div class="nav-item active">
       <LayoutDashboard :size="18" /> {{ t("Översikt") }}
       <span class="nav-count">{{ lanes.length }}</span>
     </div>
-    <div class="sidebar-projects">
-      <span class="nav-caption">REPOSITORIES</span
-      ><button
-        v-if="loggedIn"
-        class="sidebar-add"
-        @click="picker = true"
-        :aria-label="t('Välj repositories')"
-      >
-        <Plus :size="16" /></button
-      ><a
-        v-for="lane in lanes"
-        :key="lane.repo.id"
-        class="repo-nav"
-        :href="'#repo-' + lane.repo.id"
-        ><span class="repo-dot" />{{ lane.repo.name }}</a
-      >
-      <p v-if="!lanes.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
-    </div>
+    <SidebarRepositories
+      :repos="sidebarRepos"
+      :now="now"
+      :can-select="loggedIn"
+      @select="picker = true"
+    />
     <div class="sidebar-footer">
       <Github :size="19" />
-      <div>{{ t("Byggt för ditt flöde") }}<small>{{ t("Drivs av GitHub Issues") }}</small></div>
+      <div>
+        {{ t("Byggt för ditt flöde")
+        }}<small>{{ t("Drivs av GitHub Issues") }}</small>
+      </div>
       <ExternalLink :size="13" />
     </div>
   </aside>
@@ -461,17 +667,32 @@ onMounted(async () => {
       <div class="topbar-right">
         <LanguageSettings />
         <InstallApp />
+        <button
+          v-if="user && sessionToken"
+          class="button small handoff-button"
+          :aria-label="t('Öppna på mobilen')"
+          :title="t('Öppna på mobilen')"
+          @click="handoffOpen = true"
+        >
+          <QrCode :size="16" /><span>{{ t("Mobil") }}</span>
+        </button>
         <span class="connection"
           ><i :class="{ connected: loggedIn }" />{{
-            loggedIn ? t("GitHub anslutet") : isDemo ? t("Demoläge") : t("Ej ansluten")
+            loggedIn
+              ? t("GitHub anslutet")
+              : isDemo
+                ? t("Demoläge")
+                : t("Ej ansluten")
           }}</span
-        ><template v-if="user"
-          ><img :src="user.avatar_url" alt="" class="avatar" /><span
+        ><template v-if="user || savedSession"
+          ><img v-if="user" :src="user.avatar_url" alt="" class="avatar" /><span
             class="username"
+            v-if="user"
             >{{ user.login }}</span
           ><button
             class="icon-button"
-            @click="logout"
+            @click="logoutPrompt = true"
+            :disabled="authBusy || restoring"
             :aria-label="t('Logga ut')"
             :title="t('Logga ut')"
           >
@@ -506,14 +727,26 @@ onMounted(async () => {
           <X :size="16" />
         </button>
       </div>
+      <div v-if="restoring" class="notice" role="status">
+        {{ t("Återställer sparad inloggning…") }}
+      </div>
       <template v-if="!loggedIn && !isDemo"
         ><div class="welcome">
           <span class="eyebrow"
-            ><span class="repo-dot" /> {{ t("MINDRE LETANDE. MER FRAMÅT.") }}</span
+            ><span class="repo-dot" />
+            {{ t("MINDRE LETANDE. MER FRAMÅT.") }}</span
           >
-          <h1>{{ t("Alla dina projekt.") }}<br /><span>{{ t("Ett tydligt flöde.") }}</span></h1>
+          <h1>
+            {{ t("Alla dina projekt.") }}<br /><span>{{
+              t("Ett tydligt flöde.")
+            }}</span>
+          </h1>
           <p>
-            {{ t("Från första idén till sista fixen. Följ dina GitHub-issues i en samlad vy som anpassar sig efter hur du jobbar.") }}
+            {{
+              t(
+                "Från första idén till sista fixen. Följ dina GitHub-issues i en samlad vy som anpassar sig efter hur du jobbar.",
+              )
+            }}
           </p>
           <div class="welcome-actions">
             <button v-if="oauthReady" class="button primary" @click="oauth">
@@ -527,7 +760,11 @@ onMounted(async () => {
             </button>
           </div>
           <p class="privacy-note">
-            {{ t("Dina issues hämtas direkt från GitHub. Inga projektdata sparas på en server.") }}
+            {{
+              t(
+                "Dina issues hämtas direkt från GitHub. Inga projektdata sparas på en server.",
+              )
+            }}
           </p>
           <form
             v-if="tokenPanel"
@@ -536,7 +773,18 @@ onMounted(async () => {
           >
             <label for="token">GitHub personal access token</label>
             <p>
-              {{ t("Använd en fine-grained token med läsrättighet till Issues och Metadata för de repositories du vill följa. Tokenen sparas krypterat i webbläsarens databas (IndexedDB) tills du loggar ut.") }}
+              {{
+                t(
+                  "Använd en fine-grained token med läsrättighet till Issues och Metadata för de repositories du vill följa. Tokenen sparas krypterat i webbläsarens databas (IndexedDB) tills du loggar ut.",
+                )
+              }}
+            </p>
+            <p>
+              {{
+                t(
+                  "För commit-information i privata projekt behövs även läsrättighet till Contents och Pull requests.",
+                )
+              }}
             </p>
             <input
               id="token"
@@ -597,11 +845,19 @@ onMounted(async () => {
         ><section class="page-heading">
           <div>
             <div class="eyebrow">{{ t("DITT ARBETE, SAMLAT") }}</div>
-            <h1>{{ t("Projektöversikt") }}<span class="heading-dot">.</span></h1>
-            <p>{{ t("Från backlog till klart. Håll koll på vad som rör sig.") }}</p>
+            <h1>
+              {{ t("Projektöversikt") }}<span class="heading-dot">.</span>
+            </h1>
+            <p>
+              {{ t("Från backlog till klart. Håll koll på vad som rör sig.") }}
+            </p>
           </div>
           <div class="heading-actions">
-            <button class="button" :disabled="busy || isDemo" @click="refresh">
+            <button
+              class="button"
+              :disabled="busy || isDemo"
+              @click="refresh()"
+            >
               <RefreshCw :size="15" :class="{ spinning: busy }" />{{
                 busy ? t("Hämtar…") : t("Uppdatera")
               }}</button
@@ -616,8 +872,11 @@ onMounted(async () => {
           </div>
         </section>
         <div v-if="isDemo" class="notice demo-notice">
-          <span
-            >{{ t("Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.") }}</span
+          <span>{{
+            t(
+              "Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.",
+            )
+          }}</span
           ><button class="text-button" @click="logout">
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
@@ -627,7 +886,10 @@ onMounted(async () => {
             <span class="stat-icon repos"><Layers3 :size="20" /></span>
             <div>
               <span class="stat-label">Repositories</span
-              ><strong>{{ lanes.length }}<small>{{ t("i din översikt") }}</small></strong>
+              ><strong
+                >{{ lanes.length
+                }}<small>{{ t("i din översikt") }}</small></strong
+              >
             </div>
           </div>
           <div class="stat">
@@ -636,14 +898,18 @@ onMounted(async () => {
             /></span>
             <div>
               <span class="stat-label">{{ t("Öppna issues") }}</span
-              ><strong>{{ stats.open }}<small>{{ t("att ta vidare") }}</small></strong>
+              ><strong
+                >{{ stats.open }}<small>{{ t("att ta vidare") }}</small></strong
+              >
             </div>
           </div>
           <div class="stat">
             <span class="stat-icon progress"><Activity :size="20" /></span>
             <div>
               <span class="stat-label">{{ t("Pågående") }}</span
-              ><strong>{{ stats.progress }}<small>{{ t("just nu") }}</small></strong>
+              ><strong
+                >{{ stats.progress }}<small>{{ t("just nu") }}</small></strong
+              >
             </div>
           </div>
           <div class="stat">
@@ -651,7 +917,8 @@ onMounted(async () => {
             <div>
               <span class="stat-label">{{ t("Stängda") }}</span
               ><strong
-                >{{ stats.closed }}<small>{{ t("senaste 30 dagarna") }}</small></strong
+                >{{ stats.closed
+                }}<small>{{ t("senaste 30 dagarna") }}</small></strong
               >
             </div>
           </div>
@@ -663,7 +930,8 @@ onMounted(async () => {
               :aria-label="t('Sök issues')"
               :placeholder="t('Sök issues, labels eller nummer…')" /></label
           ><label class="coord-toggle"
-            ><input type="checkbox" v-model="hideCoordination" /> {{ t("Dölj koordinationsärenden") }}</label
+            ><input type="checkbox" v-model="hideCoordination" />
+            {{ t("Dölj koordinationsärenden") }}</label
           ><span class="updated"
             ><i />{{
               refreshed
@@ -673,7 +941,16 @@ onMounted(async () => {
                     minute: "2-digit",
                   })
                 : t("Väntar på data")
-            }}<span v-if="loggedIn">{{ t(" · varje minut") }}</span></span
+            }}<span
+              v-if="loggedIn"
+              :title="
+                syncError ||
+                t(
+                  'Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.',
+                )
+              "
+              >{{ t(" · adaptiv synk") }}</span
+            ></span
           >
         </div>
         <div v-if="busy && !lanes.length" class="empty-state">
@@ -684,7 +961,9 @@ onMounted(async () => {
         <div v-else-if="!lanes.length" class="empty-state">
           <Layers3 :size="32" />
           <h2>{{ t("Ge dina projekt en plats") }}</h2>
-          <p>{{ t("Välj vilka repositories du vill följa i din översikt.") }}</p>
+          <p>
+            {{ t("Välj vilka repositories du vill följa i din översikt.") }}
+          </p>
           <button class="button primary" @click="picker = true">
             <Plus :size="16" /> {{ t("Välj repositories") }}
           </button>
@@ -707,9 +986,9 @@ onMounted(async () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     >{{ lane.repo.name }}<ArrowRight :size="14" /></a
-                  ><span v-if="lane.repo.private" class="private-badge"
-                    >{{ t("Privat") }}</span
-                  >
+                  ><span v-if="lane.repo.private" class="private-badge">{{
+                    t("Privat")
+                  }}</span>
                 </h2>
                 <span class="repo-owner"
                   >{{ lane.repo.owner.login }} <span> / </span>
@@ -739,7 +1018,9 @@ onMounted(async () => {
                 /><BellOff v-else :size="15" /><span
                   >{{ t("Notiser") }}
                   {{
-                    notificationsEnabled(lane.repo.full_name) ? t("på") : t("av")
+                    notificationsEnabled(lane.repo.full_name)
+                      ? t("på")
+                      : t("av")
                   }}</span
                 >
               </button>
@@ -761,7 +1042,11 @@ onMounted(async () => {
             {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}
           </div>
           <div v-if="lane.timerWarning" class="notice">
-            {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}
+            {{
+              t(
+                "Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.",
+              )
+            }}
           </div>
           <p class="mobile-swipe-hint">
             {{ t("Svep för Backlog, In progress och Closed →") }}
@@ -795,6 +1080,9 @@ onMounted(async () => {
                   :issue="issue"
                   :rules="rules[lane.repo.full_name] || {}"
                   :now="now"
+                  :load-commit="
+                    isDemo ? undefined : commitLoader(lane.repo.full_name)
+                  "
                   :demo="isDemo"
                   :celebrate="
                     recentClosures.has(closureKey(lane.repo.full_name, issue))
@@ -830,7 +1118,9 @@ onMounted(async () => {
           </div>
         </section>
         <footer class="board-footer">
-          <span><Github :size="14" /> {{ t("Dina repositories. Ditt arbetssätt.") }}</span
+          <span
+            ><Github :size="14" />
+            {{ t("Dina repositories. Ditt arbetssätt.") }}</span
           ><span>{{
             isDemo
               ? t("Fiktiva exempeldata")
@@ -853,11 +1143,17 @@ onMounted(async () => {
           <span class="eyebrow">{{ t("DIN ÖVERSIKT") }}</span>
           <h2 id="picker-title">{{ t("Välj repositories") }}</h2>
         </div>
-        <button class="icon-button" @click="picker = false" :aria-label="t('Stäng')">
+        <button
+          class="icon-button"
+          @click="picker = false"
+          :aria-label="t('Stäng')"
+        >
           <X :size="20" />
         </button>
       </div>
-      <p>{{ t("En swimlane per projekt. Ditt val sparas på den här enheten.") }}</p>
+      <p>
+        {{ t("En swimlane per projekt. Ditt val sparas på den här enheten.") }}
+      </p>
       <label class="search"
         ><Search :size="17" /><input
           v-model="repoQuery"
@@ -873,10 +1169,16 @@ onMounted(async () => {
             @change="toggleRepo(repo.full_name)"
           /><span
             ><strong>{{ repo.full_name }}</strong
-            ><small>{{ repo.description || t("Ingen beskrivning") }}</small></span
-          ><span v-if="repo.private" class="private-badge">{{ t("Privat") }}</span></label
+            ><small>{{
+              repo.description || t("Ingen beskrivning")
+            }}</small></span
+          ><span v-if="repo.private" class="private-badge">{{
+            t("Privat")
+          }}</span></label
         >
-        <p v-if="!filteredRepos.length">{{ t("Inga repositories matchar sökningen.") }}</p>
+        <p v-if="!filteredRepos.length">
+          {{ t("Inga repositories matchar sökningen.") }}
+        </p>
       </div>
       <div class="modal-footer">
         <span>{{ pendingSelected.length }}{{ t(" valda") }}</span
@@ -907,7 +1209,10 @@ onMounted(async () => {
         </button>
       </div>
       <p>
-        {{ editing }} {{ t("· Lämna tomt för automatisk detektering. Ange exakta labelnamn.") }}
+        {{ editing }}
+        {{
+          t("· Lämna tomt för automatisk detektering. Ange exakta labelnamn.")
+        }}
       </p>
       <label
         v-for="field in [
@@ -919,7 +1224,9 @@ onMounted(async () => {
         :key="field[0]"
         class="rule-field"
         >{{ t(field[1])
-        }}<input v-model="rules[editing]![field[0]]" :placeholder="t('Automatiskt')"
+        }}<input
+          v-model="rules[editing]![field[0]]"
+          :placeholder="t('Automatiskt')"
       /></label>
       <div class="modal-footer">
         <span>{{ t("Gäller bara din vy") }}</span
@@ -927,4 +1234,18 @@ onMounted(async () => {
       </div>
     </form>
   </div>
+  <VersionUpdate />
+  <LogoutDialog
+    :open="logoutPrompt"
+    :busy="logoutBusy"
+    @cancel="logoutPrompt = false"
+    @confirm="confirmLogout"
+  />
+  <MobileHandoff
+    v-if="handoffOpen && sessionToken"
+    :token="sessionToken"
+    :selected="selected"
+    :rules="rules"
+    @close="handoffOpen = false"
+  />
 </template>

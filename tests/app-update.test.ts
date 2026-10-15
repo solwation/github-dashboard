@@ -7,12 +7,14 @@ class Worker extends EventTarget {
 function fixture(initialController = true) {
   const worker = new Worker();
   const registration = Object.assign(new EventTarget(), {
-    waiting: worker as Worker | null,
+    waiting: initialController ? (worker as Worker | null) : null,
     installing: null as Worker | null,
     update: vi.fn().mockResolvedValue(undefined),
   });
   const serviceWorker = Object.assign(new EventTarget(), {
-    controller: initialController ? new Worker() : null,
+    controller: initialController
+      ? Object.assign(new Worker(), { state: "activated" })
+      : null,
     getRegistration: vi.fn().mockResolvedValue(registration),
     ready: new Promise(() => {}),
   });
@@ -27,7 +29,21 @@ function fixture(initialController = true) {
     reload,
   });
   controller.start();
-  return { ...controller, serviceWorker, registration, worker, reload, events, offline() { online = false; }, online() { online = true; events.dispatchEvent(new Event("online")); } };
+  return {
+    ...controller,
+    serviceWorker,
+    registration,
+    worker,
+    reload,
+    events,
+    offline() {
+      online = false;
+    },
+    online() {
+      online = true;
+      events.dispatchEvent(new Event("online"));
+    },
+  };
 }
 const controllers: ReturnType<typeof fixture>[] = [];
 function setup(initialController = true) {
@@ -35,7 +51,10 @@ function setup(initialController = true) {
   controllers.push(controller);
   return controller;
 }
-afterEach(() => { for (const controller of controllers.splice(0)) controller.stop(); vi.useRealTimers(); });
+afterEach(() => {
+  for (const controller of controllers.splice(0)) controller.stop();
+  vi.useRealTimers();
+});
 describe("app version updates", () => {
   it("offers a waiting update for ten seconds, activates it, then reloads exactly once", async () => {
     vi.useFakeTimers();
@@ -46,9 +65,20 @@ describe("app version updates", () => {
     expect(app.seconds.value).toBe(1);
     expect(app.worker.postMessage).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+    expect(app.worker.postMessage).toHaveBeenCalledWith({
+      type: "SKIP_WAITING",
+    });
     expect(app.reload).not.toHaveBeenCalled();
+    app.registration.waiting = null;
+    app.serviceWorker.controller = app.worker;
+    app.worker.state = "activating";
     app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    expect(app.reload).not.toHaveBeenCalled();
+    app.worker.state = "activated";
+    app.worker.dispatchEvent(new Event("statechange"));
+    app.registration.waiting = null;
+    app.serviceWorker.controller = app.worker;
+    app.worker.state = "activated";
     app.serviceWorker.dispatchEvent(new Event("controllerchange"));
     expect(app.reload).toHaveBeenCalledTimes(1);
   });
@@ -60,6 +90,9 @@ describe("app version updates", () => {
     expect(app.applying.value).toBe(true);
     expect(app.worker.postMessage).toHaveBeenCalledTimes(1);
     expect(app.reload).not.toHaveBeenCalled();
+    app.registration.waiting = null;
+    app.serviceWorker.controller = app.worker;
+    app.worker.state = "activated";
     app.serviceWorker.dispatchEvent(new Event("controllerchange"));
     expect(app.reload).toHaveBeenCalledTimes(1);
   });
@@ -69,6 +102,8 @@ describe("app version updates", () => {
     app.registration.waiting = null;
     await vi.advanceTimersByTimeAsync(0);
     expect(app.available.value).toBe(false);
+    app.serviceWorker.controller = app.worker;
+    app.worker.state = "activated";
     app.serviceWorker.dispatchEvent(new Event("controllerchange"));
     expect(app.available.value).toBe(true);
     expect(app.reload).not.toHaveBeenCalled();
@@ -80,9 +115,24 @@ describe("app version updates", () => {
     vi.useFakeTimers();
     const app = setup(false);
     await vi.advanceTimersByTimeAsync(0);
+    app.serviceWorker.controller = app.worker;
+    app.worker.state = "activated";
     app.serviceWorker.dispatchEvent(new Event("controllerchange"));
     await vi.advanceTimersByTimeAsync(10_000);
     expect(app.available.value).toBe(false);
+    expect(app.reload).not.toHaveBeenCalled();
+  });
+  it("discovers a waiting update after the first controller claim", async () => {
+    vi.useFakeTimers();
+    const app = setup(false);
+    await vi.advanceTimersByTimeAsync(0);
+    app.registration.waiting = app.worker;
+    app.serviceWorker.controller = Object.assign(new Worker(), {
+      state: "activated",
+    });
+    app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    expect(app.available.value).toBe(true);
+    expect(app.seconds.value).toBe(10);
     expect(app.reload).not.toHaveBeenCalled();
   });
   it("uses the deadline after a suspended tab and delays offline updates", async () => {

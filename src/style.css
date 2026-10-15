@@ -1499,3 +1499,35 @@ h1 {
     display: none;
   }
 }
+#language-preference {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px;
+  border: 1px solid #dce3e5;
+  border-radius: 5px;
+  color: inherit;
+  background: white;
+  font: inherit;
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .handoff-button span {
+    display: none;
+  }
+}
+.brand-copy {
+  display: block;
+  line-height: 1.1;
+}
+.brand-copy small {
+  display: block;
+  margin-top: 7px;
+  color: #7c8c8b;
+  font:
+    400 8px/1.2 "DM Sans",
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}

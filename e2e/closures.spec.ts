@@ -70,7 +70,11 @@ async function setup(page: Page) {
           closed_at: "2026-01-01T12:00:00Z",
         },
       ]
-        .filter((issue) => issue.state === url.searchParams.get("state"))
+        .filter(
+          (issue) =>
+            url.searchParams.get("state") === "all" ||
+            issue.state === url.searchParams.get("state"),
+        )
         .map((issue) => ({
           ...issue,
           created_at: "2026-01-01",
@@ -127,19 +131,23 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   await alpha.click();
   await expect(alpha).toBeChecked();
   await expect(beta).not.toBeChecked();
-  const closedAt = "2026-10-15T12:34:56Z";
+  const closedAt = new Date(Date.now() - 5000).toISOString();
   states.alpha = { state: "closed", closed_at: closedAt };
   states.beta = { state: "closed", closed_at: closedAt };
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
   await expect(page.locator(".just-closed")).toHaveCount(2);
-  await expect(page.locator("time").first()).toHaveAttribute(
+  await expect(page.locator(".closed-date").first()).toHaveAttribute(
     "datetime",
     closedAt,
   );
-  await expect(page.locator("time").first()).toContainText(/\d{2}:\d{2}/);
+  await expect(page.locator(".closed-date").first()).toContainText(
+    /sekund.*sedan| min sedan/,
+  );
   await expect.poll(() => count(page)).toBe(1);
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Uppdatera", exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Uppdatera", exact: true }),
+  ).toBeEnabled();
   expect(await count(page)).toBe(1);
   // Poll even when hidden if a selected project has notifications enabled.
   await page.evaluate(() =>
@@ -149,20 +157,23 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
     }),
   );
   states.alpha = { state: "closed", closed_at: "2026-10-15T13:45:56Z" };
-  await page.clock.fastForward(60000);
+  await page.clock.fastForward(301000);
   await expect.poll(() => count(page)).toBe(2);
   await alpha.click();
   await expect(alpha).not.toBeChecked();
   states.alpha = { state: "closed", closed_at: "2026-10-15T14:45:56Z" };
   await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
-  await expect(page.locator("time").first()).toHaveAttribute(
+  await expect(page.locator(".closed-date").first()).toHaveAttribute(
     "datetime",
     states.alpha.closed_at!,
   );
   expect(await count(page)).toBe(2);
   await beta.click();
   await expect(beta).toBeChecked();
-  await page.getByRole("button", { name: "Logga ut" }).click();
+  await page.getByRole("button", { name: "Logga ut", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Logga ut och ta bort token", exact: true })
+    .click();
   await page.getByRole("button", { name: "Anslut GitHub" }).click();
   await page.getByLabel("GitHub personal access token").fill("test-only");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
