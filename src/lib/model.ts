@@ -7,6 +7,8 @@ export interface Issue {
   id: number;
   number: number;
   title: string;
+  body?: string | null;
+  comments?: number;
   html_url: string;
   state: string;
   created_at: string;

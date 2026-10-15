@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IssueDetails from "./IssueDetails.vue";
 import { useLanguage } from "../lib/i18n";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
@@ -108,6 +109,7 @@ const visibleLabels = computed(() =>
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </div>
+    <IssueDetails :body="issue.body" :comments="issue.comments" />
     <div v-if="col !== 'backlog' || issue.assignees.length" class="card-bottom">
       <span
         v-if="col === 'progress'"
@@ -166,6 +168,7 @@ const visibleLabels = computed(() =>
       <span v-else-if="commitState === 'loaded'">{{ t("Ingen stängande commit kopplad") }}</span>
       <template v-else-if="commitState === 'error'">
         <span>{{ t("Stängande commit kunde inte hämtas.") }}</span>
+        <span>{{ t("Kontrollera att tokenen har läsrättighet till Contents och Pull requests för commit-information.") }}</span>
         <button type="button" @click="loadClosingCommit">{{ t("Försök igen") }}</button>
       </template>
     </div>
