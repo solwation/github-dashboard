@@ -338,6 +338,16 @@ export const english: Record<string, string> = {
     "Could not save your sign-in securely in the browser. Please try again.",
   "Den sparade inloggningen kunde inte låsas upp. Logga in igen.":
     "Could not unlock the saved sign-in. Sign in again.",
+  "Instruktioner för issueflödet": "Issue workflow instructions",
+  "Dela den publika guiden med din AI-assistent eller lägg den i ditt projekt. Ingen inloggning krävs.":
+    "Share the public guide with your AI assistant or add it to your project. No sign-in is required.",
+  "Hänvisning för din AI-assistent": "Reference for your AI assistant",
+  "Läs och följ instruktionerna på {url} när du arbetar med issues i det här projektet.":
+    "Read and follow the instructions at {url} when working with issues in this project.",
+  "Kopiera hänvisning": "Copy reference",
+  "Ladda ned ISSUEFLOW.md": "Download ISSUEFLOW.md",
+  "Hänvisningen har kopierats.": "The reference has been copied.",
+  "Kopiera den markerade hänvisningen manuellt.": "Copy the selected reference manually.",
   "Ny version tillgänglig": "New version available",
   "Uppdaterar om {seconds} sekunder…": "Updating in {seconds} seconds…",
   "Uppdaterar…": "Updating…",

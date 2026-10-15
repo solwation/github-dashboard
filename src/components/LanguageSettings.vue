@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import WorkflowGuide from "./WorkflowGuide.vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
@@ -48,6 +49,7 @@ function change(event: Event) {
     <button v-if="canViewProblems" class="button" @click="dialog?.close(); emit('openProblems')">
       {{ t("Problemrapport") }}<span v-if="problemCount">({{ problemCount }})</span>
     </button>
+    <WorkflowGuide />
     <div class="modal-footer">
       <button class="button primary" @click="dialog?.close()">
         {{ t("Klart") }}
