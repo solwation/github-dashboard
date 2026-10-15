@@ -21,6 +21,7 @@ const props = defineProps<{
   now: number;
   rules: Rules;
   demo?: boolean;
+  celebrate?: boolean;
 }>();
 const col = computed(() => column(props.issue, props.rules));
 const rank = computed(() => priority(props.issue, props.rules));
@@ -29,7 +30,10 @@ const visibleLabels = computed(() =>
 );
 </script>
 <template>
-  <article class="issue-card" :class="col">
+  <article
+    class="issue-card"
+    :class="[col, { 'just-closed': celebrate && col === 'closed' }]"
+  >
     <div class="card-top">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
@@ -76,14 +80,25 @@ const visibleLabels = computed(() =>
         ><Clock3 :size="13" />{{
           issue.startedAt ? duration(issue.startedAt, now) : "Starttid okänd"
         }}</span
-      ><span v-else-if="col === 'closed'" class="closed-date"
+      ><time
+        v-else-if="col === 'closed' && issue.closed_at"
+        class="closed-date"
+        :datetime="issue.closed_at"
+        :title="
+          new Date(issue.closed_at).toLocaleString('sv-SE', {
+            dateStyle: 'full',
+            timeStyle: 'long',
+          })
+        "
         >Stängd
         {{
-          new Date(issue.closed_at!).toLocaleDateString("sv-SE", {
+          new Date(issue.closed_at).toLocaleString("sv-SE", {
             month: "short",
             day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           })
-        }}</span
+        }}</time
       ><span class="assignees"
         ><img
           v-for="person in issue.assignees.slice(0, 3)"

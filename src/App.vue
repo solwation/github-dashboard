@@ -2,6 +2,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Activity,
+  Bell,
+  BellOff,
   ArrowRight,
   Check,
   ChevronDown,
@@ -22,6 +24,12 @@ import Github from "./components/GithubIcon.vue";
 import { GitHub } from "./lib/github";
 import { callback, login, oauthReady } from "./lib/auth";
 import { demo } from "./lib/demo";
+import { ClosureTracker, closureKey } from "./lib/closures";
+import {
+  notificationPermission,
+  requestNotifications,
+  notifyClosure,
+} from "./lib/notifications";
 import {
   column,
   isCoordination,
@@ -54,6 +62,95 @@ watch(picker, (open) => {
 });
 const visibleLimit = ref<Record<string, number>>({});
 const authBusy = ref(false);
+const notificationRepos = ref<string[]>([]);
+const notificationNotice = ref("");
+const permission = ref(notificationPermission());
+const notificationPending = ref<string | null>(null);
+const recentClosures = ref(new Set<string>());
+const closureTracker = new ClosureTracker();
+const celebrationTimers = new Set<ReturnType<typeof setTimeout>>();
+function clearClosureFeedback() {
+  closureTracker.clear();
+  recentClosures.value.clear();
+  for (const timer of celebrationTimers) clearTimeout(timer);
+  celebrationTimers.clear();
+  notificationNotice.value = "";
+}
+function notificationsEnabled(repo: string) {
+  return (
+    permission.value === "granted" && notificationRepos.value.includes(repo)
+  );
+}
+async function toggleNotifications(repo: string) {
+  if (notificationPending.value) return;
+  notificationNotice.value = "";
+  permission.value = notificationPermission();
+  if (
+    notificationRepos.value.includes(repo) &&
+    permission.value === "granted"
+  ) {
+    notificationRepos.value = notificationRepos.value.filter(
+      (name) => name !== repo,
+    );
+    save();
+    return;
+  }
+  const run = generation;
+  notificationPending.value = repo;
+  try {
+    const result = await requestNotifications();
+    if (run !== generation) return;
+    permission.value = result;
+    if (result === "granted") {
+      if (!notificationRepos.value.includes(repo))
+        notificationRepos.value.push(repo);
+      save();
+      notificationNotice.value = `Notiser på för ${repo}. Nya stängningar meddelas medan dashboarden är öppen, även i en bakgrundsflik. Webbläsaren kan fördröja uppdateringar i bakgrunden.`;
+    } else {
+      notificationNotice.value =
+        result === "unsupported"
+          ? "Den här webbläsaren stöder inte notiser här. Använd en datorwebbläsare med HTTPS."
+          : result === "denied"
+            ? "Notiser är blockerade. Tillåt notiser för den här webbplatsen i webbläsarens inställningar och försök igen."
+            : "Notiser aktiverades inte. Du kan försöka igen med klockan vid projektet.";
+    }
+  } catch {
+    if (run === generation)
+      notificationNotice.value =
+        "Webbläsaren kunde inte aktivera notiser. Kontrollera webbplatsens behörigheter.";
+  } finally {
+    if (run === generation) notificationPending.value = null;
+  }
+}
+function closureFeedback(result: Lane[]) {
+  permission.value = notificationPermission();
+  for (const lane of result) {
+    for (const issue of closureTracker.update(lane)) {
+      if (hideCoordination.value && isCoordination(issue)) continue;
+      const key = closureKey(lane.repo.full_name, issue);
+      recentClosures.value.add(key);
+      const timer = setTimeout(() => {
+        recentClosures.value.delete(key);
+        celebrationTimers.delete(timer);
+      }, 6000);
+      celebrationTimers.add(timer);
+      if (notificationsEnabled(lane.repo.full_name)) {
+        try {
+          notifyClosure(lane.repo, issue);
+        } catch {
+          notificationRepos.value = notificationRepos.value.filter(
+            (name) => name !== lane.repo.full_name,
+          );
+          save();
+          notificationNotice.value =
+            "Notiser kunde inte visas och har stängts av för " +
+            lane.repo.name +
+            ". Den här webbläsaren kan sakna stöd för skrivbordsnotiser.";
+        }
+      }
+    }
+  }
+}
 let api: GitHub | null = null;
 let generation = 0;
 const loggedIn = computed(() => Boolean(user.value));
@@ -98,7 +195,11 @@ function save() {
   try {
     localStorage.setItem(
       storageKey(),
-      JSON.stringify({ selected: selected.value, rules: rules.value }),
+      JSON.stringify({
+        selected: selected.value,
+        rules: rules.value,
+        notificationRepos: notificationRepos.value,
+      }),
     );
   } catch {
     /* App remains usable without storage. */
@@ -119,6 +220,8 @@ async function connect(token: string) {
     lanes.value = [];
     selected.value = [];
     rules.value = {};
+    notificationRepos.value = [];
+    clearClosureFeedback();
     isDemo.value = false;
     tokenPanel.value = false;
     tokenInput.value = "";
@@ -130,6 +233,13 @@ async function connect(token: string) {
               (n: unknown) =>
                 typeof n === "string" &&
                 available.some((r) => r.full_name === n),
+            )
+          : [];
+        notificationRepos.value = Array.isArray(saved.notificationRepos)
+          ? saved.notificationRepos.filter(
+              (name: unknown) =>
+                typeof name === "string" &&
+                available.some((repo) => repo.full_name === name),
             )
           : [];
         rules.value =
@@ -177,6 +287,8 @@ async function refresh() {
       }
     }
     if (run === generation) {
+      closureTracker.retain(selected.value);
+      closureFeedback(result);
       lanes.value = result;
       refreshed.value = Date.now();
     }
@@ -191,12 +303,14 @@ function toggleRepo(name: string) {
 }
 async function applyRepos() {
   selected.value = [...pendingSelected.value];
+  closureTracker.retain(selected.value);
   picker.value = false;
   save();
   await refresh();
 }
 function showDemo() {
   generation++;
+  clearClosureFeedback();
   isDemo.value = true;
   lanes.value = demo();
   refreshed.value = Date.now();
@@ -204,6 +318,9 @@ function showDemo() {
 }
 function logout() {
   generation++;
+  clearClosureFeedback();
+  notificationRepos.value = [];
+  notificationPending.value = null;
   api = null;
   user.value = null;
   lanes.value = [];
@@ -269,12 +386,22 @@ onMounted(() => document.addEventListener("keydown", trapFocus));
 onUnmounted(() => document.removeEventListener("keydown", trapFocus));
 const tick = setInterval(() => (now.value = Date.now()), 1000);
 const poll = setInterval(() => {
-  if (!document.hidden && loggedIn.value && !picker.value && !editing.value)
+  if (
+    (!document.hidden ||
+      (notificationPermission() === "granted" &&
+        selected.value.some((repo) =>
+          notificationRepos.value.includes(repo),
+        ))) &&
+    loggedIn.value &&
+    !picker.value &&
+    !editing.value
+  )
     void refresh();
 }, 60000);
 onUnmounted(() => {
   clearInterval(tick);
   clearInterval(poll);
+  clearClosureFeedback();
 });
 onMounted(async () => {
   try {
@@ -346,6 +473,20 @@ onMounted(async () => {
       </div>
     </header>
     <main>
+      <div
+        v-if="notificationNotice"
+        class="notice notification-notice"
+        role="status"
+      >
+        <span>{{ notificationNotice }}</span
+        ><button
+          class="icon-button"
+          aria-label="Stäng notismeddelande"
+          @click="notificationNotice = ''"
+        >
+          <X :size="16" />
+        </button>
+      </div>
       <div v-if="error" class="notice error" role="alert">
         {{ error
         }}<button
@@ -574,6 +715,31 @@ onMounted(async () => {
               </div>
             </div>
             <div class="lane-meta">
+              <button
+                v-if="!isDemo"
+                class="notification-toggle"
+                role="switch"
+                :aria-checked="notificationsEnabled(lane.repo.full_name)"
+                :aria-label="'Notiser för ' + lane.repo.name"
+                :title="
+                  notificationsEnabled(lane.repo.full_name)
+                    ? 'Stäng av notiser om stängda issues'
+                    : 'Slå på notiser om stängda issues'
+                "
+                :disabled="notificationPending !== null"
+                :class="{ enabled: notificationsEnabled(lane.repo.full_name) }"
+                @click="toggleNotifications(lane.repo.full_name)"
+              >
+                <Bell
+                  v-if="notificationsEnabled(lane.repo.full_name)"
+                  :size="15"
+                /><BellOff v-else :size="15" /><span
+                  >Notiser
+                  {{
+                    notificationsEnabled(lane.repo.full_name) ? "på" : "av"
+                  }}</span
+                >
+              </button>
               <span class="workflow-badge"
                 ><Check :size="12" />{{ workflow(lane.labels) }}</span
               ><span>{{ laneIssues(lane).length }} issues</span
@@ -617,11 +783,17 @@ onMounted(async () => {
                     0,
                     visibleLimit[lane.repo.full_name + col.key] || 6,
                   )"
-                  :key="issue.id"
+                  :key="
+                    issue.id +
+                    (col.key === 'closed' ? issue.closed_at || '' : '')
+                  "
                   :issue="issue"
                   :rules="rules[lane.repo.full_name] || {}"
                   :now="now"
                   :demo="isDemo"
+                  :celebrate="
+                    recentClosures.has(closureKey(lane.repo.full_name, issue))
+                  "
                 />
                 <div v-if="!items(lane, col.key).length" class="column-empty">
                   <CircleCheck v-if="col.key === 'closed'" :size="20" /><Clock3
