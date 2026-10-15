@@ -65,7 +65,7 @@ Read-only inspection of the local CLAUDE.md files and live GitHub label definiti
 
 Use **Installera app** in the header, or Chrome/Edge’s install action in the address bar. On iOS use Safari → Share → Add to Home Screen. The manifest uses this repository’s Pages path and provides standalone mode, desktop/mobile icons and an offline public app shell. Installation prompts depend on browser support and eligibility. See [PWA installation requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).
 
-The build generates a versioned service worker that caches only an explicit allowlist of public app files. GitHub API responses, authenticated requests and query-bearing OAuth callbacks are never cached by this service worker. On phones (up to 650 px wide), each repository stacks Backlog, In progress and Closed vertically, so all columns are reachable without sideways scrolling. Larger screens keep the columns side by side.
+The build generates a versioned service worker that caches only an explicit allowlist of public app files. Installation and online navigation bypass stale HTTP-cache entries, and worker registration bypasses script caching, so an activated update cannot install an older cached HTML shell. GitHub API responses, authenticated requests and query-bearing OAuth callbacks are never cached by this service worker. On phones (up to 650 px wide), each repository stacks Backlog, In progress and Closed vertically, so all columns are reachable without sideways scrolling. Larger screens keep the columns side by side.
 
 ## Mobile sign-in by QR
 

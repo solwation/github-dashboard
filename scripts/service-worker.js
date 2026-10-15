@@ -3,8 +3,16 @@ const CACHE = "issueflow-shell-__CACHE_VERSION__";
 const FILES = __SHELL_FILES__;
 const root = new URL("./", self.location.href);
 const allowed = new Set(FILES.map((path) => new URL(path, root).href));
+// Stable shell URLs (especially index.html) may still be fresh in the HTTP cache
+// after deployment. A new worker must install the published bytes, not old HTML.
 self.addEventListener("install", (event) =>
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES))),
+  event.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      cache.addAll(
+        FILES.map((path) => new Request(new URL(path, root), { cache: "reload" })),
+      ),
+    ),
+  ),
 );
 self.addEventListener("activate", (event) =>
   event.waitUntil(
@@ -35,7 +43,7 @@ self.addEventListener("fetch", (event) => {
       url.pathname === root.pathname + "index.html")
   ) {
     event.respondWith(
-      fetch(request).catch(() =>
+      fetch(new Request(request, { cache: "reload" })).catch(() =>
         caches.open(CACHE).then((cache) => cache.match(root.href)),
       ),
     );
