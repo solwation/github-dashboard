@@ -12,8 +12,8 @@ npm ci
 npm run dev
 npm test
 npx playwright install chromium # first time only
-npm run test:e2e
 npm run build
+npm run test:e2e
 ```
 
 Node 22.20+ recommended. The frontend builds to `dist/`. Pushes to `main` test, build and deploy using `.github/workflows/pages.yml`. Pages must use **GitHub Actions** as its source (configured for this repository).
@@ -47,10 +47,16 @@ OAuth is implemented but requires your OAuth App registration and Worker deploym
 - Timers use the fully paginated issue event history. Removing and reapplying a work label starts a new interval. Closure/reopening clears the previous interval. No timer is fabricated from `updated_at`; unknown or inaccessible history is shown explicitly. Timers tick every second, and GitHub data refreshes every minute while the tab is visible or a selected project has notifications enabled.
 - Closed shows issues **closed in the last 30 days**, newest closure first. Open issues and matching recent closed issues are fully paginated; pull requests are excluded. Counts represent this window, not lifetime completion. Six cards initially appear in each column; **Visa fler** reveals more.
 - Newly closed issues slide into Closed and briefly glow green. Reduced-motion preferences use a static highlight instead. Initial loads and repeated refreshes do not replay old closures; reclosures are detected by their new closure timestamp. Each closed card shows the local date and time, with the full timestamp in its tooltip.
-- The bell in each repository header toggles desktop notifications for that repository. Preferences are stored per GitHub account on this device. Permission is requested only when enabling notifications. Blocked/unsupported browsers get an explanation; notifications that cannot be delivered are disabled rather than silently failing. Background polling continues for selected subscribed repositories, but browsers may throttle it. Notifications require the dashboard to remain open; this is not server-side push. Coordination filtering applies, search filtering does not suppress notifications. See [Notifications API browser support](https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API).
+- The bell in each repository header toggles browser notifications for that repository. Preferences are stored per GitHub account on this device. Permission is requested only when enabling notifications. Blocked/unsupported browsers get an explanation; notifications that cannot be delivered are disabled rather than silently failing. Background polling continues for selected subscribed repositories, but browsers may throttle it. Notifications require the dashboard to remain open; this is not server-side push. Coordination filtering applies, search filtering does not suppress notifications. Installed/mobile browsers use service-worker notifications when available. See [Notifications API browser support](https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API).
 - Coordination issues (`agent-coordination`, exactly `orkester`) are hidden by default. `orkester: …` is ownership metadata and does not hide active work. `blocked`, `awaiting-owner`, and `needs-deploy` stay visible as labels; they do not pretend to be active work.
 - API errors are isolated per repository. On refresh failure, previously fetched lane data remains visible with a warning. Timer-history failures do not prevent the rest of the lane from loading. GitHub API rate limits still apply, particularly for large selections.
 
 ## Project research
 
 Read-only inspection of the local CLAUDE.md files and live GitHub label definitions identified Lunden's `priority: high/medium/low` convention and Untappdbolaget's `high priority`, `reviewer-filed`, `in-progress`, coordination, waiting and deployment labels. Only those conventions inform the generic detection rules; no private issue titles, descriptions or account tokens are bundled into the frontend.
+
+## Install as an app
+
+Use **Installera app** in the header, or Chrome/Edge’s install action in the address bar. On iOS use Safari → Share → Add to Home Screen. The manifest uses this repository’s Pages path and provides standalone mode, desktop/mobile icons and an offline public app shell. Installation prompts depend on browser support and eligibility. See [PWA installation requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).
+
+The build generates a versioned service worker that caches only an explicit allowlist of public app files. GitHub API responses, authenticated requests and query-bearing OAuth callbacks are never cached. The mobile board scrolls horizontally within each repository; the page itself stays within the viewport.

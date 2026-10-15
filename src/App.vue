@@ -21,6 +21,7 @@ import {
 } from "@lucide/vue";
 import IssueCard from "./components/IssueCard.vue";
 import Github from "./components/GithubIcon.vue";
+import InstallApp from "./components/InstallApp.vue";
 import { GitHub } from "./lib/github";
 import { callback, login, oauthReady } from "./lib/auth";
 import { demo } from "./lib/demo";
@@ -122,6 +123,22 @@ async function toggleNotifications(repo: string) {
     if (run === generation) notificationPending.value = null;
   }
 }
+async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
+  const run = generation;
+  try {
+    await notifyClosure(lane.repo, issue);
+  } catch {
+    if (run !== generation) return;
+    notificationRepos.value = notificationRepos.value.filter(
+      (name) => name !== lane.repo.full_name,
+    );
+    save();
+    notificationNotice.value =
+      "Notiser kunde inte visas och har stängts av för " +
+      lane.repo.name +
+      ". Kontrollera webbläsarens stöd och behörigheter.";
+  }
+}
 function closureFeedback(result: Lane[]) {
   permission.value = notificationPermission();
   for (const lane of result) {
@@ -135,18 +152,7 @@ function closureFeedback(result: Lane[]) {
       }, 6000);
       celebrationTimers.add(timer);
       if (notificationsEnabled(lane.repo.full_name)) {
-        try {
-          notifyClosure(lane.repo, issue);
-        } catch {
-          notificationRepos.value = notificationRepos.value.filter(
-            (name) => name !== lane.repo.full_name,
-          );
-          save();
-          notificationNotice.value =
-            "Notiser kunde inte visas och har stängts av för " +
-            lane.repo.name +
-            ". Den här webbläsaren kan sakna stöd för skrivbordsnotiser.";
-        }
+        void sendClosure(lane, issue);
       }
     }
   }
@@ -452,6 +458,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>Översikt</strong>
       </div>
       <div class="topbar-right">
+        <InstallApp />
         <span class="connection"
           ><i :class="{ connected: loggedIn }" />{{
             loggedIn ? "GitHub anslutet" : isDemo ? "Demoläge" : "Ej ansluten"
@@ -761,6 +768,9 @@ onMounted(async () => {
             Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken
             är tillgänglig.
           </div>
+          <p class="mobile-swipe-hint">
+            Svep för Backlog, In progress och Closed →
+          </p>
           <div class="swimlane">
             <section
               v-for="col in columns"

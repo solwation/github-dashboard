@@ -1449,3 +1449,53 @@ h1 {
     background: #e9f8ef;
   }
 }
+.native-modal {
+  border: 0;
+  color: inherit;
+}
+.native-modal::backdrop {
+  background: #152d3a60;
+  backdrop-filter: blur(3px);
+}
+.mobile-swipe-hint {
+  display: none;
+}
+@media (max-width: 650px) {
+  .topbar {
+    height: auto;
+    min-height: 58px;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .topbar-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .install-button {
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+  .mobile-swipe-hint {
+    display: block;
+    font-size: 10px;
+    margin: 0;
+    padding: 10px 14px;
+    color: #728087;
+    background: #f9fbfb;
+    border-bottom: 1px solid var(--line);
+  }
+  .swimlane {
+    align-items: flex-start;
+  }
+  .board-column {
+    min-height: 190px;
+  }
+}
+@media (display-mode: standalone) {
+  .install-button {
+    display: none;
+  }
+}
