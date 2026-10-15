@@ -27,7 +27,8 @@ function lastChange(changedAt: string | null) {
       <Plus :size="16" />
     </button>
     </div>
-    <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
+    <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
+    <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
     <a class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="lastChange(repo.changedAt)">
       <span class="repository-name">
         <span class="repo-dot" aria-hidden="true" />
@@ -41,15 +42,16 @@ function lastChange(changedAt: string | null) {
       </span>
       <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
     </a>
-    <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" />
     </div>
     <p v-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
   </div>
 </template>
 <style scoped>
-.sidebar-repository-row { margin-top: 14px; }
-.sidebar-repository-row > :last-child { margin-left: 8px; margin-top: 3px; }
+.sidebar-projects { min-height: 0; overflow-y: auto; }
+.sidebar-repository-row { display: flex; align-items: flex-start; gap: 4px; margin-top: 14px; min-width: 0; }
 .sidebar-repository {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;

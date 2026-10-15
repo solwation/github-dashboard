@@ -50,7 +50,8 @@ async function expectSameDocument(page: Page) {
 test("refresh shortcuts fetch full data in place and preserve filters, order and collapsed lanes while busy", async ({ page }) => {
   const api = await connect(page);
   await expect(page.getByRole("button", { name: "Uppdatera", exact: true })).toHaveCount(0);
-  await page.locator("#repo-2").getByRole("button", { name: "Flytta beta upp", exact: true }).click();
+  await page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna beta med/ }).focus();
+  await page.keyboard.press("ArrowUp");
   await page.getByRole("button", { name: "Kollapsa beta", exact: true }).click();
   await page.getByRole("textbox", { name: "Sök issues" }).fill("Keep");
   await page.getByRole("checkbox", { name: "Dölj koordinationsärenden" }).uncheck();

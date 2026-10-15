@@ -28,8 +28,7 @@ import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
 import VersionUpdate from "./components/VersionUpdate.vue";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
-import RepositoryOrderControls from "./components/RepositoryOrderControls.vue";
-import { reconcileOrder, restoreLayout, moveProject, projectDragType } from "./lib/project-layout";
+import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
 import { ActivityTracker } from "./lib/activity";
 import { createIssueSync } from "./lib/sync";
@@ -87,20 +86,14 @@ function reorderProject(source: string, target: string) {
   save();
   nextTick(() => {
     if (!focused?.isConnected) return;
-    const control = focused.matches(":disabled")
-      ? focused.closest(".project-order-controls")?.querySelector<HTMLButtonElement>(".project-drag-handle") : focused;
-    control?.focus({ preventScroll: true });
-    control?.scrollIntoView({ block: "nearest" });
+    focused.focus({ preventScroll: true });
+    focused.scrollIntoView({ block: "nearest" });
   });
 }
 function moveRepository(name: string, direction: -1 | 1) {
   const names = orderedLanes.value.map(lane => lane.repo.full_name);
   const target = names[names.indexOf(name) + direction];
   if (target) reorderProject(name, target);
-}
-function dropProject(event: DragEvent, target: string) {
-  const source = event.dataTransfer?.getData(projectDragType);
-  if (source) reorderProject(source, target);
 }
 function toggleCollapsed(name: string) {
   collapsedRepos.value = collapsedRepos.value.includes(name)
@@ -1182,8 +1175,6 @@ onMounted(async () => {
           class="repo-lane"
           :id="'repo-' + lane.repo.id"
           :class="{ 'is-collapsed': collapsedRepos.includes(lane.repo.full_name) }"
-          @dragover.prevent
-          @drop.prevent="dropProject($event, lane.repo.full_name)"
         >
           <header class="lane-header">
             <div class="lane-title">
@@ -1213,7 +1204,6 @@ onMounted(async () => {
               </div>
             </div>
             <div class="lane-meta">
-              <RepositoryOrderControls :name="lane.repo.name" :full-name="lane.repo.full_name" :index="laneIndex" :total="orderedLanes.length" @move="moveRepository(lane.repo.full_name, $event)" />
               <span class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
                 <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
                 <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
