@@ -7,7 +7,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 - Every change needs a GitHub issue before implementation, including documentation, fixes, features and workflow changes. Reuse an existing issue when its scope already covers the work. Include concrete acceptance criteria.
 - Every issue must carry exactly one of `priority: high`, `priority: medium`, or `priority: low`. Default to `priority: medium`; do not change an existing priority without user direction.
 - Add `in-progress` immediately before actively working on an issue. Remove it when work is paused, handed back, finished, closed, or reopened. Closed issues must not retain `in-progress`.
-- Work on one issue at a time. Take the highest-priority unclaimed issue, oldest first within a priority. Respect any explicit order or scope given by the user. Do not claim another contributor's active issue.
+- Each worker works on one issue at a time. Under `/orkester`, the conductor may coordinate several independently owned issues concurrently. Take the highest-priority unclaimed issue, oldest first within a priority. Respect any explicit order or scope given by the user. Do not claim another contributor's active issue.
 - When scope expands, create or update the relevant issues. Keep unfinished work tracked and explain any actual blocker on its issue.
 
 ## Implementation and Git
@@ -27,3 +27,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 - Keep keyboard access, accessible names, mobile layouts and `prefers-reduced-motion` support when changing UI behavior.
 - `npm test` checks pure logic and transport behavior. `npm run test:e2e` checks browser flows; run `npx playwright install chromium` once if needed. `npm run build` checks types and production output. Run the checks appropriate to the issue; avoid redundant tests that only mirror implementation.
 - Update `README.md` when behavior or setup changes. Keep this file current when the project workflow changes.
+
+## /orkester
+
+The user authorizes parallel subagents for this project when useful. `/orkester` starts the conductor workflow in [.agents/skills/orkester/SKILL.md](.agents/skills/orkester/SKILL.md). In Codex clients whose slash menu does not expose custom workflows, invoke `$orkester` or ask to run the orkester workflow; Claude Code also has `.claude/commands/orkester.md`. The conductor must respect actual tool slots and available memory/CPU, give workers separate worktrees and file ownership, and integrate/test their commits before pushing main. Keep one issue per worker and all active claims visible through `in-progress`.
