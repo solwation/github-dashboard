@@ -28,6 +28,7 @@ const props = defineProps<{
   demo?: boolean;
   celebrate?: boolean;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
+  commitRetry?: number;
 }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
@@ -74,6 +75,12 @@ watch(
 );
 watch(visible, (value) => {
   if (value && commitState.value === "idle") void loadClosingCommit();
+});
+watch(() => props.commitRetry, () => {
+  if (commitState.value === "error") {
+    commitState.value = "idle";
+    void loadClosingCommit();
+  }
 });
 onMounted(() => {
   if (!("IntersectionObserver" in window)) {
@@ -171,7 +178,7 @@ const visibleLabels = computed(() =>
       /></span>
     </div>
     <div
-      v-if="col === 'closed' && !demo && loadCommit"
+      v-if="col === 'closed' && !demo && loadCommit && commitState !== 'error'"
       class="closing-commit"
       aria-live="polite"
     >
@@ -211,17 +218,6 @@ const visibleLabels = computed(() =>
       <span v-else-if="commitState === 'loaded'">{{
         t("Ingen stängande commit kopplad")
       }}</span>
-      <template v-else-if="commitState === 'error'">
-        <span>{{ t("Stängande commit kunde inte hämtas.") }}</span>
-        <span>{{
-          t(
-            "Kontrollera att tokenen har läsrättighet till Contents och Pull requests för commit-information.",
-          )
-        }}</span>
-        <button type="button" @click="loadClosingCommit">
-          {{ t("Försök igen") }}
-        </button>
-      </template>
     </div>
   </article>
 </template>

@@ -29,6 +29,7 @@ import { summarizeLanes } from "./lib/sidebar";
 import { createIssueSync } from "./lib/sync";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
+import ProblemReport from "./components/ProblemReport.vue";
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { consumeHandoff, type HandoffSettings } from "./lib/handoff";
@@ -87,6 +88,19 @@ const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
 const handoffOpen = ref(false);
 const scannerOpen = ref(false);
+const commitProblems = ref(new Map<string, { repo: string; issue: Issue }>());
+const commitRetry = ref(0);
+const problemReport = ref<{ open: () => void } | null>(null);
+const hideCommitNotice = ref(false);
+try { hideCommitNotice.value = localStorage.getItem("issueflow:hide-commit-notice") === "true"; } catch { /* Optional preference. */ }
+function setHideCommitNotice(value: boolean) {
+  hideCommitNotice.value = value;
+  try { localStorage.setItem("issueflow:hide-commit-notice", String(value)); } catch { /* Keep session preference. */ }
+}
+const activeCommitProblems = computed(() => [...commitProblems.value.values()].filter(problem =>
+  lanes.value.some(lane => lane.repo.full_name === problem.repo && lane.issues.some(issue =>
+    issue.id === problem.issue.id && issue.state === "closed" && issue.closed_at === problem.issue.closed_at)),
+));
 const notificationRepos = ref<string[]>([]);
 const notificationNotice = ref("");
 const permission = ref(notificationPermission());
@@ -95,6 +109,7 @@ const recentClosures = ref(new Set<string>());
 const closureTracker = new ClosureTracker();
 const celebrationTimers = new Set<ReturnType<typeof setTimeout>>();
 function clearClosureFeedback() {
+  commitProblems.value.clear();
   closureTracker.clear();
   recentClosures.value.clear();
   for (const timer of celebrationTimers) clearTimeout(timer);
@@ -227,8 +242,19 @@ function items(lane: Lane, key: string) {
 }
 function commitLoader(repo: string) {
   const client = api;
+  const run = generation;
   return client
-    ? (issue: Issue) => client.closingCommit(repo, issue)
+    ? async (issue: Issue) => {
+        const key = closureKey(repo, issue);
+        try {
+          const result = await client.closingCommit(repo, issue);
+          if (run === generation) commitProblems.value.delete(key);
+          return result;
+        } catch (cause) {
+          if (run === generation) commitProblems.value.set(key, { repo, issue });
+          throw cause;
+        }
+      }
     : undefined;
 }
 const sidebarRepos = computed(() =>
@@ -668,6 +694,9 @@ onMounted(async () => {
       </div>
       <div class="topbar-right">
         <LanguageSettings />
+        <ProblemReport v-if="loggedIn" ref="problemReport" :problems="activeCommitProblems"
+          :hide-notice="hideCommitNotice" @update:hide-notice="setHideCommitNotice"
+          @retry="commitRetry++" />
         <InstallApp />
         <button
           v-if="user && sessionToken"
@@ -705,6 +734,11 @@ onMounted(async () => {
       </div>
     </header>
     <main>
+      <div v-if="activeCommitProblems.length && !hideCommitNotice" class="notice commit-notice" role="status">
+        <span>{{ t("Commit-information saknas för {count} issues.", { count: activeCommitProblems.length }) }}</span>
+        <button class="button small" @click="problemReport?.open()">{{ t("Läs mer") }}</button>
+        <button class="button small" @click="setHideCommitNotice(true)">{{ t("Visa inte igen") }}</button>
+      </div>
       <div
         v-if="notificationNotice"
         class="notice notification-notice"
@@ -1088,6 +1122,7 @@ onMounted(async () => {
                     isDemo ? undefined : commitLoader(lane.repo.full_name)
                   "
                   :demo="isDemo"
+                  :commit-retry="commitRetry"
                   :celebrate="
                     recentClosures.has(closureKey(lane.repo.full_name, issue))
                   "

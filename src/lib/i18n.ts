@@ -256,6 +256,18 @@ export const english: Record<string, string> = {
   "Språkvalet sparas på den här enheten.":
     "Your language preference is saved on this device.",
   "Öppna på mobilen": "Open on mobile",
+  "Problemrapport": "Problem report",
+  "Visa inte igen": "Don't show again",
+  "Commit-information saknas för {count} issues.": "Commit information could not be loaded for {count} issues.",
+  "Issues visas som vanligt. Commit-information kan saknas på grund av tokenbehörigheter, API-gränser eller nätverksfel. Kontrollera läsrättighet till Contents och Pull requests om problemet kvarstår.":
+    "Issues are shown as usual. Commit information may be unavailable because of token permissions, API limits or network errors. Check read access to Contents and Pull requests if the problem persists.",
+  "Rapporten gäller kontrollerade issues i den här sessionen. Ny kontroll görs för synliga kort; övriga kontrolleras när de visas.":
+    "This report covers issues checked in this session. Retry checks visible cards; others are checked when shown.",
+  "Inga rapporterade problem med commit-information i den här sessionen.":
+    "No reported commit information problems in this session.",
+  "Visa notiser om problem med commit-information": "Show notifications about commit information problems",
+  "Problemrapporten finns alltid här även när notisen är dold. Bara ditt notisval sparas på enheten.":
+    "The problem report remains available here even when the notification is hidden. Only your notification preference is saved on this device.",
   "Logga in med QR-kod": "Sign in with QR code",
   "I den installerade appen: välj Logga in med QR-kod och skanna här. Använder du mobilens vanliga kamera öppnas länken i webbläsaren istället.":
     "In the installed app, choose Sign in with QR code and scan here. Using your phone’s regular camera opens the link in the browser instead.",
