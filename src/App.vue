@@ -26,6 +26,7 @@ import LanguageSettings from "./components/LanguageSettings.vue";
 import VersionUpdate from "./components/VersionUpdate.vue";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { summarizeLanes } from "./lib/sidebar";
+import { ActivityTracker } from "./lib/activity";
 import { createIssueSync } from "./lib/sync";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
@@ -107,8 +108,16 @@ const permission = ref(notificationPermission());
 const notificationPending = ref<string | null>(null);
 const recentClosures = ref(new Set<string>());
 const closureTracker = new ClosureTracker();
+const activity = new ActivityTracker();
+const activityRevision = ref(0);
+function readIssue(repo: string, issue: Issue) {
+  activity.read(repo, issue);
+  activityRevision.value++;
+  save();
+}
 const celebrationTimers = new Set<ReturnType<typeof setTimeout>>();
 function clearClosureFeedback() {
+  activity.clear();
   commitProblems.value.clear();
   closureTracker.clear();
   recentClosures.value.clear();
@@ -189,6 +198,9 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
   }
 }
 function closureFeedback(result: Lane[]) {
+  activity.retain(selected.value);
+  activity.update(result, rules.value);
+  activityRevision.value++;
   permission.value = notificationPermission();
   for (const lane of result) {
     for (const issue of closureTracker.update(lane)) {
@@ -257,9 +269,11 @@ function commitLoader(repo: string) {
       }
     : undefined;
 }
-const sidebarRepos = computed(() =>
-  summarizeLanes(lanes.value, rules.value, hideCoordination.value),
-);
+const sidebarRepos = computed(() => {
+  activityRevision.value;
+  return summarizeLanes(lanes.value, rules.value, hideCoordination.value,
+    (repo, issue) => activity.changedAt(repo, issue, now.value));
+});
 const stats = computed(() => {
   const all = lanes.value.flatMap((l) =>
     laneIssues(l).map((i) => ({ i, r: rules.value[l.repo.full_name] })),
@@ -282,6 +296,7 @@ function save() {
         selected: selected.value,
         rules: rules.value,
         notificationRepos: notificationRepos.value,
+        activityRead: activity.acknowledgements(),
       }),
     );
   } catch {
@@ -321,6 +336,7 @@ async function connect(token: string, imported?: HandoffSettings) {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
+        activity.restore(saved.activityRead);
         selected.value = Array.isArray(saved.selected)
           ? saved.selected.filter(
               (n: unknown) =>
@@ -1123,6 +1139,8 @@ onMounted(async () => {
                   "
                   :demo="isDemo"
                   :commit-retry="commitRetry"
+                  :recent-move="activity.moved(lane.repo.full_name, issue, now)"
+                  @read="readIssue(lane.repo.full_name, issue)"
                   :celebrate="
                     recentClosures.has(closureKey(lane.repo.full_name, issue))
                   "

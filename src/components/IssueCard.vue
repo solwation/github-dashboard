@@ -29,7 +29,9 @@ const props = defineProps<{
   celebrate?: boolean;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
   commitRetry?: number;
+  recentMove?: boolean;
 }>();
+const emit = defineEmits<{ read: [] }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
 const commit = ref<ClosingCommit | null>(null);
@@ -106,8 +108,13 @@ const visibleLabels = computed(() =>
   <article
     ref="card"
     class="issue-card"
-    :class="[col, { 'just-closed': celebrate && col === 'closed' }]"
+    :class="[col, { 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove }]"
   >
+    <button v-if="recentMove" class="movement-marker" @click="emit('read')"
+      :aria-label="t('Nyligen flyttad. Markera som läst')">
+      {{ t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
+      <span aria-hidden="true">✓</span>
+    </button>
     <div class="card-top">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
@@ -130,6 +137,7 @@ const visibleLabels = computed(() =>
       target="_blank"
       rel="noopener noreferrer"
       class="issue-title"
+      @click="emit('read')" @auxclick="emit('read')"
       >{{ issue.title }}<ArrowUpRight :size="13"
     /></a>
     <div class="labels">
@@ -141,7 +149,7 @@ const visibleLabels = computed(() =>
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </div>
-    <IssueDetails :body="issue.body" :comments="issue.comments" />
+    <IssueDetails :body="issue.body" :comments="issue.comments" @read="emit('read')" />
     <div v-if="col !== 'backlog' || issue.assignees.length" class="card-bottom">
       <span
         v-if="col === 'progress'"
@@ -223,6 +231,9 @@ const visibleLabels = computed(() =>
 </template>
 
 <style scoped>
+.issue-card.unread-move { border-color: #2875ba; box-shadow: 0 0 0 2px #2875ba55; background: #f1f8ff; }
+.movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
+.movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
 .closing-commit {
   display: flex;
   align-items: center;

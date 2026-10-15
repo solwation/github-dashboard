@@ -256,6 +256,9 @@ export const english: Record<string, string> = {
   "Språkvalet sparas på den här enheten.":
     "Your language preference is saved on this device.",
   "Öppna på mobilen": "Open on mobile",
+  "Oläst aktivitet": "Unread activity",
+  "Nyligen flyttad. Markera som läst": "Recently moved. Mark as read",
+  "Flyttad till {column}": "Moved to {column}",
   "Problemrapport": "Problem report",
   "Visa inte igen": "Don't show again",
   "Commit-information saknas för {count} issues.": "Commit information could not be loaded for {count} issues.",

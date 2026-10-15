@@ -1,4 +1,4 @@
-import { column, isCoordination, type Lane, type Rules } from "./model";
+import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
 
 export interface SidebarRepository {
   id: number;
@@ -7,6 +7,7 @@ export interface SidebarRepository {
   progress: number;
   closed: number;
   changedAt: string | null;
+  unreadAt?: string | null;
 }
 
 /** Summarize the loaded lanes before text search. Closed issues already use the API's 30-day window. */
@@ -14,6 +15,7 @@ export function summarizeLanes(
   lanes: Lane[],
   rules: Record<string, Rules>,
   hideCoordination: boolean,
+  unreadAt?: (repo: string, issue: Issue) => string | null,
 ): SidebarRepository[] {
   return lanes.map((lane) => {
     const summary: SidebarRepository = {
@@ -23,6 +25,7 @@ export function summarizeLanes(
       progress: 0,
       closed: 0,
       changedAt: null,
+      ...(unreadAt ? { unreadAt: null } : {}),
     };
     let latest = -Infinity;
     for (const issue of lane.issues) {
@@ -33,6 +36,8 @@ export function summarizeLanes(
         latest = changed;
         summary.changedAt = issue.updated_at;
       }
+      const unread = unreadAt?.(lane.repo.full_name, issue);
+      if (unread && (!summary.unreadAt || Date.parse(unread) > Date.parse(summary.unreadAt))) summary.unreadAt = unread;
     }
     return summary;
   });

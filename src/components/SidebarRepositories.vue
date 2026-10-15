@@ -25,7 +25,7 @@ function lastChange(changedAt: string | null) {
       <span class="repository-name">
         <span class="repo-dot" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
-        <span v-if="recentlyChanged(repo.changedAt, now)" class="recent-activity" :title="t('Nyligen ändrat')" role="img" :aria-label="t('Nyligen ändrat')" />
+        <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
       </span>
       <span class="repository-counts">
         <span class="status-count backlog" :title="t('Backlog: {count}', { count: repo.backlog })"><Circle :size="11" aria-hidden="true" /><span class="sr-only">Backlog: </span>{{ repo.backlog }}</span>

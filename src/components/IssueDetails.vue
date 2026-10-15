@@ -5,6 +5,8 @@ import { useLanguage } from "../lib/i18n";
 import { renderMarkdown } from "../lib/markdown";
 
 const props = defineProps<{ body?: string | null; comments?: number }>();
+const emit = defineEmits<{ read: [] }>();
+function toggle() { expanded.value = !expanded.value; if (expanded.value) emit("read"); }
 const { t } = useLanguage();
 const expanded = ref(false);
 const panelId = useId();
@@ -14,7 +16,7 @@ const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : ""
 <template>
   <div class="issue-details">
     <div class="details-toolbar">
-      <button type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="expanded = !expanded">
+      <button type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>
       <span class="comment-count" :title="t('{count} kommentarer', { count })" role="img" :aria-label="t('{count} kommentarer', { count })"><MessageCircle :size="13" aria-hidden="true" />{{ count }}</span>
