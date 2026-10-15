@@ -38,7 +38,7 @@ test("loads comments only on click, retries errors, paginates and renders safe M
     } else if (url.searchParams.get("page") === "2") {
       await route.fulfill({ json: [comment(102, "Last paginated comment")] });
     } else {
-      await route.fulfill({ json: [comment(1, ['## Comment plan', '**Readable** [link](https://github.com)', '```ts', `const long = '${"a".repeat(600)}';`, '```', '<img src=x onerror="window.commentsUnsafe=true">', '<script>window.commentsUnsafe=true</script>', '[unsafe](javascript:alert(1))'].join('\n\n'))], headers: { Link: '<https://api.github.com/repos/sample/comment-project/issues/1/comments?per_page=100&page=2>; rel="next"' } });
+      await route.fulfill({ json: [comment(1, ['## Comment plan', '**Readable** [link](https://github.com)', '```ts', `const long = '${"a".repeat(600)}';`, '```', '<img src=x onerror="window.commentsUnsafe=true">', '<script>window.commentsUnsafe=true</script>', '[unsafe](javascript:alert(1))'].join('\n\n'))], headers: { Link: '<https://api.github.com/repos/sample/comment-project/issues/1/comments?per_page=100&page=2>; rel="next"', 'Access-Control-Expose-Headers': 'Link' } });
     }
   });
   expect(requests).toBe(0);
