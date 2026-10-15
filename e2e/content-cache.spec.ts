@@ -55,6 +55,7 @@ test("renders encrypted content before GitHub responds, then revalidates using p
   await page.reload();
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
   await expect(page.locator(".cached-content")).toContainText("Visar sparad vy");
+  await expect(page.getByRole("heading", { name: "Hämtar ditt flöde", exact: true })).toHaveCount(0);
   state.release();
   await expect(page.locator(".issue-title")).toContainText("Fresh private fixture");
   await expect(page.locator(".cached-content")).toHaveCount(0);
