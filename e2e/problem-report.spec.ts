@@ -1,4 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+async function openReport(page: Page) {
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByRole("button", { name: /^Problemrapport/ }).click();
+}
 
 async function setup(page: Page) {
   let healthy = false;
@@ -40,9 +44,9 @@ test("groups repeated failures, preserves report after hiding and remembers the 
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   await page.locator(".issue-card.closed").last().scrollIntoViewIfNeeded();
-  await expect(page.getByRole("button", { name: "Problemrapport", exact: true })).toContainText("3");
+  await expect.poll(() => page.locator(".problem-report li").count()).toBe(3);
   await expect(page.locator(".commit-notice")).toHaveCount(0);
-  await page.getByRole("button", { name: "Problemrapport", exact: true }).click();
+  await openReport(page);
   await expect(page.getByRole("dialog").locator("li")).toHaveCount(3);
   await page.getByRole("checkbox", { name: "Visa notiser om problem med commit-information" }).check();
   await page.getByRole("button", { name: "Klart", exact: true }).click();
@@ -53,7 +57,7 @@ test("groups repeated failures, preserves report after hiding and remembers the 
 test("retry clears recovered issues from the report and restores commit statistics", async ({ page }) => {
   const state = await setup(page);
   expect(state.requests()).toBe(3);
-  await page.getByRole("button", { name: "Problemrapport", exact: true }).click();
+  await openReport(page);
   state.recover();
   await page.getByRole("button", { name: "Försök igen", exact: true }).click();
   await page.getByRole("button", { name: "Klart", exact: true }).click();
@@ -62,7 +66,7 @@ test("retry clears recovered issues from the report and restores commit statisti
   await page.locator(".issue-card.closed").last().scrollIntoViewIfNeeded();
   await expect(page.locator(".commit-diff")).toHaveCount(3);
   await expect(page.locator(".commit-notice")).toHaveCount(0);
-  await page.getByRole("button", { name: "Problemrapport", exact: true }).click();
+  await openReport(page);
   await expect(page.getByRole("dialog")).toContainText("Inga rapporterade problem");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();

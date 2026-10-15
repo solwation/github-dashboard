@@ -709,10 +709,8 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings />
-        <ProblemReport v-if="loggedIn" ref="problemReport" :problems="activeCommitProblems"
-          :hide-notice="hideCommitNotice" @update:hide-notice="setHideCommitNotice"
-          @retry="commitRetry++" />
+        <LanguageSettings :can-view-problems="loggedIn" :problem-count="activeCommitProblems.length"
+          @open-problems="problemReport?.open()" />
         <InstallApp />
         <button
           v-if="user && sessionToken"
@@ -1292,6 +1290,9 @@ onMounted(async () => {
     </form>
   </div>
   <VersionUpdate />
+  <ProblemReport v-if="loggedIn" ref="problemReport" :problems="activeCommitProblems"
+    :hide-notice="hideCommitNotice" @update:hide-notice="setHideCommitNotice"
+    @retry="commitRetry++" />
   <LogoutDialog
     :open="logoutPrompt"
     :busy="logoutBusy"

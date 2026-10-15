@@ -3,6 +3,8 @@ import { ref } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
+defineProps<{ canViewProblems?: boolean; problemCount?: number }>();
+const emit = defineEmits<{ openProblems: [] }>();
 const dialog = ref<HTMLDialogElement | null>(null);
 function change(event: Event) {
   setLanguage((event.target as HTMLSelectElement).value as LanguagePreference);
@@ -43,6 +45,9 @@ function change(event: Event) {
       <option value="en" lang="en">English</option>
     </select>
     <p>{{ t("Språkvalet sparas på den här enheten.") }}</p>
+    <button v-if="canViewProblems" class="button" @click="dialog?.close(); emit('openProblems')">
+      {{ t("Problemrapport") }}<span v-if="problemCount">({{ problemCount }})</span>
+    </button>
     <div class="modal-footer">
       <button class="button primary" @click="dialog?.close()">
         {{ t("Klart") }}

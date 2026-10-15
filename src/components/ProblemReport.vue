@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { CircleAlert, X } from "@lucide/vue";
+import { X } from "@lucide/vue";
 import type { Issue } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
 defineProps<{ problems: { repo: string; issue: Issue }[]; hideNotice: boolean }>();
@@ -11,9 +11,6 @@ function open() { dialog.value?.showModal(); }
 defineExpose({ open });
 </script>
 <template>
-  <button class="button small problem-report-button" :aria-label="t('Problemrapport')" @click="open">
-    <CircleAlert :size="15" /><span>{{ t("Problemrapport") }}</span><span v-if="problems.length">({{ problems.length }})</span>
-  </button>
   <dialog ref="dialog" class="modal native-modal problem-report" aria-labelledby="problem-report-title"
     @click="event => { if (event.target === dialog) dialog?.close(); }">
     <div class="modal-heading"><h2 id="problem-report-title">{{ t("Problemrapport") }}</h2>
@@ -42,5 +39,4 @@ ul { padding-left: 1.25rem; max-height: 35vh; overflow: auto; }
 li { margin: .6rem 0; overflow-wrap: anywhere; }
 .notice-preference { display: flex; align-items: center; gap: .5rem; margin-top: 1.25rem; }
 .notice-preference input { width: auto; }
-@media (max-width: 700px) { .problem-report-button > span { display: none; } }
 </style>
