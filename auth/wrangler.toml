@@ -1,0 +1,8 @@
+name = "github-dashboard-auth"
+main = "worker.ts"
+compatibility_date = "2026-10-01"
+[vars]
+GITHUB_CLIENT_ID = "REPLACE_WITH_OAUTH_CLIENT_ID"
+ALLOWED_ORIGIN = "https://solwation.github.io"
+REDIRECT_URI = "https://solwation.github.io/github-dashboard/"
+# Set GITHUB_CLIENT_SECRET using: npx wrangler secret put GITHUB_CLIENT_SECRET
