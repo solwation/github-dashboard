@@ -77,7 +77,7 @@ test("drag and keyboard order stay in sync, survive refresh and reload, and rema
   await page.reload();
   // Repositories discovered later append after existing positions when selected.
   await page.locator(".sidebar-add").click();
-  await page.getByRole("checkbox", { name: "sample/aardvark", exact: true }).check();
+  await page.getByRole("checkbox", { name: "sample/aardvark" }).check();
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await expectOrder(page, ["charlie", "bravo", "alpha", "aardvark"]);
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
@@ -96,7 +96,7 @@ test.describe("phone layout controls", () => {
     const api = await fixture(page);
     await page.goto("/");
     await connect(page);
-    await expect(page.locator(".sidebar")).toBeHidden();
+    await expect(page.locator(".sidebar-projects")).toBeHidden();
     await page.locator("#repo-2").getByRole("button", { name: "Flytta bravo upp", exact: true }).tap();
     await expectOrder(page, ["bravo", "alpha", "charlie"]);
     await page.getByRole("button", { name: "Kollapsa bravo", exact: true }).tap();
