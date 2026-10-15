@@ -93,6 +93,10 @@ Observed movements between backlog, in progress and closed get a prominent stati
 
 Closed cards lazily fetch the latest matching GitHub ClosedEvent.closer via GraphQL, showing the exact closing commit or merged pull request, short SHA and additions/deletions when available. Manual closures without a linked commit are explicit. Reopened/reclosed issues use the current closure timestamp. Requests are concurrency-limited and cached only in memory.
 
+## Build identity
+
+**Settings → Build information** shows the running bundle's build date and short Git commit, even before sign-in. The full timestamp and hash are available in the time element and tooltips. These values are baked into the bundle, so a cached or offline app identifies its own build. Local development is labelled as development mode; no manual version number is used.
+
 ## Development workflow
 
 Read [AI.md](../AI.md). All changes use GitHub issues with exactly one `priority: high`, `priority: medium`, or `priority: low` label, and `in-progress` during active work. When creating issues, agents automatically assess priority from impact, severity and urgency and include a short rationale; blocking bugs and significant regressions normally take precedence over feature work, while minor polish is low priority. Explicit user priorities take precedence, and existing priorities require user direction to change. Direct commits/pushes to main are authorized. `/orkester` starts coordinated parallel work, documented in [.agents/skills/orkester/SKILL.md](../.agents/skills/orkester/SKILL.md) and exposed as a Claude command. Codex supports the repository skill as `$orkester`; clients that reserve slash commands can use that form or a plain-language workflow request. See [OpenAI’s skills documentation](https://learn.chatgpt.com/docs/build-skills).
