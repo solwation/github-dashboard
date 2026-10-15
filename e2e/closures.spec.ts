@@ -134,7 +134,7 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   const closedAt = new Date(Date.now() - 5000).toISOString();
   states.alpha = { state: "closed", closed_at: closedAt };
   states.beta = { state: "closed", closed_at: closedAt };
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await page.keyboard.press("Control+r");
   await expect(page.locator(".just-closed")).toHaveCount(2);
   await expect(page.locator(".closed-date").first()).toHaveAttribute(
     "datetime",
@@ -144,10 +144,8 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
     /sekund.*sedan| min sedan/,
   );
   await expect.poll(() => count(page)).toBe(1);
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Uppdatera", exact: true }),
-  ).toBeEnabled();
+  await page.keyboard.press("Control+r");
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
   expect(await count(page)).toBe(1);
   // Poll even when hidden if a selected project has notifications enabled.
   await page.evaluate(() =>
@@ -162,7 +160,7 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   await alpha.click();
   await expect(alpha).not.toBeChecked();
   states.alpha = { state: "closed", closed_at: "2026-10-15T14:45:56Z" };
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await page.keyboard.press("Control+r");
   await expect(page.locator(".closed-date").first()).toHaveAttribute(
     "datetime",
     states.alpha.closed_at!,

@@ -33,6 +33,7 @@ import { reconcileOrder, restoreLayout, moveProject, projectDragType } from "./l
 import { summarizeLanes } from "./lib/sidebar";
 import { ActivityTracker } from "./lib/activity";
 import { createIssueSync } from "./lib/sync";
+import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import ProblemReport from "./components/ProblemReport.vue";
@@ -785,11 +786,21 @@ const sync = createIssueSync({
     syncError.value = "";
   },
 });
-onMounted(() => sync.start());
+function handleRefreshShortcut(event: KeyboardEvent) {
+  if (!loggedIn.value || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
+  // Prevent document reload even while a fetch is already running.
+  event.preventDefault();
+  if (!event.repeat && !authBusy.value) void refresh();
+}
+onMounted(() => {
+  sync.start();
+  document.addEventListener("keydown", handleRefreshShortcut);
+});
 
 onUnmounted(() => {
   clearInterval(tick);
   sync.stop();
+  document.removeEventListener("keydown", handleRefreshShortcut);
   clearClosureFeedback();
 });
 onMounted(async () => {
@@ -1056,14 +1067,6 @@ onMounted(async () => {
           </div>
           <div class="heading-actions">
             <button
-              class="button"
-              :disabled="busy || isDemo"
-              @click="refresh()"
-            >
-              <RefreshCw :size="15" :class="{ spinning: busy }" />{{
-                busy ? t("Hämtar…") : t("Uppdatera")
-              }}</button
-            ><button
               v-if="loggedIn"
               class="button primary"
               :disabled="busy"
@@ -1134,9 +1137,11 @@ onMounted(async () => {
           ><label class="coord-toggle"
             ><input type="checkbox" v-model="hideCoordination" />
             {{ t("Dölj koordinationsärenden") }}</label
-          ><span class="updated"
+          ><span class="updated" role="status" aria-live="polite" :aria-busy="busy"
             ><i />{{
-              refreshed
+              busy
+                ? t("Hämtar…")
+                : refreshed
                 ? t("Uppdaterad ") +
                   new Date(refreshed).toLocaleTimeString(locale, {
                     hour: "2-digit",

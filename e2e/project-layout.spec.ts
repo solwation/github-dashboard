@@ -68,7 +68,7 @@ test("drag and keyboard order stay in sync, survive refresh and reload, and rema
   await expect(page.locator("#repo-2 .lane-summary")).toContainText("Backlog: 1");
   await expect(page.locator("#repo-2 .lane-summary")).toContainText("Pågående: 1");
   await expect(page.locator("#repo-2 .lane-summary")).toContainText("Stängda senaste 30 dagarna: 1");
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await page.keyboard.press("Control+r");
   await expectOrder(page, ["charlie", "bravo", "alpha"]);
   await page.reload();
   await expectOrder(page, ["charlie", "bravo", "alpha"]);

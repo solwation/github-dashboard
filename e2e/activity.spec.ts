@@ -22,7 +22,7 @@ test("movement markers and sidebar dots are acknowledged individually and expire
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   await expect(page.locator(".unread-move")).toHaveCount(0);
   moved = true; updated = new Date().toISOString();
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await page.keyboard.press("Control+r");
   await expect(page.locator(".unread-move")).toHaveCount(2);
   await expect(page.locator(".recent-activity")).toHaveCount(1);
   await page.locator(".unread-move").first().getByRole("button", { name: "Läs mer", exact: true }).click();
@@ -35,7 +35,7 @@ test("movement markers and sidebar dots are acknowledged individually and expire
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   await expect(page.locator(".recent-activity")).toHaveCount(0);
   moved = false; updated = new Date(Date.now() + 1000).toISOString();
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await page.keyboard.press("Control+r");
   await expect(page.locator(".unread-move")).toHaveCount(2);
   await page.clock.fastForward(121_000);
   await expect(page.locator(".unread-move")).toHaveCount(0);

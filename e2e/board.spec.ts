@@ -155,7 +155,7 @@ test("connect, select, fetch events, customize work label, preserve data on API 
     "fictional-test-token",
   );
   fail = true;
-  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await page.keyboard.press("Control+r");
   await expect(page.getByRole("alert")).toContainText("500");
   await expect(page.locator(".issue-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
