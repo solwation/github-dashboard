@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import type { Issue, Repo } from "./model";
 
 export function notificationPermission():
@@ -18,7 +19,7 @@ export async function requestNotifications(): Promise<
 
 export async function notifyClosure(repo: Repo, issue: Issue) {
   if (notificationPermission() !== "granted") return;
-  const title = `${repo.name} · Issue stängd`;
+  const title = `${repo.name} · ${t("Issue stängd")}`;
   const options = {
     body: `#${issue.number} ${issue.title}`,
     tag: `${repo.full_name}:${issue.id}:${issue.closed_at}`,

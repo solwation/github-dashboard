@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 export interface Label {
   name: string;
   color: string;
@@ -155,10 +156,10 @@ export function duration(start: string, now: number) {
 }
 export function workflow(labels: Label[]) {
   return labels.some((l) => normalize(l.name).startsWith("priority "))
-    ? "Prioritetslabels"
+    ? t("Prioritetslabels")
     : labels.some((l) => normalize(l.name) === "reviewer filed")
-      ? "Agentflöde"
+      ? t("Agentflöde")
       : labels.some((l) => /^p[0-4]$/.test(normalize(l.name)))
         ? "P0–P4"
-        : "Standardflöde";
+        : t("Standardflöde");
 }

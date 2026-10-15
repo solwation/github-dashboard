@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined;
 const authUrl = import.meta.env.VITE_AUTH_URL as string | undefined;
 export const oauthReady = Boolean(clientId && authUrl);
@@ -35,14 +36,14 @@ export async function callback(): Promise<string | null> {
   const saved = sessionStorage.getItem("issueflow-oauth");
   sessionStorage.removeItem("issueflow-oauth");
   history.replaceState({}, "", redirectUri());
-  if (params.has("error")) throw new Error("GitHub-inloggningen avbröts.");
+  if (params.has("error")) throw new Error(t("GitHub-inloggningen avbröts."));
   const pending = saved ? JSON.parse(saved) : null;
   if (
     !pending ||
     pending.state !== params.get("state") ||
     Date.now() - pending.time > 600000
   )
-    throw new Error("Inloggningen kunde inte verifieras. Försök igen.");
+    throw new Error(t("Inloggningen kunde inte verifieras. Försök igen."));
   const response = await fetch(authUrl!.replace(/\/$/, "") + "/exchange", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -53,6 +54,6 @@ export async function callback(): Promise<string | null> {
   });
   const data = await response.json();
   if (!response.ok || !data.access_token)
-    throw new Error("GitHub-inloggningen misslyckades. Försök igen.");
+    throw new Error(t("GitHub-inloggningen misslyckades. Försök igen."));
   return data.access_token;
 }

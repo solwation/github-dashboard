@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useLanguage } from "./lib/i18n";
+const { t, locale } = useLanguage();
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Activity,
@@ -19,6 +21,7 @@ import {
   Settings2,
   X,
 } from "@lucide/vue";
+import LanguageSettings from "./components/LanguageSettings.vue";
 import IssueCard from "./components/IssueCard.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
@@ -106,19 +109,19 @@ async function toggleNotifications(repo: string) {
       if (!notificationRepos.value.includes(repo))
         notificationRepos.value.push(repo);
       save();
-      notificationNotice.value = `Notiser på för ${repo}. Nya stängningar meddelas medan dashboarden är öppen, även i en bakgrundsflik. Webbläsaren kan fördröja uppdateringar i bakgrunden.`;
+      notificationNotice.value = t("Notiser på för {repo}. Nya stängningar meddelas medan dashboarden är öppen, även i en bakgrundsflik. Webbläsaren kan fördröja uppdateringar i bakgrunden.", { repo });
     } else {
       notificationNotice.value =
         result === "unsupported"
-          ? "Den här webbläsaren stöder inte notiser här. Använd en datorwebbläsare med HTTPS."
+          ? t("Den här webbläsaren stöder inte notiser här. Använd en datorwebbläsare med HTTPS.")
           : result === "denied"
-            ? "Notiser är blockerade. Tillåt notiser för den här webbplatsen i webbläsarens inställningar och försök igen."
-            : "Notiser aktiverades inte. Du kan försöka igen med klockan vid projektet.";
+            ? t("Notiser är blockerade. Tillåt notiser för den här webbplatsen i webbläsarens inställningar och försök igen.")
+            : t("Notiser aktiverades inte. Du kan försöka igen med klockan vid projektet.");
     }
   } catch {
     if (run === generation)
       notificationNotice.value =
-        "Webbläsaren kunde inte aktivera notiser. Kontrollera webbplatsens behörigheter.";
+        t("Webbläsaren kunde inte aktivera notiser. Kontrollera webbplatsens behörigheter.");
   } finally {
     if (run === generation) notificationPending.value = null;
   }
@@ -134,9 +137,7 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
     );
     save();
     notificationNotice.value =
-      "Notiser kunde inte visas och har stängts av för " +
-      lane.repo.name +
-      ". Kontrollera webbläsarens stöd och behörigheter.";
+      t("Notiser kunde inte visas och har stängts av för {repo}. Kontrollera webbläsarens stöd och behörigheter.", { repo: lane.repo.name });
   }
 }
 function closureFeedback(result: Lane[]) {
@@ -165,11 +166,11 @@ const filteredRepos = computed(() =>
     r.full_name.toLowerCase().includes(repoQuery.value.toLowerCase()),
   ),
 );
-const columns = [
-  { key: "backlog", title: "Backlog", hint: "Högst prioritet först" },
-  { key: "progress", title: "In progress", hint: "Tid sedan arbetet startade" },
-  { key: "closed", title: "Closed", hint: "Senaste 30 dagarna · nyast först" },
-];
+const columns = computed(() => [
+  { key: "backlog", title: "Backlog", hint: t("Högst prioritet först") },
+  { key: "progress", title: "In progress", hint: t("Tid sedan arbetet startade") },
+  { key: "closed", title: "Closed", hint: t("Senaste 30 dagarna · nyast först") },
+]);
 function laneIssues(lane: Lane) {
   return lane.issues.filter(
     (i) =>
@@ -263,7 +264,7 @@ async function connect(token: string) {
   }
 }
 function message(e: unknown) {
-  return e instanceof Error ? e.message : "Något gick fel. Försök igen.";
+  return e instanceof Error ? e.message : t("Något gick fel. Försök igen.");
 }
 async function refresh() {
   if (!api || busy.value) return;
@@ -420,12 +421,12 @@ onMounted(async () => {
 </script>
 <template>
   <aside class="sidebar">
-    <a class="brand" href="." aria-label="Issueflow startsida"
+    <a class="brand" href="." :aria-label="t('Issueflow startsida')"
       ><span class="brand-icon"><Layers3 :size="23" /></span
       ><span>issueflow<span class="brand-dot">.</span></span></a
     ><span class="nav-caption">WORKSPACE</span>
     <div class="nav-item active">
-      <LayoutDashboard :size="18" /> Översikt
+      <LayoutDashboard :size="18" /> {{ t("Översikt") }}
       <span class="nav-count">{{ lanes.length }}</span>
     </div>
     <div class="sidebar-projects">
@@ -434,7 +435,7 @@ onMounted(async () => {
         v-if="loggedIn"
         class="sidebar-add"
         @click="picker = true"
-        aria-label="Välj repositories"
+        :aria-label="t('Välj repositories')"
       >
         <Plus :size="16" /></button
       ><a
@@ -444,24 +445,25 @@ onMounted(async () => {
         :href="'#repo-' + lane.repo.id"
         ><span class="repo-dot" />{{ lane.repo.name }}</a
       >
-      <p v-if="!lanes.length" class="sidebar-empty">Dina projekt börjar här.</p>
+      <p v-if="!lanes.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
     </div>
     <div class="sidebar-footer">
       <Github :size="19" />
-      <div>Byggt för ditt flöde<small>Drivs av GitHub Issues</small></div>
+      <div>{{ t("Byggt för ditt flöde") }}<small>{{ t("Drivs av GitHub Issues") }}</small></div>
       <ExternalLink :size="13" />
     </div>
   </aside>
   <div class="workspace">
     <header class="topbar">
       <div class="breadcrumb">
-        Workspace <span>/</span><strong>Översikt</strong>
+        Workspace <span>/</span><strong>{{ t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
+        <LanguageSettings />
         <InstallApp />
         <span class="connection"
           ><i :class="{ connected: loggedIn }" />{{
-            loggedIn ? "GitHub anslutet" : isDemo ? "Demoläge" : "Ej ansluten"
+            loggedIn ? t("GitHub anslutet") : isDemo ? t("Demoläge") : t("Ej ansluten")
           }}</span
         ><template v-if="user"
           ><img :src="user.avatar_url" alt="" class="avatar" /><span
@@ -470,12 +472,12 @@ onMounted(async () => {
           ><button
             class="icon-button"
             @click="logout"
-            aria-label="Logga ut"
-            title="Logga ut"
+            :aria-label="t('Logga ut')"
+            :title="t('Logga ut')"
           >
             <LogOut :size="17" /></button></template
         ><button v-else-if="isDemo" class="button small" @click="logout">
-          Till inloggning
+          {{ t("Till inloggning") }}
         </button>
       </div>
     </header>
@@ -488,7 +490,7 @@ onMounted(async () => {
         <span>{{ notificationNotice }}</span
         ><button
           class="icon-button"
-          aria-label="Stäng notismeddelande"
+          :aria-label="t('Stäng notismeddelande')"
           @click="notificationNotice = ''"
         >
           <X :size="16" />
@@ -498,7 +500,7 @@ onMounted(async () => {
         {{ error
         }}<button
           class="icon-button"
-          aria-label="Stäng felmeddelande"
+          :aria-label="t('Stäng felmeddelande')"
           @click="error = ''"
         >
           <X :size="16" />
@@ -507,27 +509,25 @@ onMounted(async () => {
       <template v-if="!loggedIn && !isDemo"
         ><div class="welcome">
           <span class="eyebrow"
-            ><span class="repo-dot" /> MINDRE LETANDE. MER FRAMÅT.</span
+            ><span class="repo-dot" /> {{ t("MINDRE LETANDE. MER FRAMÅT.") }}</span
           >
-          <h1>Alla dina projekt.<br /><span>Ett tydligt flöde.</span></h1>
+          <h1>{{ t("Alla dina projekt.") }}<br /><span>{{ t("Ett tydligt flöde.") }}</span></h1>
           <p>
-            Från första idén till sista fixen. Följ dina GitHub-issues i en
-            samlad vy som anpassar sig efter hur du jobbar.
+            {{ t("Från första idén till sista fixen. Följ dina GitHub-issues i en samlad vy som anpassar sig efter hur du jobbar.") }}
           </p>
           <div class="welcome-actions">
             <button v-if="oauthReady" class="button primary" @click="oauth">
-              <Github :size="19" /> Logga in med GitHub
+              <Github :size="19" /> {{ t("Logga in med GitHub") }}
               <ArrowRight :size="17" /></button
             ><button v-else class="button primary" @click="tokenPanel = true">
-              <Github :size="19" /> Anslut GitHub
+              <Github :size="19" /> {{ t("Anslut GitHub") }}
               <ArrowRight :size="17" /></button
             ><button class="button" @click="showDemo">
-              Utforska en demo <ArrowRight :size="16" />
+              {{ t("Utforska en demo") }} <ArrowRight :size="16" />
             </button>
           </div>
           <p class="privacy-note">
-            Dina issues hämtas direkt från GitHub. Inga projektdata sparas på en
-            server.
+            {{ t("Dina issues hämtas direkt från GitHub. Inga projektdata sparas på en server.") }}
           </p>
           <form
             v-if="tokenPanel"
@@ -536,9 +536,7 @@ onMounted(async () => {
           >
             <label for="token">GitHub personal access token</label>
             <p>
-              Använd en fine-grained token med läsrättighet till Issues och
-              Metadata för de repositories du vill följa. Tokenen finns bara i
-              minnet tills du lämnar sidan.
+              {{ t("Använd en fine-grained token med läsrättighet till Issues och Metadata för de repositories du vill följa. Tokenen sparas krypterat i webbläsarens databas (IndexedDB) tills du loggar ut.") }}
             </p>
             <input
               id="token"
@@ -552,12 +550,12 @@ onMounted(async () => {
               class="button primary"
               :disabled="authBusy || !tokenInput.trim()"
             >
-              {{ authBusy ? "Ansluter…" : "Anslut konto" }}</button
+              {{ authBusy ? t("Ansluter…") : t("Anslut konto") }}</button
             ><a
               href="https://github.com/settings/personal-access-tokens/new"
               target="_blank"
               rel="noopener noreferrer"
-              >Skapa en token <ExternalLink :size="13"
+              >{{ t("Skapa en token") }} <ExternalLink :size="13"
             /></a>
           </form>
           <button
@@ -565,10 +563,10 @@ onMounted(async () => {
             class="text-button"
             @click="tokenPanel = true"
           >
-            Använd en personal access token
+            {{ t("Använd en personal access token") }}
           </button>
         </div>
-        <div class="intro-board" aria-label="Så fungerar dashboarden">
+        <div class="intro-board" :aria-label="t('Så fungerar dashboarden')">
           <div v-for="(col, i) in columns" :key="col.key" class="intro-column">
             <span class="column-heading"
               ><i :class="col.key" />{{ col.title }}</span
@@ -576,20 +574,20 @@ onMounted(async () => {
             <div class="illustration-card" :class="col.key">
               <span class="skeleton short" /><strong>{{
                 [
-                  "Nästa stora idé",
-                  "Något bra är på gång",
-                  "Ännu ett steg framåt",
+                  t("Nästa stora idé"),
+                  t("Något bra är på gång"),
+                  t("Ännu ett steg framåt"),
                 ][i]
               }}</strong
               ><span class="skeleton" /><span class="intro-tag">{{
-                ["Prioriterat & redo", "◷ 1h 24m", "✓ Klart för idag"][i]
+                [t("Prioriterat & redo"), "◷ 1h 24m", t("✓ Klart för idag")][i]
               }}</span>
             </div>
             <span class="intro-description">{{
               [
-                "Ditt nästa steg, i rätt ordning.",
-                "Följ arbetet medan det händer.",
-                "Se vad du har åstadkommit.",
+                t("Ditt nästa steg, i rätt ordning."),
+                t("Följ arbetet medan det händer."),
+                t("Se vad du har åstadkommit."),
               ][i]
             }}</span>
           </div>
@@ -598,14 +596,14 @@ onMounted(async () => {
       <template v-else
         ><section class="page-heading">
           <div>
-            <div class="eyebrow">DITT ARBETE, SAMLAT</div>
-            <h1>Projektöversikt<span class="heading-dot">.</span></h1>
-            <p>Från backlog till klart. Håll koll på vad som rör sig.</p>
+            <div class="eyebrow">{{ t("DITT ARBETE, SAMLAT") }}</div>
+            <h1>{{ t("Projektöversikt") }}<span class="heading-dot">.</span></h1>
+            <p>{{ t("Från backlog till klart. Håll koll på vad som rör sig.") }}</p>
           </div>
           <div class="heading-actions">
             <button class="button" :disabled="busy || isDemo" @click="refresh">
               <RefreshCw :size="15" :class="{ spinning: busy }" />{{
-                busy ? "Hämtar…" : "Uppdatera"
+                busy ? t("Hämtar…") : t("Uppdatera")
               }}</button
             ><button
               v-if="loggedIn"
@@ -613,24 +611,23 @@ onMounted(async () => {
               :disabled="busy"
               @click="picker = true"
             >
-              <Plus :size="16" /> Välj repositories
+              <Plus :size="16" /> {{ t("Välj repositories") }}
             </button>
           </div>
         </section>
         <div v-if="isDemo" class="notice demo-notice">
           <span
-            >Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se
-            dina egna.</span
+            >{{ t("Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.") }}</span
           ><button class="text-button" @click="logout">
-            Anslut konto <ArrowRight :size="14" />
+            {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <section class="stats" aria-label="Sammanfattning">
+        <section class="stats" :aria-label="t('Sammanfattning')">
           <div class="stat">
             <span class="stat-icon repos"><Layers3 :size="20" /></span>
             <div>
               <span class="stat-label">Repositories</span
-              ><strong>{{ lanes.length }}<small>i din översikt</small></strong>
+              ><strong>{{ lanes.length }}<small>{{ t("i din översikt") }}</small></strong>
             </div>
           </div>
           <div class="stat">
@@ -638,23 +635,23 @@ onMounted(async () => {
               ><LayoutDashboard :size="20"
             /></span>
             <div>
-              <span class="stat-label">Öppna issues</span
-              ><strong>{{ stats.open }}<small>att ta vidare</small></strong>
+              <span class="stat-label">{{ t("Öppna issues") }}</span
+              ><strong>{{ stats.open }}<small>{{ t("att ta vidare") }}</small></strong>
             </div>
           </div>
           <div class="stat">
             <span class="stat-icon progress"><Activity :size="20" /></span>
             <div>
-              <span class="stat-label">Pågående</span
-              ><strong>{{ stats.progress }}<small>just nu</small></strong>
+              <span class="stat-label">{{ t("Pågående") }}</span
+              ><strong>{{ stats.progress }}<small>{{ t("just nu") }}</small></strong>
             </div>
           </div>
           <div class="stat">
             <span class="stat-icon closed"><CircleCheck :size="20" /></span>
             <div>
-              <span class="stat-label">Stängda</span
+              <span class="stat-label">{{ t("Stängda") }}</span
               ><strong
-                >{{ stats.closed }}<small>senaste 30 dagarna</small></strong
+                >{{ stats.closed }}<small>{{ t("senaste 30 dagarna") }}</small></strong
               >
             </div>
           </div>
@@ -663,34 +660,33 @@ onMounted(async () => {
           <label class="search"
             ><Search :size="17" /><input
               v-model="query"
-              aria-label="Sök issues"
-              placeholder="Sök issues, labels eller nummer…" /></label
+              :aria-label="t('Sök issues')"
+              :placeholder="t('Sök issues, labels eller nummer…')" /></label
           ><label class="coord-toggle"
-            ><input type="checkbox" v-model="hideCoordination" /> Dölj
-            koordinationsärenden</label
+            ><input type="checkbox" v-model="hideCoordination" /> {{ t("Dölj koordinationsärenden") }}</label
           ><span class="updated"
             ><i />{{
               refreshed
-                ? "Uppdaterad " +
-                  new Date(refreshed).toLocaleTimeString("sv-SE", {
+                ? t("Uppdaterad ") +
+                  new Date(refreshed).toLocaleTimeString(locale, {
                     hour: "2-digit",
                     minute: "2-digit",
                   })
-                : "Väntar på data"
-            }}<span v-if="loggedIn"> · varje minut</span></span
+                : t("Väntar på data")
+            }}<span v-if="loggedIn">{{ t(" · varje minut") }}</span></span
           >
         </div>
         <div v-if="busy && !lanes.length" class="empty-state">
           <RefreshCw class="spinning" :size="25" />
-          <h2>Hämtar ditt flöde</h2>
-          <p>Issues, labels och starttider hämtas från GitHub.</p>
+          <h2>{{ t("Hämtar ditt flöde") }}</h2>
+          <p>{{ t("Issues, labels och starttider hämtas från GitHub.") }}</p>
         </div>
         <div v-else-if="!lanes.length" class="empty-state">
           <Layers3 :size="32" />
-          <h2>Ge dina projekt en plats</h2>
-          <p>Välj vilka repositories du vill följa i din översikt.</p>
+          <h2>{{ t("Ge dina projekt en plats") }}</h2>
+          <p>{{ t("Välj vilka repositories du vill följa i din översikt.") }}</p>
           <button class="button primary" @click="picker = true">
-            <Plus :size="16" /> Välj repositories
+            <Plus :size="16" /> {{ t("Välj repositories") }}
           </button>
         </div>
         <section
@@ -712,7 +708,7 @@ onMounted(async () => {
                     rel="noopener noreferrer"
                     >{{ lane.repo.name }}<ArrowRight :size="14" /></a
                   ><span v-if="lane.repo.private" class="private-badge"
-                    >Privat</span
+                    >{{ t("Privat") }}</span
                   >
                 </h2>
                 <span class="repo-owner"
@@ -727,11 +723,11 @@ onMounted(async () => {
                 class="notification-toggle"
                 role="switch"
                 :aria-checked="notificationsEnabled(lane.repo.full_name)"
-                :aria-label="'Notiser för ' + lane.repo.name"
+                :aria-label="t('Notiser för ') + lane.repo.name"
                 :title="
                   notificationsEnabled(lane.repo.full_name)
-                    ? 'Stäng av notiser om stängda issues'
-                    : 'Slå på notiser om stängda issues'
+                    ? t('Stäng av notiser om stängda issues')
+                    : t('Slå på notiser om stängda issues')
                 "
                 :disabled="notificationPending !== null"
                 :class="{ enabled: notificationsEnabled(lane.repo.full_name) }"
@@ -741,9 +737,9 @@ onMounted(async () => {
                   v-if="notificationsEnabled(lane.repo.full_name)"
                   :size="15"
                 /><BellOff v-else :size="15" /><span
-                  >Notiser
+                  >{{ t("Notiser") }}
                   {{
-                    notificationsEnabled(lane.repo.full_name) ? "på" : "av"
+                    notificationsEnabled(lane.repo.full_name) ? t("på") : t("av")
                   }}</span
                 >
               </button>
@@ -754,22 +750,21 @@ onMounted(async () => {
                 v-if="!isDemo"
                 class="icon-button"
                 @click="editRules(lane)"
-                :aria-label="'Anpassa labels för ' + lane.repo.name"
-                title="Anpassa labels"
+                :aria-label="t('Anpassa labels för ') + lane.repo.name"
+                :title="t('Anpassa labels')"
               >
                 <Settings2 :size="16" />
               </button>
             </div>
           </header>
           <div v-if="lane.error" class="notice error" role="alert">
-            {{ lane.error }} Tidigare data visas om de finns.
+            {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}
           </div>
           <div v-if="lane.timerWarning" class="notice">
-            Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken
-            är tillgänglig.
+            {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}
           </div>
           <p class="mobile-swipe-hint">
-            Svep för Backlog, In progress och Closed →
+            {{ t("Svep för Backlog, In progress och Closed →") }}
           </p>
           <div class="swimlane">
             <section
@@ -811,10 +806,10 @@ onMounted(async () => {
                     :size="20"
                   /><Layers3 v-else :size="20" /><span>{{
                     col.key === "progress"
-                      ? "Inget pågående arbete"
+                      ? t("Inget pågående arbete")
                       : col.key === "closed"
-                        ? "Inga stängda issues ännu"
-                        : "Backloggen är tom"
+                        ? t("Inga stängda issues ännu")
+                        : t("Backloggen är tom")
                   }}</span>
                 </div>
                 <button
@@ -835,11 +830,11 @@ onMounted(async () => {
           </div>
         </section>
         <footer class="board-footer">
-          <span><Github :size="14" /> Dina repositories. Ditt arbetssätt.</span
+          <span><Github :size="14" /> {{ t("Dina repositories. Ditt arbetssätt.") }}</span
           ><span>{{
             isDemo
-              ? "Fiktiva exempeldata"
-              : "Läsande vy · ändra issues på GitHub"
+              ? t("Fiktiva exempeldata")
+              : t("Läsande vy · ändra issues på GitHub")
           }}</span>
         </footer></template
       >
@@ -855,20 +850,20 @@ onMounted(async () => {
     >
       <div class="modal-heading">
         <div>
-          <span class="eyebrow">DIN ÖVERSIKT</span>
-          <h2 id="picker-title">Välj repositories</h2>
+          <span class="eyebrow">{{ t("DIN ÖVERSIKT") }}</span>
+          <h2 id="picker-title">{{ t("Välj repositories") }}</h2>
         </div>
-        <button class="icon-button" @click="picker = false" aria-label="Stäng">
+        <button class="icon-button" @click="picker = false" :aria-label="t('Stäng')">
           <X :size="20" />
         </button>
       </div>
-      <p>En swimlane per projekt. Ditt val sparas på den här enheten.</p>
+      <p>{{ t("En swimlane per projekt. Ditt val sparas på den här enheten.") }}</p>
       <label class="search"
         ><Search :size="17" /><input
           v-model="repoQuery"
           autofocus
-          placeholder="Sök repositories…"
-          aria-label="Sök repositories"
+          :placeholder="t('Sök repositories…')"
+          :aria-label="t('Sök repositories')"
       /></label>
       <div class="repo-options">
         <label v-for="repo in filteredRepos" :key="repo.id" class="repo-option"
@@ -878,15 +873,15 @@ onMounted(async () => {
             @change="toggleRepo(repo.full_name)"
           /><span
             ><strong>{{ repo.full_name }}</strong
-            ><small>{{ repo.description || "Ingen beskrivning" }}</small></span
-          ><span v-if="repo.private" class="private-badge">Privat</span></label
+            ><small>{{ repo.description || t("Ingen beskrivning") }}</small></span
+          ><span v-if="repo.private" class="private-badge">{{ t("Privat") }}</span></label
         >
-        <p v-if="!filteredRepos.length">Inga repositories matchar sökningen.</p>
+        <p v-if="!filteredRepos.length">{{ t("Inga repositories matchar sökningen.") }}</p>
       </div>
       <div class="modal-footer">
-        <span>{{ pendingSelected.length }} valda</span
+        <span>{{ pendingSelected.length }}{{ t(" valda") }}</span
         ><button class="button primary" :disabled="busy" @click="applyRepos">
-          Visa översikt <ArrowRight :size="16" />
+          {{ t("Visa översikt") }} <ArrowRight :size="16" />
         </button>
       </div>
     </section>
@@ -901,35 +896,34 @@ onMounted(async () => {
       @keydown.esc="applyRules"
     >
       <div class="modal-heading">
-        <h2 id="rules-title">Anpassa labels</h2>
+        <h2 id="rules-title">{{ t("Anpassa labels") }}</h2>
         <button
           type="button"
           class="icon-button"
           @click="applyRules"
-          aria-label="Stäng"
+          :aria-label="t('Stäng')"
         >
           <X :size="20" />
         </button>
       </div>
       <p>
-        {{ editing }} · Lämna tomt för automatisk detektering. Ange exakta
-        labelnamn.
+        {{ editing }} {{ t("· Lämna tomt för automatisk detektering. Ange exakta labelnamn.") }}
       </p>
       <label
         v-for="field in [
-          ['progress', 'Pågående arbete'],
-          ['high', 'Hög prioritet'],
-          ['medium', 'Medium prioritet'],
-          ['low', 'Låg prioritet'],
+          ['progress', t('Pågående arbete')],
+          ['high', t('Hög prioritet')],
+          ['medium', t('Medium prioritet')],
+          ['low', t('Låg prioritet')],
         ] as const"
         :key="field[0]"
         class="rule-field"
-        >{{ field[1]
-        }}<input v-model="rules[editing]![field[0]]" placeholder="Automatiskt"
+        >{{ t(field[1])
+        }}<input v-model="rules[editing]![field[0]]" :placeholder="t('Automatiskt')"
       /></label>
       <div class="modal-footer">
-        <span>Gäller bara din vy</span
-        ><button class="button primary">Spara och hämta igen</button>
+        <span>{{ t("Gäller bara din vy") }}</span
+        ><button class="button primary">{{ t("Spara och hämta igen") }}</button>
       </div>
     </form>
   </div>

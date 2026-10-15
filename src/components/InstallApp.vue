@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useLanguage } from "../lib/i18n";
+const { t, locale } = useLanguage();
 import { onMounted, onUnmounted, ref } from "vue";
 import { Download, X } from "@lucide/vue";
 interface InstallPrompt extends Event {
@@ -50,7 +52,7 @@ onUnmounted(() => {
     class="button small install-button"
     @click="install"
   >
-    <Download :size="15" /><span>Installera app</span>
+    <Download :size="15" /><span>{{ t("Installera app") }}</span>
   </button>
   <dialog
     ref="dialog"
@@ -62,27 +64,24 @@ onUnmounted(() => {
     "
   >
     <div class="modal-heading">
-      <h2>Installera Issueflow</h2>
-      <button class="icon-button" aria-label="Stäng" @click="dialog?.close()">
+      <h2>{{ t("Installera Issueflow") }}</h2>
+      <button class="icon-button" :aria-label="t('Stäng')" @click="dialog?.close()">
         <X :size="20" />
       </button>
     </div>
     <p>
-      I Chrome eller Edge: använd installationsikonen i adressfältet, eller välj
-      <strong>Installera Issueflow</strong> i webbläsarens meny.
+      {{ t("I Chrome eller Edge: använd installationsikonen i adressfältet, eller välj") }}
+      <strong>{{ t("Installera Issueflow") }}</strong> {{ t("i webbläsarens meny.") }}
     </p>
     <p>
-      På iPhone och iPad: öppna sidan i Safari, tryck <strong>Dela</strong> och
-      välj <strong>Lägg till på hemskärmen</strong>. På Android finns
-      installation i webbläsarens meny.
+      {{ t("På iPhone och iPad: öppna sidan i Safari, tryck") }} <strong>{{ t("Dela") }}</strong> {{ t("och välj") }} <strong>{{ t("Lägg till på hemskärmen") }}</strong>{{ t(". På Android finns installation i webbläsarens meny.") }}
     </p>
     <p>
-      Installationen öppnar dashboarden i ett eget appfönster. GitHub-data
-      kräver internet; appskalet kan öppnas offline.
+      {{ t("Installationen öppnar dashboarden i ett eget appfönster. GitHub-data kräver internet; appskalet kan öppnas offline.") }}
     </p>
     <div class="modal-footer">
-      <span>Alternativen beror på din webbläsare.</span
-      ><button class="button primary" @click="dialog?.close()">Klart</button>
+      <span>{{ t("Alternativen beror på din webbläsare.") }}</span
+      ><button class="button primary" @click="dialog?.close()">{{ t("Klart") }}</button>
     </div>
   </dialog>
 </template>

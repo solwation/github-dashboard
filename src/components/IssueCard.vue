@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useLanguage } from "../lib/i18n";
+const { t, locale } = useLanguage();
 import { computed } from "vue";
 import {
   ArrowUpRight,
@@ -44,9 +46,9 @@ const visibleLabels = computed(() =>
       ><span
         class="priority"
         :class="['high', 'medium', 'low'][rank]"
-        :title="'Prioritet: ' + ['hög', 'medium', 'låg'][rank]"
+        :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
         ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" />{{
-          ["Hög", "Medium", "Låg"][rank]
+          [t("Hög"), "Medium", t("Låg")][rank]
         }}</span
       >
     </div>
@@ -73,26 +75,26 @@ const visibleLabels = computed(() =>
         class="timer"
         :title="
           issue.startedAt
-            ? 'Arbetslabel satt ' +
-              new Date(issue.startedAt).toLocaleString('sv-SE')
-            : 'Ingen säker starttid kunde hämtas'
+            ? t('Arbetslabel satt ') +
+              new Date(issue.startedAt).toLocaleString(locale)
+            : t('Ingen säker starttid kunde hämtas')
         "
         ><Clock3 :size="13" />{{
-          issue.startedAt ? duration(issue.startedAt, now) : "Starttid okänd"
+          issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd")
         }}</span
       ><time
         v-else-if="col === 'closed' && issue.closed_at"
         class="closed-date"
         :datetime="issue.closed_at"
         :title="
-          new Date(issue.closed_at).toLocaleString('sv-SE', {
+          new Date(issue.closed_at).toLocaleString(locale, {
             dateStyle: 'full',
             timeStyle: 'long',
           })
         "
-        >Stängd
+        >{{ t("Stängd") }}
         {{
-          new Date(issue.closed_at).toLocaleString("sv-SE", {
+          new Date(issue.closed_at).toLocaleString(locale, {
             month: "short",
             day: "numeric",
             hour: "2-digit",

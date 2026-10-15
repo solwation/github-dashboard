@@ -1,3 +1,4 @@
+import { t, locale } from "./i18n";
 import {
   column,
   progressStart,
@@ -25,10 +26,12 @@ export class GitHub {
       const reset = response.headers.get("x-ratelimit-reset");
       throw new Error(
         response.status === 401
-          ? "Sessionen har gått ut. Logga in igen."
+          ? t("Sessionen har gått ut. Logga in igen.")
           : response.status === 403 || response.status === 429
-            ? `Åtkomst nekad eller API-gräns nådd.${reset ? " Försök efter " + new Date(Number(reset) * 1000).toLocaleTimeString("sv-SE") + "." : " Kontrollera tokenens behörigheter."}`
-            : `GitHub svarade ${response.status}. Kontrollera att du har åtkomst till repot.`,
+            ? t("Åtkomst nekad eller API-gräns nådd.") + (reset
+              ? t(" Försök efter {time}.", { time: new Date(Number(reset) * 1000).toLocaleTimeString(locale.value) })
+              : t(" Kontrollera tokenens behörigheter."))
+            : t("GitHub svarade {status}. Kontrollera att du har åtkomst till repot.", { status: response.status }),
       );
     }
     return {
