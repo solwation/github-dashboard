@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
+  ChevronRight,
   CircleCheck,
   Clock3,
   ExternalLink,
@@ -25,6 +26,8 @@ import {
 import LanguageSettings from "./components/LanguageSettings.vue";
 import VersionUpdate from "./components/VersionUpdate.vue";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
+import RepositoryOrderControls from "./components/RepositoryOrderControls.vue";
+import { reconcileOrder, restoreLayout, moveProject, projectDragType } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
 import { ActivityTracker } from "./lib/activity";
 import { createIssueSync } from "./lib/sync";
@@ -61,6 +64,45 @@ const user = ref<{ login: string; avatar_url: string } | null>(null);
 const lanes = ref<Lane[]>([]);
 const repos = ref<Repo[]>([]);
 const selected = ref<string[]>([]);
+const projectOrder = ref<string[]>([]);
+const collapsedRepos = ref<string[]>([]);
+const layoutAnnouncement = ref("");
+const orderedLanes = computed(() => {
+  const order = reconcileOrder(projectOrder.value, lanes.value.map(lane => lane.repo.full_name));
+  const positions = new Map(order.map((name, index) => [name, index]));
+  return [...lanes.value].sort((a, b) => positions.get(a.repo.full_name)! - positions.get(b.repo.full_name)!);
+});
+function reorderProject(source: string, target: string) {
+  const names = orderedLanes.value.map(lane => lane.repo.full_name);
+  if (!names.includes(source) || !names.includes(target) || source === target) return;
+  const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  projectOrder.value = moveProject(reconcileOrder(projectOrder.value, repos.value.length ? repos.value.map(repo => repo.full_name) : names), source, target);
+  layoutAnnouncement.value = t("{name} flyttad till plats {position} av {total}", {
+    name: source.split("/").pop()!, position: orderedLanes.value.findIndex(lane => lane.repo.full_name === source) + 1, total: names.length,
+  });
+  save();
+  nextTick(() => {
+    if (!focused?.isConnected) return;
+    const control = focused.matches(":disabled")
+      ? focused.closest(".project-order-controls")?.querySelector<HTMLButtonElement>(".project-drag-handle") : focused;
+    control?.focus({ preventScroll: true });
+    control?.scrollIntoView({ block: "nearest" });
+  });
+}
+function moveRepository(name: string, direction: -1 | 1) {
+  const names = orderedLanes.value.map(lane => lane.repo.full_name);
+  const target = names[names.indexOf(name) + direction];
+  if (target) reorderProject(name, target);
+}
+function dropProject(event: DragEvent, target: string) {
+  const source = event.dataTransfer?.getData(projectDragType);
+  if (source) reorderProject(source, target);
+}
+function toggleCollapsed(name: string) {
+  collapsedRepos.value = collapsedRepos.value.includes(name)
+    ? collapsedRepos.value.filter(repo => repo !== name) : [...collapsedRepos.value, name];
+  save();
+}
 const rules = ref<Record<string, Rules>>({});
 const editing = ref<string | null>(null);
 const isDemo = ref(false);
@@ -283,7 +325,7 @@ function commitLoader(repo: string) {
 }
 const sidebarRepos = computed(() => {
   activityRevision.value;
-  return summarizeLanes(lanes.value, rules.value, hideCoordination.value,
+  return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
     (repo, issue) => activity.changedAt(repo, issue, now.value));
 });
 const stats = computed(() => {
@@ -306,6 +348,8 @@ function save() {
       storageKey(),
       JSON.stringify({
         selected: selected.value,
+        projectOrder: projectOrder.value,
+        collapsedRepos: collapsedRepos.value,
         rules: rules.value,
         notificationRepos: notificationRepos.value,
         activityRead: activity.acknowledgements(),
@@ -316,9 +360,14 @@ function save() {
   }
 }
 function restorePreferences(available: Repo[]) {
+    projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
+    collapsedRepos.value = [];
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
+        const layout = restoreLayout(saved, available.map(repo => repo.full_name));
+        projectOrder.value = layout.order;
+        collapsedRepos.value = layout.collapsed;
         activity.restore(saved.activityRead);
         selected.value = Array.isArray(saved.selected)
           ? saved.selected.filter(
@@ -495,6 +544,8 @@ function showDemo() {
   generation++;
   clearClosureFeedback();
   isDemo.value = true;
+  projectOrder.value = [];
+  collapsedRepos.value = [];
   lanes.value = demo();
   refreshed.value = Date.now();
   error.value = "";
@@ -532,6 +583,9 @@ function logout() {
   lanes.value = [];
   repos.value = [];
   selected.value = [];
+  projectOrder.value = [];
+  collapsedRepos.value = [];
+  layoutAnnouncement.value = "";
   rules.value = {};
   isDemo.value = false;
   busy.value = false;
@@ -731,6 +785,8 @@ onMounted(async () => {
       :now="now"
       :can-select="loggedIn"
       @select="picker = true"
+      @move="moveRepository"
+      @reorder="reorderProject"
     />
     <div class="sidebar-footer">
       <Github :size="19" />
@@ -1063,14 +1119,23 @@ onMounted(async () => {
             <Plus :size="16" /> {{ t("Välj repositories") }}
           </button>
         </div>
+        <p class="sr-only" role="status" aria-live="polite">{{ layoutAnnouncement }}</p>
         <section
-          v-for="lane in lanes"
+          v-for="(lane, laneIndex) in orderedLanes"
           :key="lane.repo.id"
           class="repo-lane"
           :id="'repo-' + lane.repo.id"
+          :class="{ 'is-collapsed': collapsedRepos.includes(lane.repo.full_name) }"
+          @dragover.prevent
+          @drop.prevent="dropProject($event, lane.repo.full_name)"
         >
           <header class="lane-header">
             <div class="lane-title">
+              <button class="collapse-project icon-button" @click="toggleCollapsed(lane.repo.full_name)"
+                :aria-label="t(collapsedRepos.includes(lane.repo.full_name) ? 'Expandera {name}' : 'Kollapsa {name}', { name: lane.repo.name })"
+                :aria-expanded="!collapsedRepos.includes(lane.repo.full_name)" :aria-controls="'lane-content-' + lane.repo.id">
+                <ChevronRight v-if="collapsedRepos.includes(lane.repo.full_name)" :size="18" /><ChevronDown v-else :size="18" />
+              </button>
               <span class="repo-avatar">{{
                 lane.repo.name.slice(0, 2).toUpperCase()
               }}</span>
@@ -1092,6 +1157,12 @@ onMounted(async () => {
               </div>
             </div>
             <div class="lane-meta">
+              <RepositoryOrderControls :name="lane.repo.name" :full-name="lane.repo.full_name" :index="laneIndex" :total="orderedLanes.length" @move="moveRepository(lane.repo.full_name, $event)" />
+              <span class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
+                <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
+                <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
+                <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepos[laneIndex]?.closed || 0 }) }}</span>
+              </span>
               <button
                 v-if="!isDemo"
                 class="notification-toggle"
@@ -1133,6 +1204,7 @@ onMounted(async () => {
               </button>
             </div>
           </header>
+          <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
           <div v-if="lane.error" class="notice error" role="alert">
             {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}
           </div>
@@ -1210,6 +1282,7 @@ onMounted(async () => {
                 </button>
               </div>
             </section>
+          </div>
           </div>
         </section>
         <footer class="board-footer">

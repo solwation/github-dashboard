@@ -35,6 +35,15 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Ordna {name}": "Reorder {name}",
+  "Ordna {name} med piltangenterna upp och ned, eller dra": "Reorder {name} with up and down arrow keys, or drag",
+  "Dra för att ordna. Använd upp- och nedpilarna med tangentbordet.": "Drag to reorder. Use the up and down arrow keys on the keyboard.",
+  "Flytta {name} upp": "Move {name} up",
+  "Flytta {name} ned": "Move {name} down",
+  "{name} flyttad till plats {position} av {total}": "{name} moved to position {position} of {total}",
+  "Expandera {name}": "Expand {name}",
+  "Kollapsa {name}": "Collapse {name}",
+  "Sammanfattning för {name}": "Summary for {name}",
   "Okänd stängningstid": "Unknown closure time",
   "1 sekund sedan": "1 second ago",
   "{seconds} sekunder sedan": "{seconds} seconds ago",

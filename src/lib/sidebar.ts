@@ -3,6 +3,7 @@ import { column, isCoordination, type Issue, type Lane, type Rules } from "./mod
 export interface SidebarRepository {
   id: number;
   name: string;
+  fullName: string;
   backlog: number;
   progress: number;
   closed: number;
@@ -21,6 +22,7 @@ export function summarizeLanes(
     const summary: SidebarRepository = {
       id: lane.repo.id,
       name: lane.repo.name,
+      fullName: lane.repo.full_name,
       backlog: 0,
       progress: 0,
       closed: 0,

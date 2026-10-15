@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { Circle, CircleCheck, Clock3, Plus } from "@lucide/vue";
+import RepositoryOrderControls from "./RepositoryOrderControls.vue";
+import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
 import { recentlyChanged, type SidebarRepository } from "../lib/sidebar";
 
 defineProps<{ repos: SidebarRepository[]; now: number; canSelect: boolean }>();
-const emit = defineEmits<{ select: [] }>();
+const emit = defineEmits<{ select: []; move: [name: string, direction: -1 | 1]; reorder: [source: string, target: string] }>();
+function drop(event: DragEvent, target: string) {
+  const source = event.dataTransfer?.getData(projectDragType);
+  if (source) emit("reorder", source, target);
+}
 const { t, locale } = useLanguage();
 function lastChange(changedAt: string | null) {
   return changedAt
@@ -21,7 +27,8 @@ function lastChange(changedAt: string | null) {
       <Plus :size="16" />
     </button>
     </div>
-    <a v-for="repo in repos" :key="repo.id" class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="lastChange(repo.changedAt)">
+    <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
+    <a class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="lastChange(repo.changedAt)">
       <span class="repository-name">
         <span class="repo-dot" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
@@ -34,16 +41,20 @@ function lastChange(changedAt: string | null) {
       </span>
       <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
     </a>
+    <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" />
+    </div>
     <p v-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
   </div>
 </template>
 <style scoped>
+.sidebar-repository-row { margin-top: 14px; }
+.sidebar-repository-row > :last-child { margin-left: 8px; margin-top: 3px; }
 .sidebar-repository {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  margin-top: 18px;
+  margin-top: 0;
   padding-right: 5px;
   border-radius: 4px;
 }
