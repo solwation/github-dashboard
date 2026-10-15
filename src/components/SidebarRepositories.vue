@@ -1,0 +1,59 @@
+<script setup lang="ts">
+import { Circle, CircleCheck, Clock3, Plus } from "@lucide/vue";
+import { useLanguage } from "../lib/i18n";
+import { recentlyChanged, type SidebarRepository } from "../lib/sidebar";
+
+defineProps<{ repos: SidebarRepository[]; now: number; canSelect: boolean }>();
+const emit = defineEmits<{ select: [] }>();
+const { t, locale } = useLanguage();
+function lastChange(changedAt: string | null) {
+  return changedAt
+    ? t("Senaste ändring: {time}", {
+        time: new Date(changedAt).toLocaleString(locale.value, { dateStyle: "full", timeStyle: "long" }),
+      })
+    : t("Ingen registrerad aktivitet");
+}
+</script>
+<template>
+  <div class="sidebar-projects">
+    <span class="nav-caption">REPOSITORIES</span>
+    <button v-if="canSelect" class="sidebar-add" @click="emit('select')" :aria-label="t('Välj repositories')">
+      <Plus :size="16" />
+    </button>
+    <a v-for="repo in repos" :key="repo.id" class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="lastChange(repo.changedAt)">
+      <span class="repository-name">
+        <span class="repo-dot" aria-hidden="true" />
+        <span class="repository-label">{{ repo.name }}</span>
+        <span v-if="recentlyChanged(repo.changedAt, now)" class="recent-activity" :title="t('Nyligen ändrat')" role="img" :aria-label="t('Nyligen ändrat')" />
+      </span>
+      <span class="repository-counts">
+        <span class="status-count backlog" :title="t('Backlog: {count}', { count: repo.backlog })"><Circle :size="11" aria-hidden="true" /><span class="sr-only">Backlog: </span>{{ repo.backlog }}</span>
+        <span class="status-count progress" :title="t('Pågående: {count}', { count: repo.progress })"><Clock3 :size="11" aria-hidden="true" /><span class="sr-only">{{ t('Pågående') }}: </span>{{ repo.progress }}</span>
+        <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck :size="11" aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span>{{ repo.closed }}</span>
+      </span>
+      <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
+    </a>
+    <p v-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
+  </div>
+</template>
+<style scoped>
+.sidebar-repository {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 18px;
+  padding-right: 5px;
+  border-radius: 4px;
+}
+.sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
+.repository-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.repository-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.repository-counts { display: flex; flex-wrap: wrap; gap: 11px; padding-left: 15px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.status-count { display: inline-flex; align-items: center; gap: 4px; }
+.backlog { color: #61727b; }
+.progress { color: #916010; }
+.closed { color: #287c66; }
+.recent-activity { flex-shrink: 0; margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: #25866a; box-shadow: 0 0 0 3px #25866a14; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+</style>
