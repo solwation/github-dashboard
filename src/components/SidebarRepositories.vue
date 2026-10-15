@@ -16,10 +16,11 @@ function lastChange(changedAt: string | null) {
 </script>
 <template>
   <div class="sidebar-projects">
-    <span class="nav-caption">REPOSITORIES</span>
+    <div class="repositories-heading"><span class="nav-caption">REPOSITORIES</span>
     <button v-if="canSelect" class="sidebar-add" @click="emit('select')" :aria-label="t('Välj repositories')">
       <Plus :size="16" />
     </button>
+    </div>
     <a v-for="repo in repos" :key="repo.id" class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="lastChange(repo.changedAt)">
       <span class="repository-name">
         <span class="repo-dot" aria-hidden="true" />

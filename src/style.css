@@ -115,10 +115,16 @@ input[type="checkbox"] {
   position: relative;
   margin-top: 39px;
 }
+.repositories-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+  min-height: 24px;
+}
 .sidebar-add {
-  position: absolute;
-  top: -4px;
-  right: 8px;
+  display: grid;
+  place-items: center;
   border: 0;
   background: transparent;
   color: var(--muted);
