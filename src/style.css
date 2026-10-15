@@ -1304,13 +1304,11 @@ h1 {
     display: none;
   }
   .swimlane {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .board-column {
-    flex: 0 0 85%;
-    scroll-snap-align: start;
+  .board-column + .board-column {
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
   .column-header {
     flex-direction: row;
@@ -1465,9 +1463,6 @@ h1 {
   background: #152d3a60;
   backdrop-filter: blur(3px);
 }
-.mobile-swipe-hint {
-  display: none;
-}
 @media (max-width: 650px) {
   .topbar {
     height: auto;
@@ -1485,18 +1480,6 @@ h1 {
   .install-button {
     padding: 7px 9px;
     font-size: 10px;
-  }
-  .mobile-swipe-hint {
-    display: block;
-    font-size: 10px;
-    margin: 0;
-    padding: 10px 14px;
-    color: #728087;
-    background: #f9fbfb;
-    border-bottom: 1px solid var(--line);
-  }
-  .swimlane {
-    align-items: flex-start;
   }
   .board-column {
     min-height: 190px;

@@ -66,7 +66,7 @@ Read-only inspection of the local CLAUDE.md files and live GitHub label definiti
 
 Use **Installera app** in the header, or Chrome/Edge’s install action in the address bar. On iOS use Safari → Share → Add to Home Screen. The manifest uses this repository’s Pages path and provides standalone mode, desktop/mobile icons and an offline public app shell. Installation prompts depend on browser support and eligibility. See [PWA installation requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).
 
-The build generates a versioned service worker that caches only an explicit allowlist of public app files. GitHub API responses, authenticated requests and query-bearing OAuth callbacks are never cached by this service worker. The mobile board scrolls horizontally within each repository; the page itself stays within the viewport.
+The build generates a versioned service worker that caches only an explicit allowlist of public app files. GitHub API responses, authenticated requests and query-bearing OAuth callbacks are never cached by this service worker. On phones (up to 650 px wide), each repository stacks Backlog, In progress and Closed vertically, so all columns are reachable without sideways scrolling. Larger screens keep the columns side by side.
 
 ## Mobile sign-in by QR
 
@@ -88,7 +88,7 @@ This remains adaptive polling. True webhook delivery needs an external webhook r
 
 Swedish and English are supported. The first supported browser language is the default; unsupported languages fall back to English. **Settings → Language** lets you select automatic, Swedish or English and remembers that choice. Date/time formatting follows the selected language; issue content and label names remain as authored.
 
-The left repository menu shows backlog, active and closed counts, independent of text search. Closed uses the same 30-day window as the board. An unread recent-activity indicator lasts up to two minutes or until its changes are read; the repository tooltip gives the last-update time. The dashboard uses the full available desktop width, and each mobile swimlane scrolls internally.
+The left repository menu shows backlog, active and closed counts, independent of text search. Closed uses the same 30-day window as the board. An unread recent-activity indicator lasts up to two minutes or until its changes are read; the repository tooltip gives the last-update time. The dashboard uses the full available desktop width, with vertically stacked columns in each phone swimlane.
 
 Observed movements between backlog, in progress and closed get a prominent static card outline and a **Moved to …** badge for up to two minutes. Open the issue description, follow its GitHub title link or click the badge to mark that issue’s current change as read. The repository’s unread activity dot disappears when no unread recent changes remain, even if its last-update time is still recent. The initial load does not invent movements; workflow-setting changes are not treated as movements. Read acknowledgements (bounded issue IDs and version timestamps, without titles or bodies) are saved with per-account preferences so reloads do not resurrect read activity. Only newly observed movements get card markers; baseline recent updates may show the sidebar dot until read or expired. The strong marker does not depend on animation and works with reduced motion.
 

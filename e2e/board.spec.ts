@@ -26,6 +26,56 @@ test("demo works at desktop and mobile widths", async ({ page }) => {
   await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
   expect(errors).toEqual([]);
 });
+test("phone swimlanes stack every status and keep controls reachable without sideways scrolling", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Utforska en demo" }).click();
+  const lanes = page.locator(".swimlane");
+  await expect(lanes).toHaveCount(3);
+
+  for (const width of [320, 390, 650]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const lane of await lanes.all()) {
+      const columns = lane.locator(".board-column");
+      await expect(columns).toHaveCount(3);
+      const laneBounds = (await lane.boundingBox())!;
+      let previousBottom = laneBounds.y;
+      for (const column of await columns.all()) {
+        const bounds = (await column.boundingBox())!;
+        expect(bounds.x).toBeCloseTo(laneBounds.x, 0);
+        expect(bounds.width).toBeCloseTo(laneBounds.width, 0);
+        expect(bounds.y).toBeGreaterThanOrEqual(previousBottom - 1);
+        previousBottom = bounds.y + bounds.height;
+        expect(await column.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+        const heading = column.locator(".column-heading");
+        await heading.scrollIntoViewIfNeeded();
+        await expect(heading).toBeInViewport();
+      }
+      expect(await lane.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.getByText(/Svep för Backlog/)).toHaveCount(0);
+  }
+
+  // A control in the final status of the final repository remains keyboard accessible.
+  const lastCard = lanes.last().locator(".closed .issue-card").last();
+  await lastCard.getByRole("button", { name: "Läs mer", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(lastCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(lastCard.getByText("Ingen beskrivning har lagts till.")).toBeInViewport();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const lane of await lanes.all()) {
+    const columns = await lane.locator(".board-column").all();
+    const first = (await columns[0]!.boundingBox())!;
+    let previousRight = first.x;
+    for (const column of columns) {
+      const bounds = (await column.boundingBox())!;
+      expect(bounds.y).toBeCloseTo(first.y, 0);
+      expect(bounds.x).toBeGreaterThanOrEqual(previousRight - 1);
+      previousRight = bounds.x + bounds.width;
+    }
+  }
+});
 test("connect, select, fetch events, customize work label, preserve data on API failure, logout", async ({
   page,
 }) => {

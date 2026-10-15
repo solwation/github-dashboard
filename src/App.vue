@@ -1143,9 +1143,6 @@ onMounted(async () => {
               )
             }}
           </div>
-          <p class="mobile-swipe-hint">
-            {{ t("Svep för Backlog, In progress och Closed →") }}
-          </p>
           <div class="swimlane">
             <section
               v-for="col in columns"
