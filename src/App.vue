@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLanguage } from "./lib/i18n";
 const { t, locale } = useLanguage();
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Activity,
   Bell,
@@ -29,6 +29,7 @@ import { summarizeLanes } from "./lib/sidebar";
 import { createIssueSync } from "./lib/sync";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
+const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { consumeHandoff, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
@@ -85,6 +86,7 @@ const sessionToken = ref("");
 const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
 const handoffOpen = ref(false);
+const scannerOpen = ref(false);
 const notificationRepos = ref<string[]>([]);
 const notificationNotice = ref("");
 const permission = ref(notificationPermission());
@@ -755,7 +757,9 @@ onMounted(async () => {
             ><button v-else class="button primary" @click="tokenPanel = true">
               <Github :size="19" /> {{ t("Anslut GitHub") }}
               <ArrowRight :size="17" /></button
-            ><button class="button" @click="showDemo">
+            ><button class="button" :disabled="authBusy || restoring" @click="scannerOpen = true">
+              <QrCode :size="19" />{{ t("Logga in med QR-kod") }}
+            </button><button class="button" @click="showDemo">
               {{ t("Utforska en demo") }} <ArrowRight :size="16" />
             </button>
           </div>
@@ -1248,4 +1252,6 @@ onMounted(async () => {
     :rules="rules"
     @close="handoffOpen = false"
   />
+  <ScanLogin v-if="scannerOpen" @close="scannerOpen = false"
+    @scanned="payload => { scannerOpen = false; void connect(payload.token, payload); }" />
 </template>

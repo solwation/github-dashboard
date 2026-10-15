@@ -256,6 +256,33 @@ export const english: Record<string, string> = {
   "Språkvalet sparas på den här enheten.":
     "Your language preference is saved on this device.",
   "Öppna på mobilen": "Open on mobile",
+  "Logga in med QR-kod": "Sign in with QR code",
+  "I den installerade appen: välj Logga in med QR-kod och skanna här. Använder du mobilens vanliga kamera öppnas länken i webbläsaren istället.":
+    "In the installed app, choose Sign in with QR code and scan here. Using your phone’s regular camera opens the link in the browser instead.",
+  "Öppna Issueflow på datorn och välj Öppna på mobilen. Rikta kameran mot QR-koden. Du loggas in direkt i den här appen.":
+    "Open Issueflow on your computer and choose Open on mobile. Point the camera at the QR code to sign in directly in this app.",
+  "Kameraförhandsvisning": "Camera preview",
+  "Kamera och bilder läses bara på din enhet. Inloggningen sparas krypterat i appen.":
+    "Camera and images are processed only on your device. Your sign-in is stored encrypted in the app.",
+  "Kameran pausades när appen lämnades. Starta den igen för att fortsätta.":
+    "The camera was paused when you left the app. Start it again to continue.",
+  "Starta kameran": "Start camera",
+  "Välj QR-bild": "Choose QR image",
+  "Väntar på kameran…": "Waiting for camera…",
+  "Söker efter QR-kod…": "Looking for QR code…",
+  "Läser QR-bild…": "Reading QR image…",
+  "QR-koden är ogiltig eller har gått ut. Skapa en ny kod i Issueflow på datorn.":
+    "The QR code is invalid or expired. Create a new code in Issueflow on your computer.",
+  "Kameran kunde inte läsa QR-koden. Försök igen eller välj en bild.":
+    "The camera could not read the QR code. Try again or choose an image.",
+  "Kameraskanning stöds inte här. Välj en QR-bild eller ange PAT manuellt.":
+    "Camera scanning is not supported here. Choose a QR image or enter your PAT manually.",
+  "Kameraåtkomst nekades. Tillåt kameran i appens inställningar eller välj en QR-bild.":
+    "Camera access was denied. Allow the camera in the app settings or choose a QR image.",
+  "Kameran kunde inte startas. Försök igen eller välj en QR-bild.":
+    "The camera could not start. Try again or choose a QR image.",
+  "Ingen QR-kod kunde läsas. Välj en tydlig bild på högst 12 MB.":
+    "No QR code could be read. Choose a clear image up to 12 MB.",
   "Skanna QR-koden med mobilens kamera för att öppna Issueflow med samma GitHub-token, projekt och labelinställningar.":
     "Scan the QR code with your phone camera to open Issueflow with the same GitHub token, projects and label settings.",
   "Alla som skannar koden får din tokens GitHub-behörigheter. Visa den bara för din egen mobil. Koden innehåller din token.":

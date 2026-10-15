@@ -105,7 +105,7 @@ onUnmounted(() => {
     <p>
       {{
         t(
-          "Skanna QR-koden med mobilens kamera för att öppna Issueflow med samma GitHub-token, projekt och labelinställningar.",
+          "I den installerade appen: välj Logga in med QR-kod och skanna här. Använder du mobilens vanliga kamera öppnas länken i webbläsaren istället.",
         )
       }}
     </p>

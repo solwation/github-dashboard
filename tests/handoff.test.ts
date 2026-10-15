@@ -1,11 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
+import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, parseHandoffUrl, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
 const now = 1_800_000_000_000;
 const settings = { token: "test_not_a_real_token", selected: ["sample/repo"], rules: { "sample/repo": { progress: "pågår 🚀", high: "prioritet:hög" } } };
 function raw(value: unknown) {
   return btoa(Array.from(new TextEncoder().encode(JSON.stringify(value)), (byte) => String.fromCharCode(byte)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 describe("mobile handoff", () => {
+  it("accepts scanned links only for this app and validates expiry without navigating", () => {
+    const { url } = createHandoffUrl("https://example.test/app/", settings, now);
+    expect(parseHandoffUrl(url, "https://example.test/app/", now).token).toBe(settings.token);
+    for (const link of [url.replace("example.test", "attacker.test"), url.replace("/app/", "/other/"), url.replace("#", "?credential=unsafe#"), "javascript:alert(1)", "not a url"]) {
+      expect(() => parseHandoffUrl(link, "https://example.test/app/", now)).toThrow();
+    }
+    expect(() => parseHandoffUrl(url, "https://example.test/app/", now + HANDOFF_LIFETIME_MS)).toThrow();
+  });
   it("roundtrips UTF-8 labels and keeps credentials out of path/query", () => {
     const { url, expiresAt } = createHandoffUrl("https://example.test/app/?old=1#repo", settings, now);
     const parsed = new URL(url);

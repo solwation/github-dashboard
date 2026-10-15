@@ -112,6 +112,22 @@ export function createHandoffUrl(
   url.hash = PREFIX.slice(1) + encodeHandoff(settings, now);
   return { url: url.href, expiresAt: now + HANDOFF_LIFETIME_MS };
 }
+/** Decode a scanned link in place; never navigate to credential-bearing input. */
+export function parseHandoffUrl(
+  value: string,
+  appUrl: string,
+  now = Date.now(),
+): HandoffPayload {
+  const url = new URL(value);
+  const app = new URL(appUrl);
+  if (
+    url.origin !== app.origin ||
+    url.pathname.replace(/\/$/, "") !== app.pathname.replace(/\/$/, "") ||
+    url.username || url.password || url.search ||
+    !url.hash.startsWith(PREFIX)
+  ) throw new Error("Invalid handoff URL");
+  return decodeHandoff(url.hash.slice(PREFIX.length), now);
+}
 /** Scrub credentials before decoding, authentication, or any network operation. */
 export function consumeHandoff(
   location: Pick<Location, "hash" | "pathname" | "search"> = window.location,
