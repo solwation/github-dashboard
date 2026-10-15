@@ -18,7 +18,7 @@ async function connect(page: Page) {
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-picker-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
-  await page.getByRole("checkbox", { name: "sample/alpha", exact: true }).check();
+  await page.getByRole("checkbox", { name: "sample/alpha" }).check();
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
   return {
@@ -44,7 +44,7 @@ for (const width of [1440, 320]) {
     await action.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog", { name: "Välj repositories" })).toBeVisible();
-    await page.getByRole("checkbox", { name: "sample/beta", exact: true }).check();
+    await page.getByRole("checkbox", { name: "sample/beta" }).check();
     api.pause();
     await page.getByRole("button", { name: "Visa översikt" }).click();
     await expect(action).toBeDisabled();
@@ -61,7 +61,7 @@ for (const width of [1440, 320]) {
 test("empty overview retains its picker action and demo cannot select repositories", async ({ page }) => {
   await connect(page);
   await page.locator(".repository-stat-action").click();
-  await page.getByRole("checkbox", { name: "sample/alpha", exact: true }).uncheck();
+  await page.getByRole("checkbox", { name: "sample/alpha" }).uncheck();
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await expect(page.locator(".empty-state").getByRole("button", { name: "Välj repositories", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
