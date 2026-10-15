@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
+import BuildInfo from "./BuildInfo.vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
@@ -54,6 +55,7 @@ function change(event: Event) {
       {{ t("Problemrapport") }}<span v-if="problemCount">({{ problemCount }})</span>
     </button>
     <WorkflowGuide />
+    <BuildInfo />
     <div class="modal-footer">
       <button class="button primary" @click="dialog?.close()">
         {{ t("Klart") }}

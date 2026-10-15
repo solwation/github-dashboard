@@ -354,6 +354,11 @@ export const english: Record<string, string> = {
   "Den sparade inloggningen kunde inte låsas upp. Logga in igen.":
     "Could not unlock the saved sign-in. Sign in again.",
   "Instruktioner för issueflödet": "Issue workflow instructions",
+  "Bygginformation": "Build information",
+  "Byggd": "Built",
+  "Commit": "Commit",
+  "Utvecklingsläge": "Development mode",
+  "Okänd commit": "Unknown commit",
   "Kommentarer för #{number}": "Comments for #{number}",
   "Stäng kommentarer": "Close comments",
   "Okänd tid": "Unknown time",
