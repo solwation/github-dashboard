@@ -12,7 +12,8 @@ async function connect(page: Page) {
   }));
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
-    if (url.searchParams.has("since")) incrementalRequests.push(url.toString());
+    if (url.searchParams.get("state") === "all" && url.searchParams.has("since"))
+      incrementalRequests.push(url.toString());
     let data: unknown = [];
     if (url.pathname === "/user") data = { login: "refresh-fixture", avatar_url: "" };
     if (url.pathname === "/user/repos") data = repos;
@@ -101,6 +102,7 @@ test("hard reload modifiers are not intercepted, and welcome/demo retain browser
   expect(cancellations).toEqual([false, false, false, false]);
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
   await page.getByRole("button", { name: "Logga ut och ta bort token", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /Alla dina projekt/ })).toBeVisible();
   for (const demo of [false, true]) {
     if (demo) await page.getByRole("button", { name: "Utforska en demo" }).click();
     expect(await page.evaluate(() => {
