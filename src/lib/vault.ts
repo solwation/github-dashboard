@@ -5,7 +5,7 @@ export const VAULT_DATABASE = "issueflow-vault";
 const STORE = "credentials";
 const RECORD = "github";
 const CONTENT = "content";
-const MAX_CONTENT_BYTES = 8 * 1024 * 1024;
+export const MAX_CONTENT_BYTES = 8 * 1024 * 1024;
 export type VaultErrorCode =
   "unavailable" | "blocked" | "read" | "write" | "decrypt";
 const messages: Record<VaultErrorCode, string> = {

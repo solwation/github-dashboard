@@ -1,4 +1,4 @@
-import { loadContent, saveContent } from "./vault";
+import { loadContent, MAX_CONTENT_BYTES, saveContent } from "./vault";
 import type { GitHub } from "./github";
 import type { Lane, Repo } from "./model";
 
@@ -24,5 +24,19 @@ export async function readSnapshot(token: string, now = Date.now()): Promise<Con
   } catch { return null; }
 }
 export function writeSnapshot(token: string, snapshot: Omit<ContentSnapshot, "version" | "savedAt">) {
-  return saveContent(token, { ...snapshot, version: 1, savedAt: Date.now() });
+  // The board is essential for startup; raw API responses only avoid repeat downloads.
+  // Budget their serialized UTF-8 bytes before encryption rather than rejecting a
+  // useful board because GitHub returned large fields or unrelated pull requests.
+  const content: ContentSnapshot = { ...snapshot, version: 1, savedAt: Date.now(), responses: [] };
+  const encoder = new TextEncoder();
+  let bytes = encoder.encode(JSON.stringify(content)).byteLength;
+  for (const response of snapshot.responses.slice(-100).reverse()) {
+    const addedBytes = encoder.encode(JSON.stringify(response)).byteLength + (content.responses.length ? 1 : 0);
+    if (bytes + addedBytes > MAX_CONTENT_BYTES) continue;
+    content.responses.push(response);
+    bytes += addedBytes;
+  }
+  content.responses.reverse();
+  // saveContent still rejects oversized boards and real storage/encryption errors.
+  return saveContent(token, content);
 }

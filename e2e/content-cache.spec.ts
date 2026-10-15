@@ -8,7 +8,7 @@ async function cacheExists(page: Page) {
     } finally { db.close(); }
   });
 }
-async function setup(page: Page) {
+async function setup(page: Page, oversizedResponse = false) {
   const repo = { id: 1, name: "test", full_name: "sample/test", private: true, description: "Fixture", html_url: "https://github.com/sample/test", owner: { login: "sample" } };
   let title = "Cached private fixture";
   let blocked = false;
@@ -23,6 +23,11 @@ async function setup(page: Page) {
     const etag = '"' + url.pathname + (url.pathname.endsWith("/issues") ? title : "stable") + '"';
     if (route.request().headers()["if-none-match"]) conditional++;
     if (route.request().headers()["if-none-match"] === etag) { await route.fulfill({ status: 304 }); return; }
+    if (oversizedResponse && url.pathname.endsWith("/issues") && url.searchParams.get("state") === "closed") {
+      // GitHub's issues endpoint also returns PRs, which do not belong on the board.
+      await route.fulfill({ headers: { etag, "access-control-expose-headers": "etag" }, json: [{ pull_request: {}, closed_at: new Date().toISOString(), body: "x".repeat(9 * 1024 * 1024) }] });
+      return;
+    }
     await route.fulfill({ headers: { etag, "access-control-expose-headers": "etag" }, json: url.pathname === "/user" ? { login: "cache-test", avatar_url: "" } : url.pathname === "/user/repos" ? [repo] : url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open" ? [{ id: 1, number: 1, title, body: "Private cached fixture description", comments: 0, state: "open", closed_at: null, created_at: "2026-01-01T12:00:00Z", updated_at: new Date().toISOString(), html_url: `${repo.html_url}/issues/1`, labels: [], assignees: [] }] : [] });
   });
   await page.goto("/");
@@ -98,4 +103,42 @@ test("damaged ciphertext is ignored while the saved PAT still signs in", async (
   await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
   await expect(page.locator(".cached-content")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeVisible();
+});
+
+test("large optional API responses do not prevent encrypted board caching and startup restore", async ({ page }) => {
+  const state = await setup(page, true);
+  const readCache = () => page.evaluate(async () => {
+    const path = "/src/lib/vault.ts";
+    const vault = await import(/* @vite-ignore */ path);
+    const snapshot = await vault.loadContent("fixture-cache-token");
+    return { bytes: new TextEncoder().encode(JSON.stringify(snapshot)).byteLength, titles: (snapshot?.lanes ?? []).flatMap((lane: { issues: { title: string }[] }) => lane.issues.map(issue => issue.title)) };
+  });
+  await expect.poll(async () => (await readCache()).titles).toEqual(["Cached private fixture"]);
+  expect((await readCache()).bytes).toBeLessThanOrEqual(8 * 1024 * 1024);
+  await expect(page.getByRole("status").filter({ hasText: "Innehållscachen kunde inte sparas" })).toHaveCount(0);
+  state.block();
+  await page.reload();
+  await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
+  await expect(page.locator(".cached-content")).toBeVisible();
+  state.release();
+  await expect(page.locator(".cached-content")).toHaveCount(0);
+});
+
+test("genuine content storage errors warn without breaking the board and a successful retry clears the warning", async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function(value, key) {
+      if (key === "content") throw new DOMException("Fixture storage quota exceeded", "QuotaExceededError");
+      return put.call(this, value, key);
+    };
+    Object.assign(window, { restoreCacheStorage: () => { IDBObjectStore.prototype.put = put; } });
+  });
+  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  const warning = page.getByRole("status").filter({ hasText: "Innehållscachen kunde inte sparas" });
+  await expect(warning).toBeVisible();
+  await expect(page.locator(".issue-title")).toContainText("Cached private fixture");
+  await page.evaluate(() => (window as unknown as { restoreCacheStorage: () => void }).restoreCacheStorage());
+  await page.getByRole("button", { name: "Uppdatera", exact: true }).click();
+  await expect(warning).toHaveCount(0);
 });
