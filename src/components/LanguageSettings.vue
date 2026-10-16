@@ -24,7 +24,7 @@ function change(event: Event) {
     :aria-label="t('Inställningar')"
   >
     <Settings2 :size="15" /><span>{{ t("Inställningar") }}</span>
-    <span v-if="missingCount" class="permissions-badge" role="status" :aria-label="t('{count} saknade GitHub-rättigheter', { count: missingCount })">({{ missingCount }})</span>
+    <span v-if="missingCount" class="permissions-badge" role="status" :aria-label="t('{count} saknade GitHub-rättigheter', { count: missingCount })">{{ missingCount }}</span>
   </button>
   <dialog
     ref="dialog"
@@ -68,5 +68,5 @@ function change(event: Event) {
 </template>
 
 <style scoped>
-.permissions-badge { background: #b91c1c; color: white; border-radius: 999px; padding: .1rem .4rem; font-size: .75rem; font-weight: 700; }
+.permissions-badge { background: #b91c1c; color: white; border-radius: 50%; padding: 0; width: 1.375rem; height: 1.375rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .75rem; font-weight: 700; }
 </style>

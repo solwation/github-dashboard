@@ -35,6 +35,10 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Översikt över GitHub-rättigheter": "GitHub permissions overview",
+  "Rättighet": "Permission",
+  "Funktioner i dashboarden": "Dashboard features",
+  "Åtkomst per repository": "Access by repository",
   "+{count} idag": "+{count} today",
   "Inlästa issues i valda repositories som nu är stängda och har senaste stängning idag, i din lokala tidszon. Fritextfilter påverkar inte dagsuppgiften. Detta är inte en komplett historik över stängningar.": "Loaded issues in selected repositories that are currently closed and were last closed today in your local time zone. Text filters do not affect this daily count. This is not a complete history of closure events.",
   "inlästa issues": "loaded issues",
