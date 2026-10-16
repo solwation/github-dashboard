@@ -215,7 +215,9 @@ const recentClosures = ref(new Set<string>());
 const closureTracker = new ClosureTracker();
 const statusTracker = new StatusTransitionTracker();
 const audioUnavailableText = "Ljud kunde inte aktiveras. Klicka eller tryck på en tangent i dashboarden för att försöka igen. Notiser fungerar fortfarande.";
-const statusPlayer = new StatusSoundPlayer(() => { notificationNotice.value = t(audioUnavailableText); });
+// Background playback failures stay silent. Explain unavailable audio only when
+// the user explicitly enables repository notifications below.
+const statusPlayer = new StatusSoundPlayer();
 const activity = new ActivityTracker();
 const activityRevision = ref(0);
 function readIssue(repo: string, issue: Issue) {
@@ -266,11 +268,12 @@ async function toggleNotifications(repo: string) {
       if (!notificationRepos.value.includes(repo))
         notificationRepos.value.push(repo);
       save();
+      const soundReady = await audioReady;
+      if (run !== generation) return;
       notificationNotice.value = t(
         "Notiser på för {repo}. Statusändringar spelar ljud och nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden.",
         { repo },
-      );
-      if (!(await audioReady) && run === generation) notificationNotice.value += " " + t(audioUnavailableText);
+      ) + (soundReady ? "" : " " + t(audioUnavailableText));
     } else {
       notificationNotice.value =
         result === "unsupported"

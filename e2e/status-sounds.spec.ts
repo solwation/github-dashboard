@@ -68,3 +68,69 @@ test("status sounds follow repository opt-in and live transitions without replay
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   expect(await notes()).toEqual([]);
 });
+
+for (const audioMode of ['unsupported', 'denied'] as const) {
+  test(`dismissed ${audioMode} audio warning stays dismissed while status and OS notifications continue`, async ({ page }) => {
+    await page.addInitScript(mode => {
+      const notices: string[] = [];
+      class DeniedAudioContext {
+        state = 'suspended';
+        async resume() { throw new DOMException('Audio unavailable', 'NotAllowedError'); }
+      }
+      class WorkingNotification {
+        static permission = 'granted';
+        static async requestPermission() { return 'granted'; }
+        constructor(title: string) { notices.push(title); }
+        close() {}
+      }
+      Object.assign(window, { AudioContext: mode === 'unsupported' ? undefined : DeniedAudioContext,
+        Notification: WorkingNotification, deliveredNotices: notices });
+    }, audioMode);
+    const repo = { id: 1, name: 'silent', full_name: 'sample/silent', private: false, description: 'Fixture', html_url: 'https://github.com/sample/silent', owner: { login: 'sample' } };
+    let state = 'open';
+    let labels: string[] = [];
+    let closedAt: string | null = null;
+    await page.route('https://api.github.com/**', async route => {
+      const url = new URL(route.request().url());
+      let data: unknown = [];
+      if (url.pathname === '/user') data = { login: 'silent-audio', avatar_url: '' };
+      else if (url.pathname === '/user/repos') data = [repo];
+      else if (url.pathname.endsWith('/issues') && (url.searchParams.get('state') === state || url.searchParams.get('state') === 'all')) {
+        data = [{ id: 1, number: 1, title: 'Silent task', state, labels: labels.map(name => ({ name, color: 'ffffff' })), assignees: [], created_at: '2026-01-01T00:00:00Z', updated_at: new Date().toISOString(), closed_at: closedAt, html_url: `${repo.html_url}/issues/1` }];
+      }
+      await route.fulfill({ json: data });
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
+    await page.getByLabel('GitHub personal access token').fill('fictional-silent-token');
+    await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
+    await page.getByRole('checkbox', { name: repo.full_name }).check();
+    await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
+    await expect(page.locator('.backlog .issue-card')).toHaveCount(1);
+    const toggle = page.getByRole('switch', { name: 'Notiser för silent', exact: true });
+    await toggle.click();
+    await expect(page.locator('.notification-notice')).toContainText('Ljud kunde inte aktiveras');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: 'Stäng notismeddelande', exact: true }).click();
+    for (let round = 0; round < 2; round++) {
+      state = 'open'; labels = ['in-progress']; closedAt = null;
+      await page.keyboard.press('Control+r');
+      await expect(page.locator('.progress .issue-card')).toHaveCount(1);
+      await expect(page.locator('.updated')).toHaveAttribute('aria-busy', 'false');
+      await expect(page.locator('.notification-notice')).toHaveCount(0);
+      labels = ['in-progress', 'blocked'];
+      await page.keyboard.press('Control+r');
+      await expect(page.locator('.issue-card .labels')).toContainText('blocked');
+      await expect(page.locator('.notification-notice')).toHaveCount(0);
+      state = 'closed'; labels = []; closedAt = new Date(Date.now() + round).toISOString();
+      await page.keyboard.press('Control+r');
+      await expect(page.locator('.closed .issue-card')).toHaveCount(1);
+      await expect.poll(() => page.evaluate(() => (window as unknown as { deliveredNotices: string[] }).deliveredNotices.length)).toBe(round + 1);
+      await expect(page.locator('.notification-notice')).toHaveCount(0);
+    }
+    // Ordinary interactions may retry audio activation without surfacing errors.
+    await page.getByRole('textbox', { name: 'Sök issues', exact: true }).click();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.notification-notice')).toHaveCount(0);
+  });
+}
