@@ -8,7 +8,15 @@ test("shows comment counts and expands safe Markdown inside an issue card", asyn
     "- [x] Completed step", "- [ ] Remaining step", "", "```ts", `const longLine = '${"a".repeat(600)}';`, "```", "",
     '<script>window.issueScriptExecuted = true</script>',
     '<img src=x onerror="window.issueScriptExecuted = true">',
+    "", "![Original report](https://github.com/sample/details-project/blob/main/docs/report.png)",
   ].join("\n");
+  await page.route("https://github.com/sample/details-project/blob/main/docs/report.png*", async route => {
+    if (new URL(route.request().url()).searchParams.get("raw") !== "true") {
+      await route.fulfill({ contentType: "text/html", body: "<html>File viewer</html>" });
+      return;
+    }
+    await route.fulfill({ contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=", "base64") });
+  });
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     let result: unknown = [];
@@ -38,7 +46,10 @@ test("shows comment counts and expands safe Markdown inside an issue card", asyn
   await expect(card.locator('input[type="checkbox"]').first()).toBeDisabled();
   await expect(card.locator("pre code")).toContainText("const longLine");
   await expect(card.locator(".issue-markdown a")).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(card.locator(".issue-markdown script, .issue-markdown img")).toHaveCount(0);
+  await expect(card.locator(".issue-markdown script, .issue-markdown img[onerror]")).toHaveCount(0);
+  const reportImage = card.getByRole("img", { name: "Original report" });
+  await expect(reportImage).toHaveAttribute("src", "https://github.com/sample/details-project/blob/main/docs/report.png?raw=true");
+  await expect.poll(() => reportImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1);
   expect(await page.evaluate(() => (window as Window & { issueScriptExecuted?: boolean }).issueScriptExecuted)).toBeUndefined();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

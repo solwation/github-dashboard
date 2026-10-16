@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { renderMarkdown } from "../src/lib/markdown";
 describe("safe issue Markdown", () => {
+  it("loads GitHub blob images as raw files while preserving ordinary links", () => {
+    const url = "https://github.com/sample/project/blob/main/docs/report.jpg";
+    expect(renderMarkdown(`![Report](${url})`)).toContain(`src="${url}?raw=true"`);
+    expect(renderMarkdown(`[Report](${url})`)).toContain(`href="${url}"`);
+    expect(renderMarkdown("![Report](https://github.com/sample/project/blob/feature/report/docs/image%20one.jpg?raw=false&other=1#preview)"))
+      .toContain('src="https://github.com/sample/project/blob/feature/report/docs/image%20one.jpg?raw=true&amp;other=1#preview"');
+  });
+  it("preserves other image URLs and escaped alt text", () => {
+    for (const url of [
+      "https://example.com/sample/project/blob/main/report.jpg",
+      "https://github.com.example.com/sample/project/blob/main/report.jpg",
+      "https://github.com/user-attachments/assets/example",
+      "https://raw.githubusercontent.com/sample/project/main/report.jpg",
+      "./report.jpg",
+    ]) expect(renderMarkdown(`![Report](${url})`)).toContain(`src="${url}"`);
+    expect(renderMarkdown('![<script>](https://github.com/sample/project/blob/main/report.jpg)'))
+      .toContain('alt="&lt;script&gt;"');
+  });
   it("renders headings, emphasis, lists, fenced code and read-only task checkboxes", () => {
     const html = renderMarkdown("## Plan\n\n**Read me**\n\n- [x] Complete\n- [ ] Next\n\n```js\nconst text = '<script>';\n```\n");
     expect(html).toContain("<h2>Plan</h2>");

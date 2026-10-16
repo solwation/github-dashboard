@@ -7,7 +7,7 @@ Your GitHub issues. One clear board.
 Follow work across repositories without switching tabs. Backlog sorts by priority, active work shows elapsed time, and Closed keeps the last 30 days in view.
 
 - **Your layout:** reorder projects, collapse repositories and set how many cards each column shows.
-- **The context you need:** read issue descriptions, comments and closing commit details.
+- **The context you need:** read issue descriptions, comments and closing commit details, including embedded images linked to GitHub repository files.
 - **Ready when you return:** encrypted local sign-in and content cache, with automatic GitHub updates.
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
 
