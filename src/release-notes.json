@@ -92,6 +92,13 @@
       },
       {
         "text": {
+          "sv": "En utgången delningslänk eller avbruten GitHub-inloggning visar nu felet över din sparade tavla i stället för att logga ut dig.",
+          "en": "An expired handoff link or cancelled GitHub sign-in now shows the error over your saved board instead of appearing signed out."
+        },
+        "issues": [104]
+      },
+      {
+        "text": {
           "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
           "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
         },
