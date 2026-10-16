@@ -1,18 +1,11 @@
 {
-  "baseCommit": "72132e3ff009b2c87265b81e6e4f1374235f2712",
+  "baseCommit": "39d866513b5708731addaba14555f30546b59d5c",
   "summary": {
-    "sv": "Gemensam tavla med projektfärger och bättre statistikvy. Kortare uppdateringstext, nedräkning i knappen och kopierbara instruktioner.",
-    "en": "Combined boards with project colors and improved statistics. Shorter update text, a button countdown and copyable workflow instructions."
+    "sv": "Tydligare projektfärger i vänstermenyn och på korten. Publicering sker först när GitHub Actions har kontrollerat att arbetet är klart.",
+    "en": "Clearer project colors in the sidebar and on cards. GitHub Actions checks that work is ready before publishing."
   },
   "issues": [
-    79,
-    80,
-    81,
-    83,
-    84,
-    85,
-    86,
-    87,
-    88
+    89,
+    90
   ]
 }

@@ -2,16 +2,16 @@
   {
     "date": "2026-10-16",
     "summary": {
-      "sv": "Gemensam tavla med projektfärger och bättre statistikvy. Kortare uppdateringstext, nedräkning i knappen och kopierbara instruktioner.",
-      "en": "Combined boards with project colors and improved statistics. Shorter update text, a button countdown and copyable workflow instructions."
+      "sv": "Tydligare projektfärger i vänstermenyn och på korten. Publicering sker först när GitHub Actions har kontrollerat att arbetet är klart.",
+      "en": "Clearer project colors in the sidebar and on cards. GitHub Actions checks that work is ready before publishing."
     },
     "sections": [
       {
         "text": {
-          "sv": "Växla mellan separata projekttavlor och en gemensam board; kortens repositorynamn och färger matchar vänstermenyn och vyvalet följer QR-synken.",
-          "en": "Switch between separate project boards and one combined board; repository names and colors match the sidebar, and QR sync carries your view choice."
+          "sv": "Växla mellan separata tavlor och en gemensam board; tydliga färgprickar och kortkanter matchar projekten i vänstermenyn, och vyvalet följer QR-synken.",
+          "en": "Switch between separate boards and one combined board; clear dots and card accents match sidebar projects, and QR sync carries your view choice."
         },
-        "issues": [81]
+        "issues": [81, 90]
       },
       {
         "text": {
@@ -92,10 +92,10 @@
       },
       {
         "text": {
-          "sv": "Orkestern samlar färdiga ärenden inför publicering och bevakar nya issues i en timme efter verifierad leverans.",
-          "en": "Orkester batches completed issues for publication and watches for new issues for an hour after a verified release."
+          "sv": "GitHub Actions kontrollerar återstående arbete före publicering; orkestern integrerar isolerade arbetsgrenar och bevakar nya issues i en timme efter verifierad leverans.",
+          "en": "GitHub Actions checks remaining work before publishing; orkester integrates isolated branches and watches for new issues for an hour after verified delivery."
         },
-        "issues": [83, 86]
+        "issues": [83, 86, 89]
       }
     ]
   },
