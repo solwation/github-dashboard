@@ -23,6 +23,24 @@ test("public production guide is directly fetchable and its reference and downlo
   await page.goto(base);
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   const guide = page.getByRole("region", { name: "Instruktioner för issueflödet" });
+  const summary = guide.locator("summary");
+  await expect(summary).toHaveAttribute("aria-expanded", "false");
+  await expect(guide.getByRole("heading", { name: "Issueflow-compatible issue workflow", exact: true })).toBeHidden();
+  await summary.focus();
+  await summary.press("Enter");
+  await expect(summary).toHaveAttribute("aria-expanded", "true");
+  const document = guide.locator(".workflow-document");
+  await expect(document.getByRole("heading", { name: "Issueflow-compatible issue workflow", exact: true })).toBeVisible();
+  await expect(document.getByRole("table")).toBeVisible();
+  // The inline document and downloadable file must describe the same workflow.
+  const headings = markdown.split("\n").filter(line => line.startsWith("## ")).map(line => line.slice(3));
+  for (const heading of headings) await expect(document.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+  await expect(document).toContainText("This guide describes Issueflow's default detection and per-repository overrides.");
+  expect(await summary.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeLessThanOrEqual(14);
+  await summary.press("Space");
+  await expect(summary).toHaveAttribute("aria-expanded", "false");
+  await expect(document).toBeHidden();
+  await summary.press("Enter");
   await expect(guide.getByRole("link", { name: guideUrl, exact: true })).toHaveAttribute("href", guideUrl);
   const reference = page.getByLabel("Hänvisning för din AI-assistent");
   await expect(reference).toHaveValue(`Läs och följ instruktionerna på ${guideUrl} när du arbetar med issues i det här projektet.`);
@@ -46,6 +64,7 @@ test("denied clipboard selects a manual copy fallback and guide stays within mob
   });
   await page.goto(base);
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByRole("region", { name: "Instruktioner för issueflödet" }).locator("summary").click();
   await page.getByRole("button", { name: "Kopiera hänvisning" }).click();
   const field = page.getByLabel("Hänvisning för din AI-assistent");
   await expect(field).toBeFocused();
@@ -53,7 +72,12 @@ test("denied clipboard selects a manual copy fallback and guide stays within mob
   await expect(page.getByRole("status").filter({ hasText: "Kopiera den markerade hänvisningen manuellt." })).toBeVisible();
   const dialog = page.getByRole("dialog", { name: "Inställningar", exact: true });
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const document = page.locator(".workflow-document");
+  expect(await document.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await expect(document.getByRole("table")).toBeVisible();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await expect(page.getByRole("heading", { name: "Issue workflow instructions" })).toBeVisible();
+  await expect(page.getByText("ISSUEFLOW.md is a guide for you and your AI assistant.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Issue workflow instructions" }).locator("summary")).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByLabel("Reference for your AI assistant")).toHaveValue(`Read and follow the instructions at ${guideUrl} when working with issues in this project.`);
 });
