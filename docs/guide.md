@@ -15,7 +15,7 @@ npm run build
 npm run test:e2e
 ```
 
-Node 22.20+ recommended. The frontend builds to `dist/`. Run only the relevant tests locally before pushing, using `npx vitest run <affected test files>` or `npx playwright test <affected test files>`. Pushes to `main` build and deploy using `.github/workflows/pages.yml`; Actions does not run tests or install browsers. Pages must use **GitHub Actions** as its source (configured for this repository).
+Node 22.20+ recommended. The frontend builds to `dist/`. Run only the relevant tests locally before pushing, using `npx vitest run <affected test files>` or `npx playwright test <affected test files>`. Pushes to `main` run the publication gate in `.github/workflows/pages.yml`; Actions builds and deploys only when the queue, prepared delta and artifact pass its checks, without running tests or installing browsers. Pages must use **GitHub Actions** as its source (configured for this repository).
 
 ## Connect your account
 
@@ -108,3 +108,14 @@ Click an issue card's comment count to read its discussion in a dialog. Comments
 Statistics saves a separate encrypted, credential-bound IndexedDB cache (up to 10 repositories, 8 MiB, seven days). Saved charts appear before background revalidation. Returning two days later reuses complete historical commit days and fetches from the previous final UTC day, including its overlap; SHA-bound diff details are reused. Issues, events and pull requests are revalidated because labels and history can change. Full commit membership is revalidated at least every seven days or when you choose Refresh. A force-push affecting older commits can therefore remain visible until that revalidation. Missing new days and bounded/failed sources remain marked as partial data; revoked access hides its metrics. Logout or credential replacement clears the statistics cache.
 
 On Statistics, sidebar repository links scroll to that project’s statistics section and preserve the view, filters and loaded data. Direct statistics section links and browser history stay on Statistics; Overview links keep their board behavior.
+
+
+## Publication gate
+
+Integration pushes to main are allowed while the backlog is unfinished. GitHub Actions is the publication authority: it reads the complete paginated open issue queue before building and again immediately before deploying the same artifact. Pull requests and issues labelled exactly `orkester` are excluded; a session owner label such as `orkester: session` is not an exemption. Any unready, blocked, active or owner-claimed issue stops deployment.
+
+The conductor implements, integrates and tests locally, then marks ready work `needs-deploy` without active or owner claims. Such issues may stay open: the gate allows them only when they appear in the prepared `src/update-summary.json` delta, avoiding a close-before-deploy deadlock. The Action never changes readiness labels. After the Action publishes and Pages is verified, close delivered issues and remove `needs-deploy`.
+
+Pushes to main, issue opening/reopening/closing/label changes, and workflow dispatch retry the same gate; dispatch cannot force deployment. Each run checks out current main and binds its build to that exact SHA. The bilingual delta is limited to 180 characters per language, references issues in daily release notes, and names the exact previously published commit from the public release manifest. The final check compares current main and public baseline again and validates the build manifest extracted from the uploaded Pages artifact against its checked-out source. Already published SHAs are skipped. API failures, incomplete metadata, new unfinished issues, changed baselines, advanced main or artifact mismatches block publication without modifying readiness.
+
+GitHub API checks use the read-only Actions token; the public Pages manifest is fetched without credentials. There is no manual-deployment override. Keep local verification, worktree isolation, active-issue limits and the 60-minute idle monitoring after verified publication unchanged.

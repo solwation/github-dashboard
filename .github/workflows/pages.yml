@@ -2,40 +2,89 @@ name: Build and deploy Pages
 on:
   push:
     branches: [main]
+  issues:
+    types: [opened, reopened, closed, labeled, unlabeled]
   workflow_dispatch:
 permissions:
   contents: read
+  issues: read
 concurrency:
   group: pages
   cancel-in-progress: true
+env:
+  PUBLIC_MANIFEST_URL: https://solwation.github.io/github-dashboard/release-notes.json
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      allowed: ${{ steps.gate.outputs.allowed }}
+      commit: ${{ steps.gate.outputs.commit }}
     steps:
+      # Issue events retry the newest integrated main, not the event's older SHA.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build
+      - name: Bind checked-out commit
+        id: source
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Check publication readiness
+        id: gate
+        run: node --experimental-strip-types scripts/publication-gate.ts prepare
         env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_RUN_SHA: ${{ steps.source.outputs.commit }}
+      - if: steps.gate.outputs.allowed == 'true'
+        run: npm ci
+      - if: steps.gate.outputs.allowed == 'true'
+        run: npm run build
+        env:
+          GITHUB_SHA: ${{ steps.gate.outputs.commit }}
           VITE_GITHUB_CLIENT_ID: ${{ vars.VITE_GITHUB_CLIENT_ID }}
           VITE_AUTH_URL: ${{ vars.VITE_AUTH_URL }}
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.gate.outputs.allowed == 'true'
+        uses: actions/configure-pages@v5
+      - if: steps.gate.outputs.allowed == 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
   deploy:
+    if: needs.build.outputs.allowed == 'true'
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
+      contents: read
+      issues: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: pages-artifact
+      - name: Read the manifest from the deployment artifact
+        run: tar -xOf pages-artifact/artifact.tar ./release-notes.json > built-release-notes.json
+      - name: Recheck queue, baseline, main and exact artifact
+        id: gate
+        run: node --experimental-strip-types scripts/publication-gate.ts final built-release-notes.json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_RUN_SHA: ${{ needs.build.outputs.commit }}
       - name: Deploy
+        if: steps.gate.outputs.allowed == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
