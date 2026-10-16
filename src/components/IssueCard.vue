@@ -121,14 +121,15 @@ const visibleLabels = computed(() =>
   <article
     ref="card"
     class="issue-card"
-    :class="[col, { 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timedOut && col === 'progress' }]"
+    :style="repository ? { '--repository-color': repositoryColor(repository) } : undefined"
+    :class="[col, { 'has-repository': !!repository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timedOut && col === 'progress' }]"
   >
     <button v-if="recentMove" class="movement-marker" @click="emit('read')"
       :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')">
       {{ recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
       <span aria-hidden="true">✓</span>
     </button>
-    <span v-if="repository" class="card-repository" :style="{ '--repository-color': repositoryColor(repository) }" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
+    <span v-if="repository" class="card-repository" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
     <div class="card-top">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
@@ -253,8 +254,10 @@ const visibleLabels = computed(() =>
 </template>
 
 <style scoped>
-.card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 25%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 8%, white); color: #273a3c; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
-.card-repository i { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
+.issue-card.has-repository { position: relative; }
+.issue-card.has-repository::after { content: ""; position: absolute; top: 6px; bottom: 6px; right: 0; width: 3px; border-radius: 3px; background: var(--repository-color); pointer-events: none; }
+.card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: #273a3c; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.card-repository i { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
 
 .backlog-age {
   font-size: 9px;

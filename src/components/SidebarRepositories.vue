@@ -71,10 +71,10 @@ function lastChange(changedAt: string | null) {
   border-radius: 4px;
 }
 .sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
-.repo-dot { box-shadow: none; }
+.repo-dot { width: 11px; height: 11px; box-shadow: none; }
 .repository-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .repository-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.repository-counts { display: flex; flex-wrap: wrap; gap: 11px; padding-left: 15px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.repository-counts { display: flex; flex-wrap: wrap; gap: 11px; padding-left: 19px; font-size: 10px; font-variant-numeric: tabular-nums; }
 .status-count { display: inline-flex; align-items: center; gap: 4px; }
 .backlog { color: #61727b; }
 .progress { color: #916010; }
