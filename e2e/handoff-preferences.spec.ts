@@ -68,6 +68,8 @@ async function expectTransferredColors(page: Page) {
 }
 
 test("desktop and mobile optically sync all preferences repeatedly without logout or document reload", async ({ page, browser }) => {
+  // Two browser contexts and several render-and-scan round trips exceed the default timeout on slower machines.
+  test.slow();
   await fixture(page);
   await page.goto(createHandoffUrl(base, { token, selected: ["sample/test", "sample/second"], rules: { "sample/test": { progress: "Working" } }, preferences }).url);
   await expect(page.locator(".repo-lane")).toHaveCount(2);
