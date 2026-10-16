@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, useId, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
 import { MessageCircle, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { renderMarkdown } from "../lib/markdown";
@@ -43,9 +43,11 @@ async function load() {
     if (open.value && current === revision) state.value = "error";
   }
 }
-function show() {
-  dialog.value?.showModal();
+async function show() {
   open.value = true;
+  await nextTick();
+  if (!open.value) return;
+  dialog.value?.showModal();
   emit("read");
   void load();
 }
