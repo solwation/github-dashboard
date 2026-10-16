@@ -1,6 +1,6 @@
 import type { Rules } from "./model";
 import { handoffRecord, handoffRepository, handoffRepositoryList, parseHandoffPreferences, type HandoffPreferences } from "./handoff-preferences";
-export { mergeHandoffPreferences, type HandoffPreferences, type HandoffPreferenceState, type HandoffStatisticsPreferences } from "./handoff-preferences";
+export { mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffPreferenceState, type HandoffStatisticsPreferences } from "./handoff-preferences";
 
 export const HANDOFF_LIFETIME_MS = 5 * 60 * 1000;
 const PREFIX = "#issueflow-handoff=";

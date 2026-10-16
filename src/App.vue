@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useLanguage } from "./lib/i18n";
-const { t, locale } = useLanguage();
+const { t, locale, preference, setLanguage } = useLanguage();
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Activity,
@@ -47,7 +47,7 @@ const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
 import { cacheFailureReason } from "./lib/cache-failure";
-import { consumeHandoff, type HandoffSettings } from "./lib/handoff";
+import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
@@ -436,6 +436,41 @@ const stats = computed(() => {
     closed: all.filter(({ i }) => i.state === "closed").length,
   };
 });
+const transferablePreferences = computed<HandoffPreferences>(() => ({
+  projectOrder: projectOrder.value, collapsedRepos: collapsedRepos.value,
+  columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
+  notificationRepos: notificationRepos.value, language: preference.value,
+  query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
+  hideCoordination: hideCoordination.value, timeoutMinutes: timeoutMinutes.value,
+  currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
+}));
+function applyChosenPreferences(value: HandoffPreferences) {
+  projectOrder.value = value.projectOrder ?? projectOrder.value;
+  collapsedRepos.value = value.collapsedRepos ?? collapsedRepos.value;
+  columnLimit.value = value.columnLimit ?? columnLimit.value;
+  repositoryColumnLimits.value = value.repositoryColumnLimits ?? repositoryColumnLimits.value;
+  notificationRepos.value = value.notificationRepos ?? notificationRepos.value;
+  if (value.language !== undefined) setLanguage(value.language);
+  query.value = value.query ?? query.value;
+  repositoryQueries.value = value.repositoryQueries ?? repositoryQueries.value;
+  repoQuery.value = value.repoQuery ?? repoQuery.value;
+  hideCoordination.value = value.hideCoordination ?? hideCoordination.value;
+  timeoutMinutes.value = value.timeoutMinutes ?? timeoutMinutes.value;
+  statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
+  if (value.currentView) {
+    currentView.value = value.currentView;
+    history.replaceState(null, "", "#" + value.currentView);
+  }
+  visibleLimit.value = {};
+}
+function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) {
+  const state = mergeHandoffPreferences({ ...transferablePreferences.value, selected: selected.value, rules: rules.value }, incoming, available.map(repo => repo.full_name));
+  selected.value = state.selected;
+  rules.value = state.rules;
+  applyChosenPreferences(state);
+  save();
+}
+watch([query, repositoryQueries, repoQuery, hideCoordination, currentView, statisticsPreferences], () => save(), { deep: true });
 function storageKey() {
   return `issueflow:${user.value?.login}`;
 }
@@ -445,6 +480,7 @@ function save() {
     localStorage.setItem(
       storageKey(),
       JSON.stringify({
+        preferences: transferablePreferences.value,
         selected: selected.value,
         projectOrder: projectOrder.value,
         collapsedRepos: collapsedRepos.value,
@@ -467,6 +503,8 @@ function restorePreferences(available: Repo[]) {
     timeoutMinutes.value = DEFAULT_TIMEOUT_MINUTES;
     repositoryColumnLimits.value = {};
     visibleLimit.value = {};
+    query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
+    hideCoordination.value = true; statisticsPreferences.value = {};
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
@@ -494,6 +532,11 @@ function restorePreferences(available: Repo[]) {
           : [];
         rules.value =
           saved.rules && typeof saved.rules === "object" ? saved.rules : {};
+        if (saved.preferences) {
+          const preferences = parseHandoffPreferences(saved.preferences);
+          const state = mergeHandoffPreferences({ ...transferablePreferences.value, selected: selected.value, rules: rules.value }, { selected: selected.value, rules: rules.value, preferences }, available.map(repo => repo.full_name));
+          applyChosenPreferences(state);
+        }
       }
     } catch {
       /* Ignore invalid preferences. */
@@ -504,6 +547,15 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
   authBusy.value = true;
   error.value = "";
   try {
+    if (imported && token === sessionToken.value && api && user.value && !isDemo.value) {
+      const available = await api.repos();
+      repos.value = available;
+      applyImportedPreferences(imported, available);
+      lanes.value = lanes.value.filter(lane => selected.value.includes(lane.repo.full_name));
+      if (selected.value.length) await refresh();
+      else { showingCache.value = false; await persistContent(); }
+      return;
+    }
     const next = new GitHub(token);
     if (cached) {
       generation++;
@@ -559,14 +611,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       repositoryColumnLimits.value = Object.fromEntries(Object.entries(repositoryColumnLimits.value).filter(([name]) => accessible.has(name)));
       rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
     } else restorePreferences(available);
-    if (imported) {
-      const accessible = new Set(available.map((repo) => repo.full_name));
-      selected.value = imported.selected.filter((name) => accessible.has(name));
-      rules.value = Object.fromEntries(
-        Object.entries(imported.rules).filter(([name]) => accessible.has(name)),
-      );
-      save();
-    }
+    if (imported) applyImportedPreferences(imported, available);
     lanes.value = lanes.value.filter(lane => selected.value.includes(lane.repo.full_name) && available.some(repo => repo.full_name === lane.repo.full_name));
     if (selected.value.length) await refresh();
     else { picker.value = true; showingCache.value = false; await persistContent(); }
@@ -962,7 +1007,7 @@ onMounted(async () => {
       </div>
       <div class="topbar-right">
         <LanguageSettings :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
-          @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
+          :can-scan="loggedIn" @scan="scannerOpen = true" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
           v-if="user && sessionToken"
@@ -1538,9 +1583,10 @@ onMounted(async () => {
     :token="sessionToken"
     :selected="selected"
     :rules="rules"
+    :preferences="transferablePreferences"
     @close="handoffOpen = false"
   />
-  <ScanLogin v-if="scannerOpen" @close="scannerOpen = false"
+  <ScanLogin v-if="scannerOpen" :mode="loggedIn ? 'preferences' : 'login'" @close="scannerOpen = false"
     @scanned="payload => { scannerOpen = false; void connect(payload.token, payload); }" />
 </template>
 

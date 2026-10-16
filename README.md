@@ -10,6 +10,7 @@ Follow work across repositories without switching tabs. Backlog sorts by priorit
 - **Your layout:** reorder projects, collapse repositories and set how many cards each column shows.
 - **The context you need:** read issue descriptions, comments and closing commit details, including embedded images linked to GitHub repository files.
 - **Ready when you return:** encrypted local sign-in and content cache, with automatic GitHub updates.
+- **Optical sync:** transfer account, chosen settings and view in either direction using a local QR code. Scan again from Settings while signed in; browser permissions and read/timeout acknowledgements stay on each device.
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
 - **Explore activity:** Statistics stacks the repositories selected in the sidebar, in their board order, over the latest 30 UTC calendar days, with daily issue, commit, code-change and pull-request charts. Each repository has independent date, current-label and contributor filters. Unavailable metrics stay hidden; bounded API collection is marked when incomplete.
 - **Active projects:** the Repositories card shows how many selected projects have Backlog, In progress or issues closed in the last 30 days, independently of text filters.

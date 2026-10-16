@@ -10,7 +10,7 @@ import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
-const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; timeoutMinutes?: number }>(), { permissions: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
+const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number }>(), { permissions: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
 const acknowledgedMissing = ref(new Set<string>());
 const permissionsOpen = ref(false);
 const permissionKey = (permission: string, repo: string) => `${permission}:${repo}`;
@@ -34,7 +34,7 @@ watch(() => props.permissions, () => {
   acknowledgedMissing.value = seen;
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
+const emit = defineEmits<{ scan: []; checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const minutes = parseTimeoutMinutes(input.value);
@@ -96,6 +96,7 @@ function change(event: Event) {
     <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
     <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" />
 >>>>>>> 312eaff (feat: track and acknowledge overdue in-progress work locally (#56))
+    <button v-if="canScan" class="button" @click="dialog?.close(); emit('scan')">{{ t("Läs QR-kod") }}</button>
     <WorkflowGuide />
     <BuildInfo />
     <div class="modal-footer">

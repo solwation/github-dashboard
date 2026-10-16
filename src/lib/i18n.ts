@@ -35,6 +35,16 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Synka med QR-kod": "Sync with QR code",
+  "På den andra enheten: öppna Inställningar och välj Läs QR-kod, eller välj Logga in med QR-kod om du inte är inloggad. Skanna här för att överföra konto, inställningar och vy åt valfritt håll.": "On the other device, open Settings and choose Read QR code, or choose Sign in with QR code if you are signed out. Scan here to transfer your account, settings and view in either direction.",
+  "Alla som skannar koden får din tokens GitHub-behörigheter. Visa den bara för dina egna enheter. Koden innehåller din token.": "Anyone who scans this code receives your token's GitHub permissions. Show it only to your own devices. The code contains your token.",
+  "QR-kod för konto och inställningar": "QR code for account and settings",
+  "Inställningarna ryms inte i en QR-kod, eller koden kunde inte skapas. Inget har tagits bort eller överförts. Prova med färre valda projekt eller kortare filter och labelinställningar.": "The settings do not fit in a QR code, or the code could not be generated. Nothing has been removed or transferred. Try fewer selected projects or shorter filters and label settings.",
+  "Notifikationsval följer med, men kamera, ljud och webbläsarens notifikationsbehörighet gäller lokalt. Läsmarkeringar och kvitterade timeoutvarningar stannar på mottagande enhet.": "Notification preferences transfer, but camera, audio and browser notification permissions remain local. Read markers and acknowledged timeout warnings stay on the receiving device.",
+  "QR-koden är ogiltig eller har gått ut. Skapa en ny kod på den andra enheten.": "The QR code is invalid or expired. Generate a new code on the other device.",
+  "Läs QR-kod": "Read QR code",
+  "Visa en QR-kod i Issueflow på den andra enheten och skanna den här. Konto, inställningar och vy överförs utan att du behöver logga ut först.": "Show a QR code in Issueflow on the other device and scan it here. Your account, settings and view transfer without signing out first.",
+
   "Välj repositories i översikten för att se deras statistik.": "Select repositories in Overview to see their statistics.",
 
   "{count} aktiva": "{count} active",

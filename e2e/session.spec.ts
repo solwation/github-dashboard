@@ -78,20 +78,21 @@ test("mobile handoff scrubs URL, imports repo selections and renders a local exp
   });
   await page.goto(url);
   await expect(page.locator(".repo-lane")).toHaveCount(1);
-  expect(page.url()).not.toContain("#");
+  expect(page.url()).not.toContain("issueflow-handoff");
+  expect(page.url()).not.toContain("fixture-handoff-token");
   expect(requests.some((url) => url.includes("fixture-handoff-token"))).toBe(
     false,
   );
   await page.getByRole("button", { name: "Öppna på mobilen" }).click();
   await expect(
-    page.getByRole("img", { name: "QR-kod för att logga in på mobilen" }),
+    page.getByRole("img", { name: "QR-kod för konto och inställningar" }),
   ).toHaveAttribute("src", /^data:image\/png/);
   await expect(page.getByRole("dialog")).toContainText(
     "Koden innehåller din token",
   );
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
   await expect(
-    page.getByRole("img", { name: "QR-kod för att logga in på mobilen" }),
+    page.getByRole("img", { name: "QR-kod för konto och inställningar" }),
   ).toHaveCount(0);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
