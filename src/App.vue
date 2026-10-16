@@ -33,6 +33,7 @@ import { summarizeLanes } from "./lib/sidebar";
 import { ActivityTracker } from "./lib/activity";
 import { createIssueSync } from "./lib/sync";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
+import { matchesIssueFilters } from "./lib/issue-filter";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import ProblemReport from "./components/ProblemReport.vue";
@@ -122,6 +123,7 @@ const syncError = ref("");
 const lastSynced = new Map<string, number>();
 const lastFullSynced = new Map<string, number>();
 const query = ref("");
+const repositoryQueries = ref<Record<string, string>>({});
 const repoQuery = ref("");
 const picker = ref(false);
 const tokenPanel = ref(false);
@@ -319,10 +321,7 @@ function laneIssues(lane: Lane) {
   return lane.issues.filter(
     (i) =>
       (!hideCoordination.value || !isCoordination(i)) &&
-      (!query.value ||
-        `${i.title} #${i.number} ${i.labels.map((l) => l.name).join(" ")}`
-          .toLowerCase()
-          .includes(query.value.toLowerCase())),
+      matchesIssueFilters(i, query.value, repositoryQueries.value[lane.repo.full_name] || ""),
   );
 }
 function items(lane: Lane, key: string) {
@@ -636,6 +635,7 @@ function logout() {
   busy.value = false;
   error.value = "";
   query.value = "";
+  repositoryQueries.value = {};
   picker.value = false;
   editing.value = null;
   refreshed.value = null;
@@ -1245,6 +1245,22 @@ onMounted(async () => {
             </div>
           </header>
           <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
+          <div class="repository-filter">
+            <label :for="'repository-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
+            <div class="repository-filter-controls">
+              <div class="repository-search">
+                <Search :size="16" aria-hidden="true" />
+                <input :id="'repository-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]"
+                  :placeholder="t('Sök issues, labels eller nummer…')" />
+              </div>
+              <button class="button small" :disabled="!repositoryQueries[lane.repo.full_name]"
+                :aria-label="t('Rensa filtret för {name}', { name: lane.repo.full_name })"
+                @click="repositoryQueries[lane.repo.full_name] = ''">{{ t("Rensa") }}</button>
+            </div>
+          </div>
+          <p v-if="(query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">
+            {{ t("Inga issues i {name} matchar filtren.", { name: lane.repo.full_name }) }}
+          </p>
           <div v-if="lane.error" class="notice error" role="alert">
             {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}
           </div>
@@ -1302,7 +1318,9 @@ onMounted(async () => {
                     v-else-if="col.key === 'progress'"
                     :size="20"
                   /><Layers3 v-else :size="20" /><span>{{
-                    col.key === "progress"
+                    query || repositoryQueries[lane.repo.full_name]
+                      ? t("Inga issues matchar filtren")
+                      : col.key === "progress"
                       ? t("Inget pågående arbete")
                       : col.key === "closed"
                         ? t("Inga stängda issues ännu")
@@ -1466,3 +1484,12 @@ onMounted(async () => {
   <ScanLogin v-if="scannerOpen" @close="scannerOpen = false"
     @scanned="payload => { scannerOpen = false; void connect(payload.token, payload); }" />
 </template>
+
+<style scoped>
+.repository-filter { padding: 14px 18px; display: grid; gap: 7px; font-size: 12px; color: var(--muted); }
+.repository-filter-controls { display: flex; gap: 8px; }
+.repository-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: min(100%, 420px); min-width: 0; }
+.repository-search input { width: 100%; min-width: 0; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
+.repository-search:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
+.repository-filter-empty { margin: 0; padding: 0 18px 14px; color: var(--muted); font-size: 13px; }
+</style>

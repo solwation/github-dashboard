@@ -35,6 +35,11 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Filtrera issues i {name}": "Filter issues in {name}",
+  "Rensa filtret för {name}": "Clear filter for {name}",
+  "Rensa": "Clear",
+  "Inga issues i {name} matchar filtren.": "No issues in {name} match the filters.",
+  "Inga issues matchar filtren": "No issues match the filters",
   "Visa max work items per kolumn": "Maximum work items shown per column",
   "Ärv global inställning ({count})": "Inherit global setting ({count})",
   "Antal som visas först. Visa fler visar nästa omgång; kolumnens antal omfattar alla work items.": "Number shown initially. Show more reveals the next batch; column totals include all work items.",
