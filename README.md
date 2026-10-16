@@ -20,6 +20,8 @@ Issueflow reads GitHub. Make issue changes on GitHub; private content stays in y
 
 Use a fine-grained GitHub token with **Issues: read** and **Metadata: read**. Add **Contents: read** and **Pull requests: read** for private closing commit details. Try the demo first—no account required.
 
+Settings includes an expandable issue workflow guide, readable directly in the dashboard.
+
 Settings → GitHub permissions shows verified access and explains which features each read permission enables. A red Settings badge counts permissions with confirmed missing access.
 
 ## Run locally
