@@ -4,26 +4,31 @@ export interface OverviewCounts { open: number; progress: number; closed: number
 export const emptyCounts = (): OverviewCounts => ({ open: 0, progress: 0, closed: 0 });
 export const overviewKeys = ["open", "progress", "closed"] as const;
 export const OVERVIEW_DELTA_MS = 3000;
+export type OverviewOutcome = "positive" | "negative" | null;
+type IssueColumn = ReturnType<typeof column>;
 
-function count(lane: Lane, rules: Rules, hideCoordination: boolean): OverviewCounts {
+function snapshot(lane: Lane, rules: Rules, hideCoordination: boolean) {
   const counts = emptyCounts();
-  const seen = new Set<number>();
+  const columns = new Map<number, IssueColumn>();
   for (const issue of lane.issues) {
-    if (seen.has(issue.id) || issue.pull_request || (hideCoordination && isCoordination(issue))) continue;
-    seen.add(issue.id);
+    if (columns.has(issue.id) || issue.pull_request || (hideCoordination && isCoordination(issue))) continue;
+    const col = column(issue, rules);
+    columns.set(issue.id, col);
     if (issue.state === "open") counts.open++;
-    if (column(issue, rules) === "progress") counts.progress++;
+    if (col === "progress") counts.progress++;
     if (issue.state === "closed") counts.closed++;
   }
-  return counts;
+  return { counts, columns };
 }
 
 /** Baselines track successful GitHub snapshots, never the current text search. */
 export class OverviewFeedbackTracker {
   private signature = "";
-  private snapshots = new Map<string, OverviewCounts>();
+  private snapshots = new Map<string, ReturnType<typeof snapshot>>();
+  progressOutcome: OverviewOutcome = null;
 
   update(lanes: Lane[], rules: Record<string, Rules>, hideCoordination: boolean, live: boolean, session: string | number): OverviewCounts {
+    this.progressOutcome = null;
     if (!live) { this.clear(); return emptyCounts(); }
     const repos = [...new Set(lanes.map(lane => lane.repo.full_name))].sort();
     const signature = JSON.stringify([session, hideCoordination, repos.map(repo => [repo, Object.entries(rules[repo] || {}).sort(([a], [b]) => a.localeCompare(b))])]);
@@ -34,14 +39,21 @@ export class OverviewFeedbackTracker {
     for (const lane of lanes) {
       if (lane.error) continue;
       const repo = lane.repo.full_name;
-      const counts = count(lane, rules[repo] || {}, hideCoordination);
+      const next = snapshot(lane, rules[repo] || {}, hideCoordination);
       const before = this.snapshots.get(repo);
-      if (!reset && before) for (const key of overviewKeys) delta[key] += counts[key] - before[key];
-      this.snapshots.set(repo, counts);
+      if (!reset && before) {
+        for (const key of overviewKeys) delta[key] += next.counts[key] - before.counts[key];
+        for (const [id, col] of next.columns) {
+          if (before.columns.get(id) !== "progress") continue;
+          if (col === "backlog") this.progressOutcome = "negative";
+          else if (col === "closed" && this.progressOutcome !== "negative") this.progressOutcome = "positive";
+        }
+      }
+      this.snapshots.set(repo, next);
     }
     return delta;
   }
-  clear() { this.signature = ""; this.snapshots.clear(); }
+  clear() { this.signature = ""; this.snapshots.clear(); this.progressOutcome = null; }
 }
 
 /** Current closed issues whose latest closure is on the viewer's local calendar day. */

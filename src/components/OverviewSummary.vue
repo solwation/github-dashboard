@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, reactive, watch } from "vue";
 import { Activity, CircleCheck, Layers3, LayoutDashboard, Plus } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Lane, Rules } from "../lib/model";
-import { countClosedToday, emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, type OverviewCounts } from "../lib/overview-feedback";
+import { countClosedToday, emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, type OverviewCounts, type OverviewOutcome } from "../lib/overview-feedback";
 const props = defineProps<{
   counts: OverviewCounts; lanes: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
   live: boolean; session: number | string; now: number; loggedIn: boolean; busy: boolean;
@@ -12,10 +12,11 @@ const emit = defineEmits<{ chooseRepositories: [] }>();
 const { t } = useLanguage();
 const tracker = new OverviewFeedbackTracker();
 const deltas = reactive(emptyCounts());
+const outcomes = reactive<Record<keyof OverviewCounts, OverviewOutcome>>({ open: null, progress: null, closed: null });
 const timers = new Map<keyof OverviewCounts, ReturnType<typeof setTimeout>>();
 let previousDisplay: OverviewCounts | null = null;
 function clear(key: keyof OverviewCounts) {
-  clearTimeout(timers.get(key)); timers.delete(key); deltas[key] = 0;
+  clearTimeout(timers.get(key)); timers.delete(key); deltas[key] = 0; outcomes[key] = null;
 }
 watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, props.live, props.session], () => {
   const changes = tracker.update(props.lanes, props.rules, props.hideCoordination, props.live, props.session);
@@ -27,6 +28,12 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
       const amount = Math.sign(changes[key]) === Math.sign(visibleChange)
         ? Math.sign(visibleChange) * Math.min(Math.abs(changes[key]), Math.abs(visibleChange)) : 0;
       deltas[key] += amount;
+      if (!deltas[key]) outcomes[key] = null;
+      else if (key === "progress") {
+        const outcome = tracker.progressOutcome || (amount > 0 ? "positive" : null);
+        // Keep setbacks visible if a burst also contains completed work.
+        outcomes[key] = outcomes[key] === "negative" || outcome === "negative" ? "negative" : outcome || outcomes[key];
+      } else outcomes[key] = deltas[key] > 0 ? "positive" : "negative";
       timers.set(key, setTimeout(() => clear(key), OVERVIEW_DELTA_MS));
     } else if (visibleChange || !props.live) clear(key);
   }
@@ -48,7 +55,7 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
       <div><span class="stat-label">Repositories</span><strong>{{ lanes.length }}<small>{{ t("i din översikt") }}</small></strong></div>
       <button v-if="loggedIn" class="icon-button repository-stat-action" :aria-label="t('Välj repositories')" :title="t('Välj repositories')" :disabled="busy" @click="emit('chooseRepositories')"><Plus :size="16" aria-hidden="true" /></button>
     </div>
-    <div v-for="card in cards" :key="card.key" class="stat" :data-stat="card.key" :class="{ 'stat-increase': deltas[card.key] > 0, 'stat-decrease': deltas[card.key] < 0 }">
+    <div v-for="card in cards" :key="card.key" class="stat" :data-stat="card.key" :class="{ 'stat-positive': deltas[card.key] && outcomes[card.key] === 'positive', 'stat-negative': deltas[card.key] && outcomes[card.key] === 'negative' }">
       <span class="stat-icon" :class="card.style"><component :is="card.icon" :size="20" /></span>
       <div class="stat-content">
         <span class="stat-label">{{ card.label }}</span>
@@ -64,10 +71,11 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
 .stat-content { min-width: 0; }
 .stat strong { flex-wrap: wrap; row-gap: 6px; }
 .stat strong small { white-space: normal; }
-.stat-increase { background-color: #eaf6ef; border-color: #65a781; }
-.stat-decrease { background-color: #fff0ec; border-color: #c8826c; }
-.stat-delta { font-size: .75rem; font-weight: 600; color: #19643c; }
-.stat-decrease .stat-delta { color: #943d28; }
+.stat-positive { background-color: #eaf6ef; border-color: #65a781; }
+.stat-negative { background-color: #fff0ec; border-color: #c8826c; }
+.stat-delta { font-size: .75rem; font-weight: 600; color: #53636d; }
+.stat-positive .stat-delta { color: #19643c; }
+.stat-negative .stat-delta { color: #943d28; }
 .stat-today { display: inline-block; margin-top: .5rem; font-size: .75rem; color: #286b51; }
 .stat-today-note { color: #61766d; font-size: .6875rem; }
 @media (prefers-reduced-motion: reduce) { .stat { transition: none; } }

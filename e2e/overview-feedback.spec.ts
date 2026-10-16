@@ -17,9 +17,9 @@ async function fixture(page: Page) {
     if (url.pathname === "/user") body = { login: "summary-fixture", avatar_url: "" };
     else if (url.pathname === "/user/repos") body = [repo];
     else if (url.pathname.endsWith("/issues")) {
-      const all = stage === 0 ? [issue(1, "open"), issue(2, "open", true), issue(3, "closed")]
+      const all = stage === 0 ? [issue(1, "open", true), issue(2, "open", true), issue(3, "closed")]
         : stage === 1 ? [issue(1, "open", true), issue(2, "closed", false, true), issue(3, "closed")]
-        : [issue(1, "open"), issue(2, "open"), issue(3, "closed")];
+        : [issue(1, "open"), issue(2, "closed", false, true), issue(3, "closed")];
       if (url.searchParams.get("state") === "open") requests++;
       body = all.filter(issue => issue.state === url.searchParams.get("state"));
     }
@@ -44,26 +44,29 @@ async function fixture(page: Page) {
 }
 const card = (page: Page, key: string) => page.locator('.stats [data-stat="' + key + '"]');
 
-test("summary marks only live count changes, aggregates fast updates, clears deltas, and keeps search silent", async ({ page }) => {
+test("summary colors progress completion green and return to backlog red while keeping search silent", async ({ page }) => {
   const api = await fixture(page);
   await expect(page.locator(".stat-delta")).toHaveCount(0);
   await expect(card(page, "closed").locator(".stat-today")).toContainText("+0 idag");
   api.setStage(1);
   await api.refresh();
   await expect(card(page, "open").locator(".stat-delta")).toHaveText("−1");
-  await expect(card(page, "open")).toHaveClass(/stat-decrease/);
+  await expect(card(page, "open")).toHaveClass(/stat-negative/);
   await expect(card(page, "closed").locator(".stat-delta")).toHaveText("+1");
-  await expect(card(page, "closed")).toHaveClass(/stat-increase/);
-  await expect(card(page, "progress").locator(".stat-delta")).toHaveCount(0);
+  await expect(card(page, "closed")).toHaveClass(/stat-positive/);
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress")).toHaveClass(/stat-positive/);
   await expect(card(page, "closed").locator(".stat-today")).toContainText("+1 idag");
   await api.refresh();
   await expect(card(page, "closed").locator(".stat-delta")).toHaveText("+1");
+  // Start a distinct pulse for a return to backlog: the sign stays negative but the color changes.
+  await expect(page.locator(".stat-delta")).toHaveCount(0, { timeout: 5000 });
   api.setStage(2);
   await api.refresh();
-  // The opposite update cancels the earlier open/closed deltas.
   await expect(card(page, "open").locator(".stat-delta")).toHaveCount(0);
   await expect(card(page, "closed").locator(".stat-delta")).toHaveCount(0);
   await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress")).toHaveClass(/stat-negative/);
   await expect(page.locator(".stat-delta")).toHaveCount(0, { timeout: 5000 });
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("no matching issues");
   await expect(card(page, "open").locator("strong")).toHaveText(/0/);
@@ -72,6 +75,21 @@ test("summary marks only live count changes, aggregates fast updates, clears del
   await expect(page.locator(".stat-delta")).toHaveCount(0);
   await api.refresh();
   await expect(page.locator(".stat-delta")).toHaveCount(0);
+});
+
+test("mixed completion and backlog batch keeps negative outcome during rapid aggregated updates", async ({ page }) => {
+  const api = await fixture(page);
+  api.setStage(2);
+  await api.refresh();
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−2");
+  await expect(card(page, "progress")).toHaveClass(/stat-negative/);
+  api.setStage(1);
+  await api.refresh();
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress")).toHaveClass(/stat-negative/);
+  await api.refresh();
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress")).toHaveClass(/stat-negative/);
 });
 
 test("summary uses accessible English feedback and static reduced-motion colors on mobile", async ({ page }) => {
@@ -85,6 +103,8 @@ test("summary uses accessible English feedback and static reduced-motion colors 
   await api.refresh();
   const summary = page.getByRole("region", { name: "Summary", exact: true });
   await expect(summary.getByRole("status")).toContainText("Closed: +1");
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress")).toHaveClass(/stat-positive/);
   await expect(card(page, "closed").locator(".stat-today")).toContainText("+1 today");
   expect(await card(page, "closed").evaluate(element => getComputedStyle(element).transitionDuration)).toBe("0s");
   expect(await summary.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);

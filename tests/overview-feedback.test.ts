@@ -10,6 +10,46 @@ const lane = (issues: Issue[], repo = "a/b", error?: string): Lane => ({
 });
 const update = (tracker: OverviewFeedbackTracker, lanes: Lane[], options: { rules?: Record<string, Rules>; hide?: boolean; live?: boolean; session?: number } = {}) => tracker.update(lanes, options.rules || {}, options.hide || false, options.live ?? true, options.session ?? 1);
 describe("overview change feedback", () => {
+  it("marks the same progress decrease positive for completion and negative for backlog", () => {
+    const tracker = new OverviewFeedbackTracker();
+    update(tracker, [lane([issue(1, ["in-progress"])])]);
+    expect(update(tracker, [lane([issue(1, [], "closed")])]).progress).toBe(-1);
+    expect(tracker.progressOutcome).toBe("positive");
+    expect(update(tracker, [lane([issue(1, [], "closed")])])).toEqual(emptyCounts());
+    expect(tracker.progressOutcome).toBeNull();
+    update(tracker, [lane([issue(1, ["in-progress"])])]);
+    expect(update(tracker, [lane([issue(1)])]).progress).toBe(-1);
+    expect(tracker.progressOutcome).toBe("negative");
+  });
+  it.each([false, true])("gives backlog precedence over simultaneous completed work regardless of repository order (%s)", reverse => {
+    const tracker = new OverviewFeedbackTracker();
+    const initial = [lane([issue(1, ["in-progress"])]), lane([issue(1, ["in-progress"])], "a/c")];
+    const next = [lane([issue(1, [], "closed")]), lane([issue(1)], "a/c")];
+    update(tracker, reverse ? initial.reverse() : initial);
+    expect(update(tracker, reverse ? next.reverse() : next).progress).toBe(-2);
+    expect(tracker.progressOutcome).toBe("negative");
+  });
+  it("silently rebaselines outcomes for rule/view/session edits and ignores failed or missing destinations", () => {
+    const tracker = new OverviewFeedbackTracker();
+    const initial = [lane([issue(1, ["in-progress"])])];
+    update(tracker, initial);
+    update(tracker, [lane([issue(1)])], { rules: { "a/b": { progress: "custom" } } });
+    expect(tracker.progressOutcome).toBeNull();
+    update(tracker, initial);
+    update(tracker, [lane([issue(1, [], "closed")], "a/b", "failed")]);
+    expect(tracker.progressOutcome).toBeNull();
+    update(tracker, [lane([issue(1, [], "closed")])]);
+    expect(tracker.progressOutcome).toBe("positive");
+    update(tracker, initial);
+    update(tracker, [lane([])]);
+    expect(tracker.progressOutcome).toBeNull();
+    update(tracker, initial);
+    update(tracker, [lane([issue(1)])], { hide: true });
+    expect(tracker.progressOutcome).toBeNull();
+    update(tracker, initial);
+    update(tracker, [lane([issue(1, [], "closed")])], { session: 2 });
+    expect(tracker.progressOutcome).toBeNull();
+  });
   it("is silent on startup/cache, returns simultaneous signed deltas, and ignores unchanged snapshots", () => {
     const tracker = new OverviewFeedbackTracker();
     const first = [lane([issue(1), issue(2, ["in-progress"]), issue(3)])];
