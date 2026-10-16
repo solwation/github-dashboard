@@ -85,6 +85,13 @@
       },
       {
         "text": {
+          "sv": "En länk eller QR-kod för ett annat konto ersätter inte längre din sparade inloggning utan att du först bekräftar bytet.",
+          "en": "A link or QR code for another account no longer replaces your saved sign-in unless you first confirm the switch."
+        },
+        "issues": [103]
+      },
+      {
+        "text": {
           "sv": "Cachad vy återställs lugnare, uppdateringar aktiveras säkrare och otillgängliga commitdetaljer döljs; Inställningar, språkminne och filtrerade översiktssiffror har rättats.",
           "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
