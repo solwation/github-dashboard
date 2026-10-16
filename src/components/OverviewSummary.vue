@@ -71,6 +71,7 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
 </template>
 <style scoped>
 .stat { transition: background-color .25s, border-color .25s; }
+.repository-stat strong .repository-active { display: block; }
 .repository-active:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 3px; }
 .stat-content { min-width: 0; }
 .stat strong { flex-wrap: wrap; row-gap: 6px; }

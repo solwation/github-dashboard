@@ -35,7 +35,7 @@ for (const width of [1440, 320]) {
     const action = card.getByRole("button", { name: "Välj repositories", exact: true });
     await expect(page.locator(".page-heading button")).toHaveCount(0);
     await expect(page.locator(".sidebar-add")).toBeAttached();
-    await expect(card.locator("strong")).toHaveText("1i din översikt");
+    await expect(card.locator("strong")).toHaveText("10 aktiva");
     await expect(action).toBeVisible();
     const cardBox = (await card.boundingBox())!;
     const actionBox = (await action.boundingBox())!;
@@ -50,7 +50,7 @@ for (const width of [1440, 320]) {
     await expect(action).toBeDisabled();
     api.release();
     await expect(action).toBeEnabled();
-    await expect(card.locator("strong")).toHaveText("2i din översikt");
+    await expect(card.locator("strong")).toHaveText("20 aktiva");
     await page.getByRole("button", { name: "Inställningar", exact: true }).click();
     await page.getByLabel("Språk", { exact: true }).selectOption("en");
     await page.getByRole("button", { name: "Done", exact: true }).click();

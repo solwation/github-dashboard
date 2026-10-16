@@ -35,6 +35,10 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "{count} aktiva": "{count} active",
+  "{count} aktiva projekt. {definition}": "{count} active projects. {definition}",
+  "Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet.": "Active projects have at least one issue in Backlog or In progress, or an issue closed in the last 30 days. Hidden coordination issues are excluded. Text filters do not affect this count.",
+
   "Ange ett heltal mellan 1 och 10080 minuter.": "Enter a whole number between 1 and 10080 minutes.",
   "Tidsgräns för pågående issues (minuter)": "In progress issue timeout (minutes)",
   "Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.": "Issues in progress are flagged after this limit. An unknown start time never triggers a warning. Default: 30 minutes.",

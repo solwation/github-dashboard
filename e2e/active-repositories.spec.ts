@@ -31,12 +31,13 @@ test('repository summary counts active projects independently of text search and
   await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
   await page.getByLabel('GitHub personal access token').fill('fixture-active-projects-token');
   await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
-  for (const repo of repositories) await page.getByRole('checkbox', { name: repo.full_name, exact: true }).check();
+  for (const repo of repositories) await page.getByRole('checkbox', { name: new RegExp(repo.full_name) }).check();
   await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
   const card = page.locator('.repository-stat');
   const active = card.locator('.repository-active');
   await expect(card.locator('strong')).toContainText('7');
   await expect(active).toHaveText('4 aktiva');
+  await expect(active).toBeVisible();
   await expect(active).toHaveAttribute('title', /Backlog.*In progress.*30 dagarna.*Fritextfilter/);
   await expect(active).toHaveAttribute('aria-label', /^4 aktiva projekt\./);
   await page.getByRole('textbox', { name: 'Sök issues', exact: true }).fill('no matching issue');
@@ -49,7 +50,7 @@ test('repository summary counts active projects independently of text search and
   const chooser = card.getByRole('button', { name: 'Välj repositories', exact: true });
   await expect(chooser).toBeFocused();
   await page.keyboard.press('Enter');
-  await page.getByRole('checkbox', { name: 'sample/backlog', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: /sample\/backlog/ }).uncheck();
   await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
   await expect(card.locator('strong')).toContainText('6');
   await expect(active).toHaveText('4 aktiva');
