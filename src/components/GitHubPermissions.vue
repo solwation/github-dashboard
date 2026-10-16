@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { X } from "@lucide/vue";
+import NoticeBadge from "./NoticeBadge.vue";
 import { permissionDefinitions, type PermissionReport, type PermissionReason } from '../lib/permissions';
 import { useLanguage } from '../lib/i18n';
 const { t } = useLanguage();
-defineProps<{ report: PermissionReport; checking?: boolean; canCheck?: boolean }>();
+defineProps<{ report: PermissionReport; checking?: boolean; canCheck?: boolean; notices?: number }>();
 const emit = defineEmits<{ check: []; opened: []; closed: [] }>();
 const dialog = ref<HTMLDialogElement>();
 const reasons: Record<PermissionReason, string> = {
@@ -16,7 +17,11 @@ const reasons: Record<PermissionReason, string> = {
 const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas', unknown: 'Ej verifierad' };
 </script>
 <template>
-  <button class="button permissions-open" @click="dialog?.showModal(); emit('opened'); emit('check')">GitHub permissions</button>
+  <button class="button permissions-open" aria-label="GitHub permissions" :aria-describedby="notices ? 'permissions-notices' : undefined"
+    @click="dialog?.showModal(); emit('opened'); emit('check')">
+    GitHub permissions
+    <NoticeBadge id="permissions-notices" :count="notices ?? 0" :label="t('{count} saknade GitHub-rättigheter', { count: notices ?? 0 })" />
+  </button>
   <dialog ref="dialog" class="permissions-dialog" aria-labelledby="github-permissions-title" @close="emit('closed')"
     @click="event => { if (event.target === dialog) dialog?.close(); }">
     <div class="permissions-heading">

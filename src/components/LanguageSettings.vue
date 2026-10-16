@@ -4,6 +4,7 @@ import { DEFAULT_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES, parseTimeoutMinutes } fro
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import GitHubPermissions from "./GitHubPermissions.vue";
+import NoticeBadge from "./NoticeBadge.vue";
 import { missingPermissionCount, type PermissionReport } from "../lib/permissions";
 import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
@@ -16,6 +17,9 @@ const permissionKey = (permission: string, repo: string) => `${permission}:${rep
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
   ...entry, repositories: entry.repositories.filter(repo => !acknowledgedMissing.value.has(permissionKey(entry.permission, repo.repo))),
 }))));
+// Notices per Settings submenu; the Settings button shows their total.
+const submenuNotices = computed(() => ({ permissions: missingCount.value }));
+const settingsNotices = computed(() => Object.values(submenuNotices.value).reduce((total, count) => total + count, 0));
 function acknowledgePermissions() {
   permissionsOpen.value = true;
   const seen = new Set(acknowledgedMissing.value);
@@ -52,9 +56,10 @@ function change(event: Event) {
     class="button small"
     @click="dialog?.showModal(); emit('checkPermissions')"
     :aria-label="t('Inställningar')"
+    :aria-describedby="settingsNotices ? 'settings-notices' : undefined"
   >
     <Settings2 :size="15" /><span>{{ t("Inställningar") }}</span>
-    <span v-if="missingCount" class="permissions-badge" role="status" :aria-label="t('{count} saknade GitHub-rättigheter', { count: missingCount })">{{ missingCount }}</span>
+    <NoticeBadge id="settings-notices" :count="settingsNotices" :label="t('{count} saknade GitHub-rättigheter', { count: settingsNotices })" />
   </button>
   <dialog
     ref="dialog"
@@ -90,7 +95,7 @@ function change(event: Event) {
     <input id="issue-timeout-minutes" type="number" min="1" :max="MAX_TIMEOUT_MINUTES" step="1" required
       :value="timeoutMinutes" :disabled="!canEditLimit" aria-describedby="issue-timeout-help" @change="changeTimeout" />
     <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
-    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
+    <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
     <button v-if="canScan" class="button" @click="dialog?.close(); emit('scan')">{{ t("Läs QR-kod") }}</button>
     <WorkflowGuide />
     <div class="settings-updates">
@@ -106,5 +111,4 @@ function change(event: Event) {
 
 <style scoped>
 .settings-updates { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
-.permissions-badge { background: #b91c1c; color: white; border-radius: 50%; padding: 0; width: 1.375rem; height: 1.375rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .75rem; font-weight: 700; }
 </style>
