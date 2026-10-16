@@ -92,6 +92,13 @@
       },
       {
         "text": {
+          "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
+          "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
+        },
+        "issues": [102]
+      },
+      {
+        "text": {
           "sv": "Ett tillfälligt fel vid hämtning av tidslinjen ger inte längre kvarstående tidtagarvarningar eller tystade timeout-notiser efter nästa synk.",
           "en": "A temporary timeline fetch error no longer leaves lingering timer warnings or silenced timeout notifications after the next sync."
         },
