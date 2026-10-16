@@ -16,6 +16,11 @@ const snapshots = shallowRef<Record<string, StatisticsData>>({});
 const loading = ref<Record<string, boolean>>({});
 const failures = ref<Record<string, boolean>>({});
 const busy = computed(() => props.repositories.some(repo => loading.value[repo.full_name]));
+const initialLoading = computed(() => busy.value && !props.repositories.some(repo => {
+  const data = snapshots.value[repo.full_name];
+  return data && [data.issues, data.events, data.commits, data.changes, data.pulls].some(source => source !== null);
+}));
+const completed = computed(() => props.repositories.filter(repo => loading.value[repo.full_name] === false).length);
 const partial = computed(() => props.repositories.some(repo => {
   const data = snapshots.value[repo.full_name];
   return !!data && ([data.issues, data.events, data.commits, data.changes, data.pulls].some(source => source?.complete === false) || !!data.changes?.data.some(change => !change.filesComplete));
@@ -60,13 +65,19 @@ onUnmounted(() => { generation++; collector?.dispose(); });
   <section class="statistics-view" :aria-label="t('Statistik')">
     <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1><p>{{ t("De senaste 30 dagarna, repository för repository.") }}</p></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
-    <div class="statistics-repositories">
+    <div v-if="initialLoading" class="statistics-loading-splash" role="status" aria-live="polite">
+      <RefreshCw class="statistics-loading-spinner" :size="34" aria-hidden="true" />
+      <h2>{{ t("Hämtar och sammanställer statistik") }}</h2>
+      <p>{{ t("Vi hämtar underlaget från GitHub. Statistiken visas så snart den är klar.") }}</p>
+      <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: repositories.length }) }}</small>
+    </div>
+    <div v-show="!initialLoading" class="statistics-repositories">
       <StatisticsRepository v-for="repository in repositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-failed="!!failures[repository.full_name]"
         :period="period" :preference="preferencesState[repository.full_name]" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
-    <footer v-if="repositories.length" class="statistics-footnotes">
+    <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">
       <p>{{ t("Kalenderdagar i UTC. Dagens värden är preliminära.") }}</p>
       <details class="statistics-panel statistics-definitions"><summary>{{ t("Definitioner och datatäckning") }}</summary><ul>
         <li>{{ t("Stängda och återöppnade issues räknas från faktiska GitHub-händelser. Samma issue kan stängas flera gånger. Nettoflöde = skapade + återöppnade − stängda; detta är förändringen, inte antalet öppna issues.") }}</li>
@@ -92,5 +103,12 @@ onUnmounted(() => { generation++; collector?.dispose(); });
 .statistics-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
 .statistics-empty h2 { font-size: 18px; }
 .statistics-empty p { font-size: 13px; }
+.statistics-loading-splash { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 300px; padding: 36px 20px; border: 1px solid var(--line); border-radius: 12px; background: white; text-align: center; }
+.statistics-loading-splash h2 { margin: 0; font-size: 21px; }
+.statistics-loading-splash p { max-width: 420px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.statistics-loading-splash small { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.statistics-loading-spinner { color: var(--green); animation: statistics-spin 1s linear infinite; }
+@keyframes statistics-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }
 @media (max-width: 650px) { .statistics-heading { flex-direction: column; align-items: stretch; } .statistics-heading h1 { font-size: 26px; } }
 </style>

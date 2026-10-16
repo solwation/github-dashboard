@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { BarChart3 } from "@lucide/vue";
+import { BarChart3, RefreshCw } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { normalizeStatisticsPreference } from "../lib/statistics-preferences";
@@ -57,6 +57,12 @@ function reset() { state.value = normalize({ ...state.value, from: props.period.
 <template>
   <section class="statistics-repository" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
     <header class="statistics-repository-heading"><h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" target="_blank" rel="noopener noreferrer">{{ repository.full_name }}</a></h2></header>
+    <div v-if="loading && !data" class="statistics-repository-loading" role="status" aria-live="polite">
+      <RefreshCw class="statistics-loading-spinner" :size="26" aria-hidden="true" />
+      <div><strong>{{ t("Hämtar och sammanställer statistik") }}</strong><p>{{ t("Vänta medan underlaget för {name} hämtas.", { name: repository.full_name }) }}</p></div>
+    </div>
+    <p v-else-if="loading" class="statistics-refreshing" role="status" aria-live="polite"><RefreshCw class="statistics-loading-spinner" :size="15" aria-hidden="true" />{{ t("Uppdaterar statistik. Tidigare värden visas under tiden.") }}</p>
+    <div class="statistics-repository-content" :aria-busy="loading">
     <div v-if="anyData" class="statistics-filters">
       <div class="statistics-filter-grid">
         <label>{{ t("Från datum (UTC)") }}<input v-model="state.from" type="date" :min="period.from" :max="state.to || period.to" /></label>
@@ -66,8 +72,7 @@ function reset() { state.value = normalize({ ...state.value, from: props.period.
       </div>
       <div class="statistics-filter-actions"><button class="button small" :disabled="!filtersActive" @click="reset">{{ t("Återställ filter") }}</button></div>
     </div>
-    <p v-if="loading" role="status" class="statistics-message">{{ t("Hämtar statistik…") }}</p>
-    <p v-if="temporary" role="status" class="notice">{{ t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") }}</p>
+    <p v-if="temporary && !loading" role="status" class="notice">{{ anyData ? t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") : t("Statistiken kunde inte hämtas just nu. Försök igen senare.") }}</p>
     <p v-if="invalidRange" role="status" class="statistics-message">{{ t("Välj ett giltigt datumintervall inom de senaste 30 dagarna.") }}</p>
     <template v-else-if="anyData">
       <div class="statistics-totals"><div v-for="key in availableMetrics" :key="key" class="statistics-total"><span>{{ t(metricNames[key]) }}</span><strong>{{ number(summary.totals[key]!) }}</strong><small v-if="summary.complete[key] === false">{{ t("Delvis data") }}</small></div><div v-if="summary.closureAgeDays !== null" class="statistics-total"><span>{{ t("Medianålder vid stängning") }}</span><strong>{{ summary.closureAgeDays.toLocaleString(locale, { maximumFractionDigits: 1 }) }} <small>{{ t("dagar") }}</small></strong><small v-if="summary.complete.closed === false">{{ t("Delvis data") }}</small></div></div>
@@ -75,7 +80,8 @@ function reset() { state.value = normalize({ ...state.value, from: props.period.
       <div class="statistics-breakdowns"><section v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel"><h3>{{ t("Bidragsgivare") }}</h3><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></section><section v-if="summary.labels.length" class="statistics-panel"><h3>{{ t("Labels på skapade issues") }}</h3><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></section></div>
       <p v-if="lastFetched" class="statistics-source-time">{{ t("Äldsta underlaget hämtat {time}", { time: new Date(lastFetched).toLocaleString(locale, { timeZone: 'UTC' }) }) }} UTC.</p>
     </template>
-    <div v-else-if="!loading" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
+    <div v-else-if="!loading && !temporary" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
+    </div>
   </section>
 </template>
 <style scoped>
@@ -107,5 +113,12 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
 .statistics-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
 .statistics-empty h3 { font-size: 18px; }
 .statistics-empty p { font-size: 13px; }
+.statistics-repository-loading { display: flex; align-items: center; gap: 16px; min-height: 150px; padding: 25px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.statistics-repository-loading strong { display: block; font-size: 15px; }
+.statistics-repository-loading p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.statistics-refreshing { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin: 0 0 15px; }
+.statistics-loading-spinner { flex-shrink: 0; color: var(--green); animation: statistics-spin 1s linear infinite; }
+@keyframes statistics-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }
 @media (max-width: 650px) { .statistics-panel-heading { flex-direction: column; align-items: stretch; } .statistics-filters, .statistics-panel { padding: 14px; } }
 </style>
