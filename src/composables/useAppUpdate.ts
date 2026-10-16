@@ -18,6 +18,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   const sw = environment.serviceWorker;
   let active = false;
   let hadController = Boolean(sw.controller);
+  let loadedController = sw.controller;
   let registration: ServiceWorkerRegistration | undefined;
   let waiting: ServiceWorker | null = null;
   let deadline: number | undefined;
@@ -25,27 +26,39 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   let tickTimer: ReturnType<typeof setInterval> | undefined;
   let checkTimer: ReturnType<typeof setInterval> | undefined;
   let reloading = false;
-  let checking = false;
+  let checking: Promise<void> | null = null;
   let activationTarget: ServiceWorker | null = null;
+  let activationRequested = false;
+  const claimRequested = new WeakSet<ServiceWorker>();
   function clearActivationTarget() {
     activationTarget?.removeEventListener("statechange", maybeFinish);
     activationTarget = null;
   }
   function maybeFinish() {
     if (
-      state.applying &&
-      activationTarget &&
-      sw.controller === activationTarget &&
-      activationTarget.state === "activated"
+      activationRequested &&
+      sw.controller && sw.controller !== loadedController &&
+      sw.controller.state === "activated"
     )
       finish();
+    else if (activationRequested && activationTarget?.state === "activated" && !claimRequested.has(activationTarget)) {
+      // Recover an active worker whose initial clients.claim failed or was delayed.
+      claimRequested.add(activationTarget);
+      try { activationTarget.postMessage({ type: "CLAIM_CLIENTS" }); } catch { /* The bounded retry remains available. */ }
+    } else if (state.applying && activationTarget?.state === "redundant") {
+      const replacement = registration?.waiting || registration?.active;
+      if (replacement && replacement !== loadedController && replacement !== activationTarget && replacement.state !== "redundant") activate(replacement);
+    }
   }
   function waitForActivation(target: ServiceWorker) {
     clearActivationTarget();
     activationTarget = target;
     target.addEventListener("statechange", maybeFinish);
     clearTimeout(activationTimeout);
-    activationTimeout = setTimeout(activationFailed, 15000);
+    activationTimeout = setTimeout(() => {
+      maybeFinish();
+      if (!reloading) activationFailed();
+    }, 60000);
     maybeFinish();
   }
   const installationListeners = new Map<ServiceWorker, () => void>();
@@ -66,9 +79,23 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     environment.reload();
   }
   function activationFailed() {
-    clearActivationTarget();
+    clearTimeout(activationTimeout);
+    // Keep observing late activation: a suspended tab may resume after the timeout.
     state.applying = false;
     state.error = "Uppdateringen kunde inte aktiveras. Försök igen.";
+  }
+  function activate(target: ServiceWorker) {
+    waiting = target;
+    waitForActivation(target);
+    if (target.state === "installed") {
+      try { target.postMessage({ type: "SKIP_WAITING" }); }
+      catch { activationFailed(); }
+    }
+  }
+  function activationCandidate() {
+    return [registration?.waiting, sw.controller !== loadedController ? sw.controller : null,
+      registration?.active !== loadedController ? registration?.active : null, waiting, registration?.installing]
+      .find((worker): worker is ServiceWorker => Boolean(worker && worker !== loadedController && worker.state !== "redundant"));
   }
   function reloadNow() {
     if (!active || !state.available || state.applying || reloading) return;
@@ -81,42 +108,34 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     }
     state.error = "";
     state.applying = true;
+    activationRequested = true;
+    if (activationTarget) claimRequested.delete(activationTarget);
     // Another tab may already have activated the latest worker.
-    waiting = registration?.waiting || waiting;
-    if (waiting?.state === "redundant") {
-      activationFailed();
-      return;
-    }
-    if (!waiting || waiting.state === "activated") {
-      const current = waiting?.state === "activated" ? waiting : sw.controller;
-      if (!current) {
-        activationFailed();
-        return;
-      }
-      waitForActivation(current);
-      return;
-    }
-    waitForActivation(waiting);
-    try {
-      waiting.postMessage({ type: "SKIP_WAITING" });
-    } catch {
-      clearTimeout(activationTimeout);
-      activationFailed();
-    }
+    const candidate = activationCandidate();
+    if (candidate) activate(candidate);
+    else void check().then(() => {
+      if (!active || !state.applying || reloading) return;
+      const found = activationCandidate();
+      if (found) activate(found);
+      else activationFailed();
+    });
   }
   function controllerChanged() {
-    if (!active) return;
+    if (!active || reloading) return;
     // A first installation may claim this tab, without representing a new app version.
     if (!hadController) {
       hadController = true;
+      loadedController = sw.controller;
       watchInstalling();
       if (registration?.waiting) offer(registration.waiting);
       void check();
       return;
     }
+    if (sw.controller === loadedController) return;
     waiting = null;
-    if (state.applying) {
-      maybeFinish();
+    if (activationRequested) {
+      if (sw.controller && sw.controller !== loadedController) waitForActivation(sw.controller);
+      else maybeFinish();
     } else {
       offer(null);
     }
@@ -125,18 +144,23 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     const worker = registration?.installing;
     if (!worker || installationListeners.has(worker)) return;
     const changed = () => {
-      if (worker.state === "installed" && hadController)
-        offer(registration?.waiting || worker);
+      if (worker.state === "installed" && hadController) {
+        if (state.applying) activate(registration?.waiting || worker);
+        else offer(registration?.waiting || worker);
+      }
     };
     installationListeners.set(worker, changed);
     worker.addEventListener("statechange", changed);
     changed();
   }
-  async function check() {
-    if (!active || checking || !environment.online()) return;
-    checking = true;
-    hadController ||= Boolean(sw.controller);
-    try {
+  function check(): Promise<void> {
+    if (checking) return checking;
+    if (!active || !environment.online()) return Promise.resolve();
+    if (!hadController && sw.controller) {
+      hadController = true;
+      loadedController = sw.controller;
+    }
+    checking = (async () => { try {
       const found = await sw.getRegistration(environment.appUrl);
       if (!active || !found) return;
       if (registration !== found) {
@@ -153,9 +177,8 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
         state.error =
           "Det gick inte att kontrollera uppdateringen. Försök igen.";
       }
-    } finally {
-      checking = false;
-    }
+    } })().finally(() => { checking = null; });
+    return checking;
   }
   function resumed() {
     if (
@@ -173,7 +196,10 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   function start() {
     if (active) return;
     active = true;
-    hadController ||= Boolean(sw.controller);
+    if (!hadController && sw.controller) {
+      hadController = true;
+      loadedController = sw.controller;
+    }
     sw.addEventListener("controllerchange", controllerChanged);
     environment.events.addEventListener("focus", resumed);
     environment.events.addEventListener("online", resumed);

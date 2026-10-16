@@ -17,15 +17,19 @@ self.addEventListener("install", (event) =>
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     (async () => {
-      for (const key of await caches.keys())
-        if (key.startsWith("issueflow-shell-") && key !== CACHE)
-          await caches.delete(key);
       await self.clients.claim();
+      // Cleanup is optional. A cache-storage failure must never prevent takeover.
+      try {
+        for (const key of await caches.keys())
+          if (key.startsWith("issueflow-shell-") && key !== CACHE)
+            await caches.delete(key);
+      } catch { /* Keep the installed shell and retry cleanup on a future version. */ }
     })(),
   ),
 );
 self.addEventListener("message", (event) => {
-  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data?.type === "SKIP_WAITING") event.waitUntil(self.skipWaiting());
+  if (event.data?.type === "CLAIM_CLIENTS") event.waitUntil(self.clients.claim());
 });
 self.addEventListener("fetch", (event) => {
   const request = event.request,

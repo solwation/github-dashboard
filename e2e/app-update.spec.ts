@@ -7,6 +7,8 @@ import { resolve, extname, join } from "node:path";
 
 let server: Server, base: string, directory: string;
 let version = 0;
+let failCleanup = false;
+let failInstall = false;
 const commits = ["1".repeat(40), "2".repeat(40)];
 // Build two actual apps: a worker-only marker cannot prove new JavaScript loaded.
 test.beforeAll(async () => {
@@ -27,7 +29,13 @@ test.beforeAll(async () => {
       return;
     }
     try {
-      const data = await readFile(file);
+      if (failInstall && /\/assets\/.*\.js$/.test(path)) {
+        response.writeHead(503).end("temporary deployment failure");
+        return;
+      }
+      let data = await readFile(file);
+      if (path === "/sw.js" && failCleanup)
+        data = Buffer.concat([Buffer.from('caches.delete = async () => { throw new Error("fixture cleanup failure"); };\n'), data]);
       const types: Record<string, string> = {
         ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
         ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml",
@@ -62,6 +70,8 @@ async function discover(page: Page) {
 test("cacheable deployments load actual new code after countdown, across tabs, immediately, and offline", async ({ page, context }) => {
   test.setTimeout(90_000);
   version = 0;
+  failCleanup = false;
+  failInstall = false;
   await page.goto(base);
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
@@ -94,5 +104,65 @@ test("cacheable deployments load actual new code after countdown, across tabs, i
   version = 1;
   await page.goto(base);
   // Normal revisit must bypass fresh HTTP-cached HTML too.
+  await expectBuild(page, commits[1]!);
+});
+
+test("real worker takeover survives cleanup failure across existing tabs and retains saved settings", async ({ page, context }) => {
+  test.setTimeout(90_000);
+  version = 0;
+  failCleanup = false;
+  failInstall = false;
+  await page.goto(base);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await expectBuild(page, commits[0]!);
+  await page.evaluate(() => localStorage.setItem("update-regression-setting", "preserved"));
+  const other = await context.newPage();
+  await other.goto(base);
+  await expectBuild(other, commits[0]!);
+  version = 1;
+  failCleanup = true;
+  await discover(page);
+  await expect(page.locator(".version-update")).toBeVisible();
+  await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await expect(page.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
+  await expectBuild(page, commits[1]!);
+  await expect(other.locator(".version-update")).toBeVisible();
+  // This tab applies an already-activated worker; it must not wait for another activation.
+  await other.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await expect(other.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
+  await expectBuild(other, commits[1]!);
+  expect(await other.evaluate(() => localStorage.getItem("update-regression-setting"))).toBe("preserved");
+  await other.close();
+  failCleanup = false;
+});
+
+test("failed shell installation keeps the old app working and can be retried after network recovery", async ({ page }) => {
+  test.setTimeout(90_000);
+  version = 0;
+  failCleanup = false;
+  failInstall = false;
+  await page.goto(base);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await expectBuild(page, commits[0]!);
+  version = 1;
+  failInstall = true;
+  await page.evaluate(async () => {
+    const registration = (await navigator.serviceWorker.getRegistration())!;
+    const failed = new Promise<void>(resolve => registration.addEventListener("updatefound", () => {
+      const worker = registration.installing!;
+      worker.addEventListener("statechange", () => { if (worker.state === "redundant") resolve(); });
+    }, { once: true }));
+    await registration.update();
+    await failed;
+  });
+  await expectBuild(page, commits[0]!);
+  await expect(page.locator(".version-update")).toHaveCount(0);
+  failInstall = false;
+  await discover(page);
+  await expect(page.locator(".version-update")).toBeVisible();
+  await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await expect(page.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
   await expectBuild(page, commits[1]!);
 });

@@ -6,17 +6,49 @@ function shell() {
   const listeners = new Map<string, (event: any) => void>();
   const cache = { addAll: vi.fn().mockResolvedValue(undefined), match: vi.fn().mockResolvedValue(new Response("offline shell")) };
   const fetch = vi.fn().mockResolvedValue(new Response("new shell"));
+  const claim = vi.fn().mockResolvedValue(undefined);
+  const skipWaiting = vi.fn().mockResolvedValue(undefined);
+  const cacheStorage = { open: vi.fn().mockResolvedValue(cache), keys: vi.fn().mockResolvedValue(["issueflow-shell-old", "unrelated-cache"]), delete: vi.fn().mockResolvedValue(true) };
   const source = readFileSync(new URL("../scripts/service-worker.js", import.meta.url), "utf8")
     .replace("__CACHE_VERSION__", "test")
     .replace("__SHELL_FILES__", JSON.stringify(["./", "./assets/app-test.js"]));
   runInNewContext(source, {
     URL, Request, fetch,
-    self: { location: { href: "https://example.test/board/sw.js" }, addEventListener: (name: string, listener: (event: any) => void) => listeners.set(name, listener) },
-    caches: { open: vi.fn().mockResolvedValue(cache) },
+    self: { location: { href: "https://example.test/board/sw.js" }, clients: { claim }, skipWaiting, addEventListener: (name: string, listener: (event: any) => void) => listeners.set(name, listener) },
+    caches: cacheStorage,
   });
-  return { listeners, cache, fetch };
+  return { listeners, cache, fetch, claim, skipWaiting, cacheStorage };
 }
 describe("public service-worker shell", () => {
+  it("claims existing tabs before optional cleanup, tolerating cache deletion failures", async () => {
+    const { listeners, claim, cacheStorage } = shell();
+    cacheStorage.delete.mockRejectedValueOnce(new Error("cache storage unavailable"));
+    let activated!: Promise<unknown>;
+    listeners.get("activate")!({ waitUntil: (work: Promise<unknown>) => activated = work });
+    await expect(activated).resolves.toBeUndefined();
+    expect(claim).toHaveBeenCalledOnce();
+    expect(cacheStorage.delete).toHaveBeenCalledWith("issueflow-shell-old");
+    expect(claim.mock.invocationCallOrder[0]).toBeLessThan(cacheStorage.delete.mock.invocationCallOrder[0]!);
+  });
+  it("extends activation-message lifetime and supports retrying a missing controller claim", async () => {
+    const { listeners, claim, skipWaiting } = shell();
+    let work!: Promise<unknown>;
+    listeners.get("message")!({ data: { type: "SKIP_WAITING" }, waitUntil: (promise: Promise<unknown>) => work = promise });
+    await work;
+    expect(skipWaiting).toHaveBeenCalledOnce();
+    listeners.get("message")!({ data: { type: "CLAIM_CLIENTS" }, waitUntil: (promise: Promise<unknown>) => work = promise });
+    await work;
+    expect(claim).toHaveBeenCalledOnce();
+  });
+  it("rejects incomplete shell installation and leaves existing shell caches intact", async () => {
+    const { listeners, cache, cacheStorage, claim } = shell();
+    cache.addAll.mockRejectedValueOnce(new Error("deployment asset missing"));
+    let installed!: Promise<unknown>;
+    listeners.get("install")!({ waitUntil: (work: Promise<unknown>) => installed = work });
+    await expect(installed).rejects.toThrow("deployment asset missing");
+    expect(cacheStorage.delete).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+  });
   it("installs fresh shell bytes even while the previous deployment's HTML is HTTP cached", async () => {
     const { listeners, cache } = shell();
     let installed!: Promise<unknown>;
