@@ -35,6 +35,8 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Överordnat ärende": "Parent issue",
+  "{completed} av {total} underärenden stängda": "{completed} of {total} sub-issues closed",
   "Just nu": "Just now",
   "AI-agenter · GitHub-issues": "AI agents · GitHub issues",
   "DINA AGENTER. DITT FLÖDE.": "YOUR AGENTS. YOUR WORKFLOW.",
@@ -77,7 +79,7 @@ export const english: Record<string, string> = {
   "Timeout för {repo} #{number}: {title}": "Timeout for {repo} #{number}: {title}",
   "Timeout för pågående issue": "In progress issue timeout",
 
-  "Issues, etiketter, kommentarer och tid i pågående arbete. Statistik över issueflödet.": "Issues, labels, comments and time in progress. Issue activity statistics.",
+  "Issues, etiketter, kommentarer, underärenden och tid i pågående arbete. Statistik över issueflödet.": "Issues, labels, comments, sub-issues and time in progress. Issue activity statistics.",
   "Commitdetaljer och tillagd eller borttagen kod. Statistik över commits och kodändringar.": "Commit details and added or deleted code. Commit and code change statistics.",
   "Information om sammanslagna pull requests och deras koppling till stängda issues. Statistik över pull requests.": "Merged pull request information and links to closed issues. Pull request statistics.",
   "Statistik": "Statistics",

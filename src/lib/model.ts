@@ -24,6 +24,7 @@ export interface Issue {
   labels: Label[];
   assignees: { login: string; avatar_url: string }[];
   pull_request?: unknown;
+  sub_issues_summary?: { total: number; completed: number; percent_completed?: number };
   startedAt?: string | null;
   timerError?: boolean;
 }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import IssueRelationsView from "./IssueRelations.vue";
+import type { IssueRelations } from "../lib/issue-relations";
 import IssueDetails from "./IssueDetails.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useLanguage } from "../lib/i18n";
@@ -29,6 +31,9 @@ const props = defineProps<{
   rules: Rules;
   demo?: boolean;
   celebrate?: boolean;
+  repository?: string;
+  loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
+  relationsRevision?: number;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   commentsSession?: number;
@@ -156,6 +161,8 @@ const visibleLabels = computed(() =>
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </div>
+    <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
+      :load="loadRelations" :session="commentsSession" :revision="relationsRevision" />
     <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
       <p>{{ t("Timeout: pågående i {duration}, över gränsen {minutes} min.", { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 }) }}</p>

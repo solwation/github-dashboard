@@ -199,6 +199,7 @@ const logoutBusy = ref(false);
 const handoffOpen = ref(false);
 const scannerOpen = ref(false);
 const commitRetry = ref(0);
+const relationsRevision = ref(0);
 const permissionReport = ref<PermissionReport>([]);
 const permissionsChecking = ref(false);
 let permissionRun = 0;
@@ -337,6 +338,7 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
   }
 }
 function closureFeedback(result: Lane[], fullSnapshot = true) {
+  relationsRevision.value++;
   activity.retain(selected.value);
   activity.update(result, rules.value, Date.now(), { discoverNew: fullSnapshot, observedAt: Object.fromEntries(lastSynced) });
   activityRevision.value++;
@@ -406,6 +408,15 @@ function commentsLoader(repo: string) {
   const run = generation;
   return client ? async (issue: Issue) => {
     const result = await client.issueComments(repo, issue.number);
+    if (client !== api || run !== generation) throw new Error("Session changed");
+    return result;
+  } : undefined;
+}
+function relationsLoader(repo: string) {
+  const client = api;
+  const run = generation;
+  return client ? async (issue: Issue) => {
+    const result = await client.issueRelations(repo, issue);
     if (client !== api || run !== generation) throw new Error("Session changed");
     return result;
   } : undefined;
@@ -681,6 +692,7 @@ async function refresh(incremental = false) {
       }
     }
     if (run === generation) {
+      if (!incremental) client.invalidateIssueRelations();
       closureTracker.retain(selected.value);
       closureFeedback(result);
       lanes.value = result;
@@ -1402,6 +1414,9 @@ onMounted(async () => {
                     (col.key === 'closed' ? issue.closed_at || '' : '')
                   "
                   :issue="issue"
+                  :repository="lane.repo.full_name"
+                  :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
+                  :relations-revision="relationsRevision"
                   :rules="rules[lane.repo.full_name] || {}"
                   :now="now"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"

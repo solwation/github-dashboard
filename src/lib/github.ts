@@ -1,4 +1,5 @@
 import { permissionDefinitions, permissionEndpoint, permissionForPath, permissionResult, type PermissionObservation, type PermissionReport } from "./permissions";
+import { IssueRelationsCache, issueRelationsQuery, parseIssueRelations } from "./issue-relations";
 import { t, locale } from "./i18n";
 import {
   ClosingCommitCache,
@@ -78,6 +79,17 @@ export class GitHub {
     });
     return parseClosingCommit(response.data, issue);
   });
+  private readonly relations = new IssueRelationsCache(async (repository, number) => {
+    if (this.retryAfterMs()) return null;
+    const parts = repository.split("/");
+    if (parts.length !== 2 || parts.some(part => !/^[\w.-]+$/.test(part)) || !Number.isSafeInteger(number) || number < 1) return null;
+    const response = await this.request<unknown>("/graphql", {
+      method: "POST", body: JSON.stringify({ query: issueRelationsQuery, variables: { owner: parts[0], name: parts[1], number } }),
+    });
+    return parseIssueRelations(response.data);
+  });
+  issueRelations(repository: string, issue: Issue) { return this.relations.get(repository, issue); }
+  invalidateIssueRelations() { this.relations.clear(); }
   constructor(private token: string) {}
   exportResponses() {
     return [...this.responses.entries()].slice(-100);
