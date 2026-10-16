@@ -58,7 +58,6 @@ async function copy() {
   </Teleport>
 </template>
 <style scoped>
-.workflow-guide { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
 .workflow-guide-dialog { box-sizing: border-box; width: min(60rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: min(90dvh, calc(100dvh - 2rem)); overflow: hidden; border: 1px solid var(--line); border-radius: .8rem; padding: 1.2rem; color: var(--text, #273a3c); background: white; }
 .workflow-guide-dialog[open] { display: flex; flex-direction: column; }
 .workflow-guide-dialog::backdrop { background: #102b2a88; }

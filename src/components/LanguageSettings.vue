@@ -95,11 +95,11 @@ function change(event: Event) {
     <input id="issue-timeout-minutes" type="number" min="1" :max="MAX_TIMEOUT_MINUTES" step="1" required
       :value="timeoutMinutes" :disabled="!canEditLimit" aria-describedby="issue-timeout-help" @change="changeTimeout" />
     <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
-    <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
-    <button v-if="canScan" class="button" @click="dialog?.close(); emit('scan')">{{ t("Läs QR-kod") }}</button>
-    <WorkflowGuide />
-    <div class="settings-updates">
+    <div class="settings-actions">
+      <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
+      <WorkflowGuide />
       <button class="button small" aria-haspopup="dialog" @click="emit('openUpdates')">{{ t("Automatiska uppdateringar") }}</button>
+      <button v-if="canScan" class="button small" aria-haspopup="dialog" @click="dialog?.close(); emit('scan')">{{ t("Läs QR-kod") }}</button>
     </div>
     <div class="modal-footer">
       <button class="button primary" @click="dialog?.close()">
@@ -110,5 +110,8 @@ function change(event: Event) {
 </template>
 
 <style scoped>
-.settings-updates { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
+.settings-actions { display: grid; gap: .625rem; border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
+.settings-actions > .button,
+.settings-actions :deep(.permissions-open),
+.settings-actions :deep(.workflow-guide > .button) { width: 100%; white-space: normal; }
 </style>

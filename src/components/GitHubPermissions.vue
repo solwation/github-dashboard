@@ -17,7 +17,7 @@ const reasons: Record<PermissionReason, string> = {
 const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas', unknown: 'Ej verifierad' };
 </script>
 <template>
-  <button class="button permissions-open" aria-label="GitHub permissions" :aria-describedby="notices ? 'permissions-notices' : undefined"
+  <button class="button small permissions-open" aria-label="GitHub permissions" :aria-describedby="notices ? 'permissions-notices' : undefined"
     @click="dialog?.showModal(); emit('opened'); emit('check')">
     GitHub permissions
     <NoticeBadge id="permissions-notices" :count="notices ?? 0" :label="t('{count} saknade GitHub-rättigheter', { count: notices ?? 0 })" />
@@ -62,7 +62,6 @@ const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas
   </dialog>
 </template>
 <style scoped>
-.permissions-open { margin-top: 1rem; }
 .permissions-dialog { box-sizing: border-box; width: min(72rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); padding: 1.25rem; border: 1px solid var(--line); border-radius: .8rem; background: white; color: #273a3c; overflow: hidden; }
 .permissions-dialog[open] { display: flex; flex-direction: column; }
 .permissions-dialog::backdrop { background: #152d3a60; backdrop-filter: blur(3px); }

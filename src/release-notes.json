@@ -50,10 +50,10 @@
       },
       {
         "text": {
-          "sv": "QR-synkning fungerar åt båda hållen medan du är inloggad, så att konto, valda inställningar och vy kan föras över mellan dina enheter. Kameraskanningen kan öppnas direkt från QR-popupen och finns även kvar i Inställningar. Startsidan beskriver nu tydligt att Issueflow är till för att följa AI-agenters arbete via GitHub-issues.",
-          "en": "QR sync now works in both directions while you are signed in, transferring your account, chosen settings and view between your devices. Camera scanning opens directly from the QR popup and remains available in Settings. The start page now clearly explains that Issueflow is for following AI agents' work through GitHub issues."
+          "sv": "QR-synkning fungerar åt båda hållen medan du är inloggad, så att konto, valda inställningar och vy kan föras över mellan dina enheter. Kameraskanningen kan öppnas direkt från QR-popupen och finns även kvar i Inställningar, där genvägarna nu har samma storlek och en gemensam placering. Startsidan beskriver nu tydligt att Issueflow är till för att följa AI-agenters arbete via GitHub-issues.",
+          "en": "QR sync now works in both directions while you are signed in, transferring your account, chosen settings and view between your devices. Camera scanning opens directly from the QR popup and remains available in Settings, where shortcuts now share a consistent size and placement. The start page now clearly explains that Issueflow is for following AI agents' work through GitHub issues."
         },
-        "issues": [63, 54, 72]
+        "issues": [63, 54, 72, 74]
       },
       {
         "text": {
