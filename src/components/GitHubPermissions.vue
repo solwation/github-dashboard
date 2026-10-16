@@ -16,7 +16,7 @@ const reasons: Record<PermissionReason, string> = {
 const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas', unknown: 'Ej verifierad' };
 </script>
 <template>
-  <button class="button permissions-open" @click="dialog?.showModal()">GitHub permissions</button>
+  <button class="button permissions-open" @click="dialog?.showModal(); emit('check')">GitHub permissions</button>
   <dialog ref="dialog" class="permissions-dialog" aria-labelledby="github-permissions-title"
     @click="event => { if (event.target === dialog) dialog?.close(); }">
     <div class="permissions-heading">
@@ -26,7 +26,7 @@ const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas
     <div class="permissions-content" :aria-busy="checking">
       <p>{{ t('Läsrättigheter styr vilka funktioner du kan använda. Saknad åtkomst döljer motsvarande information. Kontrollen ändrar ingenting på GitHub.') }}</p>
       <p>{{ t('Kontrollen gäller valda repositories. GitHub visar inte en fullständig lista över tokenens tilldelade rättigheter. Repositoryurval och organisationsregler kan också begränsa åtkomsten.') }}</p>
-      <button class="button small" :disabled="checking || !canCheck" @click="emit('check')">{{ t(checking ? 'Kontrollerar rättigheter…' : 'Uppdatera kontrollen') }}</button>
+      <p v-if="checking" role="status">{{ t('Kontrollerar rättigheter…') }}</p>
       <p v-if="!canCheck">{{ t('Logga in för att kontrollera GitHub-rättigheter.') }}</p>
       <p v-else-if="!report.some(entry => entry.repositories.length)">{{ t('Välj minst ett repository för att kontrollera åtkomsten.') }}</p>
       <div class="permissions-table-scroll" tabindex="0" role="region" :aria-label="t('Översikt över GitHub-rättigheter')">
@@ -40,9 +40,9 @@ const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas
                 <ul v-if="report.find(entry => entry.permission === definition.id)?.repositories.length" class="permission-repositories">
                   <li v-for="repository in report.find(entry => entry.permission === definition.id)!.repositories" :key="repository.repo">
                     <strong>{{ repository.repo }}</strong>
-                    <span :class="['permission-status', repository.status]">
-                      <span aria-hidden="true">{{ repository.status === 'granted' ? '✓' : repository.status === 'missing' ? '✕' : '–' }}</span>
-                      {{ t(statusLabels[repository.status]) }}
+                    <span :class="['permission-status', repository.reason === 'public-access' ? 'public-read' : repository.status]">
+                      <span aria-hidden="true">{{ repository.status === 'granted' || repository.reason === 'public-access' ? '✓' : repository.status === 'missing' ? '✕' : '–' }}</span>
+                      {{ t(repository.reason === 'public-access' ? 'Publik läsåtkomst' : statusLabels[repository.status]) }}
                     </span>
                     <p>{{ t(reasons[repository.reason]) }}</p>
                   </li>
@@ -75,7 +75,7 @@ const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas
 .permission-repositories li + li { margin-top: .8rem; padding-top: .8rem; border-top: 1px solid var(--line); }
 .permission-repositories p { margin: .25rem 0 0; }
 .permission-status { display: block; font-weight: 600; margin-block: .25rem; }
-.granted { color: #167047; }
+.granted, .public-read { color: #167047; }
 .missing { color: #b91c1c; }
 .unknown { color: var(--muted, #61727b); }
 .permissions-table-scroll:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }

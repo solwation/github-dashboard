@@ -42,7 +42,8 @@ test('Settings counts unique missing permissions, explains repository difference
   await expect(contents).toContainText('tillagd eller borttagen kod');
   await expect(dialog.locator('.permission-status.granted')).toHaveCount(6);
   state.recover();
-  await dialog.getByRole('button', { name: 'Uppdatera kontrollen', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   await expect(contents.locator('.granted')).toHaveCount(2);
   await expect(page.locator('.permissions-badge')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -58,7 +59,9 @@ test('public API readability stays neutral and produces no missing-permission ba
   await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });
-  await expect(dialog.locator('.permission-status.unknown')).toHaveCount(8);
+  await expect(dialog.locator('.permission-status.public-read')).toHaveCount(8);
+  await expect(dialog).toContainText('Publik läsåtkomst');
+  await expect(dialog.getByRole('button', { name: 'Uppdatera kontrollen' })).toHaveCount(0);
   await expect(dialog).toContainText('Publika data kan läsas utan denna tilldelade rättighet');
   await expect(page.locator('.permissions-badge')).toHaveCount(0);
   await expect(dialog.locator('.permission-status.granted')).toHaveCount(0);
