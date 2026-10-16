@@ -163,9 +163,10 @@ function toggleCollapsed(name: string) {
 const rules = ref<Record<string, Rules>>({});
 const editing = ref<string | null>(null);
 const isDemo = ref(false);
-const currentView = ref(window.location.hash === "#statistics" ? "statistics" : "overview");
+const isStatisticsHash = () => /^#statistics(?:-repo-\d+)?$/.test(window.location.hash);
+const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
 async function navigateWorkspace() {
-  currentView.value = window.location.hash === "#statistics" ? "statistics" : "overview";
+  currentView.value = isStatisticsHash() ? "statistics" : "overview";
   await nextTick();
   const target = document.getElementById(window.location.hash.slice(1));
   const repositoryControls = target?.closest("details");
@@ -518,7 +519,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value, timeoutMinutes: timeoutMinutes.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
-function applyChosenPreferences(value: HandoffPreferences) {
+function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
   projectOrder.value = value.projectOrder ?? projectOrder.value;
   collapsedRepos.value = value.collapsedRepos ?? collapsedRepos.value;
   columnLimit.value = value.columnLimit ?? columnLimit.value;
@@ -532,7 +533,7 @@ function applyChosenPreferences(value: HandoffPreferences) {
   splitByRepository.value = value.splitByRepository ?? splitByRepository.value;
   timeoutMinutes.value = value.timeoutMinutes ?? timeoutMinutes.value;
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
-  if (value.currentView) {
+  if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+)$/.test(window.location.hash))) {
     currentView.value = value.currentView;
     history.replaceState(null, "", "#" + value.currentView);
   }
@@ -612,7 +613,7 @@ function restorePreferences(available: Repo[]) {
         if (saved.preferences) {
           const preferences = parseHandoffPreferences(saved.preferences);
           const state = mergeHandoffPreferences({ ...transferablePreferences.value, selected: selected.value, rules: rules.value }, { selected: selected.value, rules: rules.value, preferences }, available.map(repo => repo.full_name));
-          applyChosenPreferences(state);
+          applyChosenPreferences(state, true);
         }
       }
     } catch {
@@ -1081,6 +1082,7 @@ onMounted(async () => {
     </a>
     </nav>
     <SidebarRepositories
+      :statistics="currentView === 'statistics'"
       :repos="sidebarRepos"
       :now="now"
       :can-select="loggedIn"

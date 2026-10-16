@@ -55,7 +55,7 @@ watch(state, value => {
 function reset() { state.value = normalize({ ...state.value, from: props.period.from, to: props.period.to, label: "", contributor: "" }); }
 </script>
 <template>
-  <section class="statistics-repository" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
+  <section :id="'statistics-repo-' + repository.id" class="statistics-repository" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
     <header class="statistics-repository-heading"><h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" target="_blank" rel="noopener noreferrer">{{ repository.full_name }}</a></h2></header>
     <div v-if="loading && !data" class="statistics-repository-loading" role="status" aria-live="polite">
       <RefreshCw class="statistics-loading-spinner" :size="26" aria-hidden="true" />
@@ -85,7 +85,7 @@ function reset() { state.value = normalize({ ...state.value, from: props.period.
   </section>
 </template>
 <style scoped>
-.statistics-repository { min-width: 0; margin-bottom: 40px; }
+.statistics-repository { scroll-margin-top: 20px; min-width: 0; margin-bottom: 40px; }
 .statistics-repository-heading h2 { margin: 0 0 18px; font-size: 23px; overflow-wrap: anywhere; }
 .statistics-repository-heading a { color: inherit; text-decoration: none; }
 .statistics-repository-heading a:hover { text-decoration: underline; }

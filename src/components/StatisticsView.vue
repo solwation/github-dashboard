@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { RefreshCw, BarChart3 } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
@@ -33,6 +33,18 @@ const historyVerifiedAt = computed(() => {
   const values = props.repositories.map(repo => snapshots.value[repo.full_name]?.commits).filter(source => source?.historyVerifiedAt && source.historyVerifiedAt < source.fetchedAt).map(source => source!.historyVerifiedAt!);
   return values.length ? Math.min(...values) : null;
 });
+let followedAnchor = "";
+async function followRepositoryAnchor() {
+  const hash = window.location.hash;
+  if (!/^#statistics-repo-\d+$/.test(hash) || followedAnchor === hash || initialLoading.value) return;
+  await nextTick();
+  const target = document.getElementById(hash.slice(1));
+  if (!target?.getClientRects().length) return;
+  target.scrollIntoView({ block: "start" });
+  followedAnchor = hash;
+}
+watch([initialLoading, renderedRepositories], () => { void followRepositoryAnchor(); }, { flush: "post" });
+onMounted(() => { window.addEventListener("hashchange", followRepositoryAnchor); void followRepositoryAnchor(); });
 let collector: StatisticsCollector | null = null;
 let generation = 0;
 let sessionEpoch = 0;
@@ -103,7 +115,7 @@ watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
   preparedRepositories.value = new Set([...preparedRepositories.value].filter(name => selected.has(name)));
   void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
 });
-onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); });
+onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followRepositoryAnchor); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">

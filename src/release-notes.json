@@ -22,10 +22,10 @@
       },
       {
         "text": {
-          "sv": "Statistik visar valda projekt i ordning med egna filter, tydlig laddning och tunna graflinjer; tidigare diagram behålls medan nya hämtas.",
-          "en": "Statistics stacks selected projects with independent filters, clear loading and thin chart lines, retaining existing charts while fresh data loads."
+          "sv": "Statistik visar valda projekt i ordning med egna filter, tydlig laddning och grafer i full bredd med tunna linjer; tidigare diagram behålls medan nya hämtas.",
+          "en": "Statistics stacks selected projects with independent filters, clear loading and full-width charts with thin lines, retaining existing charts while fresh data loads."
         },
-        "issues": [45, 62, 76]
+        "issues": [45, 62, 76, 87, 88]
       },
       {
         "text": {

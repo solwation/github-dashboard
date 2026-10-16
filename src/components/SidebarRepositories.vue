@@ -6,7 +6,7 @@ import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
 import { recentlyChanged, type SidebarRepository } from "../lib/sidebar";
 
-defineProps<{ repos: SidebarRepository[]; now: number; canSelect: boolean; restoring?: boolean }>();
+defineProps<{ repos: SidebarRepository[]; now: number; canSelect: boolean; restoring?: boolean; statistics?: boolean }>();
 const emit = defineEmits<{ select: []; move: [name: string, direction: -1 | 1]; reorder: [source: string, target: string] }>();
 function drop(event: DragEvent, target: string) {
   const source = event.dataTransfer?.getData(projectDragType);
@@ -34,7 +34,7 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
     <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
-    <a class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" @click="revealRepository(repo.id)" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
+    <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="!statistics && revealRepository(repo.id)" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repository-name">
         <span class="repo-dot" :style="{ backgroundColor: repositoryColor(repo.fullName) }" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
