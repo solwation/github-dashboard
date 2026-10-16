@@ -35,6 +35,7 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Just nu": "Just now",
   "AI-agenter · GitHub-issues": "AI agents · GitHub issues",
   "DINA AGENTER. DITT FLÖDE.": "YOUR AGENTS. YOUR WORKFLOW.",
   "Följ dina AI-agenter.": "Track your AI agents.",

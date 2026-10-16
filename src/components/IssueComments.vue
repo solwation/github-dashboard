@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
 import { MessageCircle, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { renderMarkdown } from "../lib/markdown";
+import { commentTimeLabel } from "../lib/time";
 import type { Issue, IssueComment } from "../lib/model";
 
 const props = defineProps<{
@@ -17,6 +18,8 @@ const { t, locale } = useLanguage();
 const dialog = ref<HTMLDialogElement>();
 const titleId = useId();
 const open = ref(false);
+const now = ref(Date.now());
+let clock: ReturnType<typeof setInterval> | undefined;
 const state = ref<"loading" | "loaded" | "error">("loading");
 const comments = ref<IssueComment[]>([]);
 let revision = 0;
@@ -44,6 +47,9 @@ async function load() {
   }
 }
 async function show() {
+  if (open.value) return;
+  now.value = Date.now();
+  clock = setInterval(() => { now.value = Date.now(); }, 10000);
   open.value = true;
   await nextTick();
   if (!open.value) return;
@@ -52,6 +58,8 @@ async function show() {
   void load();
 }
 function clear() {
+  clearInterval(clock);
+  clock = undefined;
   revision++;
   open.value = false;
   comments.value = [];
@@ -84,7 +92,8 @@ onBeforeUnmount(clear);
             <article v-for="comment in rendered" :key="comment.id" class="issue-comment">
               <div class="comment-meta">
                 <strong>{{ comment.user?.login || t('Raderad användare') }}</strong>
-                <time :datetime="comment.created_at">{{ dateLabel(comment.created_at) }}</time>
+                <time :datetime="Number.isFinite(Date.parse(comment.created_at)) ? comment.created_at : undefined"
+                  :title="dateLabel(comment.created_at)" :aria-label="dateLabel(comment.created_at)" aria-live="off">{{ commentTimeLabel(comment.created_at, now, locale) }}</time>
                 <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
               </div>
               <div v-if="comment.body?.trim()" class="comment-markdown" v-html="comment.markdown" />

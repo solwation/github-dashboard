@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { backlogAgeLabel, closedTimeLabel, RECENT_CLOSURE_MS } from "../src/lib/time";
+import { backlogAgeLabel, closedTimeLabel, commentTimeLabel, RECENT_COMMENT_MS, RECENT_CLOSURE_MS } from "../src/lib/time";
 import { setLanguage } from "../src/lib/i18n";
 const stamp = "2026-10-15T10:00:00Z",
   closed = Date.parse(stamp);
@@ -52,5 +52,26 @@ describe("live closure timestamp", () => {
     expect(closedTimeLabel("bad", closed, "en-GB")).toBe(
       "Unknown closure time",
     );
+  });
+});
+
+describe("comment timestamps", () => {
+  it("uses compact relative minutes, hours and days before switching to exact time at seven days", () => {
+    setLanguage("sv");
+    expect(commentTimeLabel(stamp, closed + 59000, "sv-SE")).toBe("Just nu");
+    expect(commentTimeLabel(stamp, closed + 60000, "sv-SE")).toMatch(/1 min/);
+    expect(commentTimeLabel(stamp, closed + 120000, "sv-SE")).toMatch(/2 min/);
+    expect(commentTimeLabel(stamp, closed + 3600000, "sv-SE")).toMatch(/1 tim/);
+    expect(commentTimeLabel(stamp, closed + 86400000, "sv-SE")).toMatch(/1 d/);
+    expect(commentTimeLabel(stamp, closed + RECENT_COMMENT_MS - 1, "sv-SE")).toMatch(/6\s+d/);
+    expect(commentTimeLabel(stamp, closed + RECENT_COMMENT_MS, "sv-SE")).toBe(new Date(stamp).toLocaleString("sv-SE"));
+  });
+  it("localizes and handles future, invalid and unknown clock values safely", () => {
+    setLanguage("en");
+    expect(commentTimeLabel(stamp, closed, "en-GB")).toBe("Just now");
+    expect(commentTimeLabel(stamp, closed + 120000, "en-GB")).toMatch(/^2\s+min\.? ago$/);
+    expect(commentTimeLabel(stamp, closed - 1, "en-GB")).toBe(new Date(stamp).toLocaleString("en-GB"));
+    expect(commentTimeLabel(stamp, NaN, "en-GB")).toBe(new Date(stamp).toLocaleString("en-GB"));
+    expect(commentTimeLabel("invalid", closed, "en-GB")).toBe("Unknown time");
   });
 });

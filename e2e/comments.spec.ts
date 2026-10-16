@@ -206,3 +206,41 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 320, height: 640 
     await expect(trigger).toBeFocused();
   });
 }
+
+test("comment times update relatively without refetching or moving the discussion, with exact timestamps retained", async ({ page }) => {
+  const now = Date.parse("2026-10-16T12:00:00Z");
+  await page.clock.install({ time: new Date(now) });
+  let requests = 0;
+  const recent = new Date(now - 70000).toISOString();
+  const old = new Date(now - 8 * 86400000).toISOString();
+  await connect(page, async route => {
+    requests++;
+    await route.fulfill({ json: Array.from({ length: 12 }, (_, index) => ({
+      ...comment(index + 1, "A comment with enough discussion to scroll.\n\n".repeat(6)),
+      created_at: index === 11 ? old : recent,
+    })) });
+  });
+  await page.getByRole("button", { name: "102 kommentarer" }).click();
+  const dialog = page.getByRole("dialog", { name: "Kommentarer för #1" });
+  const time = dialog.locator("time").first();
+  await expect(time).toContainText("1 min");
+  await expect(time).toHaveAttribute("datetime", recent);
+  const exact = await page.evaluate(value => new Date(value).toLocaleString("sv-SE"), recent);
+  await expect(time).toHaveAttribute("title", exact);
+  await expect(time).toHaveAttribute("aria-label", exact);
+  await expect(dialog.locator("time").last()).toHaveText(await page.evaluate(value => new Date(value).toLocaleString("sv-SE"), old));
+  const scroll = dialog.locator(".comments-body");
+  const before = await scroll.evaluate(element => { element.scrollTop = 150; return element.scrollTop; });
+  await page.clock.fastForward(60000);
+  await expect(time).toContainText("2 min");
+  expect(await scroll.evaluate(element => element.scrollTop)).toBe(before);
+  expect(requests).toBe(1);
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Stäng kommentarer" }).click();
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByLabel("Språk", { exact: true }).selectOption("en");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "102 comments", exact: true }).click();
+  await expect(page.locator(".comments-dialog time").first()).toHaveText(/^2\s+min\.? ago$/);
+  expect(requests).toBe(2);
+});
