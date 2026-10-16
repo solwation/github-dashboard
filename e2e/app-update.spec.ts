@@ -77,7 +77,7 @@ async function discover(page: Page) {
   });
 }
 
-test("visible tabs ask, Not now defers across reloads and checks, the badge installs, background tabs count down", async ({ page, context }) => {
+test("visible tabs count down, Not now defers across reloads and checks, and the badge installs", async ({ page, context }) => {
   test.setTimeout(120_000);
   version = 0;
   failCleanup = false;
@@ -95,10 +95,7 @@ test("visible tabs ask, Not now defers across reloads and checks, the badge inst
   const prompt = page.locator(".version-update");
   await expect(prompt).toBeVisible();
   await expect(prompt).toContainText("En ny version av Issueflow finns tillgänglig.");
-  // A visible tab waits for a choice instead of installing while it is being read.
-  await page.waitForTimeout(11_000);
-  await expect(prompt).toBeVisible();
-  await expect(prompt).not.toContainText("sekunder");
+  await expect(prompt).toContainText("sekunder");
   await expectBuild(page, commits[0]!);
 
   await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
@@ -148,7 +145,7 @@ test("visible tabs ask, Not now defers across reloads and checks, the badge inst
   expect(await page.evaluate(() => localStorage.getItem("issueflow-update-deferred"))).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem("update-regression-setting"))).toBe("preserved");
 
-  // Installing forgets the deferral, so the old tab prompts; in the background it installs after the countdown.
+  // Installing forgets the deferral, so the old tab prompts and installs after its countdown.
   const otherPrompt = otherTab.locator(".version-update");
   await expect(otherPrompt).toBeVisible();
   await hide(otherTab);
@@ -261,9 +258,13 @@ test("the prompt summarizes notes published with the new version and Read more o
     const notes = page.getByRole("dialog", { name: "Versionsnyheter", exact: true });
     await expect(notes).toContainText("Fixturens förbättring.");
     await expect(notes.getByRole("link", { name: "Issue #1 på GitHub" })).toBeVisible();
+    await page.waitForTimeout(11_000);
+    await expectBuild(page, commits[0]!);
+    await expect(notes).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(notes).toBeHidden();
     await expect(readMore).toBeFocused();
+    await expect(prompt).toContainText("sekunder");
     await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
     await expect(prompt).toHaveCount(0);
   } finally {

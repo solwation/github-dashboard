@@ -28,8 +28,9 @@ function fixture(initialController = true, options: FixtureOptions = {}) {
   });
   const events = new EventTarget();
   const visibility = new EventTarget();
-  // Existing countdown scenarios describe background tabs; visible tabs wait for a choice.
+  // Visibility changes still notify lifecycle; dialogs alone pause the countdown.
   let hidden = options.hidden ?? true;
+  let blocked = false;
   const storage = options.storage ?? new MemoryStorage();
   let online = true;
   const reload = vi.fn();
@@ -40,6 +41,7 @@ function fixture(initialController = true, options: FixtureOptions = {}) {
     online: () => online,
     reload,
     hidden: () => hidden,
+    blocked: () => blocked,
     visibility: visibility as unknown as Document,
     storage,
     ...(options.now ? { now: options.now } : {}),
@@ -53,6 +55,10 @@ function fixture(initialController = true, options: FixtureOptions = {}) {
     reload,
     events,
     storage,
+    setBlocked(value: boolean) {
+      blocked = value;
+      visibility.dispatchEvent(new Event("visibilitychange"));
+    },
     setHidden(value: boolean) {
       hidden = value;
       visibility.dispatchEvent(new Event("visibilitychange"));
@@ -365,22 +371,19 @@ describe("update prompt in visible tabs and Not now", () => {
     expect(nextLocalMidnight(at("2026-10-25T12:00:00"))).toBe(at("2026-10-26T00:00:00"));
     expect(at("2026-10-26T00:00:00") - at("2026-10-25T00:00:00")).toBe(25 * 3600_000);
   });
-  it("waits for a choice in a visible tab and only counts down in the background", async () => {
+  it("counts down in a visible tab and pauses while a dialog is being read", async () => {
     vi.useFakeTimers();
     const app = setup(true, { hidden: false });
     await vi.advanceTimersByTimeAsync(0);
     expect(app.available.value).toBe(true);
+    expect(app.counting.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(app.seconds.value).toBe(5);
+    app.setBlocked(true);
     expect(app.counting.value).toBe(false);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(app.worker.postMessage).not.toHaveBeenCalled();
-    app.setHidden(true);
-    expect(app.counting.value).toBe(true);
-    await vi.advanceTimersByTimeAsync(5_000);
-    app.setHidden(false);
-    expect(app.counting.value).toBe(false);
-    await vi.advanceTimersByTimeAsync(20_000);
-    expect(app.worker.postMessage).not.toHaveBeenCalled();
-    app.setHidden(true);
+    app.setBlocked(false);
     expect(app.seconds.value).toBe(10);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });

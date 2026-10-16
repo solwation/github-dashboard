@@ -9,8 +9,10 @@ interface UpdateEnvironment {
   reload(): void;
   /** Injectable clock (epoch ms) for countdowns and the local-midnight deferral. */
   now?(): number;
-  /** Whether the page is a background tab; only hidden pages install automatically. */
+  /** Optional page visibility, retained for embedders. */
   hidden?(): boolean;
+  /** Pause automatic installation while a dialog is being used. */
+  blocked?(): boolean;
   /** Receives `visibilitychange` (the document in browsers). */
   visibility?: Pick<Document, "addEventListener" | "removeEventListener">;
   /** Non-private persistence for "Not now", shared by this origin's tabs. */
@@ -35,11 +37,11 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     error: "",
     /** "Not now" was chosen today: no automatic prompt or installation until local midnight. */
     deferred: false,
-    /** A background tab is counting down to an automatic installation. */
+    /** The update prompt is counting down to an automatic installation. */
     counting: false,
   });
   const now = environment.now ?? (() => Date.now());
-  const hidden = environment.hidden ?? (() => false);
+  const blocked = environment.blocked ?? (() => false);
   const storage = environment.storage ?? null;
   const sw = environment.serviceWorker;
   let active = false;
@@ -121,9 +123,9 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     if (deferredUntil !== null && !validDeferral(deferredUntil)) deferredUntil = null;
     state.deferred = deferredUntil !== null;
   }
-  /** Visible tabs wait for an explicit choice; background tabs install after a countdown. */
+  /** Every tab counts down; an open dialog pauses and restarts the full interval. */
   function schedule() {
-    if (state.available && !state.applying && !state.deferred && hidden()) {
+    if (state.available && !state.applying && !state.deferred && !state.error && !blocked()) {
       if (!deadline) {
         state.seconds = COUNTDOWN_SECONDS;
         deadline = now() + COUNTDOWN_SECONDS * 1000;
@@ -319,6 +321,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
         refreshDeferral();
         schedule();
       }
+      schedule();
       if (!deadline || !state.available || state.applying) return;
       state.seconds = Math.max(0, Math.ceil((deadline - now()) / 1000));
       if (state.seconds === 0) apply(false);
@@ -374,7 +377,7 @@ export function useAppUpdate(): AppUpdate {
         visibility: document,
         appUrl: new URL("./", document.baseURI).href,
         online: () => navigator.onLine,
-        hidden: () => document.visibilityState === "hidden",
+        blocked: () => Boolean(document.querySelector('dialog[open], [role="dialog"]')),
         reload: () => window.location.reload(),
         storage: browserStorage(),
       })
