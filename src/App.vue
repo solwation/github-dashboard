@@ -967,33 +967,68 @@ async function applyRules() {
   await refresh();
 }
 let previousFocus: HTMLElement | null = null;
+const pickerDialog = ref<HTMLElement | null>(null);
+const rulesDialog = ref<HTMLElement | null>(null);
 const modalOpen = computed(() => picker.value || Boolean(editing.value));
+const openModal = () => (picker.value ? pickerDialog.value : editing.value ? rulesDialog.value : null);
+function modalFocusables(dialog: HTMLElement) {
+  return Array.from(
+    dialog.querySelectorAll<HTMLElement>(
+      "button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])",
+    ),
+  ).filter(
+    (node) =>
+      !(node as HTMLButtonElement).disabled &&
+      !node.closest("[inert], dialog:not([open])") &&
+      node.getClientRects().length > 0 &&
+      getComputedStyle(node).visibility !== "hidden",
+  );
+}
 watch(modalOpen, async (open) => {
   if (open) {
     previousFocus = document.activeElement as HTMLElement;
     await nextTick();
     document.body.style.overflow = "hidden";
-    document.querySelector<HTMLElement>(".modal button, .modal input")?.focus();
+    const dialog = openModal();
+    if (dialog) modalFocusables(dialog)[0]?.focus();
   } else {
     document.body.style.overflow = "";
-    previousFocus?.focus();
+    const target = previousFocus;
+    previousFocus = null;
+    if (target?.isConnected) target.focus();
   }
 });
+function closeModal() {
+  if (editing.value) void applyRules();
+  else if (picker.value) picker.value = false;
+}
 function trapFocus(event: KeyboardEvent) {
-  if (event.key !== "Tab" || !modalOpen.value) return;
-  const nodes = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      ".modal button:not(:disabled), .modal input, .modal a[href]",
-    ),
-  );
+  if (!modalOpen.value) return;
+  const dialog = openModal();
+  if (!dialog) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeModal();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const nodes = modalFocusables(dialog);
   const first = nodes[0],
     last = nodes.at(-1);
-  if (event.shiftKey && document.activeElement === first) {
+  const active = document.activeElement;
+  if (!first || !last) {
     event.preventDefault();
-    last?.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
+    return;
+  }
+  if (!active || !dialog.contains(active)) {
     event.preventDefault();
-    first?.focus();
+    (event.shiftKey ? last : first).focus();
+  } else if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
   }
 }
 onMounted(() => document.addEventListener("keydown", trapFocus));
@@ -1767,11 +1802,11 @@ onMounted(async () => {
   </div>
   <div v-if="picker" class="modal-backdrop" @click.self="picker = false">
     <section
+      ref="pickerDialog"
       class="modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="picker-title"
-      @keydown.esc="picker = false"
     >
       <div class="modal-heading">
         <div>
@@ -1825,12 +1860,12 @@ onMounted(async () => {
   </div>
   <div v-if="editing" class="modal-backdrop" @click.self="applyRules">
     <form
+      ref="rulesDialog"
       class="modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="rules-title"
       @submit.prevent="applyRules"
-      @keydown.esc="applyRules"
     >
       <div class="modal-heading">
         <h2 id="rules-title">{{ t("Anpassa labels") }}</h2>
