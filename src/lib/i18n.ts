@@ -35,6 +35,8 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Ljud kunde inte aktiveras. Klicka eller tryck på en tangent i dashboarden för att försöka igen. Notiser fungerar fortfarande.": "Sound could not be enabled. Click or press a key in the dashboard to try again. Notifications still work.",
+  "Notiser på för {repo}. Statusändringar spelar ljud och nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden.": "Notifications enabled for {repo}. Status changes play sounds and new closures are announced while the dashboard is open. The browser may delay background updates.",
   "Filtrera issues i {name}": "Filter issues in {name}",
   "Rensa filtret för {name}": "Clear filter for {name}",
   "Rensa": "Clear",

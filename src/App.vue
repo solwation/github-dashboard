@@ -31,6 +31,7 @@ import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
 import { ActivityTracker } from "./lib/activity";
+import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
@@ -186,6 +187,9 @@ const permission = ref(notificationPermission());
 const notificationPending = ref<string | null>(null);
 const recentClosures = ref(new Set<string>());
 const closureTracker = new ClosureTracker();
+const statusTracker = new StatusTransitionTracker();
+const audioUnavailableText = "Ljud kunde inte aktiveras. Klicka eller tryck på en tangent i dashboarden för att försöka igen. Notiser fungerar fortfarande.";
+const statusPlayer = new StatusSoundPlayer(() => { notificationNotice.value = t(audioUnavailableText); });
 const activity = new ActivityTracker();
 const activityRevision = ref(0);
 function readIssue(repo: string, issue: Issue) {
@@ -195,6 +199,8 @@ function readIssue(repo: string, issue: Issue) {
 }
 const celebrationTimers = new Set<ReturnType<typeof setTimeout>>();
 function clearClosureFeedback() {
+  statusTracker.clear();
+  statusPlayer.clear();
   activity.clear();
   commitProblems.value.clear();
   closureTracker.clear();
@@ -216,6 +222,7 @@ async function toggleNotifications(repo: string) {
     notificationRepos.value.includes(repo) &&
     permission.value === "granted"
   ) {
+    statusPlayer.clear();
     notificationRepos.value = notificationRepos.value.filter(
       (name) => name !== repo,
     );
@@ -224,6 +231,8 @@ async function toggleNotifications(repo: string) {
   }
   const run = generation;
   notificationPending.value = repo;
+  // Start audio while the click still supplies browser user activation.
+  const audioReady = statusPlayer.unlock();
   try {
     const result = await requestNotifications();
     if (run !== generation) return;
@@ -233,9 +242,10 @@ async function toggleNotifications(repo: string) {
         notificationRepos.value.push(repo);
       save();
       notificationNotice.value = t(
-        "Notiser på för {repo}. Nya stängningar meddelas medan dashboarden är öppen, även i en bakgrundsflik. Webbläsaren kan fördröja uppdateringar i bakgrunden.",
+        "Notiser på för {repo}. Statusändringar spelar ljud och nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden.",
         { repo },
       );
+      if (!(await audioReady) && run === generation) notificationNotice.value += " " + t(audioUnavailableText);
     } else {
       notificationNotice.value =
         result === "unsupported"
@@ -256,6 +266,7 @@ async function toggleNotifications(repo: string) {
         "Webbläsaren kunde inte aktivera notiser. Kontrollera webbplatsens behörigheter.",
       );
   } finally {
+    await audioReady;
     if (run === generation) notificationPending.value = null;
   }
 }
@@ -280,6 +291,8 @@ function closureFeedback(result: Lane[]) {
   activity.update(result, rules.value);
   activityRevision.value++;
   permission.value = notificationPermission();
+  statusTracker.retain(selected.value);
+  statusPlayer.play(statusTracker.update(result, rules.value, notificationsEnabled, hideCoordination.value));
   for (const lane of result) {
     for (const issue of closureTracker.update(lane)) {
       if (hideCoordination.value && isCoordination(issue)) continue;
@@ -785,15 +798,22 @@ function handleRefreshShortcut(event: KeyboardEvent) {
   event.preventDefault();
   if (!event.repeat && !authBusy.value) void refresh();
 }
+function resumeStatusAudio(event: Event) {
+  if (event.isTrusted && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
+}
 onMounted(() => {
   sync.start();
   document.addEventListener("keydown", handleRefreshShortcut);
+  document.addEventListener("pointerdown", resumeStatusAudio, { passive: true });
+  document.addEventListener("keydown", resumeStatusAudio);
 });
 
 onUnmounted(() => {
   clearInterval(tick);
   sync.stop();
   document.removeEventListener("keydown", handleRefreshShortcut);
+  document.removeEventListener("pointerdown", resumeStatusAudio);
+  document.removeEventListener("keydown", resumeStatusAudio);
   clearClosureFeedback();
 });
 onMounted(async () => {
