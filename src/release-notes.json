@@ -99,10 +99,10 @@
       },
       {
         "text": {
-          "sv": "Ett tillfälligt fel vid hämtning av tidslinjen ger inte längre kvarstående tidtagarvarningar eller tystade timeout-notiser efter nästa synk.",
-          "en": "A temporary timeline fetch error no longer leaves lingering timer warnings or silenced timeout notifications after the next sync."
+          "sv": "Ett tillfälligt tidslinjefel ger inte längre kvarstående tidtagarvarningar eller tystade timeout-notiser, och nekad åtkomst skiljs från API-gränser.",
+          "en": "A temporary timeline error no longer leaves lingering timer warnings or muted timeout alerts, and access denials are told apart from API limits."
         },
-        "issues": [106]
+        "issues": [106, 107]
       },
       {
         "text": {

@@ -146,8 +146,11 @@ export class GitHub {
         );
       if (resetAt && response.headers.get("x-ratelimit-remaining") === "0")
         this.limitedUntil = Math.max(this.limitedUntil, Number(resetAt) * 1000);
-      const reset = response.headers.get("x-ratelimit-reset");
       const rateLimited = response.status === 429 || !!retry || response.headers.get("x-ratelimit-remaining") === "0";
+      // Only a genuine rate limit shows a retry time; GitHub sends X-RateLimit-Reset on every response (#107).
+      const retryAt = rateLimited
+        ? this.limitedUntil > Date.now() ? this.limitedUntil : Number(resetAt) * 1000 || 0
+        : 0;
       const body = await response.json().catch(() => null) as { message?: unknown } | null;
       const permissionDenied = response.status === 403 && !rateLimited && typeof body?.message === "string" &&
         /^Resource not accessible by (personal access token|integration)\.?$/i.test(body.message);
@@ -156,14 +159,14 @@ export class GitHub {
         response.status === 401
           ? t("Sessionen har gått ut. Logga in igen.")
           : response.status === 403 || response.status === 429
-            ? t("Åtkomst nekad eller API-gräns nådd.") +
-              (reset
-                ? t(" Försök efter {time}.", {
-                    time: new Date(Number(reset) * 1000).toLocaleTimeString(
-                      locale.value,
-                    ),
-                  })
-                : t(" Kontrollera tokenens behörigheter."))
+            ? rateLimited
+              ? t("GitHubs API-gräns är nådd.") +
+                (retryAt > Date.now()
+                  ? t(" Försök efter {time}.", {
+                      time: new Date(retryAt).toLocaleTimeString(locale.value),
+                    })
+                  : t(" Försök igen senare."))
+              : t("Åtkomst nekad.") + t(" Kontrollera tokenens behörigheter.")
             : t(
                 "GitHub svarade {status}. Kontrollera att du har åtkomst till repot.",
                 { status: response.status },

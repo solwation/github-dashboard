@@ -583,6 +583,10 @@ export const english: Record<string, string> = {
     "The automatic prompt returns tomorrow. You can install the update now.",
   "Issueflow söker efter uppdateringar automatiskt. En synlig flik frågar först; en flik i bakgrunden uppdateras efter 10 sekunder. ”Inte nu” skjuter upp båda till nästa dag. Inloggning, inställningar och sparat innehåll behålls.":
     "Issueflow checks for updates automatically. A visible tab asks first; a background tab updates after 10 seconds. “Not now” postpones both until the next day. Sign-in, settings and saved content are kept.",
+  // Rate limit vs permission errors (#107)
+  "GitHubs API-gräns är nådd.": "GitHub API rate limit reached.",
+  " Försök igen senare.": " Try again later.",
+  "Åtkomst nekad.": "Access denied.",
 };
 export function t(
   source: string,
