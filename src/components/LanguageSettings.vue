@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import BuildInfo from "./BuildInfo.vue";
@@ -9,8 +9,30 @@ import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
-const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean }>(), { permissions: () => [] });
-const missingCount = computed(() => missingPermissionCount(props.permissions));
+const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean }>(), { permissions: () => [] });
+const acknowledgedMissing = ref(new Set<string>());
+const permissionsOpen = ref(false);
+const permissionKey = (permission: string, repo: string) => `${permission}:${repo}`;
+const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
+  ...entry, repositories: entry.repositories.filter(repo => !acknowledgedMissing.value.has(permissionKey(entry.permission, repo.repo))),
+}))));
+function acknowledgePermissions() {
+  permissionsOpen.value = true;
+  const seen = new Set(acknowledgedMissing.value);
+  for (const entry of props.permissions) for (const repo of entry.repositories) {
+    if (repo.status === "missing") seen.add(permissionKey(entry.permission, repo.repo));
+  }
+  acknowledgedMissing.value = seen;
+}
+watch(() => props.permissionsSession, () => { acknowledgedMissing.value = new Set(); permissionsOpen.value = false; });
+watch(() => props.permissions, () => {
+  const seen = new Set(acknowledgedMissing.value);
+  for (const entry of props.permissions) for (const repo of entry.repositories) {
+    if (repo.status === "granted" || repo.reason === "public-access") seen.delete(permissionKey(entry.permission, repo.repo));
+  }
+  acknowledgedMissing.value = seen;
+  if (permissionsOpen.value) acknowledgePermissions();
+}, { deep: true });
 const emit = defineEmits<{ checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null] }>();
 const dialog = ref<HTMLDialogElement | null>(null);
 function change(event: Event) {
@@ -56,7 +78,7 @@ function change(event: Event) {
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
-    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" />
+    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
     <WorkflowGuide />
     <BuildInfo />
     <div class="modal-footer">

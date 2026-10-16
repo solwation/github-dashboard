@@ -5,7 +5,7 @@ import { permissionDefinitions, type PermissionReport, type PermissionReason } f
 import { useLanguage } from '../lib/i18n';
 const { t } = useLanguage();
 defineProps<{ report: PermissionReport; checking?: boolean; canCheck?: boolean }>();
-const emit = defineEmits<{ check: [] }>();
+const emit = defineEmits<{ check: []; opened: []; closed: [] }>();
 const dialog = ref<HTMLDialogElement>();
 const reasons: Record<PermissionReason, string> = {
   'private-access': 'Bekräftad läsåtkomst till detta privata repository. Detta visar faktisk åtkomst, inte tokenens exakta tilldelning.',
@@ -16,8 +16,8 @@ const reasons: Record<PermissionReason, string> = {
 const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas', unknown: 'Ej verifierad' };
 </script>
 <template>
-  <button class="button permissions-open" @click="dialog?.showModal(); emit('check')">GitHub permissions</button>
-  <dialog ref="dialog" class="permissions-dialog" aria-labelledby="github-permissions-title"
+  <button class="button permissions-open" @click="dialog?.showModal(); emit('opened'); emit('check')">GitHub permissions</button>
+  <dialog ref="dialog" class="permissions-dialog" aria-labelledby="github-permissions-title" @close="emit('closed')"
     @click="event => { if (event.target === dialog) dialog?.close(); }">
     <div class="permissions-heading">
       <h2 id="github-permissions-title">GitHub permissions</h2>

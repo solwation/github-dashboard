@@ -25,6 +25,7 @@ test('Settings counts unique missing permissions, explains repository difference
   await page.setViewportSize({ width: 1280, height: 900 });
   const state = await setup(page);
   await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await expect(page.locator('.permissions-badge')).toHaveText('1');
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });
   await expect(dialog.getByRole('heading', { name: 'GitHub permissions' })).toBeVisible();
@@ -33,14 +34,18 @@ test('Settings counts unique missing permissions, explains repository difference
   expect((await dialog.boundingBox())!.width).toBeGreaterThan(800);
   await page.screenshot({ path: '/tmp/issueflow-permissions-table.png' });
   await page.setViewportSize({ width: 390, height: 1000 });
-  await expect(page.locator('.permissions-badge')).toHaveText('1');
-  await expect(page.locator('.permissions-badge')).toHaveAccessibleName('1 saknade GitHub-rättigheter');
+  await expect(page.locator('.permissions-badge')).toHaveCount(0);
   const contents = dialog.locator('.permission-entry').filter({ has: page.getByRole('rowheader', { name: 'Contents: Läs', exact: true }) });
   await expect(contents.locator('.missing')).toHaveCount(2);
   await expect(contents).toContainText('sample/first');
   await expect(contents).toContainText('sample/second');
   await expect(contents).toContainText('tillagd eller borttagen kod');
   await expect(dialog.locator('.permission-status.granted')).toHaveCount(6);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.permissions-badge')).toHaveCount(0);
+  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
+  await expect(contents.locator('.missing')).toHaveCount(2);
+  await expect(page.locator('.permissions-badge')).toHaveCount(0);
   state.recover();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
