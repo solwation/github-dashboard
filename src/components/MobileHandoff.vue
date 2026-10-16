@@ -63,7 +63,9 @@ async function generate() {
     );
     expiresAt.value = handoff.expiresAt;
     const image = await QRCode.toDataURL(handoff.url, {
-      width: 640,
+      // Keep every module six whole pixels wide. A fixed image width can put
+      // dense profile codes on a fractional grid that jsQR cannot sample reliably.
+      scale: 6,
       margin: 4,
       errorCorrectionLevel: "L",
       color: { dark: "#101827", light: "#ffffff" },

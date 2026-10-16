@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "node --experimental-strip-types scripts/patch-jsqr.ts",
     "dev": "vite --host 0.0.0.0",
     "build": "node scripts/check-source-integrity.mjs && vue-tsc --noEmit && vite build",
     "test": "vitest run tests",
