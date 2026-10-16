@@ -6,6 +6,22 @@ const repo = "sample/project";
 const issue = (id: number, col = "backlog", at = now): Issue => ({ id, number: id, title: "Fixture", html_url: `https://github.com/${repo}/issues/${id}`, state: col === "closed" ? "closed" : "open", closed_at: col === "closed" ? new Date(at).toISOString() : null, created_at: new Date(now - 86400000).toISOString(), updated_at: new Date(at).toISOString(), labels: col === "progress" ? [{ name: "in-progress", color: "fff" }] : [], assignees: [] });
 const lane = (issues: Issue[]): Lane => ({ repo: { id: 1, name: "project", full_name: repo, description: null, private: false, html_url: `https://github.com/${repo}`, owner: { login: "sample" } }, issues, labels: [] });
 describe("readable activity", () => {
+  it("uses the request start when a repository response completes after an issue was created", () => {
+    const tracker = new ActivityTracker();
+    tracker.update([lane([])], {}, now + 3000, { observedAt: { [repo]: now } });
+    const fresh = { ...issue(2, "backlog", now + 2000), created_at: new Date(now + 2000).toISOString() };
+    tracker.update([lane([fresh])], {}, now + 4000);
+    expect(tracker.moved(repo, fresh, now + 4000)).toBe("created");
+  });
+  it("preserves the creation baseline while polling only known active issues", () => {
+    const tracker = new ActivityTracker();
+    const existing = issue(1, "progress", now);
+    tracker.update([lane([existing])], {}, now);
+    tracker.update([lane([existing])], {}, now + 3000, { discoverNew: false });
+    const fresh = { ...issue(2, "backlog", now + 2000), created_at: new Date(now + 2000).toISOString() };
+    tracker.update([lane([existing, fresh])], {}, now + 4000);
+    expect(tracker.moved(repo, fresh, now + 4000)).toBe("created");
+  });
   it("marks a newly created Backlog issue after the established baseline and keeps it across syncs", () => {
     const tracker = new ActivityTracker();
     tracker.update([lane([issue(1)])], {}, now);

@@ -13,7 +13,7 @@ export class ActivityTracker {
   private unread = new Map<string, Map<number, Activity>>();
   private acknowledged = new Map<string, string>();
 
-  update(lanes: Lane[], rules: Record<string, Rules>, now = Date.now()) {
+  update(lanes: Lane[], rules: Record<string, Rules>, now = Date.now(), options: { discoverNew?: boolean; observedAt?: Record<string, number> } = {}) {
     for (const lane of lanes) {
       if (lane.error) continue;
       const repo = lane.repo.full_name;
@@ -38,7 +38,7 @@ export class ActivityTracker {
         } else if (!previous || (!rulesChanged && !before)) {
           const created = Date.parse(issue.created_at);
           const changed = Date.parse(issue.updated_at);
-          const newlyCreated = previous && col === "backlog" && created > previous.at && created <= now && now - created < ACTIVITY_LIFETIME_MS;
+          const newlyCreated = options.discoverNew !== false && previous && col === "backlog" && created > previous.at && created <= now && now - created < ACTIVITY_LIFETIME_MS;
           if (newlyCreated) pending.set(issue.id, { version: next.version, at: created, kind: "created" });
           else if (changed <= now && now - changed < ACTIVITY_LIFETIME_MS)
             pending.set(issue.id, { version: next.version, at: changed, kind: "updated" });
@@ -48,7 +48,7 @@ export class ActivityTracker {
       for (const [id, activity] of pending) {
         if (!current.has(id) || now - activity.at >= ACTIVITY_LIFETIME_MS) pending.delete(id);
       }
-      this.snapshots.set(repo, { at: now, rules: ruleKey, issues: current });
+      this.snapshots.set(repo, { at: options.discoverNew === false ? previous?.at ?? now : options.observedAt?.[repo] ?? now, rules: ruleKey, issues: current });
       this.unread.set(repo, pending);
     }
   }

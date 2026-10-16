@@ -336,9 +336,9 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
     );
   }
 }
-function closureFeedback(result: Lane[]) {
+function closureFeedback(result: Lane[], fullSnapshot = true) {
   activity.retain(selected.value);
-  activity.update(result, rules.value);
+  activity.update(result, rules.value, Date.now(), { discoverNew: fullSnapshot, observedAt: Object.fromEntries(lastSynced) });
   activityRevision.value++;
   permission.value = notificationPermission();
   statusTracker.retain(selected.value);
@@ -869,7 +869,7 @@ async function refreshActive() {
       }),
     );
     if (run === generation) {
-      closureFeedback(result);
+      closureFeedback(result, false);
       lanes.value = result;
       if (!showingCache.value) refreshed.value = Date.now();
       await persistContent();

@@ -35,6 +35,9 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Skapat i Backlog": "Created in backlog",
+  "Nyligen skapat i Backlog. Markera som läst": "Recently created in Backlog. Mark as read",
+
   "Synka med QR-kod": "Sync with QR code",
   "På den andra enheten: öppna Inställningar och välj Läs QR-kod, eller välj Logga in med QR-kod om du inte är inloggad. Skanna här för att överföra konto, inställningar och vy åt valfritt håll.": "On the other device, open Settings and choose Read QR code, or choose Sign in with QR code if you are signed out. Scan here to transfer your account, settings and view in either direction.",
   "Alla som skannar koden får din tokens GitHub-behörigheter. Visa den bara för dina egna enheter. Koden innehåller din token.": "Anyone who scans this code receives your token's GitHub permissions. Show it only to your own devices. The code contains your token.",
