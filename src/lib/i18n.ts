@@ -35,6 +35,15 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Ange ett heltal mellan 1 och 10080 minuter.": "Enter a whole number between 1 and 10080 minutes.",
+  "Tidsgräns för pågående issues (minuter)": "In progress issue timeout (minutes)",
+  "Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.": "Issues in progress are flagged after this limit. An unknown start time never triggers a warning. Default: 30 minutes.",
+  "Timeout: pågående i {duration}, över gränsen {minutes} min.": "Timeout: in progress for {duration}, exceeding the {minutes} min limit.",
+  "Ignorera timeout för #{number}": "Ignore timeout for #{number}",
+  "Ignorera timeout": "Ignore timeout",
+  "Timeout för {repo} #{number}: {title}": "Timeout for {repo} #{number}: {title}",
+  "Timeout för pågående issue": "In progress issue timeout",
+
   "Issues, etiketter, kommentarer och tid i pågående arbete. Statistik över issueflödet.": "Issues, labels, comments and time in progress. Issue activity statistics.",
   "Commitdetaljer och tillagd eller borttagen kod. Statistik över commits och kodändringar.": "Commit details and added or deleted code. Commit and code change statistics.",
   "Information om sammanslagna pull requests och deras koppling till stängda issues. Statistik över pull requests.": "Merged pull request information and links to closed issues. Pull request statistics.",

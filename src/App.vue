@@ -31,6 +31,7 @@ import VersionUpdate from "./components/VersionUpdate.vue";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
+import { TimeoutTracker, DEFAULT_TIMEOUT_MINUTES, parseTimeoutMinutes, type TimeoutEntry } from "./lib/timeouts";
 import { ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
@@ -56,6 +57,7 @@ import {
   notificationPermission,
   requestNotifications,
   notifyClosure,
+  notifyTimeout,
 } from "./lib/notifications";
 import {
   column,
@@ -126,7 +128,7 @@ async function persistContent() {
   const run = generation;
   try {
     await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value,
-      syncedAt: refreshed.value, responses: api.exportResponses() });
+      syncedAt: refreshed.value, responses: api.exportResponses(), timeoutAcknowledgements: timeoutTracker.exportAcknowledgements() });
     if (run === generation) cacheWarning.value = "";
   } catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
 }
@@ -146,6 +148,22 @@ watch(picker, (open) => {
 });
 const visibleLimit = ref<Record<string, number>>({});
 const columnLimit = ref(defaultColumnLimit);
+const timeoutMinutes = ref(DEFAULT_TIMEOUT_MINUTES);
+const timeoutTracker = new TimeoutTracker();
+const timedOut = ref<TimeoutEntry[]>([]);
+const timeoutRevision = ref(0);
+function setTimeoutMinutes(minutes: number) {
+  timeoutMinutes.value = parseTimeoutMinutes(minutes) ?? DEFAULT_TIMEOUT_MINUTES;
+  save();
+}
+function ignoreTimeout(repo: string, issue: Issue) {
+  if (!timeoutTracker.acknowledge(repo, issue)) return;
+  timeoutRevision.value++;
+  void persistContent();
+}
+function issueTimedOut(repo: string, issue: Issue) {
+  return timedOut.value.some(entry => entry.repo === repo && entry.issue.id === issue.id);
+}
 const repositoryColumnLimits = ref<Record<string, number>>({});
 function initialLimit(repo: string) {
   return effectiveColumnLimit(columnLimit.value, repositoryColumnLimits.value, repo);
@@ -227,6 +245,8 @@ function readIssue(repo: string, issue: Issue) {
 }
 const celebrationTimers = new Set<ReturnType<typeof setTimeout>>();
 function clearClosureFeedback() {
+  timeoutTracker.clear();
+  timedOut.value = [];
   statusTracker.clear();
   statusPlayer.clear();
   activity.clear();
@@ -339,6 +359,17 @@ function closureFeedback(result: Lane[]) {
 }
 let api: GitHub | null = null;
 let generation = 0;
+watch([lanes, rules, now, timeoutMinutes, timeoutRevision, showingCache, restoring, busy, hideCoordination], () => {
+  if (busy.value) return;
+  const result = timeoutTracker.scan(lanes.value, rules.value, timeoutMinutes.value, now.value,
+    { notify: !showingCache.value && !restoring.value });
+  timedOut.value = result.active.filter(entry => !hideCoordination.value || !isCoordination(entry.issue));
+  for (const entry of result.newlyTimedOut) {
+    if ((hideCoordination.value && isCoordination(entry.issue)) || !notificationsEnabled(entry.repo)) continue;
+    const repo = lanes.value.find(lane => lane.repo.full_name === entry.repo)?.repo;
+    if (repo) void notifyTimeout(repo, entry.issue).catch(() => {});
+  }
+}, { deep: true });
 const loggedIn = computed(() => Boolean(user.value));
 const filteredRepos = computed(() =>
   repos.value.filter((r) =>
@@ -420,6 +451,7 @@ function save() {
         repositoryColumnLimits: repositoryColumnLimits.value,
         notificationRepos: notificationRepos.value,
         activityRead: activity.acknowledgements(),
+        timeoutMinutes: timeoutMinutes.value,
       }),
     );
   } catch {
@@ -430,11 +462,13 @@ function restorePreferences(available: Repo[]) {
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
     columnLimit.value = defaultColumnLimit;
+    timeoutMinutes.value = DEFAULT_TIMEOUT_MINUTES;
     repositoryColumnLimits.value = {};
     visibleLimit.value = {};
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
+        timeoutMinutes.value = parseTimeoutMinutes(saved.timeoutMinutes) ?? DEFAULT_TIMEOUT_MINUTES;
         const limits = restoreColumnLimits(saved, available.map(repo => repo.full_name));
         columnLimit.value = limits.global;
         repositoryColumnLimits.value = limits.overrides;
@@ -478,6 +512,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       sessionToken.value = token;
       repos.value = cached.repos;
       restorePreferences(cached.repos);
+      timeoutTracker.restore(cached.timeoutAcknowledgements);
       lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
       refreshed.value = cached.syncedAt;
       showingCache.value = true;
@@ -924,7 +959,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -964,6 +999,12 @@ onMounted(async () => {
     </header>
     <main :id="currentView === 'statistics' && (loggedIn || isDemo) ? 'statistics' : 'overview'" tabindex="-1">
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
+      <div v-if="timedOut.length" class="notice timeout-notices" role="status">
+        <div v-for="entry in timedOut" :key="entry.key">
+          <span>{{ t("Timeout för {repo} #{number}: {title}", { repo: entry.repo, number: entry.issue.number, title: entry.issue.title }) }}</span>
+          <button class="button small" @click="ignoreTimeout(entry.repo, entry.issue)">{{ t("Ignorera timeout") }}</button>
+        </div>
+      </div>
       <div
         v-if="notificationNotice"
         class="notice notification-notice"
@@ -1316,6 +1357,9 @@ onMounted(async () => {
                   :issue="issue"
                   :rules="rules[lane.repo.full_name] || {}"
                   :now="now"
+                  :timed-out="issueTimedOut(lane.repo.full_name, issue)"
+                  :timeout-minutes="timeoutMinutes"
+                  @ignore-timeout="ignoreTimeout(lane.repo.full_name, issue)"
                   :load-commit="
                     isDemo ? undefined : commitLoader(lane.repo.full_name)
                   "

@@ -18,11 +18,17 @@ export async function requestNotifications(): Promise<
 }
 
 export async function notifyClosure(repo: Repo, issue: Issue) {
+  return notifyIssue(repo, issue, t("Issue stängd"), `${repo.full_name}:${issue.id}:${issue.closed_at}`);
+}
+export async function notifyTimeout(repo: Repo, issue: Issue) {
+  return notifyIssue(repo, issue, t("Timeout för pågående issue"), `timeout:${repo.full_name}:${issue.id}:${issue.startedAt}`);
+}
+async function notifyIssue(repo: Repo, issue: Issue, description: string, tag: string) {
   if (notificationPermission() !== "granted") return;
-  const title = `${repo.name} · ${t("Issue stängd")}`;
+  const title = `${repo.name} · ${description}`;
   const options = {
     body: `#${issue.number} ${issue.title}`,
-    tag: `${repo.full_name}:${issue.id}:${issue.closed_at}`,
+    tag,
     icon: new URL("favicon.svg", document.baseURI).href,
   };
   try {

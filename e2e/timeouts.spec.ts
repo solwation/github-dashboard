@@ -64,5 +64,15 @@ test('timeout uses actual work start, responds to Settings and keeps acknowledge
   await page.reload();
   await expect(slow).toHaveClass(/issue-timeout/);
   await expect(unknown).not.toHaveClass(/issue-timeout/);
+  await page.clock.install();
+  await page.getByRole('switch', { name: 'Notiser för timeout-fixture', exact: true }).click();
+  startedAt = new Date().toISOString();
+  await page.keyboard.press('Control+r');
+  await expect(slow).not.toHaveClass(/issue-timeout/);
+  await page.clock.fastForward(31 * 60000);
+  await expect(slow).toHaveClass(/issue-timeout/);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { timeoutNotices: unknown[] }).timeoutNotices.length)).toBe(1);
+  await page.clock.fastForward(60000);
+  expect(await page.evaluate(() => (window as unknown as { timeoutNotices: unknown[] }).timeoutNotices.length)).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

@@ -13,6 +13,7 @@ Follow work across repositories without switching tabs. Backlog sorts by priorit
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
 - **Explore activity:** Statistics compares repositories over the latest 30 UTC calendar days, with daily issue, commit, code-change and pull-request charts. Filter by date, current labels or contributor. Unavailable metrics stay hidden; bounded API collection is marked when incomplete.
 - **See changes:** Overview counts briefly highlight increases and decreases, with a daily count of loaded issues closed today in your local timezone.
+- **Spot stalled work:** Settings defaults to a 30-minute In progress timeout. Verified overdue work turns red and appears in a notice; ignore it for that work period. Acknowledgements stay in the encrypted cache on this device.
 - **Hear progress:** enable a repository’s notifications for distinct sounds when work starts, closes, becomes blocked or returns to Backlog. Audio resumes after interacting with the dashboard; browsers may delay background updates.
 
 Issueflow reads GitHub. Make issue changes on GitHub; private content stays in your browser's encrypted storage.
