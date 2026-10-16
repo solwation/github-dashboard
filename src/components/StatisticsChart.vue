@@ -29,7 +29,7 @@ const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${pro
       <text x="48" y="246">{{ dates[0] }}</text><text x="748" y="246" text-anchor="end">{{ dates[dates.length - 1] }}</text>
       <line v-if="dates.length" :x1="x(selected)" y1="30" :x2="x(selected)" y2="215" stroke="#aab6b7" stroke-dasharray="3 4" />
       <g v-for="(series, index) in series" :key="series.name">
-        <polyline :points="points(series.days)" fill="none" :stroke="colors[index % colors.length]" stroke-width="2.5" :stroke-dasharray="index ? `${8 - index} ${index + 2}` : undefined" />
+        <polyline :points="points(series.days)" fill="none" :stroke="colors[index % colors.length]" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="index ? `${8 - index} ${index + 2}` : undefined" />
         <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(day.values[metric] || 0)" :r="selected === dayIndex ? 5 : 3" :fill="colors[index % colors.length]" @mouseenter="selected = dayIndex" @click="selected = dayIndex"><title>{{ series.name }} · {{ day.date }}: {{ day.values[metric] || 0 }}</title></circle>
       </g>
     </svg>
@@ -43,7 +43,8 @@ const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${pro
 </template>
 <style scoped>
 .statistics-chart { min-width: 0; }
-svg { width: 100%; height: auto; display: block; min-height: 130px; }
+svg { width: 100%; max-width: 1000px; height: auto; display: block; margin-inline: auto; min-height: 130px; }
+svg line { vector-effect: non-scaling-stroke; }
 svg text { fill: #56696b; font: 11px system-ui; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px; margin: 10px 0; }
 .chart-legend span { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
