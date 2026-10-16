@@ -9,6 +9,7 @@ let server: Server, base: string, directory: string;
 let version = 0;
 let failCleanup = false;
 let failInstall = false;
+let notesFixture: string | null = null;
 const commits = ["1".repeat(40), "2".repeat(40)];
 // Build two actual apps: a worker-only marker cannot prove new JavaScript loaded.
 test.beforeAll(async () => {
@@ -31,6 +32,10 @@ test.beforeAll(async () => {
     try {
       if (failInstall && /\/assets\/.*\.js$/.test(path)) {
         response.writeHead(503).end("temporary deployment failure");
+        return;
+      }
+      if (path === "/release-notes.json" && notesFixture) {
+        response.writeHead(200, { "Content-Type": "application/json" }).end(notesFixture);
         return;
       }
       let data = await readFile(file);
@@ -229,4 +234,39 @@ test("failed shell installation keeps the old app working and can be retried aft
   await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
   await expect(page.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
   await expectBuild(page, commits[1]!);
+});
+
+test("the prompt summarizes notes published with the new version and Read more opens them", async ({ page }) => {
+  test.setTimeout(120_000);
+  version = 0;
+  failCleanup = false;
+  failInstall = false;
+  // A future day keeps the fixture newer than the installed build on any test date.
+  notesFixture = JSON.stringify({
+    build: { builtAt: new Date().toISOString(), commit: commits[1] },
+    days: [{ date: "2999-01-01", summary: { sv: "Fixturens sammanfattning.", en: "Fixture summary." },
+      sections: [{ text: { sv: "Fixturens förbättring.", en: "Fixture improvement." }, issues: [1] }] }],
+  });
+  try {
+    await page.goto(base);
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    version = 1;
+    await discover(page);
+    const prompt = page.locator(".version-update");
+    await expect(prompt).toContainText("Fixturens sammanfattning.");
+    await expect(prompt).toContainText(commits[1]!.slice(0, 7));
+    const readMore = prompt.getByRole("button", { name: "Läs mer", exact: true });
+    await readMore.click();
+    const notes = page.getByRole("dialog", { name: "Versionsnyheter", exact: true });
+    await expect(notes).toContainText("Fixturens förbättring.");
+    await expect(notes.getByRole("link", { name: "Issue #1 på GitHub" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(notes).toBeHidden();
+    await expect(readMore).toBeFocused();
+    await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
+    await expect(prompt).toHaveCount(0);
+  } finally {
+    notesFixture = null;
+  }
 });

@@ -68,8 +68,11 @@ function releaseNotes(build: BuildInfo): Plugin {
       this.emitFile({ type: "asset", fileName: RELEASE_NOTES_FILE, source: source() });
     },
     configureServer(server) {
+      // Only the published path next to index.html; /src/release-notes.json is a module import.
+      const base = server.config.base.startsWith("/") ? server.config.base : "/";
+      const published = base.replace(/\/?$/, "/") + RELEASE_NOTES_FILE;
       server.middlewares.use((request, response, next) => {
-        if (request.url?.split("?")[0].endsWith("/" + RELEASE_NOTES_FILE)) {
+        if (request.url?.split("?")[0] === published) {
           response.setHeader("Content-Type", "application/json; charset=utf-8");
           response.setHeader("Cache-Control", "no-store");
           response.end(source());

@@ -105,3 +105,24 @@ test("collapsed and phone sidebars hide the version text without horizontal scro
     expect(await noHorizontalScroll(page)).toBe(true);
   }
 });
+
+test("release notes open from the sidebar with the bundled days and return focus", async ({ page }) => {
+  await page.goto(base);
+  const opener = page.getByRole("region", { name: "Version", exact: true }).getByRole("button", { name: "Versionsnyheter", exact: true });
+  await opener.click();
+  const notes = page.getByRole("dialog", { name: "Versionsnyheter", exact: true });
+  await expect(notes).toBeVisible();
+  await expect(notes.getByRole("button", { name: "Stäng versionsnyheter" })).toBeFocused();
+  await expect(notes.locator("time").first()).toHaveAttribute("datetime", /^\d{4}-\d{2}-\d{2}$/);
+  await expect(notes.getByRole("link", { name: "Issue #52 på GitHub" })).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await noHorizontalScroll(page)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.keyboard.press("Escape");
+  await expect(notes).toBeHidden();
+  await expect(opener).toBeFocused();
+  // The published copy carries this build's identity for older installed versions.
+  const published = await page.evaluate(async () => (await fetch("release-notes.json", { cache: "no-store" })).json());
+  expect(published.build.commit).toBe(commit);
+  expect(published.days.length).toBeGreaterThan(0);
+});

@@ -30,6 +30,8 @@ import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from ".
 import VersionUpdate from "./components/VersionUpdate.vue";
 import UpdateDialog from "./components/UpdateDialog.vue";
 import SidebarVersion from "./components/SidebarVersion.vue";
+import ReleaseNotes from "./components/ReleaseNotes.vue";
+import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
@@ -81,18 +83,36 @@ const {
   applying: updateApplying, error: updateError, deferred: updateDeferred,
 } = appUpdate;
 const updateDialogOpen = ref(false);
-// TODO(#69 integration): fill from updateSummary(notesSince(days, __BUILD_INFO__.builtAt), lang).
-const updateSummary = ref("");
-// TODO(#69 integration): the available build from fetchPublishedReleaseNotes(); null hides it.
-const availableBuild = ref<{ builtAt: string | null; commit: string | null } | null>(null);
+// Notes published with the latest deployment describe what the waiting update adds.
+const publishedNotes = ref<PublishedReleaseNotes | null>(null);
+let notesRequest: Promise<void> | null = null;
+function loadPublishedNotes() {
+  notesRequest ??= fetchPublishedReleaseNotes()
+    .then((notes) => { if (notes) publishedNotes.value = notes; })
+    .finally(() => { notesRequest = null; });
+}
+watch(updateAvailable, (available) => { if (available) loadPublishedNotes(); }, { immediate: true });
+const installedBuild = __BUILD_INFO__;
+const newerBuild = computed(() => {
+  const build = publishedNotes.value?.build;
+  return build && build.commit !== installedBuild.commit ? build : null;
+});
+const newNoteDays = computed(() =>
+  newerBuild.value && publishedNotes.value ? notesSince(publishedNotes.value.days, installedBuild.builtAt) : []);
+const updateSummary = computed(() => summarizeUpdate(newNoteDays.value, noteLanguage(locale.value)));
+const availableBuild = computed(() => (updateAvailable.value ? newerBuild.value : null));
 const sidebarVersion = ref<InstanceType<typeof SidebarVersion> | null>(null);
 function openUpdateDialog() {
   updateDialogOpen.value = true;
   void appUpdate.check();
+  if (updateAvailable.value) loadPublishedNotes();
 }
-// TODO(#69 integration): open <ReleaseNotes :open :days @close> with the published notes.
-function openReleaseNotes(days?: unknown) {
-  void days;
+const releaseNotesOpen = ref(false);
+const releaseNotesDays = ref<ReleaseNoteDay[]>(bundledReleaseNotes);
+/** Without days the installed bundle's notes are shown; the update views pass what is new. */
+function openReleaseNotes(days?: ReleaseNoteDay[]) {
+  releaseNotesDays.value = days?.length ? days : bundledReleaseNotes;
+  releaseNotesOpen.value = true;
 }
 function deferUpdate() {
   appUpdate.defer();
@@ -1618,10 +1638,11 @@ onMounted(async () => {
   </div>
   <VersionUpdate :open="updateAvailable && !updateDeferred" :seconds="updateSeconds" :counting="updateCounting"
     :applying="updateApplying" :error="updateError" :summary="updateSummary" :available-version="availableBuild"
-    @install="appUpdate.reloadNow()" @defer="deferUpdate" @read-more="openReleaseNotes()" />
+    @install="appUpdate.reloadNow()" @defer="deferUpdate" @read-more="openReleaseNotes(newNoteDays)" />
   <UpdateDialog :open="updateDialogOpen" :available="updateAvailable" :applying="updateApplying" :error="updateError"
     :deferred="updateDeferred" :summary="updateSummary" :available-version="availableBuild"
-    @close="updateDialogOpen = false" @install="appUpdate.reloadNow()" @read-more="openReleaseNotes()" />
+    @close="updateDialogOpen = false" @install="appUpdate.reloadNow()" @read-more="openReleaseNotes(newNoteDays)" />
+  <ReleaseNotes :open="releaseNotesOpen" :days="releaseNotesDays" @close="releaseNotesOpen = false" />
   <LogoutDialog
     :open="logoutPrompt"
     :busy="logoutBusy"

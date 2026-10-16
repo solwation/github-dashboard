@@ -2,10 +2,17 @@
   {
     "date": "2026-10-16",
     "summary": {
-      "sv": "Ny statistikvy, tydligare signaler när arbete ändras eller fastnar, underärenden och nyaste kommentarer först, samt en behörighetsöversikt i Inställningar.",
-      "en": "A new Statistics view, clearer signals when work changes or stalls, sub-issues and newest-first comments, and a permissions overview in Settings."
+      "sv": "Versionsnyheter och uppdateringar du själv styr, en ny statistikvy, tydligare signaler när arbete ändras eller fastnar, underärenden och nyaste kommentarer först samt en rättighetsöversikt i Inställningar.",
+      "en": "Release notes and updates on your terms, a new Statistics view, clearer signals when work changes or stalls, sub-issues and newest-first comments, and a permissions overview in Settings."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Versionen och byggdatumet visas nu längst ned i vänstermenyn, tillsammans med de här versionsnyheterna, som sammanfattar förbättringarna dag för dag. När en ny version finns berättar uppdateringsrutan kort vad den innehåller. Välj Uppdatera nu, eller Inte nu för att slippa frågan resten av dagen. En röd (!)-markering vid versionen visar att uppdateringen väntar, och den kan installeras när du vill, även via Inställningar → Automatiska uppdateringar.",
+          "en": "The version and build date now appear at the bottom of the sidebar, together with these release notes, which summarise improvements day by day. When a new version is available, the update prompt briefly describes what it brings. Choose Update now, or Not now to skip the prompt for the rest of the day. A red (!) marker next to the version shows that the update is waiting, and you can install it whenever you like, also from Settings → Automatic updates."
+        },
+        "issues": [52, 69, 70]
+      },
       {
         "text": {
           "sv": "Statistik visar de repositories du har valt i sidomenyn, i samma ordning som på tavlan, med dagliga diagram över issues, commits, kodändringar och pull requests för de senaste 30 dagarna. Varje repository har egna filter för datum, label och bidragsgivare. En tydlig laddningsvy visar hur långt hämtningen har kommit, och vid uppdatering ligger tidigare diagram kvar. Mått som din token inte ger tillgång till döljs.",
