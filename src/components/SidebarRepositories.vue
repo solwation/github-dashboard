@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Circle, CircleCheck, Clock3, Plus } from "@lucide/vue";
 import RepositoryOrderControls from "./RepositoryOrderControls.vue";
+import { repositoryColor } from "../lib/repository-color";
 import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
 import { recentlyChanged, type SidebarRepository } from "../lib/sidebar";
@@ -31,7 +32,7 @@ function lastChange(changedAt: string | null) {
     <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
     <a class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repository-name">
-        <span class="repo-dot" aria-hidden="true" />
+        <span class="repo-dot" :style="{ backgroundColor: repositoryColor(repo.fullName) }" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
       </span>
@@ -66,6 +67,7 @@ function lastChange(changedAt: string | null) {
   border-radius: 4px;
 }
 .sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
+.repo-dot { box-shadow: none; }
 .repository-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .repository-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .repository-counts { display: flex; flex-wrap: wrap; gap: 11px; padding-left: 15px; font-size: 10px; font-variant-numeric: tabular-nums; }

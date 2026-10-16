@@ -43,6 +43,8 @@ import { createIssueSync } from "./lib/sync";
 import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
+import { combinedItems, boardEntryKey } from "./lib/combined-board";
+import { repositoryColor } from "./lib/repository-color";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import type { PermissionReport } from "./lib/permissions";
@@ -194,6 +196,8 @@ const picker = ref(false);
 const tokenPanel = ref(false);
 const tokenInput = ref("");
 const hideCoordination = ref(true);
+const splitByRepository = ref(true);
+const combinedLimits = ref<Record<string, number>>({});
 const pendingSelected = ref<string[]>([]);
 watch(picker, (open) => {
   if (open) pendingSelected.value = [...selected.value];
@@ -457,6 +461,9 @@ function laneIssues(lane: Lane) {
 function items(lane: Lane, key: string) {
   return sortedIssues(laneIssues(lane), key, rules.value[lane.repo.full_name]);
 }
+const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, repositoryQueries: repositoryQueries.value, hideCoordination: hideCoordination.value })])));
+function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
+watch(columnLimit, () => { combinedLimits.value = {}; });
 function commentsLoader(repo: string) {
   const client = api;
   const run = generation;
@@ -506,7 +513,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
   notificationRepos: notificationRepos.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
-  hideCoordination: hideCoordination.value, timeoutMinutes: timeoutMinutes.value,
+  hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value, timeoutMinutes: timeoutMinutes.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences) {
@@ -520,6 +527,7 @@ function applyChosenPreferences(value: HandoffPreferences) {
   repositoryQueries.value = value.repositoryQueries ?? repositoryQueries.value;
   repoQuery.value = value.repoQuery ?? repoQuery.value;
   hideCoordination.value = value.hideCoordination ?? hideCoordination.value;
+  splitByRepository.value = value.splitByRepository ?? splitByRepository.value;
   timeoutMinutes.value = value.timeoutMinutes ?? timeoutMinutes.value;
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
   if (value.currentView) {
@@ -527,6 +535,7 @@ function applyChosenPreferences(value: HandoffPreferences) {
     history.replaceState(null, "", "#" + value.currentView);
   }
   visibleLimit.value = {};
+  combinedLimits.value = {};
 }
 function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) {
   const state = mergeHandoffPreferences({ ...transferablePreferences.value, selected: selected.value, rules: rules.value }, incoming, available.map(repo => repo.full_name));
@@ -535,7 +544,7 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   applyChosenPreferences(state);
   save();
 }
-watch([query, repositoryQueries, repoQuery, hideCoordination, currentView, statisticsPreferences, preference], () => save(), { deep: true });
+watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, currentView, statisticsPreferences, preference], () => save(), { deep: true });
 function storageKey() {
   return `issueflow:${user.value?.login}`;
 }
@@ -568,8 +577,9 @@ function restorePreferences(available: Repo[]) {
     timeoutMinutes.value = DEFAULT_TIMEOUT_MINUTES;
     repositoryColumnLimits.value = {};
     visibleLimit.value = {};
+    combinedLimits.value = {};
     query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
-    hideCoordination.value = true; statisticsPreferences.value = {};
+    hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
       if (saved) {
@@ -785,6 +795,8 @@ async function applyRepos() {
   await refresh(false, true);
 }
 function showDemo() {
+  splitByRepository.value = true;
+  combinedLimits.value = {};
   generation++;
   selectionRevision++;
   repositoryRequests.clear();
@@ -846,6 +858,8 @@ function logout() {
   error.value = "";
   query.value = "";
   currentView.value = "overview";
+  splitByRepository.value = true;
+  combinedLimits.value = {};
   repositoryQueries.value = {};
   picker.value = false;
   editing.value = null;
@@ -1310,6 +1324,7 @@ onMounted(async () => {
           ><label class="coord-toggle"
             ><input type="checkbox" v-model="hideCoordination" />
             {{ t("Dölj koordinationsärenden") }}</label
+          ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
           ><span class="updated" role="status" aria-live="polite" :aria-busy="busy"
             ><i />{{
               busy
@@ -1349,6 +1364,7 @@ onMounted(async () => {
           </button>
         </div>
         <p class="sr-only" role="status" aria-live="polite">{{ layoutAnnouncement }}</p>
+        <template v-if="splitByRepository">
         <section
           v-for="(lane, laneIndex) in orderedLanes"
           :key="lane.repo.id"
@@ -1486,8 +1502,7 @@ onMounted(async () => {
                     shownLimit(lane.repo.full_name, col.key),
                   )"
                   :key="
-                    issue.id +
-                    (col.key === 'closed' ? issue.closed_at || '' : '')
+                    boardEntryKey({ lane, issue }, col.key)
                   "
                   :issue="issue"
                   :repository="lane.repo.full_name"
@@ -1541,6 +1556,100 @@ onMounted(async () => {
               </div>
             </section>
           </div>
+          </div>
+        </section>
+        </template>
+        <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
+          <details class="combined-repository-controls">
+            <summary>{{ t("Repositoryfilter och inställningar") }}</summary>
+            <p class="combined-limit-note">{{ t("Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.") }}</p>
+            <div v-for="lane in orderedLanes" :key="lane.repo.full_name" class="combined-repository-control" :id="'repo-' + lane.repo.id">
+              <span class="combined-repository-name"><i :style="{ backgroundColor: repositoryColor(lane.repo.full_name) }" aria-hidden="true" />{{ lane.repo.full_name }}</span>
+              <div class="repository-filter">
+                <label class="sr-only" :for="'combined-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
+                <div class="repository-search"><Search :size="14" aria-hidden="true" /><input :id="'combined-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]" :placeholder="t('Sök issues, labels eller nummer…')" />
+                  <button class="icon-button repository-filter-clear" :disabled="!repositoryQueries[lane.repo.full_name]" :aria-label="t('Rensa filtret för {name}', { name: lane.repo.full_name })" @click="repositoryQueries[lane.repo.full_name] = ''"><X :size="13" aria-hidden="true" /></button>
+                </div>
+              </div>
+              <button v-if="!isDemo" class="notification-toggle" role="switch" :aria-checked="notificationsEnabled(lane.repo.full_name)" :aria-label="t('Notiser för ') + lane.repo.name" :disabled="notificationPending !== null" :class="{ enabled: notificationsEnabled(lane.repo.full_name) }" @click="toggleNotifications(lane.repo.full_name)"><Bell v-if="notificationsEnabled(lane.repo.full_name)" :size="15" /><BellOff v-else :size="15" />{{ t("Notiser") }} {{ notificationsEnabled(lane.repo.full_name) ? t("på") : t("av") }}</button>
+              <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Anpassa labels för ') + lane.repo.name"><Settings2 :size="16" /></button>
+            </div>
+          </details>
+          <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
+            <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
+            <p v-if="lane.error" class="notice error" role="alert"><strong>{{ lane.repo.full_name }}</strong> {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}</p>
+            <p v-if="lane.timerWarning" class="notice"><strong>{{ lane.repo.full_name }}</strong> {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</p>
+          </template>
+          <div class="swimlane">
+            <section
+              v-for="col in columns"
+              :key="col.key"
+              class="board-column"
+              :class="col.key"
+            >
+              <div class="column-header">
+                <div class="column-heading">
+                  <i :class="col.key" />{{ col.title
+                  }}<span v-if="combinedColumns[col.key]!.length || !orderedLanes.some(lane => lane.loading || lane.error)" class="column-count">{{
+                    combinedColumns[col.key]!.length
+                  }}</span>
+                </div>
+                <span class="column-hint">{{ col.hint }}</span>
+              </div>
+              <div class="cards">
+                <IssueCard
+                  v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
+                  :key="boardEntryKey({ lane, issue }, col.key)"
+                  :issue="issue"
+                  :repository="lane.repo.full_name"
+                  :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
+                  :relations-revision="relationsRevision"
+                  :rules="rules[lane.repo.full_name] || {}"
+                  :now="now"
+                  :timed-out="issueTimedOut(lane.repo.full_name, issue)"
+                  :timeout-minutes="timeoutMinutes"
+                  @ignore-timeout="ignoreTimeout(lane.repo.full_name, issue)"
+                  :load-commit="
+                    isDemo ? undefined : commitLoader(lane.repo.full_name)
+                  "
+                  :demo="isDemo"
+                  :load-comments="isDemo ? undefined : commentsLoader(lane.repo.full_name)"
+                  :comments-session="generation"
+                  :commit-retry="commitRetry"
+                  :recent-move="activity.moved(lane.repo.full_name, issue, now)"
+                  @read="readIssue(lane.repo.full_name, issue)"
+                  :celebrate="
+                    recentClosures.has(closureKey(lane.repo.full_name, issue))
+                  "
+                />
+                <div v-if="!combinedColumns[col.key]!.length && !orderedLanes.some(lane => lane.loading || lane.error)" class="column-empty">
+                  <CircleCheck v-if="col.key === 'closed'" :size="20" /><Clock3
+                    v-else-if="col.key === 'progress'"
+                    :size="20"
+                  /><Layers3 v-else :size="20" /><span>{{
+                    query || orderedLanes.some(lane => repositoryQueries[lane.repo.full_name])
+                      ? t("Inga issues matchar filtren")
+                      : col.key === "progress"
+                      ? t("Inget pågående arbete")
+                      : col.key === "closed"
+                        ? t("Inga stängda issues ännu")
+                        : t("Backloggen är tom")
+                  }}</span>
+                </div>
+                <button
+                  v-if="
+                    combinedColumns[col.key]!.length >
+                    combinedLimit(col.key)
+                  "
+                  class="show-more"
+                  @click="
+                    combinedLimits[col.key] = combinedLimit(col.key) + columnLimit
+                  "
+                >
+                  {{ t("Visa fler") }} <ChevronDown :size="14" />
+                </button>
+              </div>
+            </section>
           </div>
         </section>
         <footer class="board-footer">
@@ -1702,4 +1811,12 @@ onMounted(async () => {
 
 .repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .repository-loading svg { flex-shrink: 0; }
+.combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: white; overflow: hidden; }
+.combined-repository-controls { padding: 15px 18px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.combined-repository-controls summary { cursor: pointer; font-weight: 600; }
+.combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.combined-repository-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.combined-repository-name { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex: 1 1 180px; overflow-wrap: anywhere; }
+.combined-repository-name i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.combined-repository-control .repository-filter { flex: 1 1 200px; }
 </style>

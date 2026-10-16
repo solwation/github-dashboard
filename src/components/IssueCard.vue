@@ -6,6 +6,7 @@ import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useLanguage } from "../lib/i18n";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { repositoryColor } from "../lib/repository-color";
 import type { ClosingCommit } from "../lib/commits";
 import type { ActivityMarker } from "../lib/activity";
 import {
@@ -127,6 +128,7 @@ const visibleLabels = computed(() =>
       {{ recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
       <span aria-hidden="true">✓</span>
     </button>
+    <span v-if="repository" class="card-repository" :style="{ '--repository-color': repositoryColor(repository) }" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
     <div class="card-top">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
@@ -251,6 +253,9 @@ const visibleLabels = computed(() =>
 </template>
 
 <style scoped>
+.card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 25%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 8%, white); color: #273a3c; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.card-repository i { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
+
 .backlog-age {
   font-size: 9px;
   color: #87929a;

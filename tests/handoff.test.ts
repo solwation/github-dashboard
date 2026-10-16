@@ -53,7 +53,7 @@ const preferences: Required<HandoffPreferences> = {
   collapsedRepos: ["sample/second"], columnLimit: 8,
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"],
   language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
-  repoQuery: "sample", hideCoordination: false, timeoutMinutes: 45, currentView: "statistics",
+  repoQuery: "sample", hideCoordination: false, splitByRepository: false, timeoutMinutes: 45, currentView: "statistics",
   statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions" } },
 };
 describe("optical preference schema v2", () => {
@@ -92,7 +92,7 @@ describe("optical preference schema v2", () => {
   it.each([
     { columnLimit: 0 }, { columnLimit: 101 }, { columnLimit: "6" },
     { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
-    { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" },
+    { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" }, { splitByRepository: "false" },
     { projectOrder: ["sample/repo", "SAMPLE/REPO"] }, { collapsedRepos: ["../private"] },
     { notificationRepos: Array.from({ length: 101 }, (_, n) => "sample/repo" + n) },
     { repositoryColumnLimits: { "sample/repo": 2.5 } }, { repositoryQueries: { "sample/repo": "a".repeat(501) } },

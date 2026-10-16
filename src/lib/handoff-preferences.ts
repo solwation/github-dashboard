@@ -29,6 +29,7 @@ export interface HandoffPreferences {
   repositoryQueries?: Record<string, string>;
   repoQuery?: string;
   hideCoordination?: boolean;
+  splitByRepository?: boolean;
   timeoutMinutes?: number;
   currentView?: "overview" | "statistics";
   statistics?: HandoffStatisticsPreferences;
@@ -61,6 +62,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   notificationRepos: handoffRepositoryList, language: value => ["auto", "sv", "en"].includes(value as string),
   query: text, repositoryQueries: value => repoMap(value, text), repoQuery: text,
   hideCoordination: value => typeof value === "boolean",
+  splitByRepository: value => typeof value === "boolean",
   timeoutMinutes: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 1 && value <= 10080,
   currentView: value => value === "overview" || value === "statistics",
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
