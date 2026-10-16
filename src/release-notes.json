@@ -2,8 +2,8 @@
   {
     "date": "2026-10-16",
     "summary": {
-      "sv": "Projekt har tydligt åtskilda färger som sparas och följer QR-synken. Större QR-profiler kan läsas tillförlitligt.",
-      "en": "Projects have distinct colors that are saved and carried through QR sync. Larger QR profiles can be read reliably."
+      "sv": "Visade behörighetsproblem förblir kvitterade efter omladdning och återinloggning. Ignorera timeout fungerar direkt även under pågående uppdatering.",
+      "en": "Viewed permission problems stay acknowledged after reload and signing back in. Ignore timeout updates immediately while GitHub refreshes."
     },
     "sections": [
       {
@@ -43,10 +43,10 @@
       },
       {
         "text": {
-          "sv": "Översikten visar statusändringar, dagens stängningar och aktiva projekt; nya Backlog-ärenden blir gröna och långvarigt pågående arbete får kvitterbara timeoutvarningar.",
-          "en": "Overview highlights status changes, today's closures and active projects; new Backlog issues turn green, while stalled work gets timeout warnings you can acknowledge."
+          "sv": "Översikten visar statusändringar, dagens stängningar och aktiva projekt; nya Backlog-ärenden blir gröna och timeoutvarningar kan kvitteras direkt även under uppdatering.",
+          "en": "Overview highlights status changes, today's closures and active projects; new Backlog issues turn green, and timeout warnings clear immediately even during refresh."
         },
-        "issues": [48, 64, 55, 56]
+        "issues": [48, 64, 55, 56, 94]
       },
       {
         "text": {
@@ -65,9 +65,9 @@
       {
         "text": {
           "sv": "Inställningar visar GitHub-behörigheter i en tabell med kvitterbara badges; repositoryknappar och hjälptexter har blivit tydligare.",
-          "en": "Settings explains GitHub permissions in a table with badges that clear once viewed; repository controls and help text are clearer."
+          "en": "Settings explains GitHub permissions in a table; viewed problems stay acknowledged after reload and signing back in, and repository controls are clearer."
         },
-        "issues": [46, 51, 58, 71]
+        "issues": [46, 51, 58, 71, 93]
       },
       {
         "text": {

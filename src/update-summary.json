@@ -1,11 +1,11 @@
 {
-  "baseCommit": "ce67d54455ebd3cca49758431547ccac6a638d5d",
+  "baseCommit": "6d812b2ed993def6eaa59c557df2cd5724c49eee",
   "summary": {
-    "sv": "Projekt har tydligt åtskilda färger som sparas och följer QR-synken. Större QR-profiler kan läsas tillförlitligt.",
-    "en": "Projects have distinct colors that are saved and carried through QR sync. Larger QR profiles can be read reliably."
+    "sv": "Visade behörighetsproblem förblir kvitterade efter omladdning och återinloggning. Ignorera timeout fungerar direkt även under pågående uppdatering.",
+    "en": "Viewed permission problems stay acknowledged after reload and signing back in. Ignore timeout updates immediately while GitHub refreshes."
   },
   "issues": [
-    91,
-    92
+    93,
+    94
   ]
 }

@@ -18,7 +18,7 @@ One view of what your agents plan, work on and complete across your repositories
 - **Active projects:** the Repositories card shows how many selected projects have Backlog, In progress or issues closed in the last 30 days, independently of text filters.
 - **New work:** issues created in Backlog after startup get a green “Created in backlog” marker until read or expired. Returning work keeps its separate movement marker.
 - **See changes:** Overview counts briefly highlight increases and decreases, with a daily count of loaded issues closed today in your local timezone.
-- **Spot stalled work:** Settings defaults to a 30-minute In progress timeout. Verified overdue work turns red and appears in a notice; ignore it for that work period. Acknowledgements stay in the encrypted cache on this device.
+- **Spot stalled work:** Settings defaults to a 30-minute In progress timeout. Verified overdue work turns red and appears in a notice; ignore it for that work period, with immediate feedback even while GitHub refreshes. Acknowledgements stay in the encrypted cache on this device.
 - **Hear progress:** enable a repository’s notifications for distinct sounds when work starts, closes, becomes blocked or returns to Backlog. Audio resumes after interacting with the dashboard; browsers may delay background updates.
 
 Issueflow reads GitHub. Make issue changes on GitHub; private content stays in your browser's encrypted storage.
