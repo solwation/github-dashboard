@@ -69,25 +69,27 @@ onBeforeUnmount(clear);
         <button type="button" class="close-comments" :aria-label="t('Stäng kommentarer')" autofocus @click="close"><X :size="20" /></button>
       </div>
       <p class="comments-issue-title">{{ issue.title }}</p>
-      <p v-if="demo" class="comments-status">{{ t('Kommentarer visas inte i demon. Anslut GitHub för att läsa dina issuediskussioner.') }}</p>
-      <div v-else aria-live="polite" :aria-busy="state === 'loading'">
-        <p v-if="state === 'loading'" class="comments-status">{{ t('Hämtar kommentarer…') }}</p>
-        <div v-else-if="state === 'error'" class="comments-status">
-          <p role="alert">{{ t('Kommentarerna kunde inte hämtas. Kontrollera anslutningen och din åtkomst till repot.') }}</p>
-          <button type="button" class="retry-comments" @click="load">{{ t('Försök igen') }}</button>
+      <div class="comments-body" role="region" :aria-labelledby="titleId" tabindex="0">
+        <p v-if="demo" class="comments-status">{{ t('Kommentarer visas inte i demon. Anslut GitHub för att läsa dina issuediskussioner.') }}</p>
+        <div v-else aria-live="polite" :aria-busy="state === 'loading'">
+          <p v-if="state === 'loading'" class="comments-status">{{ t('Hämtar kommentarer…') }}</p>
+          <div v-else-if="state === 'error'" class="comments-status">
+            <p role="alert">{{ t('Kommentarerna kunde inte hämtas. Kontrollera anslutningen och din åtkomst till repot.') }}</p>
+            <button type="button" class="retry-comments" @click="load">{{ t('Försök igen') }}</button>
+          </div>
+          <template v-else>
+            <p v-if="!comments.length" class="comments-status">{{ t('Inga kommentarer ännu.') }}</p>
+            <article v-for="comment in rendered" :key="comment.id" class="issue-comment">
+              <div class="comment-meta">
+                <strong>{{ comment.user?.login || t('Raderad användare') }}</strong>
+                <time :datetime="comment.created_at">{{ dateLabel(comment.created_at) }}</time>
+                <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
+              </div>
+              <div v-if="comment.body?.trim()" class="comment-markdown" v-html="comment.markdown" />
+              <p v-else class="comments-status">{{ t('Kommentaren saknar text.') }}</p>
+            </article>
+          </template>
         </div>
-        <template v-else>
-          <p v-if="!comments.length" class="comments-status">{{ t('Inga kommentarer ännu.') }}</p>
-          <article v-for="comment in rendered" :key="comment.id" class="issue-comment">
-            <div class="comment-meta">
-              <strong>{{ comment.user?.login || t('Raderad användare') }}</strong>
-              <time :datetime="comment.created_at">{{ dateLabel(comment.created_at) }}</time>
-              <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
-            </div>
-            <div v-if="comment.body?.trim()" class="comment-markdown" v-html="comment.markdown" />
-            <p v-else class="comments-status">{{ t('Kommentaren saknar text.') }}</p>
-          </article>
-        </template>
       </div>
     </template>
   </dialog>
@@ -95,12 +97,15 @@ onBeforeUnmount(clear);
 <style scoped>
 .comment-count { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem; border: 0; background: transparent; color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 32px; }
 button:focus-visible, a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
-.comments-dialog { box-sizing: border-box; width: min(44rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); overflow-y: auto; border: 1px solid var(--line); border-radius: .8rem; padding: 1.2rem; color: #273a3c; background: white; }
+.comments-dialog { box-sizing: border-box; width: min(44rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); overflow: hidden; border: 1px solid var(--line); border-radius: .8rem; padding: 1.2rem; color: #273a3c; background: white; }
+.comments-dialog[open] { display: flex; flex-direction: column; }
+.comments-body { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.comments-body:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 .comments-dialog::backdrop { background: #102b2a88; }
-.comments-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
-h2 { font-size: 1rem; line-height: 1.5; margin: .4rem 0; }
-.close-comments { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 0; background: transparent; border-radius: .4rem; cursor: pointer; }
-.comments-issue-title { margin: 0 0 1rem; overflow-wrap: anywhere; color: var(--muted); font-size: .85rem; }
+.comments-heading { flex-shrink: 0; min-width: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+h2 { overflow-wrap: anywhere; min-width: 0; font-size: 1rem; line-height: 1.5; margin: .4rem 0; }
+.close-comments { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 0; background: transparent; border-radius: .4rem; cursor: pointer; }
+.comments-issue-title { flex-shrink: 0; margin: 0 0 1rem; overflow-wrap: anywhere; color: var(--muted); font-size: .85rem; }
 .comments-status { font-size: .85rem; line-height: 1.6; color: var(--muted); }
 .retry-comments { border: 1px solid var(--line); border-radius: .4rem; padding: .6rem .8rem; background: white; color: var(--green); cursor: pointer; }
 .issue-comment { min-width: 0; padding: 1rem 0; border-top: 1px solid var(--line); }
@@ -110,7 +115,7 @@ h2 { font-size: 1rem; line-height: 1.5; margin: .4rem 0; }
 .comment-markdown { font-size: .85rem; line-height: 1.65; overflow-wrap: anywhere; }
 .comment-markdown :deep(h1), .comment-markdown :deep(h2), .comment-markdown :deep(h3) { font-size: 1rem; }
 .comment-markdown :deep(h4), .comment-markdown :deep(h5), .comment-markdown :deep(h6) { font-size: .9rem; }
-.comment-markdown :deep(pre) { max-width: 100%; overflow-x: auto; padding: .7rem; background: #f1f5f4; white-space: pre; overflow-wrap: normal; border-radius: .4rem; }
+.comment-markdown :deep(pre) { box-sizing: border-box; max-width: 100%; overflow-x: auto; padding: .7rem; background: #f1f5f4; white-space: pre; overflow-wrap: normal; border-radius: .4rem; }
 .comment-markdown :deep(code) { font-size: .78rem; background: #f1f5f4; }
 .comment-markdown :deep(img) { max-width: 100%; height: auto; }
 .comment-markdown :deep(table) { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }

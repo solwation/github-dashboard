@@ -131,3 +131,57 @@ test("a pending private comment response cannot appear after logout and switchin
   await expect(page.getByRole("dialog")).toContainText("Kommentarer visas inte i demon.");
   await expect(page.getByText("Previous account private comment")).toHaveCount(0);
 });
+
+for (const viewport of [{ width: 1280, height: 800 }, { width: 320, height: 640 }]) {
+  test(`many comments scroll inside the rounded dialog at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.route('https://example.test/wide.png', route => route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="300"><rect width="2400" height="300" fill="blue"/></svg>',
+    }));
+    await connect(page, async route => {
+      const body = [
+        'Long discussion text '.repeat(12),
+        '```ts\nconst long = "' + 'code'.repeat(200) + '";\n```',
+        '![Wide fixture](https://example.test/wide.png)',
+        '[Long link](https://example.test/' + 'long'.repeat(100) + ')',
+        'https://example.test/' + 'unbroken'.repeat(100),
+      ].join('\n\n');
+      await route.fulfill({ json: Array.from({ length: 30 }, (_, index) => comment(index + 1, index === 29 ? 'Final discussion comment' : body)) });
+    });
+    const trigger = page.getByRole('button', { name: '102 kommentarer' });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Kommentarer för #1' });
+    const body = dialog.locator('.comments-body');
+    const close = dialog.getByRole('button', { name: 'Stäng kommentarer' });
+    await expect(dialog.locator('.issue-comment')).toHaveCount(30);
+    await expect.poll(() => dialog.locator('img').first().evaluate(element => (element as HTMLImageElement).complete && (element as HTMLImageElement).naturalWidth === 2400)).toBe(true);
+    await expect(close).toBeVisible();
+    await expect(close).toBeFocused();
+    expect(await dialog.evaluate(element => ({
+      width: element.scrollWidth <= element.clientWidth,
+      height: element.scrollHeight <= element.clientHeight,
+      overflow: getComputedStyle(element).overflow,
+    }))).toEqual({ width: true, height: true, overflow: 'hidden' });
+    expect(await body.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    expect(await body.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const dialogBox = (await dialog.boundingBox())!;
+    const bodyBox = (await body.boundingBox())!;
+    expect(dialogBox.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(viewport.height);
+    expect(bodyBox.x).toBeGreaterThan(dialogBox.x);
+    expect(bodyBox.x + bodyBox.width).toBeLessThan(dialogBox.x + dialogBox.width);
+    expect(bodyBox.y + bodyBox.height).toBeLessThan(dialogBox.y + dialogBox.height);
+    const initialCloseBox = await close.boundingBox();
+    await body.focus();
+    await page.keyboard.press('Control+End');
+    await expect.poll(() => body.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    await expect(dialog.getByText('Final discussion comment')).toBeInViewport();
+    await expect(close).toBeInViewport();
+    expect(await close.boundingBox()).toEqual(initialCloseBox);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+  });
+}
