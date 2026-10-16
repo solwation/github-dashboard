@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { X } from "@lucide/vue";
+import { Camera, X } from "@lucide/vue";
 import QRCode from "qrcode";
 import type { Rules } from "../lib/model";
 import { createHandoffUrl, type HandoffPreferences } from "../lib/handoff";
@@ -12,7 +12,7 @@ const props = defineProps<{
   rules: Record<string, Rules>;
   preferences?: HandoffPreferences;
 }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; scan: [] }>();
 const { t } = useLanguage();
 const dialog = ref<HTMLDialogElement | null>(null);
 const qr = ref("");
@@ -38,6 +38,11 @@ function close() {
   if (timer) clearInterval(timer);
   dialog.value?.close();
   emit("close");
+}
+function scan() {
+  if (closed) return;
+  close();
+  emit("scan");
 }
 async function generate() {
   clearSecret();
@@ -107,10 +112,11 @@ onUnmounted(() => {
     <p>
       {{
         t(
-          "På den andra enheten: öppna Inställningar och välj Läs QR-kod, eller välj Logga in med QR-kod om du inte är inloggad. Skanna här för att överföra konto, inställningar och vy åt valfritt håll.",
+          "Låt den andra enheten skanna koden nedan för att ta emot dina inställningar. För att hämta inställningar hit, välj Skanna QR-kod från annan enhet.",
         )
       }}
     </p>
+    <button class="button handoff-scan" @click="scan"><Camera :size="17" aria-hidden="true" />{{ t("Skanna QR-kod från annan enhet") }}</button>
     <p class="handoff-warning">
       {{
         t(
@@ -166,6 +172,7 @@ onUnmounted(() => {
 .handoff-dialog p {
   line-height: 1.5;
 }
+.handoff-scan { white-space: normal; text-align: left; }
 .handoff-warning {
   padding: 0.75rem;
   border: 1px solid #d69a45;

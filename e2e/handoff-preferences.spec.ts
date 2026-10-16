@@ -44,8 +44,9 @@ async function exportCode(page: Page): Promise<{ payload: HandoffPayload; image:
   return { payload, image };
 }
 async function scanCode(page: Page, image: string) {
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
-  await page.getByRole("button", { name: "Läs QR-kod", exact: true }).click();
+  await page.getByRole("button", { name: "Öppna på mobilen", exact: true }).click();
+  await page.getByRole("button", { name: "Skanna QR-kod från annan enhet", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Synka med QR-kod", exact: true })).toHaveCount(0);
   await page.getByLabel("Välj QR-bild", { exact: true }).setInputFiles({
     name: "fictional-preferences-qr.png", mimeType: "image/png", buffer: Buffer.from(image.split(",")[1]!, "base64"),
   });

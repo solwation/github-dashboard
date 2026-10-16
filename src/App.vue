@@ -1656,6 +1656,7 @@ onMounted(async () => {
     :rules="rules"
     :preferences="transferablePreferences"
     @close="handoffOpen = false"
+    @scan="scannerOpen = true"
   />
   <ScanLogin v-if="scannerOpen" :mode="loggedIn ? 'preferences' : 'login'" @close="scannerOpen = false"
     @scanned="payload => { scannerOpen = false; void connect(payload.token, payload); }" />

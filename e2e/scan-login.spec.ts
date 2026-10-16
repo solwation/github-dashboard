@@ -99,3 +99,45 @@ test("cancel stops a camera whose permission resolves after the dialog closes", 
   await expect.poll(() => page.evaluate(() => (window as any).cameraStops)).toBe(1);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test('signed-in QR popup opens the camera only on scan and stops it on cancel', async ({ page }) => {
+  await fixture(page);
+  await page.addInitScript(() => {
+    Object.assign(window, { signedInCameraStarts: 0, signedInCameraStops: 0 });
+    navigator.mediaDevices.getUserMedia = async () => {
+      (window as any).signedInCameraStarts++;
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
+      canvas.getContext('2d')!.fillRect(0, 0, 64, 64);
+      const stream = canvas.captureStream(1);
+      for (const track of stream.getTracks()) {
+        const stop = track.stop.bind(track);
+        track.stop = () => { (window as any).signedInCameraStops++; stop(); };
+      }
+      return stream;
+    };
+  });
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto(createHandoffUrl('http://127.0.0.1:5173/', settings).url);
+  await expect(page.locator('.repo-lane')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Öppna på mobilen', exact: true }).click();
+  const popup = page.getByRole('dialog', { name: 'Synka med QR-kod', exact: true });
+  const scan = popup.getByRole('button', { name: 'Skanna QR-kod från annan enhet', exact: true });
+  await expect(scan).toBeVisible();
+  expect(await page.evaluate(() => (window as any).signedInCameraStarts)).toBe(0);
+  expect(await popup.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await scan.focus(); await page.keyboard.press('Enter');
+  const scanner = page.getByRole('dialog', { name: 'Läs QR-kod', exact: true });
+  await expect(scanner).toBeVisible();
+  await expect(popup).toHaveCount(0);
+  await expect(page.getByRole('img', { name: 'QR-kod för konto och inställningar' })).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => (window as any).signedInCameraStarts)).toBe(1);
+  await scanner.getByRole('button', { name: 'Avbryt', exact: true }).click();
+  await expect(scanner).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => (window as any).signedInCameraStops)).toBe(1);
+  await expect(page.getByRole('button', { name: 'Logga ut', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await page.getByLabel('Språk', { exact: true }).selectOption('en');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: 'Open on mobile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Scan QR code from another device', exact: true })).toBeVisible();
+});
