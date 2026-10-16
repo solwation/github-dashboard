@@ -35,6 +35,12 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "AI-agenter · GitHub-issues": "AI agents · GitHub issues",
+  "DINA AGENTER. DITT FLÖDE.": "YOUR AGENTS. YOUR WORKFLOW.",
+  "Följ dina AI-agenter.": "Track your AI agents.",
+  "Via GitHub-issues.": "Through GitHub issues.",
+  "En samlad överblick över vad agenterna planerar, arbetar med och har slutfört i dina repositories. Fungerar även för issues du arbetar med själv.": "One view of what your agents plan, work on and complete across your repositories. Works with issues you handle yourself, too.",
+
   "Hämtar och sammanställer statistik": "Fetching and preparing statistics",
   "Vi hämtar underlaget från GitHub. Statistiken visas så snart den är klar.": "We are fetching the source data from GitHub. Statistics will appear as soon as they are ready.",
   "Hämtning avslutad för {done} av {total} repositories.": "Fetching finished for {done} of {total} repositories.",

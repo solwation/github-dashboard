@@ -6,7 +6,7 @@ test("follows browser language, switches live in settings and remembers choice",
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(
-    page.getByRole("heading", { name: /All your projects/ }),
+    page.getByRole("heading", { name: /Track your AI agents/ }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByLabel("Language", { exact: true }).selectOption("sv");
@@ -17,7 +17,7 @@ test("follows browser language, switches live in settings and remembers choice",
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: /Alla dina projekt/ }),
+    page.getByRole("heading", { name: /Följ dina AI-agenter/ }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Inställningar", exact: true })

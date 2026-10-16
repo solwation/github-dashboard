@@ -4,7 +4,7 @@ test("demo works at desktop and mobile widths", async ({ page }) => {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /Alla dina projekt/ }),
+    page.getByRole("heading", { name: /Följ dina AI-agenter/ }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Utforska en demo" }).click();
   await expect(page.locator(".repo-lane")).toHaveCount(3);

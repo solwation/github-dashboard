@@ -71,7 +71,7 @@ test("overview keeps the welcome screen available and follows the selected langu
   const overview = page.getByRole("link", { name: "Översikt", exact: true });
   await expect(overview).not.toHaveAttribute("aria-current", "page");
   await overview.click();
-  await expect(page.getByRole("heading", { name: /Alla dina projekt/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Följ dina AI-agenter/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Anslut GitHub", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
