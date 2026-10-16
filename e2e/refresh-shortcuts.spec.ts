@@ -85,6 +85,8 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
     api.next();
     await page.keyboard.press(shortcut);
     await expect(page.locator("#repo-1 .issue-title")).toHaveText(`Keep task version ${version}`);
+    // A shortcut during an in-flight full refresh is absorbed, so let this one finish first.
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
     await expectSameDocument(page);
   }
 });

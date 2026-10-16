@@ -28,7 +28,7 @@ async function connect(page: Page) {
 }
 
 for (const width of [1440, 320]) {
-  test(`repository card opens the picker, keeps count and respects busy at ${width}px`, async ({ page }) => {
+  test(`repository card opens the picker, keeps count and stays available while loading at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     const api = await connect(page);
     const card = page.locator(".repository-stat");
@@ -47,8 +47,13 @@ for (const width of [1440, 320]) {
     await page.getByRole("checkbox", { name: "sample/beta" }).check();
     api.pause();
     await page.getByRole("button", { name: "Visa översikt" }).click();
-    await expect(action).toBeDisabled();
+    // The picker stays reachable while the new selection loads (#98), like the sidebar picker.
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
+    await expect(action).toBeEnabled();
+    await action.focus();
+    await expect(action).toBeFocused();
     api.release();
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
     await expect(action).toBeEnabled();
     await expect(card.locator("strong")).toHaveText("20 aktiva");
     await page.getByRole("button", { name: "Inställningar", exact: true }).click();
