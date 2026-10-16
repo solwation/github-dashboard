@@ -219,6 +219,8 @@ function setTimeoutMinutes(minutes: number) {
 }
 function ignoreTimeout(repo: string, issue: Issue) {
   if (!timeoutTracker.acknowledge(repo, issue)) return;
+  // Local feedback must not wait for the timeout scan, which pauses during GitHub refresh.
+  timedOut.value = timedOut.value.filter(entry => entry.repo !== repo || entry.issue.id !== issue.id);
   timeoutRevision.value++;
   void persistContent();
 }
