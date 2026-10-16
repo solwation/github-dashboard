@@ -1,3 +1,4 @@
+import { permissionDefinitions, permissionEndpoint, permissionForPath, permissionResult, type PermissionObservation, type PermissionReport } from "./permissions";
 import { t, locale } from "./i18n";
 import {
   ClosingCommitCache,
@@ -16,7 +17,46 @@ import {
   type Repo,
   type Rules,
 } from "./model";
+export class GitHubApiError extends Error {
+  constructor(message: string, public readonly status: number, public readonly permissionDenied = false, public readonly rateLimited = false) {
+    super(message);
+    this.name = "GitHubApiError";
+  }
+}
 export class GitHub {
+  private readonly permissionObservations = new Map<string, PermissionObservation>();
+  private observePermission(path: string, ok: boolean, permissionDenied = false) {
+    const permission = permissionForPath(path);
+    if (permission) {
+      const key = `${permission.repo}:${permission.permission}`;
+      this.permissionObservations.delete(key);
+      this.permissionObservations.set(key, { ok, permissionDenied, checkedAt: Date.now() });
+      if (this.permissionObservations.size > 400) this.permissionObservations.delete(this.permissionObservations.keys().next().value!);
+    }
+  }
+  async checkPermissions(repos: Repo[], options: { force?: boolean } = {}): Promise<PermissionReport> {
+    const report: PermissionReport = permissionDefinitions.map(def => ({ permission: def.id, repositories: [] }));
+    // Sequential repositories and four small read requests avoid bursts and pagination.
+    for (const repo of repos) {
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo.full_name)) continue;
+      await Promise.all(report.map(async entry => {
+        const key = `${repo.full_name}:${entry.permission}`;
+        let observation = this.permissionObservations.get(key);
+        if (options.force || !observation || Date.now() - observation.checkedAt > 300000) {
+          if (!this.retryAfterMs()) {
+            try { await this.request(permissionEndpoint(repo.full_name, entry.permission)); }
+            catch (error) {
+              if (!(error instanceof GitHubApiError)) this.observePermission(new URL(permissionEndpoint(repo.full_name, entry.permission), "https://api.github.com").pathname, false);
+            }
+          }
+          observation = this.permissionObservations.get(key);
+        }
+        entry.repositories.push(permissionResult(repo, observation && Date.now() - observation.checkedAt <= 300000 ? observation : undefined));
+      }));
+    }
+    return report;
+  }
+
   private readonly responses = new Map<
     string,
     { etag: string; data: unknown; next: string | null }
@@ -78,8 +118,10 @@ export class GitHub {
         ...(options.body ? { "Content-Type": "application/json" } : {}),
       },
     });
-    if (response.status === 304 && cached)
+    if (response.status === 304 && cached) {
+      this.observePermission(url.pathname, true);
       return { data: cached.data as T, next: cached.next };
+    }
     if (!response.ok) {
       const retry = response.headers.get("retry-after");
       const resetAt = response.headers.get("x-ratelimit-reset");
@@ -93,7 +135,12 @@ export class GitHub {
       if (resetAt && response.headers.get("x-ratelimit-remaining") === "0")
         this.limitedUntil = Math.max(this.limitedUntil, Number(resetAt) * 1000);
       const reset = response.headers.get("x-ratelimit-reset");
-      throw new Error(
+      const rateLimited = response.status === 429 || !!retry || response.headers.get("x-ratelimit-remaining") === "0";
+      const body = await response.json().catch(() => null) as { message?: unknown } | null;
+      const permissionDenied = response.status === 403 && !rateLimited && typeof body?.message === "string" &&
+        /^Resource not accessible by (personal access token|integration)\.?$/i.test(body.message);
+      this.observePermission(url.pathname, false, permissionDenied);
+      throw new GitHubApiError(
         response.status === 401
           ? t("Sessionen har gått ut. Logga in igen.")
           : response.status === 403 || response.status === 429
@@ -109,8 +156,10 @@ export class GitHub {
                 "GitHub svarade {status}. Kontrollera att du har åtkomst till repot.",
                 { status: response.status },
               ),
+        response.status, permissionDenied, rateLimited,
       );
     }
+    this.observePermission(url.pathname, true);
     const result = {
       data: (await response.json()) as T,
       next:

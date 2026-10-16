@@ -3,11 +3,15 @@ import { ref } from "vue";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import BuildInfo from "./BuildInfo.vue";
+import GitHubPermissions from "./GitHubPermissions.vue";
+import { missingPermissionCount, type PermissionReport } from "../lib/permissions";
+import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
-defineProps<{ canViewProblems?: boolean; problemCount?: number; columnLimit: number; canEditLimit: boolean }>();
-const emit = defineEmits<{ openProblems: []; "update:columnLimit": [value: number | null] }>();
+const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean }>(), { permissions: () => [] });
+const missingCount = computed(() => missingPermissionCount(props.permissions));
+const emit = defineEmits<{ checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null] }>();
 const dialog = ref<HTMLDialogElement | null>(null);
 function change(event: Event) {
   setLanguage((event.target as HTMLSelectElement).value as LanguagePreference);
@@ -16,10 +20,11 @@ function change(event: Event) {
 <template>
   <button
     class="button small"
-    @click="dialog?.showModal()"
+    @click="dialog?.showModal(); emit('checkPermissions')"
     :aria-label="t('Inställningar')"
   >
     <Settings2 :size="15" /><span>{{ t("Inställningar") }}</span>
+    <span v-if="missingCount" class="permissions-badge" role="status" :aria-label="t('{count} saknade GitHub-rättigheter', { count: missingCount })">({{ missingCount }})</span>
   </button>
   <dialog
     ref="dialog"
@@ -51,9 +56,7 @@ function change(event: Event) {
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
-    <button v-if="canViewProblems" class="button" @click="dialog?.close(); emit('openProblems')">
-      {{ t("Problemrapport") }}<span v-if="problemCount">({{ problemCount }})</span>
-    </button>
+    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" />
     <WorkflowGuide />
     <BuildInfo />
     <div class="modal-footer">
@@ -63,3 +66,7 @@ function change(event: Event) {
     </div>
   </dialog>
 </template>
+
+<style scoped>
+.permissions-badge { background: #b91c1c; color: white; border-radius: 999px; padding: .1rem .4rem; font-size: .75rem; font-weight: 700; }
+</style>
