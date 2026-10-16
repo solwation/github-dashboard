@@ -2,8 +2,8 @@
   {
     "date": "2026-10-16",
     "summary": {
-      "sv": "Statistik, tydligare arbetsstatus och enklare uppdateringar, kommentarer, behörigheter och QR-synk.",
-      "en": "Statistics, clearer work status, and simpler updates, comments, permissions and QR sync."
+      "sv": "Gemensam tavla med projektfärger och bättre statistikvy. Kortare uppdateringstext, nedräkning i knappen och kopierbara instruktioner.",
+      "en": "Combined boards with project colors and improved statistics. Shorter update text, a button countdown and copyable workflow instructions."
     },
     "sections": [
       {
@@ -15,15 +15,22 @@
       },
       {
         "text": {
-          "sv": "Kortare versionsnyheter och kontrollstatus i sidomenyn; staplade uppdateringsknappar, nedräkning i uppdateringsknappen med dialogpaus och uppskjutning resten av dagen.",
-          "en": "Shorter sidebar release notes and version-check status, with stacked update buttons, a button countdown, dialog pauses and day-long deferral."
+          "sv": "Version, kontrollstatus och korta daggrupperade versionsnyheter finns i vänstermenyn, med issue-länkar för detaljer.",
+          "en": "The sidebar shows version information, check status and compact daily release notes, with issue links for details."
         },
-        "issues": [52, 69, 70, 77, 78, 82, 79, 83, 80, 84]
+        "issues": [52, 69, 78, 79]
       },
       {
         "text": {
-          "sv": "Statistik visar valda projekt i ordning med egna filter, tydlig laddning och grafer i full bredd med tunna linjer; tidigare diagram behålls medan nya hämtas.",
-          "en": "Statistics stacks selected projects with independent filters, clear loading and full-width charts with thin lines, retaining existing charts while fresh data loads."
+          "sv": "Uppdateringsnotisen visar senaste publiceringens korta delta, staplade knappar och nedräkning i knappen; Inte nu skjuter upp till imorgon.",
+          "en": "Update prompts show only the latest publication’s brief delta, stacked buttons and a button countdown; Not now defers until tomorrow."
+        },
+        "issues": [70, 77, 80, 82, 84]
+      },
+      {
+        "text": {
+          "sv": "Statistik visar valda projekt med egna filter, tydlig laddning och grafer i full bredd; repositorylänkarna går till rätt statistikavsnitt.",
+          "en": "Statistics stacks selected projects with independent filters, clear loading and full-width charts; repository links jump to their statistics sections."
         },
         "issues": [45, 62, 76, 87, 88]
       },
@@ -57,10 +64,17 @@
       },
       {
         "text": {
-          "sv": "Inställningar förklarar GitHub-behörigheter med kvitterbara badges och visar arbetsflödesguiden separat; repositoryknappar ligger rätt och dubblerad hjälptext är borttagen.",
-          "en": "Settings explains permissions with badges that clear once viewed; copyable workflow Markdown, aligned repository controls and shorter help simplify navigation."
+          "sv": "Inställningar visar GitHub-behörigheter i en tabell med kvitterbara badges; repositoryknappar och hjälptexter har blivit tydligare.",
+          "en": "Settings explains GitHub permissions in a table with badges that clear once viewed; repository controls and help text are clearer."
         },
-        "issues": [46, 47, 51, 58, 71, 85]
+        "issues": [46, 51, 58, 71]
+      },
+      {
+        "text": {
+          "sv": "Instruktionerna för issueflödet visas som fullständig Markdown i en liten, scrollningsbar textruta med en kopieringsknapp.",
+          "en": "Issue workflow instructions show the complete Markdown in a compact, scrollable textarea with a button to copy all instructions."
+        },
+        "issues": [47, 85]
       },
       {
         "text": {
@@ -75,6 +89,13 @@
           "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
         "issues": [53, 57, 60, 68]
+      },
+      {
+        "text": {
+          "sv": "Orkestern samlar färdiga ärenden inför publicering och bevakar nya issues i en timme efter verifierad leverans.",
+          "en": "Orkester batches completed issues for publication and watches for new issues for an hour after a verified release."
+        },
+        "issues": [83, 86]
       }
     ]
   },

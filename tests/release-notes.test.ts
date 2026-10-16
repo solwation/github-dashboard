@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import source from "../src/release-notes.json";
+import deltaSource from "../src/update-summary.json";
 import {
   bundledReleaseNotes,
+  bundledUpdateSummary,
   calendarDate,
   fetchPublishedReleaseNotes,
   notesSince,
@@ -30,6 +32,12 @@ describe("bundled release notes", () => {
     expect(dates).toEqual([...dates].sort().reverse());
     const issues = bundledReleaseNotes.flatMap((entry) => entry.sections.flatMap((item) => item.issues));
     expect(new Set(issues).size).toBe(issues.length);
+  });
+  it("prepares a concise publication delta with issue references present in the full notes", () => {
+    expect(parsePublicationDelta(deltaSource)).toEqual(bundledUpdateSummary);
+    expect(bundledUpdateSummary).not.toBeNull();
+    const known = new Set(bundledReleaseNotes.flatMap(day => day.sections.flatMap(section => section.issues)));
+    expect(bundledUpdateSummary!.issues.every(issue => known.has(issue))).toBe(true);
   });
   it("contain no credentials or private-looking URLs", () => {
     const text = JSON.stringify(source);
