@@ -24,6 +24,7 @@ import {
   X,
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
+import OverviewSummary from "./components/OverviewSummary.vue";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
 import VersionUpdate from "./components/VersionUpdate.vue";
@@ -1087,58 +1088,9 @@ onMounted(async () => {
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <section class="stats" :aria-label="t('Sammanfattning')">
-          <div class="stat repository-stat">
-            <span class="stat-icon repos"><Layers3 :size="20" /></span>
-            <div>
-              <span class="stat-label">Repositories</span
-              ><strong
-                >{{ lanes.length
-                }}<small>{{ t("i din översikt") }}</small></strong
-              >
-            </div>
-            <button
-              v-if="loggedIn"
-              class="icon-button repository-stat-action"
-              :aria-label="t('Välj repositories')"
-              :title="t('Välj repositories')"
-              :disabled="busy"
-              @click="picker = true"
-            >
-              <Plus :size="16" aria-hidden="true" />
-            </button>
-          </div>
-          <div class="stat">
-            <span class="stat-icon backlog"
-              ><LayoutDashboard :size="20"
-            /></span>
-            <div>
-              <span class="stat-label">{{ t("Öppna issues") }}</span
-              ><strong
-                >{{ stats.open }}<small>{{ t("att ta vidare") }}</small></strong
-              >
-            </div>
-          </div>
-          <div class="stat">
-            <span class="stat-icon progress"><Activity :size="20" /></span>
-            <div>
-              <span class="stat-label">{{ t("Pågående") }}</span
-              ><strong
-                >{{ stats.progress }}<small>{{ t("just nu") }}</small></strong
-              >
-            </div>
-          </div>
-          <div class="stat">
-            <span class="stat-icon closed"><CircleCheck :size="20" /></span>
-            <div>
-              <span class="stat-label">{{ t("Stängda") }}</span
-              ><strong
-                >{{ stats.closed
-                }}<small>{{ t("senaste 30 dagarna") }}</small></strong
-              >
-            </div>
-          </div>
-        </section>
+        <OverviewSummary :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
+          :live="!showingCache && !restoring" :session="generation" :now="now" :logged-in="loggedIn" :busy="busy"
+          @choose-repositories="picker = true" />
         <div class="board-toolbar">
           <label class="search"
             ><Search :size="17" /><input

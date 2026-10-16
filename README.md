@@ -11,6 +11,7 @@ Follow work across repositories without switching tabs. Backlog sorts by priorit
 - **The context you need:** read issue descriptions, comments and closing commit details, including embedded images linked to GitHub repository files.
 - **Ready when you return:** encrypted local sign-in and content cache, with automatic GitHub updates.
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
+- **See changes:** Overview counts briefly highlight increases and decreases, with a daily count of loaded issues closed today in your local timezone.
 - **Hear progress:** enable a repository’s notifications for distinct sounds when work starts, closes, becomes blocked or returns to Backlog. Audio resumes after interacting with the dashboard; browsers may delay background updates.
 
 Issueflow reads GitHub. Make issue changes on GitHub; private content stays in your browser's encrypted storage.
