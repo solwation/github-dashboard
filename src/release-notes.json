@@ -106,6 +106,13 @@
       },
       {
         "text": {
+          "sv": "Repoväljaren och label-dialogen håller tangentbordsfokus inom dialogen, stängs alltid med Esc och återför fokus till knappen.",
+          "en": "The repository picker and label dialog keep keyboard focus inside, always close with Esc and return focus to the opening button."
+        },
+        "issues": [109]
+      },
+      {
+        "text": {
           "sv": "Cachad vy återställs lugnare, uppdateringar aktiveras säkrare och otillgängliga commitdetaljer döljs; Inställningar, språkminne och filtrerade översiktssiffror har rättats.",
           "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
