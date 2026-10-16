@@ -10,6 +10,8 @@ test("repository filters stay independent and combine with the global filter in 
   const weekendFilter = page.getByRole("textbox", { name: "Filtrera issues i demo/weekend-project", exact: true });
   const globalFilter = page.getByRole("textbox", { name: "Sök issues", exact: true });
 
+  await expect(design.locator('.lane-header').getByRole('textbox', { name: 'Filtrera issues i demo/design-system', exact: true })).toBeVisible();
+  await expect(weekend.locator('.lane-header').getByRole('textbox', { name: 'Filtrera issues i demo/weekend-project', exact: true })).toBeVisible();
   await designFilter.fill("BUG");
   await expect(design.locator(".backlog .issue-card")).toHaveCount(2);
   await expect(design.locator(".progress .issue-card")).toHaveCount(0);
@@ -42,6 +44,12 @@ test("repository controls work with keyboard on mobile and translate into Englis
   await page.goto("/");
   await page.getByRole("button", { name: "Utforska en demo" }).click();
   const filter = page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true });
+  const header = page.locator('#repo-1 .lane-header');
+  await expect(header.getByRole('textbox', { name: 'Filtrera issues i demo/design-system', exact: true })).toBeVisible();
+  await header.getByRole('button', { name: 'Kollapsa design-system', exact: true }).click();
+  await expect(filter).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Expandera design-system', exact: true })).toBeVisible();
+  await header.getByRole('button', { name: 'Expandera design-system', exact: true }).click();
   await filter.focus();
   await page.keyboard.type("absent-result");
   await page.keyboard.press("Tab");
@@ -50,6 +58,11 @@ test("repository controls work with keyboard on mobile and translate into Englis
   await page.keyboard.press("Enter");
   await expect(filter).toHaveValue("");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const headerBox = await header.boundingBox();
+  const filterBox = await filter.boundingBox();
+  expect(filterBox!.x).toBeGreaterThanOrEqual(headerBox!.x);
+  expect(filterBox!.x + filterBox!.width).toBeLessThanOrEqual(headerBox!.x + headerBox!.width);
+  expect(filterBox!.y + filterBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();

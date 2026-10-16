@@ -1218,6 +1218,18 @@ onMounted(async () => {
               </div>
             </div>
             <div class="lane-meta">
+              <div class="repository-filter">
+                <label class="sr-only" :for="'repository-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
+                <div class="repository-search">
+                  <Search :size="14" aria-hidden="true" />
+                  <input :id="'repository-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]"
+                    :placeholder="t('Sök issues, labels eller nummer…')" />
+                  <button class="icon-button repository-filter-clear" :disabled="!repositoryQueries[lane.repo.full_name]"
+                    :aria-label="t('Rensa filtret för {name}', { name: lane.repo.full_name })"
+                    :title="t('Rensa filtret för {name}', { name: lane.repo.full_name })"
+                    @click="repositoryQueries[lane.repo.full_name] = ''"><X :size="13" aria-hidden="true" /></button>
+                </div>
+              </div>
               <span class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
                 <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
                 <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
@@ -1265,19 +1277,6 @@ onMounted(async () => {
             </div>
           </header>
           <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
-          <div class="repository-filter">
-            <label :for="'repository-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
-            <div class="repository-filter-controls">
-              <div class="repository-search">
-                <Search :size="16" aria-hidden="true" />
-                <input :id="'repository-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]"
-                  :placeholder="t('Sök issues, labels eller nummer…')" />
-              </div>
-              <button class="button small" :disabled="!repositoryQueries[lane.repo.full_name]"
-                :aria-label="t('Rensa filtret för {name}', { name: lane.repo.full_name })"
-                @click="repositoryQueries[lane.repo.full_name] = ''">{{ t("Rensa") }}</button>
-            </div>
-          </div>
           <p v-if="(query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">
             {{ t("Inga issues i {name} matchar filtren.", { name: lane.repo.full_name }) }}
           </p>
@@ -1506,10 +1505,11 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.repository-filter { padding: 14px 18px; display: grid; gap: 7px; font-size: 12px; color: var(--muted); }
-.repository-filter-controls { display: flex; gap: 8px; }
-.repository-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: min(100%, 420px); min-width: 0; }
-.repository-search input { width: 100%; min-width: 0; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
+.repository-filter { flex: 0 1 220px; min-width: 0; max-width: 100%; font-size: 11px; color: var(--muted); }
+.repository-search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding-left: 8px; min-width: 0; }
+.repository-search > svg { flex-shrink: 0; }
+.repository-filter-clear { flex-shrink: 0; width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
+.repository-search input { width: 100%; min-width: 0; padding-block: 7px; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
 .repository-search:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
 .repository-filter-empty { margin: 0; padding: 0 18px 14px; color: var(--muted); font-size: 13px; }
 </style>
