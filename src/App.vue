@@ -46,6 +46,7 @@ import { matchesIssueFilters } from "./lib/issue-filter";
 import { combinedItems, boardEntryKey } from "./lib/combined-board";
 import { reconcileRepositoryColors } from "./lib/repository-color";
 import LogoutDialog from "./components/LogoutDialog.vue";
+import AccountSwitchDialog from "./components/AccountSwitchDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import { restorePermissionAcknowledgements, reconcilePermissionAcknowledgements } from "./lib/permission-acknowledgements";
 import type { PermissionReport } from "./lib/permissions";
@@ -270,6 +271,36 @@ const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
 const handoffOpen = ref(false);
 const scannerOpen = ref(false);
+const accountSwitch = ref<{ current: string | null; incoming: string } | null>(null);
+let resolveAccountSwitch: ((confirmed: boolean) => void) | null = null;
+function answerAccountSwitch(confirmed: boolean) {
+  const resolve = resolveAccountSwitch;
+  resolveAccountSwitch = null;
+  accountSwitch.value = null;
+  resolve?.(confirmed);
+}
+/** Unsigned handoff payloads may come from anyone; never replace a different saved sign-in silently. */
+async function confirmAccountSwitch(current: string | null, token: string): Promise<boolean> {
+  const incoming = (await new GitHub(token).user()).login;
+  answerAccountSwitch(false);
+  return new Promise(resolve => {
+    resolveAccountSwitch = resolve;
+    accountSwitch.value = { current, incoming };
+  });
+}
+async function importScanned(payload: HandoffSettings) {
+  scannerOpen.value = false;
+  // A user-started scan while signed in is meant to sync preferences, so a different account still needs consent.
+  if (user.value && !isDemo.value && sessionToken.value && payload.token !== sessionToken.value) {
+    try {
+      if (!await confirmAccountSwitch(user.value.login, payload.token)) return;
+    } catch (e) {
+      error.value = message(e);
+      return;
+    }
+  }
+  await connect(payload.token, payload);
+}
 const commitRetry = ref(0);
 const relationsRevision = ref(0);
 const permissionReport = ref<PermissionReport>([]);
@@ -1090,7 +1121,25 @@ onMounted(async () => {
     // Remove recognized credential fragments before authentication or network calls.
     const incoming = consumeHandoff();
     if (incoming) {
-      await connect(incoming.token, incoming);
+      let remembered: string | null = null, vaultError: unknown;
+      try { remembered = await loadToken(); } catch (e) { vaultError = e; }
+      if (remembered === incoming.token || (!remembered && !vaultError)) {
+        await connect(incoming.token, incoming);
+        return;
+      }
+      savedSession.value = true;
+      const snapshot = remembered ? await readSnapshot(remembered) : null;
+      let confirmed = false, lookupError = "";
+      try {
+        const current = snapshot?.user.login ?? (remembered ? (await new GitHub(remembered).user().catch(() => null))?.login ?? null : null);
+        confirmed = await confirmAccountSwitch(current, incoming.token);
+      } catch (e) {
+        lookupError = message(e);
+      }
+      if (confirmed) await connect(incoming.token, incoming);
+      else if (remembered) await connect(remembered, undefined, snapshot);
+      else error.value = message(vaultError);
+      if (lookupError && !error.value) error.value = lookupError;
       return;
     }
     const oauthToken = await callback();
@@ -1845,7 +1894,9 @@ onMounted(async () => {
     @scan="scannerOpen = true"
   />
   <ScanLogin v-if="scannerOpen" :mode="loggedIn ? 'preferences' : 'login'" @close="scannerOpen = false"
-    @scanned="payload => { scannerOpen = false; void connect(payload.token, payload); }" />
+    @scanned="payload => void importScanned(payload)" />
+  <AccountSwitchDialog :open="Boolean(accountSwitch)" :current="accountSwitch?.current ?? null"
+    :incoming="accountSwitch?.incoming ?? ''" @cancel="answerAccountSwitch(false)" @confirm="answerAccountSwitch(true)" />
 </template>
 
 <style scoped>

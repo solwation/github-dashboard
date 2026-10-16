@@ -497,6 +497,14 @@ export const english: Record<string, string> = {
     "The transfer is accepted for five minutes. It can be used more than once. Closing this dialog removes the code here, but does not revoke your GitHub token or copies of the link.",
   "Skapa ny QR-kod": "Create new QR code",
   "Logga ut?": "Sign out?",
+  "Byta GitHub-konto?": "Switch GitHub account?",
+  "En inloggning vill ersätta den som är sparad i den här webbläsaren. Byter du tas den sparade token och dess cachade innehåll bort.":
+    "A sign-in wants to replace the one saved in this browser. If you switch, the saved token and its cached content are removed.",
+  "Sparat konto": "Saved account",
+  "Okänt (den sparade inloggningen kunde inte läsas)": "Unknown (the saved sign-in could not be read)",
+  "Nytt konto": "New account",
+  "Behåll sparat konto": "Keep saved account",
+  "Byt konto": "Switch account",
   "Din sparade GitHub-token (PAT) tas bort från den här webbläsaren när du loggar ut. Du behöver ange den igen nästa gång du loggar in.":
     "Your saved GitHub token (PAT) will be removed from this browser when you sign out. You will need to enter it again the next time you sign in.",
   Avbryt: "Cancel",
