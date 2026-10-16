@@ -33,8 +33,10 @@ const props = defineProps<{
   commentsSession?: number;
   commitRetry?: number;
   recentMove?: boolean;
+  timedOut?: boolean;
+  timeoutMinutes?: number;
 }>();
-const emit = defineEmits<{ read: [] }>();
+const emit = defineEmits<{ read: []; ignoreTimeout: [] }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
 const commit = ref<ClosingCommit | null>(null);
@@ -112,7 +114,7 @@ const visibleLabels = computed(() =>
   <article
     ref="card"
     class="issue-card"
-    :class="[col, { 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove }]"
+    :class="[col, { 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove, 'issue-timeout': timedOut && col === 'progress' }]"
   >
     <button v-if="recentMove" class="movement-marker" @click="emit('read')"
       :aria-label="t('Nyligen flyttad. Markera som läst')">
@@ -154,6 +156,10 @@ const visibleLabels = computed(() =>
       >
     </div>
     <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
+    <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
+      <p>{{ t("Timeout: pågående i {duration}, över gränsen {minutes} min.", { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 }) }}</p>
+      <button type="button" class="timeout-acknowledge" :aria-label="t('Ignorera timeout för #{number}', { number: issue.number })" @click="emit('ignoreTimeout')">{{ t("Ignorera timeout") }}</button>
+    </div>
     <div class="card-bottom">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })">
@@ -242,6 +248,11 @@ const visibleLabels = computed(() =>
   color: #87929a;
 }
 .issue-card.unread-move { border-color: #2875ba; box-shadow: 0 0 0 2px #2875ba55; background: #f1f8ff; }
+.issue-card.issue-timeout { border-color: #b42332; background: #fff1f2; box-shadow: 0 0 0 2px #b4233233; }
+.timeout-warning { color: #9f1c2a; font-size: .75rem; line-height: 1.5; }
+.timeout-warning p { margin: .7rem 0 .4rem; }
+.timeout-acknowledge { border: 1px solid #b42332; border-radius: .35rem; background: white; color: #9f1c2a; padding: .4rem .6rem; min-height: 44px; cursor: pointer; font-size: inherit; }
+.timeout-acknowledge:focus-visible { outline: 2px solid #b42332; outline-offset: 2px; }
 .movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
 .closing-commit {

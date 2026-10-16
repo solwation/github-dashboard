@@ -1,3 +1,4 @@
+import { parseTimeoutAcknowledgements, type TimeoutAcknowledgement } from "./timeouts";
 import { loadContent, MAX_CONTENT_BYTES, saveContent } from "./vault";
 import type { GitHub } from "./github";
 import type { Lane, Repo } from "./model";
@@ -10,6 +11,7 @@ export interface ContentSnapshot {
   user: { login: string; avatar_url: string };
   repos: Repo[];
   lanes: Lane[];
+  timeoutAcknowledgements?: TimeoutAcknowledgement[];
   responses: ReturnType<GitHub["exportResponses"]>;
 }
 export async function readSnapshot(token: string, now = Date.now()): Promise<ContentSnapshot | null> {
@@ -20,6 +22,7 @@ export async function readSnapshot(token: string, now = Date.now()): Promise<Con
       typeof data.user?.login !== "string" || !Array.isArray(data.repos) || !Array.isArray(data.lanes) || !Array.isArray(data.responses) ||
       data.repos.length > 2000 || data.lanes.length > 2000 ||
       !data.lanes.every(lane => typeof lane.repo?.full_name === "string" && Array.isArray(lane.issues) && Array.isArray(lane.labels))) return null;
+    if (data.timeoutAcknowledgements !== undefined) data.timeoutAcknowledgements = parseTimeoutAcknowledgements(data.timeoutAcknowledgements);
     return data;
   } catch { return null; }
 }
@@ -28,6 +31,7 @@ export function writeSnapshot(token: string, snapshot: Omit<ContentSnapshot, "ve
   // Budget their serialized UTF-8 bytes before encryption rather than rejecting a
   // useful board because GitHub returned large fields or unrelated pull requests.
   const content: ContentSnapshot = { ...snapshot, version: 1, savedAt: Date.now(), responses: [] };
+  if (content.timeoutAcknowledgements !== undefined) content.timeoutAcknowledgements = parseTimeoutAcknowledgements(content.timeoutAcknowledgements);
   const encoder = new TextEncoder();
   let bytes = encoder.encode(JSON.stringify(content)).byteLength;
   for (const response of snapshot.responses.slice(-100).reverse()) {

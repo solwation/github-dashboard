@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { DEFAULT_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES, parseTimeoutMinutes } from "../lib/timeouts";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import BuildInfo from "./BuildInfo.vue";
@@ -9,7 +10,7 @@ import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
-const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean }>(), { permissions: () => [] });
+const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; timeoutMinutes?: number }>(), { permissions: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
 const acknowledgedMissing = ref(new Set<string>());
 const permissionsOpen = ref(false);
 const permissionKey = (permission: string, repo: string) => `${permission}:${repo}`;
@@ -33,7 +34,15 @@ watch(() => props.permissions, () => {
   acknowledgedMissing.value = seen;
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null] }>();
+const emit = defineEmits<{ checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
+function changeTimeout(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const minutes = parseTimeoutMinutes(input.value);
+  input.setCustomValidity(minutes === null ? t("Ange ett heltal mellan 1 och 10080 minuter.") : "");
+  if (minutes !== null) emit("update:timeoutMinutes", minutes);
+  else input.reportValidity();
+}
+
 const dialog = ref<HTMLDialogElement | null>(null);
 function change(event: Event) {
   setLanguage((event.target as HTMLSelectElement).value as LanguagePreference);
@@ -78,7 +87,15 @@ function change(event: Event) {
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
+<<<<<<< HEAD
     <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
+=======
+    <label class="rule-field" for="issue-timeout-minutes">{{ t("Tidsgräns för pågående issues (minuter)") }}</label>
+    <input id="issue-timeout-minutes" type="number" min="1" :max="MAX_TIMEOUT_MINUTES" step="1" required
+      :value="timeoutMinutes" :disabled="!canEditLimit" aria-describedby="issue-timeout-help" @change="changeTimeout" />
+    <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
+    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" />
+>>>>>>> 312eaff (feat: track and acknowledge overdue in-progress work locally (#56))
     <WorkflowGuide />
     <BuildInfo />
     <div class="modal-footer">

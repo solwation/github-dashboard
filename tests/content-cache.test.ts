@@ -47,6 +47,14 @@ describe("bounded content snapshot", () => {
     save.mockRejectedValueOnce(failure);
     await expect(writeSnapshot("fixture", snapshot())).rejects.toBe(failure);
   });
+  it("preserves only bounded validated timeout acknowledgements inside credential-bound content", async () => {
+    const acknowledgement = { repo: "sample/repo", issueId: 1, startedAt: "2026-10-16T10:00:00.000Z" };
+    load.mockResolvedValue({ ...valid, timeoutAcknowledgements: [acknowledgement, { issueId: "bad" }] });
+    expect((await readSnapshot("fixture", now))?.timeoutAcknowledgements).toEqual([acknowledgement]);
+    await writeSnapshot("fixture", { ...snapshot(), timeoutAcknowledgements: [acknowledgement] });
+    expect(save.mock.calls[0]![0]).toBe("fixture");
+    expect(save.mock.calls[0]![1].timeoutAcknowledgements).toEqual([acknowledgement]);
+  });
   it("missing cache falls back to normal token sign-in", async () => {
     load.mockResolvedValue(null);
     expect(await readSnapshot("fixture", now)).toBeNull();
