@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
 import { createHandoffUrl, parseHandoffUrl, type HandoffPayload, type HandoffPreferences } from "../src/lib/handoff";
@@ -8,6 +9,7 @@ const token = "fictional-optical-sync-token";
 const preferences: HandoffPreferences = {
   projectOrder: ["sample/second", "sample/test"], collapsedRepos: ["sample/second"],
   columnLimit: 7, repositoryColumnLimits: { "sample/test": 2 }, notificationRepos: ["sample/test"],
+  repositoryColors: { "sample/test": "#8b43b5", "sample/second": "#987016" },
   language: "sv", query: "Fixture", repositoryQueries: { "sample/test": "ready" },
   repoQuery: "sample", hideCoordination: false, timeoutMinutes: 45, currentView: "overview",
   statistics: { "sample/test": { from: "2026-10-01", to: "2026-10-16", label: "", contributor: "", metric: "closed" } },
@@ -29,7 +31,8 @@ async function exportCode(page: Page): Promise<{ payload: HandoffPayload; image:
   await page.getByRole("button", { name: /^(Öppna på mobilen|Synka med QR-kod)$/ }).click();
   const img = page.getByRole("img", { name: "QR-kod för konto och inställningar", exact: true });
   await expect(img).toHaveAttribute("src", /^data:image\/png/);
-  const pixels = await img.evaluate((element: HTMLImageElement) => {
+  const pixels = await img.evaluate(async (element: HTMLImageElement) => {
+    await element.decode();
     const canvas = document.createElement("canvas");
     canvas.width = element.naturalWidth; canvas.height = element.naturalHeight;
     const context = canvas.getContext("2d")!;
@@ -37,7 +40,13 @@ async function exportCode(page: Page): Promise<{ payload: HandoffPayload; image:
     return { data: Array.from(context.getImageData(0, 0, canvas.width, canvas.height).data), width: canvas.width, height: canvas.height };
   });
   const decoded = jsQR(new Uint8ClampedArray(pixels.data), pixels.width, pixels.height);
+  if (!decoded) {
+    const path = test.info().outputPath("fictional-profile-qr.png");
+    await writeFile(path, Buffer.from((await img.getAttribute("src"))!.split(",")[1]!, "base64"));
+    await test.info().attach("fictional-profile-qr", { path, contentType: "image/png" });
+  }
   expect(Boolean(decoded)).toBe(true);
+  expect(pixels.width % (decoded!.version * 4 + 25)).toBe(0);
   const payload = parseHandoffUrl(decoded!.data, base);
   const image = (await img.getAttribute("src"))!;
   await page.getByRole("dialog", { name: "Synka med QR-kod", exact: true }).getByRole("button", { name: "Stäng", exact: true }).click();
@@ -53,10 +62,16 @@ async function scanCode(page: Page, image: string) {
   await expect(page.getByRole("dialog", { name: "Läs QR-kod", exact: true })).toHaveCount(0);
 }
 
+async function expectTransferredColors(page: Page) {
+  await expect(page.locator('.sidebar-repository-row[data-repository="sample/test"] .repo-dot')).toHaveCSS("background-color", "rgb(139, 67, 181)");
+  await expect(page.locator('.sidebar-repository-row[data-repository="sample/second"] .repo-dot')).toHaveCSS("background-color", "rgb(152, 112, 22)");
+}
+
 test("desktop and mobile optically sync all preferences repeatedly without logout or document reload", async ({ page, browser }) => {
   await fixture(page);
   await page.goto(createHandoffUrl(base, { token, selected: ["sample/test", "sample/second"], rules: { "sample/test": { progress: "Working" } }, preferences }).url);
   await expect(page.locator(".repo-lane")).toHaveCount(2);
+  await expectTransferredColors(page);
   const desktop = await exportCode(page);
   expect(desktop.payload.version).toBe(2);
   expect(desktop.payload.preferences).toMatchObject(preferences);
@@ -71,6 +86,7 @@ test("desktop and mobile optically sync all preferences repeatedly without logou
   await mobile.evaluate(() => Object.assign(window, { opticalDocumentMarker: "same-document" }));
   await scanCode(mobile, desktop.image);
   await expect(mobile.locator(".repo-lane")).toHaveCount(2);
+  await expectTransferredColors(mobile);
   expect(await mobile.evaluate(() => (window as unknown as { opticalDocumentMarker: string }).opticalDocumentMarker)).toBe("same-document");
   expect(await mobile.evaluate(() => Notification.permission)).toBe(localPermission);
   const imported = await exportCode(mobile);
@@ -83,6 +99,7 @@ test("desktop and mobile optically sync all preferences repeatedly without logou
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   await expect(page.getByRole("textbox", { name: "Sök issues", exact: true })).toHaveValue("return to desktop");
+  await expectTransferredColors(page);
   // A language-only edit must replace the account preference restored on reload.
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
@@ -101,6 +118,7 @@ test("optical import filters inaccessible repository preferences and legacy code
   expect(transferred.payload.selected).toEqual(["sample/test"]);
   expect(transferred.payload.preferences?.projectOrder).toEqual(["sample/test"]);
   expect(transferred.payload.preferences?.collapsedRepos).toEqual([]);
+  expect(transferred.payload.preferences?.repositoryColors).toEqual({ "sample/test": "#8b43b5" });
   expect(transferred.payload.rules).toEqual({});
   // A v1 code contains no language, limits, filters or other new preference fields.
   const legacy = btoa(JSON.stringify({ version: 1, issuedAt: Date.now(), token, selected: ["sample/test"], rules: {} })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -110,4 +128,5 @@ test("optical import filters inaccessible repository preferences and legacy code
   expect(afterLegacy.payload.preferences?.columnLimit).toBe(7);
   expect(afterLegacy.payload.preferences?.timeoutMinutes).toBe(45);
   expect(afterLegacy.payload.preferences?.query).toBe("Fixture");
+  expect(afterLegacy.payload.preferences?.repositoryColors).toEqual({ "sample/test": "#8b43b5" });
 });

@@ -2,16 +2,16 @@
   {
     "date": "2026-10-16",
     "summary": {
-      "sv": "Tydligare projektfärger i vänstermenyn och på korten. Publicering sker först när GitHub Actions har kontrollerat att arbetet är klart.",
-      "en": "Clearer project colors in the sidebar and on cards. GitHub Actions checks that work is ready before publishing."
+      "sv": "Projekt har tydligt åtskilda färger som sparas och följer QR-synken. Större QR-profiler kan läsas tillförlitligt.",
+      "en": "Projects have distinct colors that are saved and carried through QR sync. Larger QR profiles can be read reliably."
     },
     "sections": [
       {
         "text": {
-          "sv": "Växla mellan separata tavlor och en gemensam board; tydliga färgprickar och kortkanter matchar projekten i vänstermenyn, och vyvalet följer QR-synken.",
-          "en": "Switch between separate boards and one combined board; clear dots and card accents match sidebar projects, and QR sync carries your view choice."
+          "sv": "Projekt har tydligt åtskilda färger som matchar vänstermenyn och korten i separata eller gemensamma tavlor; tilldelningen sparas och följer QR-synken.",
+          "en": "Projects have contrasting colors matching the sidebar and cards in separate or combined boards; assignments are saved and carried through QR sync."
         },
-        "issues": [81, 90]
+        "issues": [81, 90, 91]
       },
       {
         "text": {
@@ -78,10 +78,10 @@
       },
       {
         "text": {
-          "sv": "QR-synk överför konto och inställningar åt båda hållen utan utloggning, med enklare skanningsgenvägar; startsidan förklarar fokus på AI-agenters arbete.",
-          "en": "QR sync transfers accounts and settings both ways without signing out, with easier scanning shortcuts; the start page explains the AI-agent focus."
+          "sv": "QR-synk överför kompletta profiler åt båda hållen utan utloggning, även större koder; skanningsgenvägar och startsidans AI-agentbeskrivning har förbättrats.",
+          "en": "QR sync transfers complete profiles both ways without signing out, including larger codes; scanning shortcuts and the start page’s AI-agent description are clearer."
         },
-        "issues": [63, 54, 72, 74]
+        "issues": [63, 54, 72, 74, 92]
       },
       {
         "text": {

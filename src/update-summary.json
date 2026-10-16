@@ -1,11 +1,11 @@
 {
-  "baseCommit": "39d866513b5708731addaba14555f30546b59d5c",
+  "baseCommit": "ce67d54455ebd3cca49758431547ccac6a638d5d",
   "summary": {
-    "sv": "Tydligare projektfärger i vänstermenyn och på korten. Publicering sker först när GitHub Actions har kontrollerat att arbetet är klart.",
-    "en": "Clearer project colors in the sidebar and on cards. GitHub Actions checks that work is ready before publishing."
+    "sv": "Projekt har tydligt åtskilda färger som sparas och följer QR-synken. Större QR-profiler kan läsas tillförlitligt.",
+    "en": "Projects have distinct colors that are saved and carried through QR sync. Larger QR profiles can be read reliably."
   },
   "issues": [
-    89,
-    90
+    91,
+    92
   ]
 }

@@ -7,7 +7,7 @@ Track your AI agents’ work through GitHub issues.
 One view of what your agents plan, work on and complete across your repositories. Follow AI agents that use GitHub issues as their work queue, or track issues you handle yourself. Backlog sorts by priority, active work shows elapsed time, and Closed keeps the last 30 days in view.
 
 - **Find issues:** combine the global text filter with independent filters per repository; search titles, issue numbers and labels, and clear each repository filter separately.
-- **Split or combine:** Split by repository is on by default; uncheck it for one board covering every selected project. Cards show repository names and visible color accents matching the sidebar dots in both views. The choice follows account and optical-sync preferences. Combined columns use the global card limit.
+- **Split or combine:** Split by repository is on by default; uncheck it for one board covering every selected project. Cards show repository names and contrasting palette colors matching the sidebar dots in both views. Color assignments stay stable when sorting or changing the selection, are saved per account and follow QR sync alongside the view choice. Combined columns use the global card limit.
 - **Your layout:** reorder projects, collapse repositories and set how many cards each column shows. Confirmed repository selections appear immediately; new projects show loading while existing data stays visible.
 - **Issue hierarchy:** parent cards show closed/total sub-issue progress; sub-issues link to their parent, including across repositories. Relations load for visible cards and stay hidden when unavailable. Counts come from GitHub and are independent of dashboard filters.
 - **The context you need:** read issue descriptions, comments shown newest first with live relative timestamps for the first seven days (exact time on hover), and closing commit details, including embedded images linked to GitHub repository files.
@@ -49,6 +49,8 @@ Requires Node 22.20+.
 npm ci
 npm run dev
 ```
+
+Use Node.js 22. `npm ci` applies the version-23 jsQR compatibility correction used by optical profile sync.
 
 Run affected tests locally before pushing; use `npm run build` for code changes. Integration pushes are allowed while work remains; GitHub Actions decides publication through a fresh issue/delta gate before building and again before deployment. Unfinished or active issues block publication; locally verified, unclaimed `needs-deploy` issues must appear in the prepared delta. Manual deployment never bypasses the gate. Orkester watches for new issues every minute for 60 minutes after the last verified release; new completed work restarts that window. Generate the popup summary in `src/update-summary.json` from that publication’s delta against the previously deployed build (maximum 180 characters per language). Full daily notes remain available through Read more. The build rejects unresolved merge markers, including those that would otherwise render as text in Vue templates. Browser tests need a one-time `npx playwright install chromium`. Actions only builds and publishes.
 
