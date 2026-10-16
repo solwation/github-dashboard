@@ -304,10 +304,11 @@ export class GitHub {
       ),
       this.all<Label>(`${root}/labels?per_page=100`),
     ]);
+    // Copy before enrichment: request() returns the objects held in the ETag cache.
     const issues = [
       ...open,
       ...closed.filter((i) => i.closed_at && i.closed_at >= since),
-    ].filter((i) => !i.pull_request);
+    ].filter((i) => !i.pull_request).map((i) => ({ ...i }));
     const active = issues.filter((i) => column(i, rules) === "progress");
     // Limit simultaneous timeline requests; each timeline is fully paginated.
     let cursor = 0;
@@ -322,6 +323,7 @@ export class GitHub {
               ),
               rules,
             );
+            issue.timerError = false;
           } catch {
             issue.timerError = true;
           }
