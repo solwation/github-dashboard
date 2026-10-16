@@ -33,6 +33,7 @@ const props = defineProps<{
   demo?: boolean;
   celebrate?: boolean;
   repository?: string;
+  assignedColor?: string;
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
@@ -121,7 +122,7 @@ const visibleLabels = computed(() =>
   <article
     ref="card"
     class="issue-card"
-    :style="repository ? { '--repository-color': repositoryColor(repository) } : undefined"
+    :style="repository ? { '--repository-color': assignedColor || repositoryColor(repository) } : undefined"
     :class="[col, { 'has-repository': !!repository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timedOut && col === 'progress' }]"
   >
     <button v-if="recentMove" class="movement-marker" @click="emit('read')"

@@ -1,3 +1,4 @@
+import { reconcileRepositoryColors, validRepositoryColor } from "./repository-color";
 import { validColumnLimit } from "./column-limits";
 import { reconcileOrder } from "./project-layout";
 import { statisticsMetrics, type StatisticsMetric } from "./statistics";
@@ -19,6 +20,7 @@ export interface HandoffStatisticsFilter {
 }
 export type HandoffStatisticsPreferences = Record<string, HandoffStatisticsFilter>;
 export interface HandoffPreferences {
+  repositoryColors?: Record<string, string>;
   projectOrder?: string[];
   collapsedRepos?: string[];
   columnLimit?: number;
@@ -57,6 +59,7 @@ function validDate(value: unknown): value is string {
     Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 }
 const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> = {
+  repositoryColors: value => repoMap(value, validRepositoryColor),
   projectOrder: handoffRepositoryList, collapsedRepos: handoffRepositoryList,
   columnLimit: validColumnLimit, repositoryColumnLimits: value => repoMap(value, validColumnLimit),
   notificationRepos: handoffRepositoryList, language: value => ["auto", "sv", "en"].includes(value as string),
@@ -105,5 +108,6 @@ export function mergeHandoffPreferences(
   if (merged.repositoryColumnLimits) merged.repositoryColumnLimits = map(merged.repositoryColumnLimits);
   if (merged.repositoryQueries) merged.repositoryQueries = map(merged.repositoryQueries);
   if (merged.statistics) merged.statistics = map(merged.statistics);
+  if (merged.repositoryColors) merged.repositoryColors = reconcileRepositoryColors(merged.selected, map(merged.repositoryColors));
   return merged;
 }

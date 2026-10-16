@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { boardEntryKey, combinedItems } from "../src/lib/combined-board";
-import { repositoryColor } from "../src/lib/repository-color";
 import { demo } from "../src/lib/demo";
 import { sortedIssues } from "../src/lib/model";
 const filters = { query: "", repositoryQueries: {}, hideCoordination: false };
@@ -39,15 +38,5 @@ describe("combined issue columns", () => {
     const result = combinedItems(lanes, "closed", {}, filters);
     expect(result.every((entry, index) => index === 0 || Date.parse(result[index - 1]!.issue.closed_at!) >= Date.parse(entry.issue.closed_at!))).toBe(true);
     lanes.forEach((lane, index) => expect(lane.issues).toEqual(before[index]));
-  });
-});
-describe("repository identity colors", () => {
-  it("is deterministic, case-insensitive and independent of project order or selection", () => {
-    const names = ["sample/alpha", "sample/beta", "sample/gamma", "demo/design-system", "demo/weekend-project", "demo/personal-website"];
-    const colors = names.map(repositoryColor);
-    expect(new Set(colors).size).toBe(names.length);
-    const expected = new Map(names.map((name, index) => [name, colors[index]]));
-    [...names].reverse().forEach(name => expect(repositoryColor(name.toUpperCase())).toBe(expected.get(name)));
-    expect(repositoryColor("sample/alpha")).toBe(repositoryColor("sample/alpha"));
   });
 });

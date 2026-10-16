@@ -44,7 +44,7 @@ import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } fro
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import { combinedItems, boardEntryKey } from "./lib/combined-board";
-import { repositoryColor } from "./lib/repository-color";
+import { reconcileRepositoryColors } from "./lib/repository-color";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import type { PermissionReport } from "./lib/permissions";
@@ -127,6 +127,7 @@ const user = ref<{ login: string; avatar_url: string } | null>(null);
 const lanes = ref<Lane[]>([]);
 const repos = ref<Repo[]>([]);
 const selected = ref<string[]>([]);
+const repositoryColors = ref<Record<string, string>>({});
 const projectOrder = ref<string[]>([]);
 const collapsedRepos = ref<string[]>([]);
 const layoutAnnouncement = ref("");
@@ -511,7 +512,11 @@ const stats = computed(() => {
     closed: all.filter(({ i }) => i.state === "closed").length,
   };
 });
+const workspaceRepositoryColors = computed(() => reconcileRepositoryColors(
+  isDemo.value ? lanes.value.map(lane => lane.repo.full_name) : selected.value, repositoryColors.value,
+));
 const transferablePreferences = computed<HandoffPreferences>(() => ({
+  repositoryColors: workspaceRepositoryColors.value,
   projectOrder: projectOrder.value, collapsedRepos: collapsedRepos.value,
   columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
   notificationRepos: notificationRepos.value, language: preference.value,
@@ -520,6 +525,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
+  repositoryColors.value = value.repositoryColors ?? repositoryColors.value;
   projectOrder.value = value.projectOrder ?? projectOrder.value;
   collapsedRepos.value = value.collapsedRepos ?? collapsedRepos.value;
   columnLimit.value = value.columnLimit ?? columnLimit.value;
@@ -553,6 +559,7 @@ function storageKey() {
 }
 function save() {
   if (!user.value) return;
+  repositoryColors.value = workspaceRepositoryColors.value;
   try {
     localStorage.setItem(
       storageKey(),
@@ -574,6 +581,7 @@ function save() {
   }
 }
 function restorePreferences(available: Repo[]) {
+    repositoryColors.value = {};
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
     columnLimit.value = defaultColumnLimit;
@@ -791,6 +799,8 @@ function toggleRepo(name: string) {
     : [...pendingSelected.value, name];
 }
 async function applyRepos() {
+  // Capture initial/default assignments before changing membership.
+  repositoryColors.value = workspaceRepositoryColors.value;
   selected.value = [...pendingSelected.value];
   reconcileSelection();
   picker.value = false;
@@ -798,6 +808,7 @@ async function applyRepos() {
   await refresh(false, true);
 }
 function showDemo() {
+  repositoryColors.value = {};
   splitByRepository.value = true;
   combinedLimits.value = {};
   generation++;
@@ -829,6 +840,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  repositoryColors.value = {};
   showingCache.value = false;
   cacheWarning.value = "";
   tokenInput.value = "";
@@ -1084,6 +1096,7 @@ onMounted(async () => {
     <SidebarRepositories
       :statistics="currentView === 'statistics'"
       :repos="sidebarRepos"
+      :repository-colors="workspaceRepositoryColors"
       :now="now"
       :can-select="loggedIn"
       :restoring="restoring && !loggedIn && !isDemo"
@@ -1510,6 +1523,7 @@ onMounted(async () => {
                   "
                   :issue="issue"
                   :repository="lane.repo.full_name"
+                  :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                   :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
                   :relations-revision="relationsRevision"
                   :rules="rules[lane.repo.full_name] || {}"
@@ -1568,7 +1582,7 @@ onMounted(async () => {
             <summary>{{ t("Repositoryfilter och inställningar") }}</summary>
             <p class="combined-limit-note">{{ t("Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.") }}</p>
             <div v-for="lane in orderedLanes" :key="lane.repo.full_name" class="combined-repository-control" :id="'repo-' + lane.repo.id">
-              <span class="combined-repository-name"><i :style="{ backgroundColor: repositoryColor(lane.repo.full_name) }" aria-hidden="true" />{{ lane.repo.full_name }}</span>
+              <span class="combined-repository-name"><i :style="{ backgroundColor: workspaceRepositoryColors[lane.repo.full_name] }" aria-hidden="true" />{{ lane.repo.full_name }}</span>
               <div class="repository-filter">
                 <label class="sr-only" :for="'combined-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
                 <div class="repository-search"><Search :size="14" aria-hidden="true" /><input :id="'combined-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]" :placeholder="t('Sök issues, labels eller nummer…')" />
@@ -1606,6 +1620,7 @@ onMounted(async () => {
                   :key="boardEntryKey({ lane, issue }, col.key)"
                   :issue="issue"
                   :repository="lane.repo.full_name"
+                  :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                   :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
                   :relations-revision="relationsRevision"
                   :rules="rules[lane.repo.full_name] || {}"

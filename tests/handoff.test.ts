@@ -49,6 +49,7 @@ describe("mobile handoff", () => {
 });
 
 const preferences: Required<HandoffPreferences> = {
+  repositoryColors: { "sample/repo": "#8b43b5" },
   projectOrder: ["sample/second", "sample/repo"],
   collapsedRepos: ["sample/second"], columnLimit: 8,
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"],
@@ -75,6 +76,15 @@ describe("optical preference schema v2", () => {
     expect(partial.preferences).toEqual({ language: "en" });
     expect(mergeHandoffPreferences(current, partial, ["sample/repo", "sample/second"]).columnLimit).toBe(8);
   });
+  it("applies explicit palette maps and repairs collisions only inside the readable selected workspace", () => {
+    const selected = ["Sample/A", "sample/b"];
+    const merged = mergeHandoffPreferences({ selected, rules: {}, repositoryColors: { "Sample/A": "#c65d16" } }, {
+      selected: ["SAMPLE/A", "sample/b", "private/hidden"], rules: {}, preferences: {
+        repositoryColors: { "sample/a": "#8b43b5", "sample/b": "#8b43b5", "private/hidden": "#245bc1" },
+      },
+    }, selected);
+    expect(merged.repositoryColors).toEqual({ "Sample/A": "#8b43b5", "sample/b": "#c65d16" });
+  });
   it("filters every repository collection against actual current access and canonicalizes case", () => {
     const incoming = { ...settings, selected: ["SAMPLE/REPO", "sample/second"], rules: { "SAMPLE/REPO": { progress: "Working" }, "sample/second": { high: "urgent" } }, preferences };
     const before = structuredClone(incoming);
@@ -85,11 +95,16 @@ describe("optical preference schema v2", () => {
     expect(merged.notificationRepos).toEqual(["Sample/Repo"]);
     expect(merged.rules).toEqual({ "Sample/Repo": { progress: "Working" } });
     expect(merged.repositoryColumnLimits).toEqual({ "Sample/Repo": 3 });
+    expect(merged.repositoryColors).toEqual({ "Sample/Repo": "#8b43b5" });
     expect(merged.repositoryQueries).toEqual({ "Sample/Repo": "label:ready" });
     expect(Object.keys(merged.statistics!)).toEqual(["Sample/Repo"]);
     expect(incoming).toEqual(before);
   });
   it.each([
+    { repositoryColors: { "sample/repo": "red" } },
+    { repositoryColors: { "../private": "#245bc1" } },
+    { repositoryColors: { "sample/repo": "#245bc1", "SAMPLE/REPO": "#c65d16" } },
+    { repositoryColors: Object.fromEntries(Array.from({ length: 101 }, (_, n) => ["sample/repo" + n, "#245bc1"])) },
     { columnLimit: 0 }, { columnLimit: 101 }, { columnLimit: "6" },
     { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
     { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" }, { splitByRepository: "false" },
