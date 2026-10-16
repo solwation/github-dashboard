@@ -192,6 +192,10 @@ watch(busy, (running) => {
 const error = ref("");
 const now = ref(Date.now());
 const refreshed = ref<number | null>(null);
+const statusTime = (time: number) => new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit" });
+// Every text the refresh status can show, so it reserves the widest one and never rewraps the toolbar.
+const statusReserve = computed(() => [t("Hämtar…"), t("Väntar på data"),
+  ...[new Date(2000, 0, 1, 8, 58), new Date(2000, 0, 1, 20, 58)].map(time => t("Uppdaterad ") + statusTime(time.getTime()))].join("\n"));
 const showingCache = ref(false);
 const cacheWarning = ref("");
 async function persistContent() {
@@ -1459,18 +1463,17 @@ onMounted(async () => {
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
           ><span class="updated" role="status" aria-live="polite" :aria-busy="busy"
-            ><i />{{
-              busy
-                ? t("Hämtar…")
-                : refreshed
-                ? t("Uppdaterad ") +
-                  new Date(refreshed).toLocaleTimeString(locale, {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : t("Väntar på data")
-            }}<span
+            ><i /><span class="updated-text" :data-reserve="statusReserve"
+              ><span>{{
+                busy
+                  ? t("Hämtar…")
+                  : refreshed
+                  ? t("Uppdaterad ") + statusTime(refreshed)
+                  : t("Väntar på data")
+              }}</span></span
+            ><span
               v-if="loggedIn"
+              class="sync-mode"
               :title="
                 syncError ||
                 t(
