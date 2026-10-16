@@ -1,10 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAppUpdateController } from "../src/composables/useAppUpdate";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { createAppUpdateController, nextLocalMidnight, UPDATE_DEFERRAL_KEY } from "../src/composables/useAppUpdate";
 class Worker extends EventTarget {
   state = "installed";
   postMessage = vi.fn();
 }
-function fixture(initialController = true) {
+class MemoryStorage {
+  values = new Map<string, string>();
+  getItem(key: string) { return this.values.get(key) ?? null; }
+  setItem(key: string, value: string) { this.values.set(key, value); }
+  removeItem(key: string) { this.values.delete(key); }
+}
+interface FixtureOptions { hidden?: boolean; now?: () => number; storage?: MemoryStorage }
+function fixture(initialController = true, options: FixtureOptions = {}) {
   const worker = new Worker();
   const registration = Object.assign(new EventTarget(), {
     waiting: initialController ? (worker as Worker | null) : null,
@@ -20,6 +27,10 @@ function fixture(initialController = true) {
     ready: new Promise(() => {}),
   });
   const events = new EventTarget();
+  const visibility = new EventTarget();
+  // Existing countdown scenarios describe background tabs; visible tabs wait for a choice.
+  let hidden = options.hidden ?? true;
+  const storage = options.storage ?? new MemoryStorage();
   let online = true;
   const reload = vi.fn();
   const controller = createAppUpdateController({
@@ -28,6 +39,10 @@ function fixture(initialController = true) {
     appUrl: "https://example.test/app/",
     online: () => online,
     reload,
+    hidden: () => hidden,
+    visibility: visibility as unknown as Document,
+    storage,
+    ...(options.now ? { now: options.now } : {}),
   });
   controller.start();
   return {
@@ -37,6 +52,11 @@ function fixture(initialController = true) {
     worker,
     reload,
     events,
+    storage,
+    setHidden(value: boolean) {
+      hidden = value;
+      visibility.dispatchEvent(new Event("visibilitychange"));
+    },
     offline() {
       online = false;
     },
@@ -47,8 +67,8 @@ function fixture(initialController = true) {
   };
 }
 const controllers: ReturnType<typeof fixture>[] = [];
-function setup(initialController = true) {
-  const controller = fixture(initialController);
+function setup(initialController = true, options: FixtureOptions = {}) {
+  const controller = fixture(initialController, options);
   controllers.push(controller);
   return controller;
 }
@@ -300,5 +320,135 @@ describe("app version updates", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(replacement.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
     expect(app.error.value).toBe("");
+  });
+});
+describe("update prompt in visible tabs and Not now", () => {
+  // A local time zone with a DST change makes the calendar-day boundary meaningful.
+  const originalTz = process.env.TZ;
+  beforeAll(() => { process.env.TZ = "Europe/Stockholm"; });
+  afterAll(() => { process.env.TZ = originalTz; });
+  const at = (local: string) => new Date(local).getTime();
+
+  it("computes the next local calendar day, including across a DST change", () => {
+    expect(new Date(at("2026-10-16T23:59:59")).getTimezoneOffset()).toBe(-120);
+    expect(nextLocalMidnight(at("2026-10-16T09:30:00"))).toBe(at("2026-10-17T00:00:00"));
+    expect(nextLocalMidnight(at("2026-10-16T00:00:00"))).toBe(at("2026-10-17T00:00:00"));
+    // 25 October 2026 has 25 hours in Stockholm.
+    expect(nextLocalMidnight(at("2026-10-25T12:00:00"))).toBe(at("2026-10-26T00:00:00"));
+    expect(at("2026-10-26T00:00:00") - at("2026-10-25T00:00:00")).toBe(25 * 3600_000);
+  });
+  it("waits for a choice in a visible tab and only counts down in the background", async () => {
+    vi.useFakeTimers();
+    const app = setup(true, { hidden: false });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(app.available.value).toBe(true);
+    expect(app.counting.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(app.worker.postMessage).not.toHaveBeenCalled();
+    app.setHidden(true);
+    expect(app.counting.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(5_000);
+    app.setHidden(false);
+    expect(app.counting.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(app.worker.postMessage).not.toHaveBeenCalled();
+    app.setHidden(true);
+    expect(app.seconds.value).toBe(10);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+  });
+  it("defers until local midnight across background checks and reloads, then prompts again", async () => {
+    vi.useFakeTimers();
+    let clock = at("2026-10-16T23:58:00");
+    const now = () => clock;
+    const storage = new MemoryStorage();
+    const app = setup(true, { hidden: false, now, storage });
+    await vi.advanceTimersByTimeAsync(0);
+    app.defer();
+    expect(app.deferred.value).toBe(true);
+    expect(app.available.value).toBe(true);
+    expect(JSON.parse(storage.getItem(UPDATE_DEFERRAL_KEY)!)).toEqual({ until: at("2026-10-17T00:00:00") });
+    // Background checks, focus, reconnection and hiding the tab neither prompt nor install.
+    app.events.dispatchEvent(new Event("focus"));
+    app.offline();
+    app.online();
+    app.setHidden(true);
+    clock += 60_000;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(app.deferred.value).toBe(true);
+    expect(app.counting.value).toBe(false);
+    expect(app.worker.postMessage).not.toHaveBeenCalled();
+    // A reload on the same day restores the deferral.
+    app.stop();
+    const reloaded = setup(true, { hidden: false, now, storage });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reloaded.available.value).toBe(true);
+    expect(reloaded.deferred.value).toBe(true);
+    clock = at("2026-10-17T00:00:00");
+    await vi.advanceTimersByTimeAsync(250);
+    expect(reloaded.deferred.value).toBe(false);
+    expect(storage.getItem(UPDATE_DEFERRAL_KEY)).toBeNull();
+  });
+  it("keeps a deferred update available for explicit installation and then forgets the deferral", async () => {
+    vi.useFakeTimers();
+    const app = setup(true, { hidden: false });
+    await vi.advanceTimersByTimeAsync(0);
+    app.defer();
+    expect(app.storage.getItem(UPDATE_DEFERRAL_KEY)).not.toBeNull();
+    app.reloadNow();
+    expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+    app.registration.waiting = null;
+    app.serviceWorker.controller = app.worker;
+    app.worker.state = "activated";
+    app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    expect(app.reload).toHaveBeenCalledOnce();
+    expect(app.storage.getItem(UPDATE_DEFERRAL_KEY)).toBeNull();
+  });
+  it("ignores and removes implausible or corrupt deferrals", async () => {
+    vi.useFakeTimers();
+    const clock = at("2026-10-16T12:00:00");
+    const storage = new MemoryStorage();
+    storage.setItem(UPDATE_DEFERRAL_KEY, JSON.stringify({ until: at("2026-10-20T00:00:00") }));
+    const future = setup(true, { hidden: false, now: () => clock, storage });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(future.deferred.value).toBe(false);
+    expect(storage.getItem(UPDATE_DEFERRAL_KEY)).toBeNull();
+    future.stop();
+    storage.setItem(UPDATE_DEFERRAL_KEY, "not json");
+    const corrupt = setup(true, { hidden: false, now: () => clock, storage });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(corrupt.deferred.value).toBe(false);
+    expect(storage.getItem(UPDATE_DEFERRAL_KEY)).toBeNull();
+  });
+  it("follows a deferral made in another tab and still defers without storage", async () => {
+    vi.useFakeTimers();
+    const clock = at("2026-10-16T12:00:00");
+    const storage = new MemoryStorage();
+    const app = setup(true, { hidden: false, now: () => clock, storage });
+    await vi.advanceTimersByTimeAsync(0);
+    storage.setItem(UPDATE_DEFERRAL_KEY, JSON.stringify({ until: at("2026-10-17T00:00:00") }));
+    app.events.dispatchEvent(Object.assign(new Event("storage"), { key: UPDATE_DEFERRAL_KEY }));
+    expect(app.deferred.value).toBe(true);
+    storage.getItem = () => { throw new Error("blocked"); };
+    storage.setItem = () => { throw new Error("blocked"); };
+    const isolated = setup(true, { hidden: true, now: () => clock, storage });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(isolated.counting.value).toBe(true);
+    isolated.defer();
+    expect(isolated.deferred.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(isolated.worker.postMessage).not.toHaveBeenCalled();
+  });
+  it("resumes an explicit offline installation when the visible tab reconnects", async () => {
+    vi.useFakeTimers();
+    const app = setup(true, { hidden: false });
+    await vi.advanceTimersByTimeAsync(0);
+    app.offline();
+    app.reloadNow();
+    expect(app.error.value).toContain("offline");
+    expect(app.worker.postMessage).not.toHaveBeenCalled();
+    app.online();
+    expect(app.applying.value).toBe(true);
+    expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
   });
 });

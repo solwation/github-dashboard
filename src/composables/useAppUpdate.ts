@@ -1,20 +1,44 @@
 import { onMounted, onUnmounted, reactive, toRefs } from "vue";
 
+type DeferralStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 interface UpdateEnvironment {
   serviceWorker: ServiceWorkerContainer;
   events: Pick<Window, "addEventListener" | "removeEventListener">;
   appUrl: string;
   online(): boolean;
   reload(): void;
+  /** Injectable clock (epoch ms) for countdowns and the local-midnight deferral. */
+  now?(): number;
+  /** Whether the page is a background tab; only hidden pages install automatically. */
+  hidden?(): boolean;
+  /** Receives `visibilitychange` (the document in browsers). */
+  visibility?: Pick<Document, "addEventListener" | "removeEventListener">;
+  /** Non-private persistence for "Not now", shared by this origin's tabs. */
+  storage?: DeferralStorage | null;
+}
+export const UPDATE_DEFERRAL_KEY = "issueflow-update-deferred";
+const COUNTDOWN_SECONDS = 10;
+/** Start of the next calendar day in the runtime's local time zone (DST-safe). */
+export function nextLocalMidnight(now: number): number {
+  const date = new Date(now);
+  date.setHours(24, 0, 0, 0);
+  return date.getTime();
 }
 /** Exported separately so browser lifecycle and timing can be tested without a DOM. */
 export function createAppUpdateController(environment: UpdateEnvironment) {
   const state = reactive({
     available: false,
-    seconds: 10,
+    seconds: COUNTDOWN_SECONDS,
     applying: false,
     error: "",
+    /** "Not now" was chosen today: no automatic prompt or installation until local midnight. */
+    deferred: false,
+    /** A background tab is counting down to an automatic installation. */
+    counting: false,
   });
+  const now = environment.now ?? (() => Date.now());
+  const hidden = environment.hidden ?? (() => false);
+  const storage = environment.storage ?? null;
   const sw = environment.serviceWorker;
   let active = false;
   let hadController = Boolean(sw.controller);
@@ -22,6 +46,8 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   let registration: ServiceWorkerRegistration | undefined;
   let waiting: ServiceWorker | null = null;
   let deadline: number | undefined;
+  let deferredUntil: number | null = null;
+  let installWhenOnline = false;
   let activationTimeout: ReturnType<typeof setTimeout> | undefined;
   let tickTimer: ReturnType<typeof setInterval> | undefined;
   let checkTimer: ReturnType<typeof setInterval> | undefined;
@@ -63,17 +89,74 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   }
   const installationListeners = new Map<ServiceWorker, () => void>();
 
+  function validDeferral(until: unknown): until is number {
+    const current = now();
+    // Never reaches past the next local midnight, even after the clock was set back.
+    return typeof until === "number" && until > current && until <= nextLocalMidnight(current);
+  }
+  /** undefined: storage is unavailable, so the in-memory deferral stays authoritative. */
+  function storedDeferral(): number | null | undefined {
+    if (!storage) return undefined;
+    let raw: string | null;
+    try {
+      raw = storage.getItem(UPDATE_DEFERRAL_KEY);
+    } catch {
+      return undefined;
+    }
+    if (!raw) return null;
+    let record: { until?: unknown } | null = null;
+    try { record = JSON.parse(raw); } catch { /* Corrupt records are discarded below. */ }
+    if (validDeferral(record?.until)) return record.until;
+    clearStoredDeferral();
+    return null;
+  }
+  function clearStoredDeferral() {
+    try { storage?.removeItem(UPDATE_DEFERRAL_KEY); } catch { /* Ignored like an absent record. */ }
+  }
+  function refreshDeferral() {
+    const stored = storedDeferral();
+    if (stored !== undefined) deferredUntil = stored;
+    if (deferredUntil !== null && !validDeferral(deferredUntil)) deferredUntil = null;
+    state.deferred = deferredUntil !== null;
+  }
+  /** Visible tabs wait for an explicit choice; background tabs install after a countdown. */
+  function schedule() {
+    if (state.available && !state.applying && !state.deferred && hidden()) {
+      if (!deadline) {
+        state.seconds = COUNTDOWN_SECONDS;
+        deadline = now() + COUNTDOWN_SECONDS * 1000;
+      }
+    } else {
+      deadline = undefined;
+    }
+    state.counting = Boolean(deadline);
+  }
+  /** "Not now": postpone the automatic prompt to the next local calendar day. */
+  function defer() {
+    if (!active || !state.available || state.applying) return;
+    deferredUntil = nextLocalMidnight(now());
+    try {
+      storage?.setItem(UPDATE_DEFERRAL_KEY, JSON.stringify({ until: deferredUntil }));
+    } catch { /* The in-memory deferral still covers this page. */ }
+    state.deferred = true;
+    state.error = "";
+    installWhenOnline = false;
+    schedule();
+  }
   function offer(worker: ServiceWorker | null) {
     if (!active || !hadController || state.applying) return;
     if (worker) waiting = worker;
     if (state.available) return;
     state.available = true;
-    state.seconds = 10;
-    deadline = Date.now() + 10_000;
+    refreshDeferral();
+    schedule();
   }
   function finish() {
     if (!active || reloading) return;
     reloading = true;
+    // Installed: an old "Not now" must not suppress the prompt for a later version.
+    deferredUntil = null;
+    clearStoredDeferral();
     clearTimeout(activationTimeout);
     clearActivationTarget();
     environment.reload();
@@ -97,15 +180,23 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
       registration?.active !== loadedController ? registration?.active : null, waiting, registration?.installing]
       .find((worker): worker is ServiceWorker => Boolean(worker && worker !== loadedController && worker.state !== "redundant"));
   }
+  /** Explicit installation; also allowed while the automatic prompt is deferred. */
   function reloadNow() {
+    apply(true);
+  }
+  function apply(explicit: boolean) {
     if (!active || !state.available || state.applying || reloading) return;
     deadline = undefined;
+    state.counting = false;
     state.seconds = 0;
     if (!environment.online()) {
+      // An explicit request resumes on reconnection; an automatic one restarts its countdown.
+      installWhenOnline ||= explicit;
       state.error =
         "Du är offline. Uppdateringen fortsätter när anslutningen är tillbaka.";
       return;
     }
+    installWhenOnline = false;
     state.error = "";
     state.applying = true;
     activationRequested = true;
@@ -181,17 +272,24 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     return checking;
   }
   function resumed() {
-    if (
-      state.available &&
-      !state.applying &&
-      !deadline &&
-      environment.online()
-    ) {
+    refreshDeferral();
+    if (state.available && !state.applying && !deadline && environment.online()) {
       state.error = "";
-      state.seconds = 10;
-      deadline = Date.now() + 10_000;
+      if (installWhenOnline) apply(true);
     }
+    schedule();
     void check();
+  }
+  function visibilityChanged() {
+    refreshDeferral();
+    schedule();
+  }
+  function storageChanged(event: Event) {
+    const key = (event as StorageEvent).key;
+    // A null key means another tab cleared all storage.
+    if (key !== undefined && key !== null && key !== UPDATE_DEFERRAL_KEY) return;
+    refreshDeferral();
+    schedule();
   }
   function start() {
     if (active) return;
@@ -203,10 +301,18 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     sw.addEventListener("controllerchange", controllerChanged);
     environment.events.addEventListener("focus", resumed);
     environment.events.addEventListener("online", resumed);
+    environment.events.addEventListener("storage", storageChanged);
+    environment.visibility?.addEventListener("visibilitychange", visibilityChanged);
+    refreshDeferral();
     tickTimer = setInterval(() => {
+      if (state.deferred && (deferredUntil === null || now() >= deferredUntil)) {
+        // Midnight passed: the deferred prompt returns without waiting for a check.
+        refreshDeferral();
+        schedule();
+      }
       if (!deadline || !state.available || state.applying) return;
-      state.seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      if (state.seconds === 0) reloadNow();
+      state.seconds = Math.max(0, Math.ceil((deadline - now()) / 1000));
+      if (state.seconds === 0) apply(false);
     }, 250);
     checkTimer = setInterval(() => {
       void check();
@@ -228,34 +334,51 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     sw.removeEventListener("controllerchange", controllerChanged);
     environment.events.removeEventListener("focus", resumed);
     environment.events.removeEventListener("online", resumed);
+    environment.events.removeEventListener("storage", storageChanged);
+    environment.visibility?.removeEventListener("visibilitychange", visibilityChanged);
     registration?.removeEventListener("updatefound", watchInstalling);
     for (const [worker, listener] of installationListeners)
       worker.removeEventListener("statechange", listener);
     installationListeners.clear();
   }
-  return { ...toRefs(state), reloadNow, start, stop };
+  return { ...toRefs(state), reloadNow, defer, check, start, stop };
 }
+export type AppUpdate = Pick<ReturnType<typeof createAppUpdateController>,
+  "available" | "seconds" | "applying" | "error" | "deferred" | "counting" | "reloadNow" | "defer" | "check">;
 
-export function useAppUpdate() {
+function browserStorage(): DeferralStorage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+/** Call once (App.vue) and share the result: each call registers its own controller. */
+export function useAppUpdate(): AppUpdate {
   const supported =
     typeof navigator !== "undefined" && "serviceWorker" in navigator;
   const controller = supported
     ? createAppUpdateController({
         serviceWorker: navigator.serviceWorker,
         events: window,
+        visibility: document,
         appUrl: new URL("./", document.baseURI).href,
         online: () => navigator.onLine,
+        hidden: () => document.visibilityState === "hidden",
         reload: () => window.location.reload(),
+        storage: browserStorage(),
       })
     : null;
   onMounted(() => controller?.start());
   onUnmounted(() => controller?.stop());
   return (
     controller || {
-      ...toRefs(
-        reactive({ available: false, seconds: 10, applying: false, error: "" }),
-      ),
+      ...toRefs(reactive({
+        available: false, seconds: COUNTDOWN_SECONDS, applying: false, error: "", deferred: false, counting: false,
+      })),
       reloadNow() {},
+      defer() {},
+      check: () => Promise.resolve(),
     }
   );
 }

@@ -28,6 +28,9 @@ import OverviewSummary from "./components/OverviewSummary.vue";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
 import VersionUpdate from "./components/VersionUpdate.vue";
+import UpdateDialog from "./components/UpdateDialog.vue";
+import SidebarVersion from "./components/SidebarVersion.vue";
+import { useAppUpdate } from "./composables/useAppUpdate";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
@@ -71,6 +74,31 @@ import {
   type Repo,
   type Rules,
 } from "./lib/model";
+// One update controller shared by the automatic prompt, the update dialog and the sidebar badge.
+const appUpdate = useAppUpdate();
+const {
+  available: updateAvailable, seconds: updateSeconds, counting: updateCounting,
+  applying: updateApplying, error: updateError, deferred: updateDeferred,
+} = appUpdate;
+const updateDialogOpen = ref(false);
+// TODO(#69 integration): fill from updateSummary(notesSince(days, __BUILD_INFO__.builtAt), lang).
+const updateSummary = ref("");
+// TODO(#69 integration): the available build from fetchPublishedReleaseNotes(); null hides it.
+const availableBuild = ref<{ builtAt: string | null; commit: string | null } | null>(null);
+const sidebarVersion = ref<InstanceType<typeof SidebarVersion> | null>(null);
+function openUpdateDialog() {
+  updateDialogOpen.value = true;
+  void appUpdate.check();
+}
+// TODO(#69 integration): open <ReleaseNotes :open :days @close> with the published notes.
+function openReleaseNotes(days?: unknown) {
+  void days;
+}
+function deferUpdate() {
+  appUpdate.defer();
+  // The prompt disappears; keep keyboard focus on the remaining update badge.
+  void nextTick(() => sidebarVersion.value?.focusBadge());
+}
 const user = ref<{ login: string; avatar_url: string } | null>(null);
 const lanes = ref<Lane[]>([]);
 const repos = ref<Repo[]>([]);
@@ -1003,6 +1031,8 @@ onMounted(async () => {
       @move="moveRepository"
       @reorder="reorderProject"
     />
+    <SidebarVersion ref="sidebarVersion" :available="updateAvailable"
+      @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
     <div class="sidebar-footer">
       <Github :size="19" aria-hidden="true" />
       <div>
@@ -1019,7 +1049,7 @@ onMounted(async () => {
       </div>
       <div class="topbar-right">
         <LanguageSettings :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
-          :can-scan="loggedIn" @scan="scannerOpen = true" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
+          :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
           v-if="user && sessionToken"
@@ -1586,7 +1616,12 @@ onMounted(async () => {
       </div>
     </form>
   </div>
-  <VersionUpdate />
+  <VersionUpdate :open="updateAvailable && !updateDeferred" :seconds="updateSeconds" :counting="updateCounting"
+    :applying="updateApplying" :error="updateError" :summary="updateSummary" :available-version="availableBuild"
+    @install="appUpdate.reloadNow()" @defer="deferUpdate" @read-more="openReleaseNotes()" />
+  <UpdateDialog :open="updateDialogOpen" :available="updateAvailable" :applying="updateApplying" :error="updateError"
+    :deferred="updateDeferred" :summary="updateSummary" :available-version="availableBuild"
+    @close="updateDialogOpen = false" @install="appUpdate.reloadNow()" @read-more="openReleaseNotes()" />
   <LogoutDialog
     :open="logoutPrompt"
     :busy="logoutBusy"
@@ -1606,6 +1641,8 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* The version section takes the free space so it sits directly above the footer. */
+.sidebar-footer { margin-top: 0; }
 .startup-placeholder { display: grid; gap: 20px; padding: 32px 0; max-width: 480px; opacity: .5; }
 .repository-filter { flex: 0 1 220px; min-width: 0; max-width: 100%; font-size: 11px; color: var(--muted); }
 .repository-search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding-left: 8px; min-width: 0; }

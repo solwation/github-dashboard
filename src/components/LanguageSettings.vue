@@ -3,7 +3,6 @@ import { ref, watch } from "vue";
 import { DEFAULT_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES, parseTimeoutMinutes } from "../lib/timeouts";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
-import BuildInfo from "./BuildInfo.vue";
 import GitHubPermissions from "./GitHubPermissions.vue";
 import { missingPermissionCount, type PermissionReport } from "../lib/permissions";
 import { computed } from "vue";
@@ -34,7 +33,7 @@ watch(() => props.permissions, () => {
   acknowledgedMissing.value = seen;
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ scan: []; checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
+const emit = defineEmits<{ scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const minutes = parseTimeoutMinutes(input.value);
@@ -94,7 +93,9 @@ function change(event: Event) {
     <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
     <button v-if="canScan" class="button" @click="dialog?.close(); emit('scan')">{{ t("Läs QR-kod") }}</button>
     <WorkflowGuide />
-    <BuildInfo />
+    <div class="settings-updates">
+      <button class="button small" aria-haspopup="dialog" @click="emit('openUpdates')">{{ t("Automatiska uppdateringar") }}</button>
+    </div>
     <div class="modal-footer">
       <button class="button primary" @click="dialog?.close()">
         {{ t("Klart") }}
@@ -104,5 +105,6 @@ function change(event: Event) {
 </template>
 
 <style scoped>
+.settings-updates { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
 .permissions-badge { background: #b91c1c; color: white; border-radius: 50%; padding: 0; width: 1.375rem; height: 1.375rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .75rem; font-weight: 700; }
 </style>
