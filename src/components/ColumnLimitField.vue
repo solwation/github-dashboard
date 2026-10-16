@@ -20,10 +20,10 @@ function update(event: Event) {
   <label :for="id">{{ t("Visa max work items per kolumn") }}</label>
   <input :id="id" type="number" min="1" :max="maxColumnLimit" step="1" inputmode="numeric"
     :required="inherit === undefined" :value="draft" :disabled="disabled" :aria-invalid="invalid"
-    :aria-describedby="id + '-help' + (invalid ? ' ' + id + '-error' : '')"
+    :aria-describedby="invalid ? id + '-error' : inherit === undefined ? id + '-help' : undefined"
     :placeholder="inherit === undefined ? undefined : t('Ärv global inställning ({count})', { count: inherit })"
     @input="update" />
   </div>
-  <p :id="id + '-help'">{{ inherit === undefined ? t("Antal som visas först. Visa fler visar nästa omgång; kolumnens antal omfattar alla work items.") : t("Lämna tomt för att ärva den globala inställningen ({count}).", { count: inherit }) }}</p>
+  <p v-if="inherit === undefined" :id="id + '-help'">{{ t("Antal som visas först. Visa fler visar nästa omgång; kolumnens antal omfattar alla work items.") }}</p>
   <p v-if="invalid" :id="id + '-error'" role="alert">{{ t("Ange ett heltal mellan 1 och 100.") }}</p>
 </template>
