@@ -26,7 +26,7 @@ Issueflow reads GitHub. Make issue changes on GitHub; private content stays in y
 
 Use a fine-grained GitHub token with **Issues: read** and **Metadata: read**. Add **Contents: read** and **Pull requests: read** for private closing commit details. Try the demo first—no account required.
 
-Settings groups permissions, workflow instructions, automatic updates and QR scanning in a consistent button list. Update prompts stack their action buttons vertically and show the ten-second countdown inside Update now (10); opening a dialog pauses the countdown, while Not now defers until tomorrow. The sidebar shows whether a version check confirmed the latest version, found an update, or has not completed. The Issue workflow instructions button opens a separate, wide popup. Read the bundled ISSUEFLOW.md guide directly in the dashboard, or copy/download it.
+Settings groups permissions, workflow instructions, automatic updates and QR scanning in a consistent button list. Update prompts stack their action buttons vertically and show the ten-second countdown inside Update now (10); opening a dialog pauses the countdown, while Not now defers until tomorrow. The sidebar shows whether a version check confirmed the latest version, found an update, or has not completed. The Issue workflow instructions button opens a compact popup with the full bundled Markdown in a scrollable textarea and a Copy instructions button.
 
 Settings → GitHub permissions shows verified access and explains which features each read permission enables. A red Settings badge counts permissions with confirmed missing access.
 

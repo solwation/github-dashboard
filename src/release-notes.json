@@ -51,9 +51,9 @@
       {
         "text": {
           "sv": "Inställningar förklarar GitHub-behörigheter med kvitterbara badges och visar arbetsflödesguiden separat; repositoryknappar ligger rätt och dubblerad hjälptext är borttagen.",
-          "en": "Settings explains permissions with badges that clear once viewed; a separate workflow guide, aligned repository controls and shorter help simplify navigation."
+          "en": "Settings explains permissions with badges that clear once viewed; copyable workflow Markdown, aligned repository controls and shorter help simplify navigation."
         },
-        "issues": [46, 47, 51, 58, 71]
+        "issues": [46, 47, 51, 58, 71, 85]
       },
       {
         "text": {
