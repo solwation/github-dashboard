@@ -11,7 +11,7 @@
           "sv": "Kortare versionsnyheter och kontrollstatus i sidomenyn; staplade uppdateringsknappar, tio sekunders nedräkning med dialogpaus och uppskjutning resten av dagen.",
           "en": "Shorter sidebar release notes and version-check status, with stacked update buttons, a ten-second countdown, dialog pauses and day-long deferral."
         },
-        "issues": [52, 69, 70, 77, 78, 82, 79]
+        "issues": [52, 69, 70, 77, 78, 82, 79, 83]
       },
       {
         "text": {
