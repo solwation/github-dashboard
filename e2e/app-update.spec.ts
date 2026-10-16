@@ -241,7 +241,8 @@ test("the prompt summarizes notes published with the new version and Read more o
   // A future day keeps the fixture newer than the installed build on any test date.
   notesFixture = JSON.stringify({
     build: { builtAt: new Date().toISOString(), commit: commits[1] },
-    days: [{ date: "2999-01-01", summary: { sv: "Fixturens sammanfattning.", en: "Fixture summary." },
+    delta: { baseCommit: commits[0], summary: { sv: "Fixturens sammanfattning.", en: "Fixture summary." }, issues: [1] },
+    days: [{ date: "2999-01-01", summary: { sv: "Hela dagens äldre ändringar ska inte visas i popupen.", en: "Older daily changes must not appear in the popup." },
       sections: [{ text: { sv: "Fixturens förbättring.", en: "Fixture improvement." }, issues: [1] }] }],
   });
   try {
@@ -252,6 +253,7 @@ test("the prompt summarizes notes published with the new version and Read more o
     await discover(page);
     const prompt = page.locator(".version-update");
     await expect(prompt).toContainText("Fixturens sammanfattning.");
+    await expect(prompt).not.toContainText("Hela dagens äldre ändringar");
     await expect(prompt).toContainText(commits[1]!.slice(0, 7));
     const readMore = prompt.getByRole("button", { name: "Läs mer", exact: true });
     await readMore.click();

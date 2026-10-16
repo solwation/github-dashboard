@@ -6,6 +6,7 @@ import {
   fetchPublishedReleaseNotes,
   notesSince,
   parsePublishedReleaseNotes,
+  parsePublicationDelta,
   parseReleaseNotes,
   updateSummary,
   type ReleaseNoteDay,
@@ -81,10 +82,20 @@ describe("notesSince", () => {
 });
 
 describe("updateSummary", () => {
-  it("combines up to three newest day summaries in the chosen language", () => {
-    expect(updateSummary(days.slice(0, 2), "sv")).toBe("Sv 2026-10-17. Sv 2026-10-16.");
-    expect(updateSummary([...days, day("2026-10-14")].reverse(), "en")).toBe("En 2026-10-17. En 2026-10-16. En 2026-10-15.");
-    expect(updateSummary([], "en")).toBe("");
+  const delta = { baseCommit: "b".repeat(40), summary: { sv: "Enbart nya förbättringar.", en: "Only the latest improvements." }, issues: [1] };
+  it("uses only a valid publication delta, even when daily notes contain older changes", () => {
+    const parsed = parsePublishedReleaseNotes({ ...published, delta });
+    expect(updateSummary(parsed?.delta, "sv")).toBe(delta.summary.sv);
+    expect(updateSummary(parsed?.delta, "en")).toBe(delta.summary.en);
+    expect(updateSummary(parsePublishedReleaseNotes(published)?.delta, "sv")).toBe("");
+    expect(updateSummary(null, "en")).toBe("");
+  });
+  it("rejects untraceable, stale, malformed or overly long summaries without losing the full notes", () => {
+    expect(parsePublicationDelta({ ...delta, summary: { sv: "x".repeat(181), en: "Short" } })).toBeNull();
+    expect(parsePublicationDelta({ ...delta, issues: [1, 1] })).toBeNull();
+    expect(parsePublicationDelta({ ...delta, baseCommit: "unknown" })).toBeNull();
+    expect(parsePublishedReleaseNotes({ ...published, delta: { ...delta, issues: [999] } })).toEqual(published);
+    expect(parsePublishedReleaseNotes({ ...published, delta: { ...delta, baseCommit: published.build.commit } })).toEqual(published);
   });
 });
 

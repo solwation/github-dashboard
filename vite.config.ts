@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { bundledReleaseNotes, RELEASE_NOTES_FILE } from "./src/lib/release-notes.ts";
+import { bundledReleaseNotes, bundledUpdateSummary, RELEASE_NOTES_FILE } from "./src/lib/release-notes.ts";
 
 type BuildInfo = { builtAt: string | null; commit: string | null };
 
@@ -61,7 +61,7 @@ function appShell(): Plugin {
  */
 function releaseNotes(build: BuildInfo): Plugin {
   const source = () =>
-    JSON.stringify({ build, days: bundledReleaseNotes }, null, 2) + "\n";
+    JSON.stringify({ build, days: bundledReleaseNotes, ...(bundledUpdateSummary ? { delta: bundledUpdateSummary } : {}) }, null, 2) + "\n";
   return {
     name: "issueflow-release-notes",
     generateBundle() {

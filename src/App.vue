@@ -101,7 +101,7 @@ const newerBuild = computed(() => {
 });
 const newNoteDays = computed(() =>
   newerBuild.value && publishedNotes.value ? notesSince(publishedNotes.value.days, installedBuild.builtAt) : []);
-const updateSummary = computed(() => summarizeUpdate(newNoteDays.value, noteLanguage(locale.value)));
+const updateSummary = computed(() => summarizeUpdate(newerBuild.value ? publishedNotes.value?.delta : null, noteLanguage(locale.value)));
 const availableBuild = computed(() => (updateAvailable.value ? newerBuild.value : null));
 const sidebarVersion = ref<InstanceType<typeof SidebarVersion> | null>(null);
 function openUpdateDialog() {

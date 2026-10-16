@@ -49,7 +49,7 @@ npm ci
 npm run dev
 ```
 
-Run affected tests locally before pushing; use `npm run build` for code changes. Integrate and verify the current backlog locally before publishing a single batch; ready issues wait with `needs-deploy`. Generate the popup summary from that publication’s delta against the previously deployed build. The build rejects unresolved merge markers, including those that would otherwise render as text in Vue templates. Browser tests need a one-time `npx playwright install chromium`. Actions only builds and publishes.
+Run affected tests locally before pushing; use `npm run build` for code changes. Integrate and verify the current backlog locally before publishing a single batch; ready issues wait with `needs-deploy`. Generate the popup summary in `src/update-summary.json` from that publication’s delta against the previously deployed build (maximum 180 characters per language). Full daily notes remain available through Read more. The build rejects unresolved merge markers, including those that would otherwise render as text in Vue templates. Browser tests need a one-time `npx playwright install chromium`. Actions only builds and publishes.
 
 ## Documentation
 

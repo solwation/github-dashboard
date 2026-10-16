@@ -1,4 +1,5 @@
 import notesSource from "../release-notes.json" with { type: "json" };
+import deltaSource from "../update-summary.json" with { type: "json" };
 
 export type NoteLanguage = "sv" | "en";
 export interface ReleaseNoteSection {
@@ -11,10 +12,17 @@ export interface ReleaseNoteDay {
   summary: Record<NoteLanguage, string>;
   sections: ReleaseNoteSection[];
 }
+export interface PublicationDelta {
+  /** Commit of the previously published build; unrelated to calendar-day grouping. */
+  baseCommit: string;
+  summary: Record<NoteLanguage, string>;
+  issues: number[];
+}
 export interface PublishedReleaseNotes {
   build: { builtAt: string | null; commit: string | null };
   /** Newest first. */
   days: ReleaseNoteDay[];
+  delta?: PublicationDelta;
 }
 
 /** Release-note days are dated in the project's local time zone. */
@@ -22,7 +30,7 @@ export const NOTES_TIME_ZONE = "Europe/Stockholm";
 /** Published file name, relative to the document base (next to index.html). */
 export const RELEASE_NOTES_FILE = "release-notes.json";
 const languages: readonly NoteLanguage[] = ["sv", "en"];
-const maxSummaryDays = 3;
+export const MAX_UPDATE_SUMMARY_CHARACTERS = 180;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -87,12 +95,26 @@ function buildIdentity(value: unknown): PublishedReleaseNotes["build"] | null {
   return { builtAt, commit };
 }
 
+/** A short, AI-authored summary generated once for one completed publication. */
+export function parsePublicationDelta(value: unknown): PublicationDelta | null {
+  if (!isRecord(value) || typeof value.baseCommit !== "string" || !/^[a-f0-9]{40,64}$/i.test(value.baseCommit)) return null;
+  const summary = texts(value.summary);
+  if (!summary || languages.some(language => Array.from(summary[language]).length > MAX_UPDATE_SUMMARY_CHARACTERS)) return null;
+  if (!Array.isArray(value.issues) || !value.issues.length || !value.issues.every(issue => Number.isSafeInteger(issue) && issue > 0) || new Set(value.issues).size !== value.issues.length) return null;
+  return { baseCommit: value.baseCommit, summary, issues: [...value.issues] as number[] };
+}
+/** Filled from the final batch only; null while no new publication is prepared. */
+export const bundledUpdateSummary = parsePublicationDelta(deltaSource);
+
 /** Validates the published `{ build, days }` document. */
 export function parsePublishedReleaseNotes(value: unknown): PublishedReleaseNotes | null {
   if (!isRecord(value)) return null;
   const build = buildIdentity(value.build);
   const days = parseReleaseNotes(value.days);
-  return build && days ? { build, days } : null;
+  if (!build || !days) return null;
+  const delta = parsePublicationDelta(value.delta);
+  const knownIssues = new Set(days.flatMap(day => day.sections.flatMap(section => section.issues)));
+  return { build, days, ...(delta && delta.baseCommit !== build.commit && delta.issues.every(issue => knownIssues.has(issue)) ? { delta } : {}) };
 }
 
 function documentBase(): string | null {
@@ -154,17 +176,9 @@ export function notesSince(
   return days.filter((day) => day.date >= installedDate);
 }
 
-/**
- * Short text for the update popup: the summaries of the newest
- * {@link maxSummaryDays} days, newest first, joined with spaces.
- * Returns "" when there are no days.
- */
-export function updateSummary(days: ReleaseNoteDay[], language: NoteLanguage): string {
-  return [...days]
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
-    .slice(0, maxSummaryDays)
-    .map((day) => day.summary[language])
-    .join(" ");
+/** Only the latest publication's delta; never falls back to calendar-day summaries. */
+export function updateSummary(delta: PublicationDelta | null | undefined, language: NoteLanguage): string {
+  return delta?.summary[language] ?? "";
 }
 
 /** Release-note language for an i18n locale such as "sv-SE" or "en-GB". */
