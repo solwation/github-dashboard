@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, reactive, watch } from "vue";
 import { Activity, CircleCheck, Layers3, LayoutDashboard, Plus } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Lane, Rules } from "../lib/model";
-import { countClosedToday, emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, type OverviewCounts, type OverviewOutcome } from "../lib/overview-feedback";
+import { countActiveRepositories, countClosedToday, emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, type OverviewCounts, type OverviewOutcome } from "../lib/overview-feedback";
 const props = defineProps<{
   counts: OverviewCounts; lanes: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
   live: boolean; session: number | string; now: number; loggedIn: boolean; busy: boolean;
@@ -40,6 +40,9 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
   previousDisplay = { ...props.counts };
 }, { immediate: true, deep: true });
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); });
+const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
+const activeRepositories = computed(() => countActiveRepositories(props.lanes, props.rules, props.now, props.hideCoordination));
+const activeDefinition = computed(() => t("Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet."));
 const today = computed(() => countClosedToday(props.lanes, props.now, props.hideCoordination));
 const cards = computed(() => [
   { key: "open" as const, label: t("Öppna issues"), hint: t("att ta vidare"), icon: LayoutDashboard, style: "backlog" },
@@ -52,7 +55,7 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
   <section class="stats" :aria-label="t('Sammanfattning')">
     <div class="stat repository-stat">
       <span class="stat-icon repos"><Layers3 :size="20" /></span>
-      <div><span class="stat-label">Repositories</span><strong>{{ lanes.length }}<small>{{ t("i din översikt") }}</small></strong></div>
+      <div><span class="stat-label">Repositories</span><strong>{{ totalRepositories }}<small class="repository-active" tabindex="0" :title="activeDefinition" :aria-label="t('{count} aktiva projekt. {definition}', { count: activeRepositories, definition: activeDefinition })">{{ t("{count} aktiva", { count: activeRepositories }) }}</small></strong></div>
       <button v-if="loggedIn" class="icon-button repository-stat-action" :aria-label="t('Välj repositories')" :title="t('Välj repositories')" :disabled="busy" @click="emit('chooseRepositories')"><Plus :size="16" aria-hidden="true" /></button>
     </div>
     <div v-for="card in cards" :key="card.key" class="stat" :data-stat="card.key" :class="{ 'stat-positive': deltas[card.key] && outcomes[card.key] === 'positive', 'stat-negative': deltas[card.key] && outcomes[card.key] === 'negative' }">
@@ -68,6 +71,7 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
 </template>
 <style scoped>
 .stat { transition: background-color .25s, border-color .25s; }
+.repository-active:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 3px; }
 .stat-content { min-width: 0; }
 .stat strong { flex-wrap: wrap; row-gap: 6px; }
 .stat strong small { white-space: normal; }

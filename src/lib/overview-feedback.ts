@@ -74,4 +74,23 @@ export function countClosedToday(lanes: Lane[], now: number, hideCoordination = 
   return count;
 }
 
+/** Active loaded repositories, independent of text filters and counted once per repository. */
+export function countActiveRepositories(lanes: Lane[], rules: Record<string, Rules>, now: number, hideCoordination = false): number {
+  if (!Number.isFinite(now)) return 0;
+  const active = new Set<string>();
+  const cutoff = now - 30 * 86400000;
+  for (const lane of lanes) {
+    const repo = lane.repo.full_name;
+    if (active.has(repo)) continue;
+    if (lane.issues.some(issue => {
+      if (issue.pull_request || (hideCoordination && isCoordination(issue))) return false;
+      const col = column(issue, rules[repo]);
+      if (col === "backlog" || col === "progress") return true;
+      const closed = Date.parse(issue.closed_at || "");
+      return col === "closed" && closed >= cutoff && closed <= now;
+    })) active.add(repo);
+  }
+  return active.size;
+}
+
 export const signedDelta = (delta: number) => delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`;
