@@ -30,6 +30,8 @@ Settings includes an Issue workflow instructions button that opens a separate, w
 
 Settings → GitHub permissions shows verified access and explains which features each read permission enables. A red Settings badge counts permissions with confirmed missing access.
 
+The sidebar shows the running version (build date and short commit) above the footer, with Release notes. When a new version is published, a visible tab asks first and shows a short summary of what changed: **Update now**, or **Not now** to postpone the automatic prompt until the next calendar day in your time zone (remembered on this device, also for background checks). A background tab installs after a 10-second countdown unless postponed. Until the update is installed, a red (!) badge on the sidebar version opens the update view, also available from Settings → Automatic updates. Updates keep encrypted sign-in, settings and cached content; offline or failed activation keeps the current version running.
+
 ## Release notes
 
 What's new is written per day in Swedish and English in [`src/release-notes.json`](src/release-notes.json), newest day first. Each day has a short summary and a few readable sections about user benefit, each listing the related issue numbers. Only changes published on `main` are included; no secrets or private repository content.

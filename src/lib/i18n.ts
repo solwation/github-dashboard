@@ -492,9 +492,6 @@ export const english: Record<string, string> = {
   "Den sparade inloggningen kunde inte låsas upp. Logga in igen.":
     "Could not unlock the saved sign-in. Sign in again.",
   "Instruktioner för issueflödet": "Issue workflow instructions",
-  "Bygginformation": "Build information",
-  "Byggd": "Built",
-  "Commit": "Commit",
   "Utvecklingsläge": "Development mode",
   "Okänd commit": "Unknown commit",
   "Kommentarer för #{number}": "Comments for #{number}",
@@ -533,11 +530,25 @@ export const english: Record<string, string> = {
   "Använd en fine-grained token med läsrättighet till Issues och Metadata för de repositories du vill följa. Tokenen sparas krypterat i webbläsarens databas (IndexedDB) tills du loggar ut.":
     "Use a fine-grained token with read access to Issues and Metadata for the repositories you want to follow. Your token is stored encrypted in your browser database (IndexedDB) until you sign out.",
   // Release notes (#69)
-  "Versionsnyheter": "What's new",
   "Stäng versionsnyheter": "Close what's new",
   "Det finns inga versionsnyheter ännu.": "There are no release notes yet.",
   "Issues:": "Issues:",
   "Issue #{number} på GitHub": "Issue #{number} on GitHub",
+  // Update flow (#70)
+  "Version": "Version",
+  "Versionsnyheter": "Release notes",
+  "Ny uppdatering tillgänglig": "New update available",
+  "Ny version:": "New version:",
+  "Installerad version:": "Installed version:",
+  "Inte nu": "Not now",
+  "Uppdatera nu": "Update now",
+  "Automatiska uppdateringar": "Automatic updates",
+  "Installera uppdateringen": "Install update",
+  "Du har den senaste versionen av Issueflow.": "You have the latest version of Issueflow.",
+  "Den automatiska frågan visas igen i morgon. Du kan installera uppdateringen nu.":
+    "The automatic prompt returns tomorrow. You can install the update now.",
+  "Issueflow söker efter uppdateringar automatiskt. En synlig flik frågar först; en flik i bakgrunden uppdateras efter 10 sekunder. ”Inte nu” skjuter upp båda till nästa dag. Inloggning, inställningar och sparat innehåll behålls.":
+    "Issueflow checks for updates automatically. A visible tab asks first; a background tab updates after 10 seconds. “Not now” postpones both until the next day. Sign-in, settings and saved content are kept.",
 };
 export function t(
   source: string,

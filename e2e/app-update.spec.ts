@@ -55,9 +55,14 @@ test.afterAll(async () => {
 });
 
 async function expectBuild(page: Page, commit: string) {
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Bygginformation", exact: true }).locator("code")).toHaveAttribute("title", commit);
-  await page.getByRole("dialog", { name: "Inställningar", exact: true }).getByRole("button", { name: "Stäng", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Version", exact: true }).locator("code")).toHaveAttribute("title", commit);
+}
+/** Playwright pages are always visible; emulate a background tab for the automatic install. */
+async function hide(page: Page) {
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
 }
 async function discover(page: Page) {
   await page.evaluate(async () => {
@@ -67,8 +72,8 @@ async function discover(page: Page) {
   });
 }
 
-test("cacheable deployments load actual new code after countdown, across tabs, immediately, and offline", async ({ page, context }) => {
-  test.setTimeout(90_000);
+test("visible tabs ask, Not now defers across reloads and checks, the badge installs, background tabs count down", async ({ page, context }) => {
+  test.setTimeout(120_000);
   version = 0;
   failCleanup = false;
   failInstall = false;
@@ -76,26 +81,85 @@ test("cacheable deployments load actual new code after countdown, across tabs, i
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   await expectBuild(page, commits[0]!);
+  await page.evaluate(() => localStorage.setItem("update-regression-setting", "preserved"));
   const otherTab = await context.newPage();
   await otherTab.goto(base);
   await expectBuild(otherTab, commits[0]!);
   version = 1;
   await discover(page);
-  await expect(page.locator(".version-update")).toContainText("10 sekunder");
-  const countdownStarted = Date.now();
-  await expect(page.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
-  expect(Date.now() - countdownStarted).toBeGreaterThanOrEqual(9000);
+  const prompt = page.locator(".version-update");
+  await expect(prompt).toBeVisible();
+  await expect(prompt).toContainText("En ny version av Issueflow finns tillgänglig.");
+  // A visible tab waits for a choice instead of installing while it is being read.
+  await page.waitForTimeout(11_000);
+  await expect(prompt).toBeVisible();
+  await expect(prompt).not.toContainText("sekunder");
+  await expectBuild(page, commits[0]!);
+
+  await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
+  await expect(prompt).toHaveCount(0);
+  const badge = page.getByRole("button", { name: "Ny uppdatering tillgänglig", exact: true });
+  await expect(badge).toBeFocused();
+  // An online reload already fetches the published shell, but the new worker still waits:
+  // the update stays available (badge) without prompting again today.
+  await page.reload();
   await expectBuild(page, commits[1]!);
-  await expect(otherTab.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
+  await expect(badge).toBeVisible();
+  await discover(page);
+  await page.waitForTimeout(1_000);
+  await expect(prompt).toHaveCount(0);
+  await expect(otherTab.locator(".version-update")).toHaveCount(0);
+
+  // The next calendar day (simulated by an elapsed deferral) prompts again.
+  await page.evaluate(() => {
+    const record = JSON.parse(localStorage.getItem("issueflow-update-deferred")!);
+    localStorage.setItem("issueflow-update-deferred", JSON.stringify({ ...record, until: Date.now() - 1 }));
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
+  await expect(prompt).toHaveCount(0);
+
+  // The badge (also on phones) and Settings open the same update dialog, returning focus.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(badge).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await badge.click();
+  const dialog = page.getByRole("dialog", { name: "Automatiska uppdateringar", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Stäng", exact: true })).toBeFocused();
+  await expect(dialog).toContainText("Ny uppdatering tillgänglig");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(badge).toBeFocused();
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByRole("button", { name: "Automatiska uppdateringar", exact: true }).click();
+  await expect(dialog).toContainText("Ny uppdatering tillgänglig");
+  await dialog.getByRole("button", { name: "Installera uppdateringen", exact: true }).click();
+  await expectBuild(page, commits[1]!);
+  await expect(badge).toHaveCount(0);
+  await expect(prompt).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("issueflow-update-deferred"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("update-regression-setting"))).toBe("preserved");
+
+  // Installing forgets the deferral, so the old tab prompts; in the background it installs after the countdown.
+  const otherPrompt = otherTab.locator(".version-update");
+  await expect(otherPrompt).toBeVisible();
+  await hide(otherTab);
+  await expect(otherPrompt).toContainText("10 sekunder");
+  const countdownStarted = Date.now();
+  await expect(otherPrompt).toHaveCount(0, { timeout: 25000 });
+  expect(Date.now() - countdownStarted).toBeGreaterThanOrEqual(9000);
   await expectBuild(otherTab, commits[1]!);
   await otherTab.close();
 
   // Returning to a previous build is another real publication and exercises the button.
   version = 0;
   await discover(page);
-  await expect(page.locator(".version-update")).toContainText("10 sekunder");
+  await expect(prompt).toBeVisible();
   await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
-  await expect(page.locator(".version-update")).toHaveCount(0);
+  await expect(prompt).toHaveCount(0);
   await expectBuild(page, commits[0]!);
   await context.setOffline(true);
   await page.reload();

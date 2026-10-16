@@ -1,49 +1,107 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { createServer, type Server } from "node:http";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { extname, join, resolve } from "node:path";
 
-test.use({ baseURL: "http://127.0.0.1:4173", locale: "sv-SE" });
+// A dedicated production build on a free port: identity is checked against a known commit.
+const commit = "3".repeat(40);
+let server: Server, base: string, directory: string;
+test.beforeAll(async () => {
+  test.setTimeout(120_000);
+  directory = await mkdtemp(join(tmpdir(), "issueflow-build-info-"));
+  execFileSync(process.execPath, ["node_modules/vite/bin/vite.js", "build", "--outDir", directory], {
+    env: { ...process.env, GITHUB_ACTIONS: "true", GITHUB_SHA: commit },
+    stdio: "pipe",
+  });
+  const types: Record<string, string> = {
+    ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
+    ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml", ".md": "text/markdown",
+  };
+  server = createServer(async (request, response) => {
+    const path = new URL(request.url!, "http://localhost").pathname.replace(/^\/github-dashboard\//, "/");
+    const file = resolve(directory, "." + (path === "/" ? "/index.html" : path));
+    if (!file.startsWith(directory + "/")) return void response.writeHead(404).end();
+    try {
+      const data = await readFile(file);
+      response.writeHead(200, { "Content-Type": types[extname(file)] || "application/octet-stream" }).end(data);
+    } catch {
+      response.writeHead(404).end();
+    }
+  });
+  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+  base = `http://127.0.0.1:${(server.address() as { port: number }).port}/github-dashboard/`;
+});
+test.afterAll(async () => {
+  if (server) await new Promise<void>((done) => server.close(() => done()));
+  if (directory) await rm(directory, { recursive: true, force: true });
+});
+test.use({ locale: "sv-SE" });
 
-test("production settings identify the running build without sign-in, in both languages on mobile", async ({ page, context }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/github-dashboard/");
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
-  const build = page.getByRole("region", { name: "Bygginformation", exact: true });
-  await expect(build).toBeVisible();
+const expectedDate = (page: Page, language: string, timestamp: string) => page.evaluate(({ language, timestamp }) =>
+  new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(timestamp)), { language, timestamp });
+const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
-  const time = build.locator("time");
+test("the sidebar identifies the running build above the footer, in both languages and offline", async ({ page, context }) => {
+  await page.goto(base);
+  const version = page.getByRole("region", { name: "Version", exact: true });
+  await expect(version).toBeVisible();
+  const time = version.locator("time");
   const timestamp = await time.getAttribute("datetime");
   expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-  const builtAt = Date.parse(timestamp!);
-  expect(Number.isFinite(builtAt)).toBe(true);
-  expect(builtAt).toBeLessThanOrEqual(Date.now());
+  expect(Date.parse(timestamp!)).toBeLessThanOrEqual(Date.now());
   await expect(time).toHaveAttribute("title", timestamp!);
+  await expect(time).toHaveText(await expectedDate(page, "sv-SE", timestamp!));
+  await expect(version.locator("code")).toHaveText(commit.slice(0, 7));
+  await expect(version.locator("code")).toHaveAttribute("title", commit);
+  await expect(version.getByRole("button", { name: "Versionsnyheter", exact: true })).toBeVisible();
+  await expect(version.getByRole("button", { name: "Ny uppdatering tillgänglig" })).toHaveCount(0);
 
-  const commit = process.env.GITHUB_ACTIONS && process.env.GITHUB_SHA
-    ? process.env.GITHUB_SHA
-    : execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  await expect(build.locator("code")).toHaveText(commit.slice(0, 7));
-  await expect(build.locator("code")).toHaveAttribute("title", commit);
+  // Directly above the author/license footer at the bottom of the sidebar.
+  const footer = page.locator(".sidebar-footer");
+  const [versionBox, footerBox] = [await version.boundingBox(), await footer.boundingBox()];
+  expect(Math.abs(versionBox!.y + versionBox!.height - footerBox!.y)).toBeLessThanOrEqual(1);
+  expect(versionBox!.x).toBeGreaterThanOrEqual(0);
 
-  const expectedDate = (language: string) => page.evaluate(({ language, timestamp }) =>
-    new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" })
-      .format(new Date(timestamp!)), { language, timestamp });
-  await expect(time).toHaveText(await expectedDate("sv-SE"));
-  const dialog = page.getByRole("dialog", { name: "Inställningar", exact: true });
-  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  // Settings no longer carries build details, but opens the separate update view.
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  const settings = page.getByRole("dialog", { name: "Inställningar", exact: true });
+  await expect(settings.locator("time, code")).toHaveCount(0);
+  const opener = settings.getByRole("button", { name: "Automatiska uppdateringar", exact: true });
+  await opener.click();
+  const updates = page.getByRole("dialog", { name: "Automatiska uppdateringar", exact: true });
+  await expect(updates).toBeVisible();
+  await expect(updates.getByRole("button", { name: "Stäng", exact: true })).toBeFocused();
+  await expect(updates).toContainText("Du har den senaste versionen av Issueflow.");
+  await expect(updates.locator("code")).toHaveAttribute("title", commit);
+  await expect(updates.getByRole("button", { name: "Installera uppdateringen" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(updates).toBeHidden();
+  await expect(opener).toBeFocused();
+  await expect(settings).toBeVisible();
 
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
-  const englishBuild = page.getByRole("region", { name: "Build information", exact: true });
-  await expect(englishBuild).toBeVisible();
-  await expect(englishBuild).toContainText("Built");
-  await expect(englishBuild.locator("time")).toHaveText(await expectedDate("en-GB"));
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  const english = page.getByRole("region", { name: "Version", exact: true });
+  await expect(english.getByRole("button", { name: "Release notes", exact: true })).toBeVisible();
+  await expect(english.locator("time")).toHaveText(await expectedDate(page, "en-GB", timestamp!));
 
-  // A cached shell must keep its own build identity rather than fetching metadata.
+  // A cached shell keeps its own build identity rather than fetching metadata.
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  const cachedBuild = page.getByRole("region", { name: "Build information", exact: true });
-  await expect(cachedBuild.locator("time")).toHaveAttribute("datetime", timestamp!);
-  await expect(cachedBuild.locator("code")).toHaveAttribute("title", commit);
+  await expect(english.locator("time")).toHaveAttribute("datetime", timestamp!);
+  await expect(english.locator("code")).toHaveAttribute("title", commit);
+});
+
+test("collapsed and phone sidebars hide the version text without horizontal scrolling", async ({ page }) => {
+  for (const width of [900, 375]) {
+    await page.setViewportSize({ width, height: 812 });
+    await page.goto(base);
+    await expect(page.locator(".sidebar")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Version", exact: true })).toBeHidden();
+    expect(await noHorizontalScroll(page)).toBe(true);
+  }
 });
