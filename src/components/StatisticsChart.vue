@@ -1,10 +1,29 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useLanguage } from "../lib/i18n";
 import type { StatisticsDay, StatisticsMetric } from "../lib/statistics";
 const { t, locale } = useLanguage();
 const props = defineProps<{ series: { name: string; days: StatisticsDay[] }[]; metric: StatisticsMetric; title: string }>();
 const selected = ref(0);
+const chart = ref<SVGSVGElement | null>(null);
+const chartWidth = ref(790);
+const plotEnd = computed(() => Math.max(48, chartWidth.value - 42));
+let resizeObserver: ResizeObserver | undefined;
+function resizeChart() {
+  const width = chart.value?.getBoundingClientRect().width;
+  if (width && Number.isFinite(width)) chartWidth.value = width;
+}
+onMounted(() => {
+  resizeChart();
+  if (typeof ResizeObserver !== "undefined" && chart.value) {
+    resizeObserver = new ResizeObserver(resizeChart);
+    resizeObserver.observe(chart.value);
+  } else window.addEventListener("resize", resizeChart);
+});
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  window.removeEventListener("resize", resizeChart);
+});
 const dates = computed(() => props.series[0]?.days.map(day => day.date) || []);
 watch(dates, dates => { selected.value = Math.min(selected.value, Math.max(0, dates.length - 1)); });
 const colors = ["#147d69", "#4b62b2", "#ae522b", "#8c4799", "#516c31"];
@@ -12,7 +31,7 @@ const bounds = computed(() => {
   const values = props.series.flatMap(series => series.days.map(day => day.values[props.metric] || 0));
   return { min: Math.min(0, ...values), max: Math.max(1, ...values) };
 });
-function x(index: number) { return 48 + index / Math.max(1, dates.value.length - 1) * 700; }
+function x(index: number) { return 48 + index / Math.max(1, dates.value.length - 1) * (plotEnd.value - 48); }
 function y(value: number) { return 215 - (value - bounds.value.min) / (bounds.value.max - bounds.value.min) * 185; }
 function points(days: StatisticsDay[]) { return days.map((day, index) => `${x(index)},${y(day.values[props.metric] || 0)}`).join(" "); }
 function number(value: number) { return value.toLocaleString(locale.value); }
@@ -20,13 +39,13 @@ const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${pro
 </script>
 <template>
   <div class="statistics-chart">
-    <svg viewBox="0 0 790 255" role="img" :aria-label="title">
+    <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title">
       <title>{{ title }}</title>
-      <line x1="48" :y1="y(0)" x2="748" :y2="y(0)" stroke="#aab6b7" />
-      <line x1="48" y1="30" x2="748" y2="30" stroke="#e4e8eb" />
+      <line x1="48" :y1="y(0)" :x2="plotEnd" :y2="y(0)" stroke="#aab6b7" />
+      <line x1="48" y1="30" :x2="plotEnd" y2="30" stroke="#e4e8eb" />
       <text x="43" y="34" text-anchor="end">{{ number(bounds.max) }}</text>
       <text x="43" y="219" text-anchor="end">{{ number(bounds.min) }}</text>
-      <text x="48" y="246">{{ dates[0] }}</text><text x="748" y="246" text-anchor="end">{{ dates[dates.length - 1] }}</text>
+      <text x="48" y="246">{{ dates[0] }}</text><text :x="plotEnd" y="246" text-anchor="end">{{ dates[dates.length - 1] }}</text>
       <line v-if="dates.length" :x1="x(selected)" y1="30" :x2="x(selected)" y2="215" stroke="#aab6b7" stroke-dasharray="3 4" />
       <g v-for="(series, index) in series" :key="series.name">
         <polyline :points="points(series.days)" fill="none" :stroke="colors[index % colors.length]" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="index ? `${8 - index} ${index + 2}` : undefined" />
@@ -43,7 +62,7 @@ const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${pro
 </template>
 <style scoped>
 .statistics-chart { min-width: 0; }
-svg { width: 100%; max-width: 1000px; height: auto; display: block; margin-inline: auto; min-height: 130px; }
+svg { width: 100%; height: 255px; display: block; overflow: hidden; }
 svg line { vector-effect: non-scaling-stroke; }
 svg text { fill: #56696b; font: 11px system-ui; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px; margin: 10px 0; }
