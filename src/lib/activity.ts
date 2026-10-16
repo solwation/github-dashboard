@@ -2,12 +2,14 @@ import { column, type Issue, type Lane, type Rules } from "./model";
 
 export const ACTIVITY_LIFETIME_MS = 2 * 60 * 1000;
 interface Snapshot { version: string; column: string }
-interface Activity { version: string; at: number; moved: boolean }
+interface Activity { version: string; at: number; kind: "updated" | "moved" | "created" }
+/** Existing movement callers keep booleans; creation is a distinct card marker. */
+export type ActivityMarker = boolean | "created";
 const version = (issue: Issue, col: string) => `${issue.updated_at}:${issue.closed_at}:${col}`;
 
 /** In-memory acknowledgement of observed changes; refreshes never resurrect read activity. */
 export class ActivityTracker {
-  private snapshots = new Map<string, { rules: string; issues: Map<number, Snapshot> }>();
+  private snapshots = new Map<string, { at: number; rules: string; issues: Map<number, Snapshot> }>();
   private unread = new Map<string, Map<number, Activity>>();
   private acknowledged = new Map<string, string>();
 
@@ -31,19 +33,22 @@ export class ActivityTracker {
         if (!rulesChanged && before && before.version !== next.version) {
           const existing = pending.get(issue.id);
           const moved = before.column !== col;
-          const keepMove = existing?.moved && now - existing.at < ACTIVITY_LIFETIME_MS;
-          pending.set(issue.id, { version: next.version, at: moved || !keepMove ? now : existing.at, moved: moved || Boolean(keepMove) });
+          const keepMarker = existing && existing.kind !== "updated" && now - existing.at < ACTIVITY_LIFETIME_MS;
+          pending.set(issue.id, { version: next.version, at: moved || !keepMarker ? now : existing.at, kind: moved ? "moved" : keepMarker ? existing.kind : "updated" });
         } else if (!previous || (!rulesChanged && !before)) {
+          const created = Date.parse(issue.created_at);
           const changed = Date.parse(issue.updated_at);
-          if (changed <= now && now - changed < ACTIVITY_LIFETIME_MS)
-            pending.set(issue.id, { version: next.version, at: changed, moved: false });
+          const newlyCreated = previous && col === "backlog" && created > previous.at && created <= now && now - created < ACTIVITY_LIFETIME_MS;
+          if (newlyCreated) pending.set(issue.id, { version: next.version, at: created, kind: "created" });
+          else if (changed <= now && now - changed < ACTIVITY_LIFETIME_MS)
+            pending.set(issue.id, { version: next.version, at: changed, kind: "updated" });
         }
         if (this.acknowledged.get(JSON.stringify([repo, issue.id])) === next.version) pending.delete(issue.id);
       }
       for (const [id, activity] of pending) {
         if (!current.has(id) || now - activity.at >= ACTIVITY_LIFETIME_MS) pending.delete(id);
       }
-      this.snapshots.set(repo, { rules: ruleKey, issues: current });
+      this.snapshots.set(repo, { at: now, rules: ruleKey, issues: current });
       this.unread.set(repo, pending);
     }
   }
@@ -57,8 +62,9 @@ export class ActivityTracker {
     const activity = this.activity(repo, issue, now);
     return activity ? new Date(activity.at).toISOString() : null;
   }
-  moved(repo: string, issue: Issue, now: number): boolean {
-    return Boolean(this.activity(repo, issue, now)?.moved);
+  moved(repo: string, issue: Issue, now: number): ActivityMarker {
+    const kind = this.activity(repo, issue, now)?.kind;
+    return kind === "created" ? "created" : kind === "moved";
   }
   read(repo: string, issue: Issue) {
     this.unread.get(repo)?.delete(issue.id);

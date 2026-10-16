@@ -5,6 +5,7 @@ import { useLanguage } from "../lib/i18n";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import type { ClosingCommit } from "../lib/commits";
+import type { ActivityMarker } from "../lib/activity";
 import {
   ArrowUpRight,
   Clock3,
@@ -32,7 +33,7 @@ const props = defineProps<{
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   commentsSession?: number;
   commitRetry?: number;
-  recentMove?: boolean;
+  recentMove?: ActivityMarker;
   timedOut?: boolean;
   timeoutMinutes?: number;
 }>();
@@ -114,11 +115,11 @@ const visibleLabels = computed(() =>
   <article
     ref="card"
     class="issue-card"
-    :class="[col, { 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove, 'issue-timeout': timedOut && col === 'progress' }]"
+    :class="[col, { 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timedOut && col === 'progress' }]"
   >
     <button v-if="recentMove" class="movement-marker" @click="emit('read')"
-      :aria-label="t('Nyligen flyttad. Markera som läst')">
-      {{ t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
+      :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')">
+      {{ recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
       <span aria-hidden="true">✓</span>
     </button>
     <div class="card-top">
@@ -248,6 +249,7 @@ const visibleLabels = computed(() =>
   color: #87929a;
 }
 .issue-card.unread-move { border-color: #2875ba; box-shadow: 0 0 0 2px #2875ba55; background: #f1f8ff; }
+.issue-card.unread-created { border-color: #39885b; box-shadow: 0 0 0 2px #39885b33; background: #edf8f0; }
 .issue-card.issue-timeout { border-color: #b42332; background: #fff1f2; box-shadow: 0 0 0 2px #b4233233; }
 .timeout-warning { color: #9f1c2a; font-size: .75rem; line-height: 1.5; }
 .timeout-warning p { margin: .7rem 0 .4rem; }
@@ -255,6 +257,8 @@ const visibleLabels = computed(() =>
 .timeout-acknowledge:focus-visible { outline: 2px solid #b42332; outline-offset: 2px; }
 .movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
+.unread-created .movement-marker { background: #d8efde; color: #1c6239; }
+.unread-created .movement-marker:focus-visible { outline-color: #1c6239; }
 .closing-commit {
   display: flex;
   align-items: center;
