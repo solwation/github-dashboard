@@ -6,6 +6,7 @@ import { parseHandoffUrl, type HandoffPayload } from "../lib/handoff";
 import { useLanguage } from "../lib/i18n";
 
 const emit = defineEmits<{ close: []; scanned: [payload: HandoffPayload] }>();
+defineProps<{ mode?: "login" | "preferences" }>();
 const { t } = useLanguage();
 const dialog = ref<HTMLDialogElement | null>(null);
 const video = ref<HTMLVideoElement | null>(null);
@@ -46,7 +47,7 @@ function accept(value: string) {
     emit("scanned", payload);
   } catch {
     stop();
-    error.value = t("QR-koden är ogiltig eller har gått ut. Skapa en ny kod i Issueflow på datorn.");
+    error.value = t("QR-koden är ogiltig eller har gått ut. Skapa en ny kod på den andra enheten.");
   }
 }
 function decode(source: CanvasImageSource, width: number, height: number) {
@@ -156,10 +157,10 @@ onUnmounted(() => {
   <dialog ref="dialog" class="modal native-modal scanner-dialog" aria-labelledby="scanner-title"
     @cancel.prevent="close" @close="close" @click="event => { if (event.target === dialog) close(); }">
     <div class="modal-heading">
-      <h2 id="scanner-title">{{ t("Logga in med QR-kod") }}</h2>
+      <h2 id="scanner-title">{{ mode === 'preferences' ? t("Läs QR-kod") : t("Logga in med QR-kod") }}</h2>
       <button class="icon-button" :aria-label="t('Stäng')" @click="close"><X :size="20" /></button>
     </div>
-    <p>{{ t("Öppna Issueflow på datorn och välj Öppna på mobilen. Rikta kameran mot QR-koden. Du loggas in direkt i den här appen.") }}</p>
+    <p>{{ t("Visa en QR-kod i Issueflow på den andra enheten och skanna den här. Konto, inställningar och vy överförs utan att du behöver logga ut först.") }}</p>
     <video ref="video" autoplay muted playsinline :aria-label="t('Kameraförhandsvisning')" v-show="scanning || pending" />
     <p v-if="error" role="alert">{{ error }}</p>
     <p v-if="paused">{{ t("Kameran pausades när appen lämnades. Starta den igen för att fortsätta.") }}</p>

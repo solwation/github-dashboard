@@ -3,13 +3,14 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { X } from "@lucide/vue";
 import QRCode from "qrcode";
 import type { Rules } from "../lib/model";
-import { createHandoffUrl } from "../lib/handoff";
+import { createHandoffUrl, type HandoffPreferences } from "../lib/handoff";
 import { useLanguage } from "../lib/i18n";
 
 const props = defineProps<{
   token: string;
   selected: string[];
   rules: Record<string, Rules>;
+  preferences?: HandoffPreferences;
 }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useLanguage();
@@ -51,6 +52,7 @@ async function generate() {
         token: props.token,
         selected: props.selected,
         rules: props.rules,
+        preferences: props.preferences,
       },
       now.value,
     );
@@ -97,7 +99,7 @@ onUnmounted(() => {
     "
   >
     <div class="modal-heading">
-      <h2 id="handoff-title">{{ t("Öppna på mobilen") }}</h2>
+      <h2 id="handoff-title">{{ t("Synka med QR-kod") }}</h2>
       <button class="icon-button" :aria-label="t('Stäng')" @click="close">
         <X :size="20" />
       </button>
@@ -105,14 +107,14 @@ onUnmounted(() => {
     <p>
       {{
         t(
-          "I den installerade appen: välj Logga in med QR-kod och skanna här. Använder du mobilens vanliga kamera öppnas länken i webbläsaren istället.",
+          "På den andra enheten: öppna Inställningar och välj Läs QR-kod, eller välj Logga in med QR-kod om du inte är inloggad. Skanna här för att överföra konto, inställningar och vy åt valfritt håll.",
         )
       }}
     </p>
     <p class="handoff-warning">
       {{
         t(
-          "Alla som skannar koden får din tokens GitHub-behörigheter. Visa den bara för din egen mobil. Koden innehåller din token.",
+          "Alla som skannar koden får din tokens GitHub-behörigheter. Visa den bara för dina egna enheter. Koden innehåller din token.",
         )
       }}
     </p>
@@ -120,7 +122,7 @@ onUnmounted(() => {
       <img
         v-if="qr"
         :src="qr"
-        :alt="t('QR-kod för att logga in på mobilen')"
+        :alt="t('QR-kod för konto och inställningar')"
         width="640"
         height="640"
       />
@@ -128,7 +130,7 @@ onUnmounted(() => {
       <p v-else-if="error" role="alert">
         {{
           t(
-            "QR-koden kunde inte skapas. Prova att välja färre projekt eller färre labelinställningar.",
+            "Inställningarna ryms inte i en QR-kod, eller koden kunde inte skapas. Inget har tagits bort eller överförts. Prova med färre valda projekt eller kortare filter och labelinställningar.",
           )
         }}
       </p>
@@ -138,6 +140,9 @@ onUnmounted(() => {
     </div>
     <p v-if="qr" class="handoff-countdown">
       {{ t("Koden accepteras i {seconds} sekunder till.", { seconds }) }}
+    </p>
+    <p class="handoff-note">
+      {{ t("Notifikationsval följer med, men kamera, ljud och webbläsarens notifikationsbehörighet gäller lokalt. Läsmarkeringar och kvitterade timeoutvarningar stannar på mottagande enhet.") }}
     </p>
     <p class="handoff-note">
       {{

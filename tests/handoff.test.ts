@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, parseHandoffUrl, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
+import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, parseHandoffUrl, mergeHandoffPreferences, type HandoffPreferences, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
 const now = 1_800_000_000_000;
 const settings = { token: "test_not_a_real_token", selected: ["sample/repo"], rules: { "sample/repo": { progress: "pågår 🚀", high: "prioritet:hög" } } };
 function raw(value: unknown) {
@@ -21,7 +21,7 @@ describe("mobile handoff", () => {
     expect(parsed.search).toBe("");
     expect(parsed.hash).toMatch(/^#issueflow-handoff=/);
     expect(expiresAt).toBe(now + HANDOFF_LIFETIME_MS);
-    expect(decodeHandoff(parsed.hash.split("=")[1]!, now)).toEqual({ ...settings, version: 1, issuedAt: now });
+    expect(decodeHandoff(parsed.hash.split("=")[1]!, now)).toEqual({ ...settings, preferences: {}, version: 2, issuedAt: now });
   });
   it("rejects expired, future, unsupported, malformed, and oversized payloads", () => {
     const encoded = encodeHandoff(settings, now);
@@ -45,5 +45,64 @@ describe("mobile handoff", () => {
     const payload = consumeHandoff({ hash: "#issueflow-handoff=" + encodeHandoff(settings, now), pathname: "/app/", search: "" }, { state: null, replaceState() { scrubbed = true; } }, now);
     expect(scrubbed).toBe(true);
     expect(payload?.token).toBe(settings.token);
+  });
+});
+
+const preferences: Required<HandoffPreferences> = {
+  projectOrder: ["sample/second", "sample/repo"],
+  collapsedRepos: ["sample/second"], columnLimit: 8,
+  repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"],
+  language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
+  repoQuery: "sample", hideCoordination: false, timeoutMinutes: 45, currentView: "statistics",
+  statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions" } },
+};
+describe("optical preference schema v2", () => {
+  it("roundtrips every chosen preference without exporting device grants or issue snapshots", () => {
+    const decoded = decodeHandoff(encodeHandoff({ ...settings, preferences }, now), now);
+    expect(decoded).toEqual({ ...settings, preferences, version: 2, issuedAt: now });
+    expect(Object.keys(decoded.preferences!).sort()).toEqual(Object.keys(preferences).sort());
+    expect(decoded).not.toHaveProperty("activityRead");
+    expect(decoded.preferences).not.toHaveProperty("timeoutAcknowledgements");
+  });
+  it("reads existing v1 codes and preserves recipient fields missing from old or partial codes", () => {
+    const legacy = decodeHandoff(raw({ ...settings, version: 1, issuedAt: now }), now);
+    const current = { selected: ["sample/second"], rules: {}, ...preferences };
+    const merged = mergeHandoffPreferences(current, legacy, ["sample/repo", "sample/second"]);
+    expect(merged.selected).toEqual(settings.selected);
+    expect(merged.rules).toEqual(settings.rules);
+    for (const [key, value] of Object.entries(preferences)) expect(merged[key as keyof typeof merged]).toEqual(value);
+    const partial = decodeHandoff(raw({ ...settings, version: 2, issuedAt: now, preferences: { language: "en", futureSetting: { ignored: true } } }), now);
+    expect(partial.preferences).toEqual({ language: "en" });
+    expect(mergeHandoffPreferences(current, partial, ["sample/repo", "sample/second"]).columnLimit).toBe(8);
+  });
+  it("filters every repository collection against actual current access and canonicalizes case", () => {
+    const incoming = { ...settings, selected: ["SAMPLE/REPO", "sample/second"], rules: { "SAMPLE/REPO": { progress: "Working" }, "sample/second": { high: "urgent" } }, preferences };
+    const before = structuredClone(incoming);
+    const merged = mergeHandoffPreferences({ selected: [], rules: {} }, incoming, ["Sample/Repo"]);
+    expect(merged.selected).toEqual(["Sample/Repo"]);
+    expect(merged.projectOrder).toEqual(["Sample/Repo"]);
+    expect(merged.collapsedRepos).toEqual([]);
+    expect(merged.notificationRepos).toEqual(["Sample/Repo"]);
+    expect(merged.rules).toEqual({ "Sample/Repo": { progress: "Working" } });
+    expect(merged.repositoryColumnLimits).toEqual({ "Sample/Repo": 3 });
+    expect(merged.repositoryQueries).toEqual({ "Sample/Repo": "label:ready" });
+    expect(Object.keys(merged.statistics!)).toEqual(["Sample/Repo"]);
+    expect(incoming).toEqual(before);
+  });
+  it.each([
+    { columnLimit: 0 }, { columnLimit: 101 }, { columnLimit: "6" },
+    { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
+    { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" },
+    { projectOrder: ["sample/repo", "SAMPLE/REPO"] }, { collapsedRepos: ["../private"] },
+    { notificationRepos: Array.from({ length: 101 }, (_, n) => "sample/repo" + n) },
+    { repositoryColumnLimits: { "sample/repo": 2.5 } }, { repositoryQueries: { "sample/repo": "a".repeat(501) } },
+    { query: "a".repeat(501) }, { statistics: { "sample/repo": { from: "2026-02-30", to: "2026-03-01", label: "", contributor: "", metric: "closed" } } },
+    { statistics: { "sample/repo": { from: "2026-10-16", to: "2026-10-01", label: "", contributor: "", metric: "closed" } } },
+  ])("rejects malformed known preferences atomically: %j", invalid => {
+    expect(() => decodeHandoff(raw({ ...settings, version: 2, issuedAt: now, preferences: { ...preferences, ...invalid } }), now)).toThrow();
+  });
+  it("does not silently truncate oversized preference collections", () => {
+    const rules = Object.fromEntries(Array.from({ length: 100 }, (_, n) => ["sample/repo" + n, { progress: "a".repeat(100), high: "b".repeat(100) }]));
+    expect(() => encodeHandoff({ ...settings, rules, preferences }, now)).toThrow("too large");
   });
 });

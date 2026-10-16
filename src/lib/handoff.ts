@@ -1,22 +1,22 @@
 import type { Rules } from "./model";
+import { handoffRecord, handoffRepository, handoffRepositoryList, parseHandoffPreferences, type HandoffPreferences } from "./handoff-preferences";
+export { mergeHandoffPreferences, type HandoffPreferences, type HandoffPreferenceState, type HandoffStatisticsPreferences } from "./handoff-preferences";
 
 export const HANDOFF_LIFETIME_MS = 5 * 60 * 1000;
 const PREFIX = "#issueflow-handoff=";
 const MAX_ENCODED_LENGTH = 16_000;
-const REPO = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/;
 const RULE_KEYS = ["progress", "high", "medium", "low"];
 export interface HandoffSettings {
   token: string;
   selected: string[];
   rules: Record<string, Rules>;
+  preferences?: HandoffPreferences;
 }
 export interface HandoffPayload extends HandoffSettings {
-  version: 1;
+  version: 1 | 2;
   issuedAt: number;
 }
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+const record = handoffRecord;
 function exactKeys(value: Record<string, unknown>, allowed: string[]) {
   return Object.keys(value).every((key) => allowed.includes(key));
 }
@@ -26,8 +26,8 @@ function validate(
 ): asserts value is HandoffPayload {
   if (
     !record(value) ||
-    !exactKeys(value, ["version", "issuedAt", "token", "selected", "rules"]) ||
-    value.version !== 1 ||
+    !exactKeys(value, value.version === 2 ? ["version", "issuedAt", "token", "selected", "rules", "preferences"] : ["version", "issuedAt", "token", "selected", "rules"]) ||
+    (value.version !== 1 && value.version !== 2) ||
     !Number.isSafeInteger(value.issuedAt) ||
     (value.issuedAt as number) > now + 30_000 ||
     now >= (value.issuedAt as number) + HANDOFF_LIFETIME_MS ||
@@ -36,19 +36,15 @@ function validate(
     value.token.length < 1 ||
     value.token.length > 1024 ||
     /\s/.test(value.token) ||
-    !Array.isArray(value.selected) ||
-    value.selected.length > 100 ||
-    !value.selected.every(
-      (repo) => typeof repo === "string" && REPO.test(repo),
-    ) ||
-    new Set(value.selected).size !== value.selected.length ||
+    !handoffRepositoryList(value.selected) ||
     !record(value.rules) ||
     Object.keys(value.rules).length > 100
   )
     throw new Error("Invalid or expired handoff");
+  if (value.version === 2) value.preferences = parseHandoffPreferences(value.preferences);
   for (const [repo, rules] of Object.entries(value.rules)) {
     if (
-      !REPO.test(repo) ||
+      !handoffRepository(repo) ||
       !record(rules) ||
       !exactKeys(rules, RULE_KEYS) ||
       !Object.values(rules).every(
@@ -63,7 +59,7 @@ export function encodeHandoff(
   settings: HandoffSettings,
   now = Date.now(),
 ): string {
-  const payload: HandoffPayload = { ...settings, version: 1, issuedAt: now };
+  const payload: HandoffPayload = { ...settings, preferences: settings.preferences || {}, version: 2, issuedAt: now };
   validate(payload, now);
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   const encoded = btoa(
