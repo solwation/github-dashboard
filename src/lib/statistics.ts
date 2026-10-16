@@ -33,6 +33,8 @@ export type StatisticsSourceName = "issues" | "events" | "commits" | "changes" |
 export interface StatisticsFilter { from: string; to: string; label: string; contributor: string }
 export const statisticsMetrics = ["closed", "created", "reopened", "netIssues", "commits", "additions", "deletions", "netLines", "files", "prsOpened", "prsMerged", "prsClosed"] as const;
 export type StatisticsMetric = typeof statisticsMetrics[number];
+export interface StatisticsPreference extends StatisticsFilter { metric: StatisticsMetric }
+export type StatisticsPreferences = Record<string, StatisticsPreference>;
 export type StatisticsValues = Partial<Record<StatisticsMetric, number>>;
 export interface StatisticsDay { date: string; values: StatisticsValues }
 export interface StatisticsSummary {

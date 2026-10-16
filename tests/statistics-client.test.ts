@@ -121,7 +121,7 @@ describe("statistics transport and coverage", () => {
       active--; return baseline(url);
     });
     const collector = new StatisticsCollector(client);
-    const [first, again] = await Promise.all([collector.load("sample/one", now), collector.load("sample/one", now), collector.load("sample/two", now), collector.load("sample/three", now)]);
+    const [first, again] = await Promise.all([collector.load("sample/one", now), collector.load("sample/one", now), ...Array.from({ length: 7 }, (_, index) => collector.load(`sample/repository${index}`, now))]);
     expect(first).toBe(again);
     expect(maximum).toBeLessThanOrEqual(3);
   });

@@ -8,7 +8,7 @@ export interface StatisticsClient {
   request<T>(path: string): Promise<{ data: T; next: string | null }>;
   retryAfterMs?(): number;
 }
-export const statisticsLimits = { issues: 3, events: 5, commits: 3, pulls: 3, changes: 60, files: 3, concurrency: 3, repositories: 5 } as const;
+export const statisticsLimits = { issues: 3, events: 5, commits: 3, pulls: 3, changes: 60, files: 3, concurrency: 3 } as const;
 const cacheDuration = 5 * 60 * 1000;
 
 /** Every request passes through a shared gate, including concurrent repository loads. */
