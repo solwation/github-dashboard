@@ -57,7 +57,7 @@ function clear() {
   comments.value = [];
 }
 function close() { clear(); dialog.value?.close(); }
-watch(() => [props.issue.id, props.issue.html_url, props.demo, props.session], close);
+watch([() => props.issue.id, () => props.issue.html_url, () => props.demo, () => props.session], close);
 onBeforeUnmount(clear);
 </script>
 <template>

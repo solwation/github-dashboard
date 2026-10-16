@@ -12,7 +12,7 @@ async function connect(page: Page, onComments: (route: Route, url: URL) => Promi
     let result: unknown = [];
     if (url.pathname === "/user") result = { login: "sample", avatar_url: "https://github.com/identicons/sample.png" };
     else if (url.pathname === "/user/repos") result = [repo];
-    else if (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open") result = [{ id: 891, number: 1, title: "Commented task", comments: 102, html_url: "https://github.com/sample/comment-project/issues/1", state: "open", created_at: timestamp, updated_at: timestamp, closed_at: null, labels: [], assignees: [] }];
+    else if (url.pathname.endsWith("/issues") && ["open", "all"].includes(url.searchParams.get("state") || "")) result = [{ id: 891, number: 1, title: "Commented task", comments: 102, html_url: "https://github.com/sample/comment-project/issues/1", state: "open", created_at: timestamp, updated_at: timestamp, closed_at: null, labels: [], assignees: [] }];
     await route.fulfill({ json: result });
   });
   await page.goto("/");
@@ -130,6 +130,27 @@ test("a pending private comment response cannot appear after logout and switchin
   await page.evaluate(() => new Promise(requestAnimationFrame));
   await expect(page.getByRole("dialog")).toContainText("Kommentarer visas inte i demon.");
   await expect(page.getByText("Previous account private comment")).toHaveCount(0);
+});
+
+test("an open discussion survives background synchronization of the same issue", async ({ page }) => {
+  await page.clock.install();
+  let requests = 0;
+  await connect(page, async route => {
+    requests++;
+    await route.fulfill({ json: [comment(1, "Keep reading this discussion")] });
+  });
+  await page.getByRole("button", { name: "102 kommentarer" }).click();
+  const dialog = page.getByRole("dialog", { name: "Kommentarer för #1" });
+  await expect(dialog.getByText("Keep reading this discussion")).toBeVisible();
+  const original = await dialog.locator(".issue-comment").elementHandle();
+  const synced = page.waitForResponse(response => response.url().includes("/issues?") && response.url().includes("state=all"));
+  await page.clock.fastForward(301000);
+  await synced;
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Keep reading this discussion")).toBeVisible();
+  expect(await original!.evaluate(element => element.isConnected)).toBe(true);
+  expect(requests).toBe(1);
 });
 
 for (const viewport of [{ width: 1280, height: 800 }, { width: 320, height: 640 }]) {
