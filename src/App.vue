@@ -488,15 +488,28 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     api = next;
     user.value = identity;
     repos.value = available;
-    if (!cached || cached.user.login !== identity.login) lanes.value = [];
-    selected.value = [];
-    rules.value = {};
-    notificationRepos.value = [];
-    if (!cached || cached.user.login !== identity.login) clearClosureFeedback();
+    const sameCachedIdentity = cached?.user.login === identity.login;
+    if (!sameCachedIdentity) {
+      lanes.value = [];
+      selected.value = [];
+      rules.value = {};
+      notificationRepos.value = [];
+      clearClosureFeedback();
+    }
     isDemo.value = false;
     tokenPanel.value = false;
     tokenInput.value = "";
-    restorePreferences(available);
+    if (sameCachedIdentity) {
+      // Revalidate repository access without resetting the already visible layout,
+      // read markers or settings the user may have edited while GitHub was slow.
+      const accessible = new Set(available.map(repo => repo.full_name));
+      selected.value = selected.value.filter(name => accessible.has(name));
+      projectOrder.value = reconcileOrder(projectOrder.value, [...accessible]);
+      collapsedRepos.value = collapsedRepos.value.filter(name => accessible.has(name));
+      notificationRepos.value = notificationRepos.value.filter(name => accessible.has(name));
+      repositoryColumnLimits.value = Object.fromEntries(Object.entries(repositoryColumnLimits.value).filter(([name]) => accessible.has(name)));
+      rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
+    } else restorePreferences(available);
     if (imported) {
       const accessible = new Set(available.map((repo) => repo.full_name));
       selected.value = imported.selected.filter((name) => accessible.has(name));
@@ -870,6 +883,7 @@ onMounted(async () => {
       :repos="sidebarRepos"
       :now="now"
       :can-select="loggedIn"
+      :restoring="restoring && !loggedIn && !isDemo"
       @select="picker = true"
       @move="moveRepository"
       @reorder="reorderProject"
@@ -953,7 +967,8 @@ onMounted(async () => {
           <X :size="16" />
         </button>
       </div>
-      <template v-if="!loggedIn && !isDemo"
+      <div v-if="restoring && !loggedIn && !isDemo" class="startup-placeholder" aria-hidden="true"><span class="skeleton short" /><span class="skeleton" /><span class="skeleton" /></div>
+      <template v-else-if="!loggedIn && !isDemo"
         ><div class="welcome">
           <span class="eyebrow"
             ><span class="repo-dot" />
@@ -1461,6 +1476,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.startup-placeholder { display: grid; gap: 20px; padding: 32px 0; max-width: 480px; opacity: .5; }
 .repository-filter { flex: 0 1 220px; min-width: 0; max-width: 100%; font-size: 11px; color: var(--muted); }
 .repository-search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding-left: 8px; min-width: 0; }
 .repository-search > svg { flex-shrink: 0; }

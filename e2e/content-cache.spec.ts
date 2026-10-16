@@ -17,12 +17,14 @@ async function setup(page: Page, oversizedResponse: boolean | "large-board" = fa
   let title = "Cached private fixture";
   let blocked = false;
   let offline = false;
+  let failure = false;
   let release: (() => void) | undefined;
   let conditional = 0;
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     if (blocked && url.pathname === "/user") await new Promise<void>(resolve => { release = resolve; });
     if (offline) { await route.abort("failed"); return; }
+    if (failure) { await route.fulfill({ status: 503, json: { message: 'Temporary failure' } }); return; }
     if (url.pathname === "/graphql") { await route.fulfill({ json: { data: { repository: { issue: null } } } }); return; }
     const etag = '"' + url.pathname + (url.pathname.endsWith("/issues") ? title : "stable") + '"';
     if (route.request().headers()["if-none-match"]) conditional++;
@@ -42,7 +44,7 @@ async function setup(page: Page, oversizedResponse: boolean | "large-board" = fa
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await expect(page.locator(".issue-title")).toContainText(title);
   await expect.poll(() => cacheExists(page)).toBe(true);
-  return { block() { blocked = true; }, refresh() { title = "Fresh private fixture"; }, release() { blocked = false; release?.(); }, offline() { offline = true; }, conditional() { return conditional; } };
+  return { block() { blocked = true; }, refresh() { title = "Fresh private fixture"; }, release() { blocked = false; release?.(); }, offline() { offline = true; }, fail() { failure = true; }, conditional() { return conditional; } };
 }
 
 test("renders encrypted content before GitHub responds, then revalidates using persisted ETags", async ({ page }) => {
@@ -182,4 +184,69 @@ test("genuine content storage errors warn without breaking the board and a succe
   await page.keyboard.press("Control+r");
   await expect(warning).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+
+test("encrypted startup avoids empty and welcome flashes and retains sidebar nodes through slow unchanged revalidation", async ({ page }) => {
+  const state = await setup(page);
+  state.block();
+  await page.addInitScript(() => {
+    const startup = { unexpected: [] as string[], restored: false, releaseDecrypt: () => {} };
+    Object.assign(window, { cacheStartup: startup });
+    const gate = new Promise<void>(resolve => { startup.releaseDecrypt = resolve; });
+    const decrypt = SubtleCrypto.prototype.decrypt;
+    SubtleCrypto.prototype.decrypt = async function(...args: Parameters<SubtleCrypto['decrypt']>) {
+      await gate;
+      return decrypt.apply(this, args);
+    };
+    new MutationObserver(() => {
+      if (startup.restored) return;
+      if (document.querySelector('.sidebar-repository-row')) { startup.restored = true; return; }
+      for (const element of document.querySelectorAll('.sidebar-empty, .welcome, .intro-board')) {
+        if (element.getClientRects().length) startup.unexpected.push(element.className);
+      }
+    }).observe(document, { childList: true, subtree: true, attributes: true });
+  });
+  await page.reload();
+  const sidebar = page.locator('.sidebar-projects');
+  await expect(sidebar).toHaveAttribute('aria-busy', 'true');
+  await expect(sidebar.locator('.sidebar-placeholder')).toBeVisible();
+  await expect(page.locator('.sidebar-empty, .welcome, .intro-board')).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { cacheStartup: { releaseDecrypt(): void } }).cacheStartup.releaseDecrypt());
+  const row = page.locator('.sidebar-repository-row[data-repository="sample/test"]');
+  await expect(row).toBeVisible();
+  await expect(page.locator('.username')).toHaveText('cache-test');
+  await expect(page.locator('.issue-title')).toContainText('Cached private fixture');
+  const original = await row.elementHandle();
+  expect(original).not.toBeNull();
+  await page.getByRole('button', { name: 'Kollapsa test', exact: true }).click();
+  await expect(page.locator('#repo-1')).toHaveClass(/is-collapsed/);
+  state.release();
+  await expect(page.locator('.updated')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByRole('button', { name: 'Logga ut', exact: true })).toBeEnabled();
+  expect(await original!.evaluate(element => element.isConnected && document.querySelector('.sidebar-repository-row[data-repository="sample/test"]') === element)).toBe(true);
+  await expect(page.locator('#repo-1')).toHaveClass(/is-collapsed/);
+  await expect(page.locator('.sidebar-empty, .welcome, .intro-board')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { cacheStartup: { unexpected: string[] } }).cacheStartup.unexpected)).toEqual([]);
+  await expectNoStartupNotices(page);
+});
+
+for (const failure of ['offline', 'transient'] as const) {
+  test(`cached sidebar survives ${failure} startup revalidation`, async ({ page }) => {
+    const state = await setup(page);
+    if (failure === 'offline') state.offline(); else state.fail();
+    await page.reload();
+    await expect(page.locator('.sidebar-repository-row[data-repository="sample/test"]')).toBeVisible();
+    await expect(page.locator('.issue-title')).toContainText('Cached private fixture');
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.locator('.sidebar-empty, .welcome, .intro-board')).toHaveCount(0);
+    await expectNoStartupNotices(page);
+  });
+}
+
+test('a genuine first start shows the ordinary empty sidebar and welcome after local restore completes', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.welcome')).toBeVisible();
+  await expect(page.locator('.sidebar-empty')).toHaveText('Dina projekt börjar här.');
+  await expect(page.locator('.sidebar-placeholder')).toHaveCount(0);
 });

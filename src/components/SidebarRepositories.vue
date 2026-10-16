@@ -5,7 +5,7 @@ import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
 import { recentlyChanged, type SidebarRepository } from "../lib/sidebar";
 
-defineProps<{ repos: SidebarRepository[]; now: number; canSelect: boolean }>();
+defineProps<{ repos: SidebarRepository[]; now: number; canSelect: boolean; restoring?: boolean }>();
 const emit = defineEmits<{ select: []; move: [name: string, direction: -1 | 1]; reorder: [source: string, target: string] }>();
 function drop(event: DragEvent, target: string) {
   const source = event.dataTransfer?.getData(projectDragType);
@@ -21,7 +21,7 @@ function lastChange(changedAt: string | null) {
 }
 </script>
 <template>
-  <div class="sidebar-projects">
+  <div class="sidebar-projects" :aria-busy="restoring || undefined">
     <div class="repositories-heading"><span class="nav-caption">REPOSITORIES</span>
     <button v-if="canSelect" class="sidebar-add" @click="emit('select')" :aria-label="t('Välj repositories')">
       <Plus :size="16" />
@@ -43,10 +43,14 @@ function lastChange(changedAt: string | null) {
       <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
     </a>
     </div>
-    <p v-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
+    <div v-if="restoring && !repos.length" class="sidebar-placeholder" aria-hidden="true"><span /><span /><span /></div>
+    <p v-else-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
   </div>
 </template>
 <style scoped>
+.sidebar-placeholder { display: grid; gap: 16px; padding: 18px 0; }
+.sidebar-placeholder span { height: 24px; width: 80%; border-radius: 4px; background: currentColor; opacity: .06; }
+.sidebar-placeholder span:nth-child(2) { width: 65%; }
 .sidebar-projects { min-height: 0; overflow-y: auto; }
 .sidebar-repository-row { display: flex; align-items: flex-start; gap: 4px; margin-top: 14px; min-width: 0; }
 .sidebar-repository {
