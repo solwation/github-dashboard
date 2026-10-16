@@ -78,10 +78,10 @@
       },
       {
         "text": {
-          "sv": "QR-synk överför kompletta profiler åt båda hållen utan utloggning, även större koder; skanningsgenvägar och startsidans AI-agentbeskrivning har förbättrats.",
-          "en": "QR sync transfers complete profiles both ways without signing out, including larger codes; scanning shortcuts and the start page’s AI-agent description are clearer."
+          "sv": "QR-synk överför kompletta profiler åt båda hållen utan utloggning, i mycket mindre koder som även webbkameror läser; skanningsgenvägar och AI-agentbeskrivningen har förbättrats.",
+          "en": "QR sync transfers complete profiles both ways without signing out, in much smaller codes that webcams can read; scan shortcuts and the AI agent intro improved."
         },
-        "issues": [63, 54, 72, 74, 92]
+        "issues": [63, 54, 72, 74, 92, 100]
       },
       {
         "text": {

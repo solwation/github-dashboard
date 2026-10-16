@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Camera, X } from "@lucide/vue";
 import QRCode from "qrcode";
 import type { Rules } from "../lib/model";
-import { createHandoffUrl, type HandoffPreferences } from "../lib/handoff";
+import { createHandoffUrl, handoffQrSegments, type HandoffPreferences } from "../lib/handoff";
 import { useLanguage } from "../lib/i18n";
 
 const props = defineProps<{
@@ -62,7 +62,8 @@ async function generate() {
       now.value,
     );
     expiresAt.value = handoff.expiresAt;
-    const image = await QRCode.toDataURL(handoff.url, {
+    // Numeric mode keeps the compact payload digits at about eight bits per byte.
+    const image = await QRCode.toDataURL(handoffQrSegments(handoff.url), {
       // Keep every module six whole pixels wide. A fixed image width can put
       // dense profile codes on a fractional grid that jsQR cannot sample reliably.
       scale: 6,

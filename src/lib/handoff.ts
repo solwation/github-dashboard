@@ -1,10 +1,14 @@
+import type { QRCodeByteSegment, QRCodeNumericSegment } from "qrcode";
 import type { Rules } from "./model";
+import { decodeCompactHandoff, encodeCompactHandoff } from "./handoff-codec";
 import { handoffRecord, handoffRepository, handoffRepositoryList, parseHandoffPreferences, type HandoffPreferences } from "./handoff-preferences";
 export { mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffPreferenceState, type HandoffStatisticsPreferences } from "./handoff-preferences";
 
 export const HANDOFF_LIFETIME_MS = 5 * 60 * 1000;
 const PREFIX = "#issueflow-handoff=";
 const MAX_ENCODED_LENGTH = 16_000;
+// Numeric capacity of the largest QR code (7089 digits) minus room for the app URL.
+const MAX_COMPACT_LENGTH = 6_800;
 const RULE_KEYS = ["progress", "high", "medium", "low"];
 export interface HandoffSettings {
   token: string;
@@ -61,14 +65,8 @@ export function encodeHandoff(
 ): string {
   const payload: HandoffPayload = { ...settings, preferences: settings.preferences || {}, version: 2, issuedAt: now };
   validate(payload, now);
-  const bytes = new TextEncoder().encode(JSON.stringify(payload));
-  const encoded = btoa(
-    Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""),
-  )
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-  if (encoded.length > MAX_ENCODED_LENGTH)
+  const encoded = encodeCompactHandoff(payload);
+  if (encoded.length > MAX_COMPACT_LENGTH)
     throw new Error("Handoff is too large");
   return encoded;
 }
@@ -76,14 +74,16 @@ export function decodeHandoff(
   encoded: string,
   now = Date.now(),
 ): HandoffPayload {
-  if (
-    !encoded ||
-    encoded.length > MAX_ENCODED_LENGTH ||
-    !/^[A-Za-z0-9_-]+$/.test(encoded) ||
-    encoded.length % 4 === 1
-  ) {
+  if (!encoded || encoded.length > MAX_ENCODED_LENGTH)
     throw new Error("Invalid handoff encoding");
+  // Digits are the compact format; base64 JSON (v1/v2) always contains letters.
+  if (/^\d+$/.test(encoded)) {
+    const payload = decodeCompactHandoff(encoded);
+    validate(payload, now);
+    return payload;
   }
+  if (!/^[A-Za-z0-9_-]+$/.test(encoded) || encoded.length % 4 === 1)
+    throw new Error("Invalid handoff encoding");
   const binary = atob(encoded.replace(/-/g, "+").replace(/_/g, "/"));
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   const payload: unknown = JSON.parse(
@@ -107,6 +107,12 @@ export function createHandoffUrl(
   url.search = "";
   url.hash = PREFIX.slice(1) + encodeHandoff(settings, now);
   return { url: url.href, expiresAt: now + HANDOFF_LIFETIME_MS };
+}
+/** QR segments for a handoff URL: the app address as bytes, the payload digits in numeric mode. */
+export function handoffQrSegments(url: string): [QRCodeByteSegment, QRCodeNumericSegment] {
+  const start = url.indexOf(PREFIX) + PREFIX.length;
+  if (start < PREFIX.length || !/^\d+$/.test(url.slice(start))) throw new Error("Invalid handoff URL");
+  return [{ data: new TextEncoder().encode(url.slice(0, start)), mode: "byte" }, { data: url.slice(start), mode: "numeric" }];
 }
 /** Decode a scanned link in place; never navigate to credential-bearing input. */
 export function parseHandoffUrl(

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, parseHandoffUrl, mergeHandoffPreferences, type HandoffPreferences, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
+import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, handoffQrSegments, parseHandoffUrl, mergeHandoffPreferences, type HandoffPreferences, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
+import { decodeCompactHandoff, encodeCompactHandoff } from "../src/lib/handoff-codec";
 const now = 1_800_000_000_000;
 const settings = { token: "test_not_a_real_token", selected: ["sample/repo"], rules: { "sample/repo": { progress: "pågår 🚀", high: "prioritet:hög" } } };
 function raw(value: unknown) {
@@ -117,7 +118,60 @@ describe("optical preference schema v2", () => {
     expect(() => decodeHandoff(raw({ ...settings, version: 2, issuedAt: now, preferences: { ...preferences, ...invalid } }), now)).toThrow();
   });
   it("does not silently truncate oversized preference collections", () => {
-    const rules = Object.fromEntries(Array.from({ length: 100 }, (_, n) => ["sample/repo" + n, { progress: "a".repeat(100), high: "b".repeat(100) }]));
+    const rules = Object.fromEntries(Array.from({ length: 100 }, (_, n) => ["sample/repo" + n, { progress: n + "a".repeat(96), high: n + "b".repeat(96) }]));
     expect(() => encodeHandoff({ ...settings, rules, preferences }, now)).toThrow("too large");
+  });
+});
+
+describe("compact optical format", () => {
+  const profile = {
+    token: "github_pat_11FICTIONAL0" + "x".repeat(70),
+    selected: ["sample/repo", "sample/second", "other-owner/tools"],
+    rules: { "sample/repo": settings.rules["sample/repo"], "sample/second": { progress: "in-progress", high: "priority: high" } },
+    preferences: { ...preferences, projectOrder: ["sample/second", "sample/repo", "other-owner/tools"] },
+  };
+
+  it("writes digits only and decodes to the identical validated payload", () => {
+    const encoded = encodeHandoff(profile, now);
+    expect(encoded).toMatch(/^\d+$/);
+    expect(decodeHandoff(encoded, now)).toEqual({ ...profile, version: 2, issuedAt: now });
+  });
+
+  it("is much smaller than the base64 JSON it replaces", () => {
+    const legacy = raw({ ...profile, version: 2, issuedAt: now });
+    // QR byte mode costs 8 bits per character, numeric mode 10 bits per 3 digits.
+    expect(encodeHandoff(profile, now).length * 10 / 3).toBeLessThan(legacy.length * 8 * 0.45);
+  });
+
+  it("roundtrips arbitrary JSON values, including keys added by newer senders", () => {
+    const value = { a: [0, 1.5, -2, 2 ** 40, null, true, false], "": "", text: "räksmörgås 🚀", date: "2026-02-28", notDate: "2026-02-30",
+      color: "#245bc1", upper: "#245BC1", packed: "AbC_def-123", repo: "Owner-1/name.with_dots", again: "Owner-1/name.with_dots", futureSetting: { nested: ["sv"] } };
+    expect(decodeCompactHandoff(encodeCompactHandoff(value))).toEqual(value);
+  });
+
+  it("rejects malformed digits without partial decoding", () => {
+    const encoded = encodeHandoff(profile, now);
+    for (const value of [encoded.slice(0, -1), encoded + "0", encoded.replace(/^\d{15}/, "999999999999999"), "1", "000"]) {
+      expect(() => decodeHandoff(value, now)).toThrow();
+    }
+    expect(() => decodeHandoff(encodeCompactHandoff({ ...profile, version: 2, issuedAt: now, extra: true }), now)).toThrow();
+    expect(() => decodeHandoff(encodeCompactHandoff({ ...profile, version: 2, issuedAt: now + HANDOFF_LIFETIME_MS }), now + 2 * HANDOFF_LIFETIME_MS)).toThrow();
+  });
+
+  it("splits the link into a byte segment for the address and a numeric segment for the payload", () => {
+    const { url } = createHandoffUrl("https://example.test/app/", profile, now);
+    const [address, payload] = handoffQrSegments(url);
+    expect(address.mode).toBe("byte");
+    expect(new TextDecoder().decode(address.data)).toBe("https://example.test/app/#issueflow-handoff=");
+    expect(payload.mode).toBe("numeric");
+    expect(new TextDecoder().decode(address.data) + payload.data).toBe(url);
+  });
+});
+
+describe("compact format limits", () => {
+  it("rejects repeated-structure expansion bombs", () => {
+    let value: unknown = "x".repeat(1000);
+    for (let level = 0; level < 4; level++) value = Array.from({ length: 8 }, () => value);
+    expect(() => decodeCompactHandoff(encodeCompactHandoff(value))).toThrow();
   });
 });

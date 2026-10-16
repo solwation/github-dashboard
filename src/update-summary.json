@@ -1,12 +1,10 @@
 {
-  "baseCommit": "9d17c71a061705680633799512c17e18c6be2776",
+  "baseCommit": "63b39fb7bbcd3364ba9f9414ae331803c91ceb02",
   "summary": {
-    "sv": "Översiktens rutor är centrerade på telefon, kontot ligger längst till höger i toppfältet och F5 under bakgrundsuppdatering hämtar ändå färska data.",
-    "en": "Overview cards are centred on phones, the account sits at the right of the top bar, and F5 during a background update still fetches fresh data."
+    "sv": "QR-koden för att överföra konto och inställningar är betydligt mindre, så även webbkameror och telefoner i svagt ljus kan läsa den.",
+    "en": "The QR code for transferring your account and settings is much smaller, so webcams and phones in dim light can read it too."
   },
   "issues": [
-    95,
-    96,
-    98
+    100
   ]
 }
