@@ -428,6 +428,12 @@ export const english: Record<string, string> = {
   Engelska: "English",
   "Språkvalet sparas på den här enheten.":
     "Your language preference is saved on this device.",
+  Tema: "Theme",
+  "Auto (systemets tema)": "Auto (system theme)",
+  Ljust: "Light",
+  Mörkt: "Dark",
+  "Auto följer enhetens ljusa eller mörka läge. Temavalet sparas på den här enheten.":
+    "Auto follows your device’s light or dark mode. Your theme preference is saved on this device.",
   "Öppna på mobilen": "Open on mobile",
   "Sparat projekt- och issueinnehåll raderas också från appens cache.":
     "Saved repository and issue content is also removed from the app cache.",

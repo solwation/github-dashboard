@@ -257,7 +257,7 @@ const visibleLabels = computed(() =>
 <style scoped>
 .issue-card.has-repository { position: relative; }
 .issue-card.has-repository::after { content: ""; position: absolute; top: 6px; bottom: 6px; right: 0; width: 3px; border-radius: 3px; background: var(--repository-color); pointer-events: none; }
-.card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: #273a3c; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .card-repository i { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
 
 .backlog-age {
@@ -269,7 +269,7 @@ const visibleLabels = computed(() =>
 .issue-card.issue-timeout { border-color: #b42332; background: #fff1f2; box-shadow: 0 0 0 2px #b4233233; }
 .timeout-warning { color: #9f1c2a; font-size: .75rem; line-height: 1.5; }
 .timeout-warning p { margin: .7rem 0 .4rem; }
-.timeout-acknowledge { border: 1px solid #b42332; border-radius: .35rem; background: white; color: #9f1c2a; padding: .4rem .6rem; min-height: 44px; cursor: pointer; font-size: inherit; }
+.timeout-acknowledge { border: 1px solid #b42332; border-radius: .35rem; background: var(--surface); color: #9f1c2a; padding: .4rem .6rem; min-height: 44px; cursor: pointer; font-size: inherit; }
 .timeout-acknowledge:focus-visible { outline: 2px solid #b42332; outline-offset: 2px; }
 .movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
@@ -310,7 +310,7 @@ const visibleLabels = computed(() =>
 .closing-commit button {
   border: 1px solid var(--line);
   border-radius: 0.3rem;
-  background: white;
+  background: var(--surface);
   padding: 0.15rem 0.4rem;
   font-size: inherit;
 }

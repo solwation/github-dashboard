@@ -10,7 +10,9 @@ import { missingPermissionCount, type PermissionReport } from "../lib/permission
 import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
+import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
+const { preference: themePreference, setTheme } = useTheme();
 const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number }>(), { permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
@@ -41,6 +43,9 @@ function changeTimeout(event: Event) {
 const dialog = ref<HTMLDialogElement | null>(null);
 function change(event: Event) {
   setLanguage((event.target as HTMLSelectElement).value as LanguagePreference);
+}
+function changeTheme(event: Event) {
+  setTheme((event.target as HTMLSelectElement).value as ThemePreference);
 }
 </script>
 <template>
@@ -80,6 +85,13 @@ function change(event: Event) {
       <option value="en" lang="en">English</option>
     </select>
     <p>{{ t("Språkvalet sparas på den här enheten.") }}</p>
+    <label class="rule-field" for="theme-preference">{{ t("Tema") }}</label>
+    <select id="theme-preference" :value="themePreference" aria-describedby="theme-preference-help" @change="changeTheme">
+      <option value="auto">{{ t("Auto (systemets tema)") }}</option>
+      <option value="light">{{ t("Ljust") }}</option>
+      <option value="dark">{{ t("Mörkt") }}</option>
+    </select>
+    <p id="theme-preference-help">{{ t("Auto följer enhetens ljusa eller mörka läge. Temavalet sparas på den här enheten.") }}</p>
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>

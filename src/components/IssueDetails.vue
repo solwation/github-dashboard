@@ -43,8 +43,8 @@ const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : ""
 .issue-markdown :deep(h4), .issue-markdown :deep(h5), .issue-markdown :deep(h6) { font-size: .85rem; }
 .issue-markdown :deep(p) { margin: .5rem 0; }
 .issue-markdown :deep(ul), .issue-markdown :deep(ol) { padding-left: 1.3rem; margin: .5rem 0; }
-.issue-markdown :deep(pre) { max-width: 100%; overflow-x: auto; padding: .65rem; border-radius: .4rem; background: #f1f5f4; white-space: pre; overflow-wrap: normal; }
-.issue-markdown :deep(code) { font-size: .72rem; background: #f1f5f4; border-radius: .2rem; }
+.issue-markdown :deep(pre) { max-width: 100%; overflow-x: auto; padding: .65rem; border-radius: .4rem; background: var(--code-bg); white-space: pre; overflow-wrap: normal; }
+.issue-markdown :deep(code) { font-size: .72rem; background: var(--code-bg); border-radius: .2rem; }
 .issue-markdown :deep(pre code) { background: transparent; }
 .issue-markdown :deep(a) { color: var(--green); text-decoration: underline; }
 .issue-markdown :deep(img) { max-width: 100%; height: auto; }

@@ -1862,7 +1862,7 @@ onMounted(async () => {
 
 .repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .repository-loading svg { flex-shrink: 0; }
-.combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: white; overflow: hidden; }
+.combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
 .combined-repository-controls { padding: 15px 18px; border-bottom: 1px solid var(--line); font-size: 12px; }
 .combined-repository-controls summary { cursor: pointer; font-weight: 600; }
 .combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }

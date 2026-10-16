@@ -78,8 +78,8 @@ function closed() {
   border: 1px solid var(--line);
   border-radius: .8rem;
   padding: 1.2rem;
-  color: var(--text, #273a3c);
-  background: white;
+  color: var(--text);
+  background: var(--surface);
 }
 .update-dialog::backdrop { background: #102b2a88; }
 .update-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
