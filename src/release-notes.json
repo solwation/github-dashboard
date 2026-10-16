@@ -43,10 +43,10 @@
       },
       {
         "text": {
-          "sv": "Översikten visar statusändringar, dagens stängningar och aktiva projekt; nya Backlog-ärenden blir gröna och timeoutvarningar kan kvitteras direkt även under uppdatering.",
-          "en": "Overview highlights status changes, today's closures and active projects; new Backlog issues turn green, and timeout warnings clear immediately even during refresh."
+          "sv": "Översikten visar statusändringar, dagens stängningar och aktiva projekt i centrerade rutor på telefon; nya Backlog-ärenden blir gröna och timeoutvarningar kvitteras direkt även under uppdatering.",
+          "en": "Overview highlights status changes, today's closures and active projects in centred phone cards; new Backlog issues turn green, and timeout warnings clear immediately even during refresh."
         },
-        "issues": [48, 64, 55, 56, 94]
+        "issues": [48, 64, 55, 56, 94, 95]
       },
       {
         "text": {
