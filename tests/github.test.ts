@@ -67,6 +67,35 @@ describe("GitHub transport", () => {
     expect(lane.timerWarning).toBe(true);
     expect(lane.issues[0]?.startedAt).toBeUndefined();
   });
+  it("does not keep a transient timeline error in cached issues across 304 responses", async () => {
+    let timelineFails = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: URL, init: RequestInit) => {
+        if (url.pathname.endsWith("/events")) {
+          if (timelineFails) return new Response("{}", { status: 500 });
+          return new Response(JSON.stringify([{ event: "labeled", label: { name: "in-progress" }, created_at: "2026-10-15T09:00:00Z" }]));
+        }
+        if ((init.headers as Record<string, string>)["If-None-Match"])
+          return new Response(null, { status: 304 });
+        const body = url.pathname.endsWith("/labels") ? []
+          : url.searchParams.get("state") === "open" ? [issue] : [];
+        return new Response(JSON.stringify(body), { headers: { etag: `"${url.search}"` } });
+      }),
+    );
+    const client = new GitHub("test-token");
+    const failed = await client.lane(repo, {});
+    expect(failed.timerWarning).toBe(true);
+    expect(failed.issues[0]?.timerError).toBe(true);
+    timelineFails = false;
+    const recovered = await client.lane(repo, {});
+    expect(recovered.timerWarning).toBe(false);
+    expect(recovered.issues[0]?.timerError).toBe(false);
+    expect(recovered.issues[0]?.startedAt).toBe("2026-10-15T09:00:00Z");
+    const exported = JSON.stringify(client.exportResponses());
+    expect(exported).not.toContain("startedAt");
+    expect(exported).not.toContain("timerError");
+  });
   it("fully paginates history to find the latest resumed interval and excludes PRs", async () => {
     vi.stubGlobal(
       "fetch",
