@@ -82,6 +82,7 @@ const appUpdate = useAppUpdate();
 const {
   available: updateAvailable, seconds: updateSeconds, counting: updateCounting,
   applying: updateApplying, error: updateError, deferred: updateDeferred,
+  checked: updateChecked, checking: updateChecking,
 } = appUpdate;
 const updateDialogOpen = ref(false);
 // Notes published with the latest deployment describe what the waiting update adds.
@@ -1072,7 +1073,7 @@ onMounted(async () => {
       @move="moveRepository"
       @reorder="reorderProject"
     />
-    <SidebarVersion ref="sidebarVersion" :available="updateAvailable"
+    <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
     <div class="sidebar-footer">
       <Github :size="19" aria-hidden="true" />

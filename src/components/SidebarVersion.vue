@@ -3,7 +3,7 @@ import { ref, useId } from "vue";
 import { useLanguage } from "../lib/i18n";
 import BuildInfo from "./BuildInfo.vue";
 
-defineProps<{ available: boolean }>();
+defineProps<{ available: boolean; checked?: boolean; checking?: boolean }>();
 const emit = defineEmits<{ "release-notes": []; "open-update": [] }>();
 const { t } = useLanguage();
 const titleId = useId();
@@ -28,6 +28,7 @@ defineExpose({ focusBadge });
       </button>
     </div>
     <p class="sidebar-version-build"><BuildInfo /></p>
+    <p class="sidebar-version-status" role="status">{{ available ? t("Uppdatering tillgänglig") : checking ? t("Kontrollerar version…") : checked ? t("Senaste versionen") : t("Versionen är inte kontrollerad") }}</p>
     <button type="button" class="sidebar-version-notes" @click="emit('release-notes')">{{ t("Versionsnyheter") }}</button>
   </section>
 </template>
@@ -44,6 +45,7 @@ defineExpose({ focusBadge });
 .sidebar-version-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
 .sidebar-version-caption { font-size: 10px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: #909b9f; }
 .sidebar-version-build { margin: 4px 0 8px; font-size: 11px; color: var(--muted); }
+.sidebar-version-status { margin: 0 0 6px; overflow-wrap: anywhere; }
 .sidebar-version-notes {
   border: 0; background: transparent; padding: 4px 0; min-height: 24px;
   color: var(--green); font: inherit; font-weight: 600; cursor: pointer; text-align: left;
@@ -59,7 +61,7 @@ defineExpose({ focusBadge });
 @media (max-width: 950px) {
   .sidebar-version { display: none; padding: 12px 0 0; border-top: 0; }
   .sidebar-version.has-update { display: block; }
-  .sidebar-version-caption, .sidebar-version-build, .sidebar-version-notes { display: none; }
+  .sidebar-version-caption, .sidebar-version-build, .sidebar-version-notes, .sidebar-version-status { display: none; }
   .sidebar-version-heading { justify-content: center; }
   .sidebar-version-badge { width: 28px; height: 28px; }
 }

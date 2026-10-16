@@ -28,6 +28,8 @@ export function nextLocalMidnight(now: number): number {
 export function createAppUpdateController(environment: UpdateEnvironment) {
   const state = reactive({
     available: false,
+    checked: false,
+    checking: false,
     seconds: COUNTDOWN_SECONDS,
     applying: false,
     error: "",
@@ -148,6 +150,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     if (worker) waiting = worker;
     if (state.available) return;
     state.available = true;
+    state.checked = false;
     refreshDeferral();
     schedule();
   }
@@ -234,6 +237,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   function watchInstalling() {
     const worker = registration?.installing;
     if (!worker || installationListeners.has(worker)) return;
+    state.checked = false;
     const changed = () => {
       if (worker.state === "installed" && hadController) {
         if (state.applying) activate(registration?.waiting || worker);
@@ -246,14 +250,15 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   }
   function check(): Promise<void> {
     if (checking) return checking;
-    if (!active || !environment.online()) return Promise.resolve();
+    if (!active || !environment.online()) { state.checked = false; return Promise.resolve(); }
     if (!hadController && sw.controller) {
       hadController = true;
       loadedController = sw.controller;
     }
+    state.checking = true;
     checking = (async () => { try {
       const found = await sw.getRegistration(environment.appUrl);
-      if (!active || !found) return;
+      if (!active || !found) { state.checked = false; return; }
       if (registration !== found) {
         registration?.removeEventListener("updatefound", watchInstalling);
         registration = found;
@@ -263,14 +268,17 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
       if (registration.waiting) offer(registration.waiting);
       await registration.update();
       if (active && registration.waiting) offer(registration.waiting);
+      if (active) state.checked = environment.online() && !state.available && !registration.installing && !registration.waiting && Boolean(sw.controller) && sw.controller === loadedController;
     } catch {
+      state.checked = false;
       if (active && state.available && !state.applying) {
         state.error =
           "Det gick inte att kontrollera uppdateringen. Försök igen.";
       }
-    } })().finally(() => { checking = null; });
+    } })().finally(() => { checking = null; state.checking = false; });
     return checking;
   }
+  function wentOffline() { state.checked = false; }
   function resumed() {
     refreshDeferral();
     if (state.available && !state.applying && !deadline && environment.online()) {
@@ -301,6 +309,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     sw.addEventListener("controllerchange", controllerChanged);
     environment.events.addEventListener("focus", resumed);
     environment.events.addEventListener("online", resumed);
+    environment.events.addEventListener("offline", wentOffline);
     environment.events.addEventListener("storage", storageChanged);
     environment.visibility?.addEventListener("visibilitychange", visibilityChanged);
     refreshDeferral();
@@ -334,6 +343,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     sw.removeEventListener("controllerchange", controllerChanged);
     environment.events.removeEventListener("focus", resumed);
     environment.events.removeEventListener("online", resumed);
+    environment.events.removeEventListener("offline", wentOffline);
     environment.events.removeEventListener("storage", storageChanged);
     environment.visibility?.removeEventListener("visibilitychange", visibilityChanged);
     registration?.removeEventListener("updatefound", watchInstalling);
@@ -344,7 +354,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   return { ...toRefs(state), reloadNow, defer, check, start, stop };
 }
 export type AppUpdate = Pick<ReturnType<typeof createAppUpdateController>,
-  "available" | "seconds" | "applying" | "error" | "deferred" | "counting" | "reloadNow" | "defer" | "check">;
+  "available" | "checked" | "checking" | "seconds" | "applying" | "error" | "deferred" | "counting" | "reloadNow" | "defer" | "check">;
 
 function browserStorage(): DeferralStorage | null {
   try {
@@ -374,7 +384,7 @@ export function useAppUpdate(): AppUpdate {
   return (
     controller || {
       ...toRefs(reactive({
-        available: false, seconds: COUNTDOWN_SECONDS, applying: false, error: "", deferred: false, counting: false,
+        available: false, checked: false, checking: false, seconds: COUNTDOWN_SECONDS, applying: false, error: "", deferred: false, counting: false,
       })),
       reloadNow() {},
       defer() {},

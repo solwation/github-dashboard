@@ -8,10 +8,10 @@
     "sections": [
       {
         "text": {
-          "sv": "Versionen och byggdatumet visas nu längst ned i vänstermenyn, tillsammans med de här versionsnyheterna, som sammanfattar förbättringarna dag för dag. När en ny version finns berättar uppdateringsrutan kort vad den innehåller, med knapparna staplade under varandra. Välj Uppdatera nu, eller Inte nu för att slippa frågan resten av dagen. En röd (!)-markering vid versionen visar att uppdateringen väntar, och den kan installeras när du vill, även via Inställningar → Automatiska uppdateringar.",
-          "en": "The version and build date now appear at the bottom of the sidebar, together with these release notes, which summarise improvements day by day. When a new version is available, the update prompt briefly describes what it brings, with vertically stacked action buttons. Choose Update now, or Not now to skip the prompt for the rest of the day. A red (!) marker next to the version shows that the update is waiting, and you can install it whenever you like, also from Settings → Automatic updates."
+          "sv": "Versionen, byggdatumet och status för senaste versionskontroll visas nu längst ned i vänstermenyn, tillsammans med de här versionsnyheterna, som sammanfattar förbättringarna dag för dag. När en ny version finns berättar uppdateringsrutan kort vad den innehåller, med knapparna staplade under varandra. Välj Uppdatera nu, eller Inte nu för att slippa frågan resten av dagen. En röd (!)-markering vid versionen visar att uppdateringen väntar, och den kan installeras när du vill, även via Inställningar → Automatiska uppdateringar.",
+          "en": "The version, build date and version-check status now appear at the bottom of the sidebar, together with these release notes, which summarise improvements day by day. When a new version is available, the update prompt briefly describes what it brings, with vertically stacked action buttons. Choose Update now, or Not now to skip the prompt for the rest of the day. A red (!) marker next to the version shows that the update is waiting, and you can install it whenever you like, also from Settings → Automatic updates."
         },
-        "issues": [52, 69, 70, 77]
+        "issues": [52, 69, 70, 77, 78]
       },
       {
         "text": {

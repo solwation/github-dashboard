@@ -77,6 +77,34 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("app version updates", () => {
+  it("only confirms the latest version after a successful controlled-worker check", async () => {
+    const app = setup();
+    app.registration.waiting = null;
+    expect(app.checked.value).toBe(false);
+    expect(app.checking.value).toBe(true);
+    await app.check();
+    expect(app.checked.value).toBe(true);
+    expect(app.checking.value).toBe(false);
+    app.registration.update.mockRejectedValueOnce(new Error("network failure"));
+    await app.check();
+    expect(app.checked.value).toBe(false);
+    expect(app.error.value).toBe("");
+    await app.check();
+    expect(app.checked.value).toBe(true);
+    app.offline(); app.events.dispatchEvent(new Event("offline"));
+    expect(app.checked.value).toBe(false);
+  });
+  it("does not confirm an unregistered, installing or waiting version", async () => {
+    const app = setup(false);
+    await app.check(); expect(app.checked.value).toBe(false);
+    app.serviceWorker.controller = Object.assign(new Worker(), { state: "activated" });
+    app.registration.installing = new Worker();
+    await app.check(); expect(app.checked.value).toBe(false);
+    app.registration.waiting = app.registration.installing;
+    app.registration.installing = null;
+    await app.check(); expect(app.available.value).toBe(true); expect(app.checked.value).toBe(false);
+  });
+
   it("offers a waiting update for ten seconds, activates it, then reloads exactly once", async () => {
     vi.useFakeTimers();
     const app = setup();
