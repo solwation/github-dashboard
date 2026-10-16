@@ -1516,13 +1516,44 @@ h1 {
     padding-bottom: 10px;
   }
   .topbar-right {
+    flex: 1 1 100%;
+    min-width: 0;
+    /* Fits one row at 375 px; very narrow screens or demo controls may wrap,
+       with the account group still kept at the right edge. */
     flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 8px;
+  }
+  .topbar-right > * {
+    flex-shrink: 0;
+  }
+  /* Account controls sit at the right edge; Settings, install and QR stay left. */
+  .topbar-right > .connection {
+    margin-left: auto;
+  }
+  /* The dot and avatar title carry "connected"; the text stays for screen readers.
+     Other states (demo, not connected) keep their visible text. */
+  .connection.connected .connection-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .install-button {
     padding: 7px 9px;
     font-size: 10px;
+  }
+  .install-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .board-column {
     min-height: 190px;

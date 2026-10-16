@@ -447,6 +447,9 @@ watch([lanes, rules, now, timeoutMinutes, timeoutRevision, showingCache, restori
   }
 }, { deep: true });
 const loggedIn = computed(() => Boolean(user.value));
+const connectionLabel = computed(() =>
+  loggedIn.value ? t("GitHub anslutet") : isDemo.value ? t("Demoläge") : t("Ej ansluten"),
+);
 const filteredRepos = computed(() =>
   repos.value.filter((r) =>
     r.full_name.toLowerCase().includes(repoQuery.value.toLowerCase()),
@@ -1148,16 +1151,10 @@ onMounted(async () => {
         >
           <QrCode :size="16" /><span>{{ t("Mobil") }}</span>
         </button>
-        <span class="connection"
-          ><i :class="{ connected: loggedIn }" />{{
-            loggedIn
-              ? t("GitHub anslutet")
-              : isDemo
-                ? t("Demoläge")
-                : t("Ej ansluten")
-          }}</span
+        <span class="connection" :class="{ connected: loggedIn }" :title="connectionLabel"
+          ><i :class="{ connected: loggedIn }" aria-hidden="true" /><span class="connection-label">{{ connectionLabel }}</span></span
         ><template v-if="user || savedSession"
-          ><img v-if="user" :src="user.avatar_url" alt="" class="avatar" /><span
+          ><img v-if="user" :src="user.avatar_url" alt="" class="avatar" :title="`${user.login} · ${connectionLabel}`" /><span
             class="username"
             v-if="user"
             >{{ user.login }}</span

@@ -64,10 +64,10 @@
       },
       {
         "text": {
-          "sv": "Inställningar visar GitHub-behörigheter i en tabell med kvitterbara badges; repositoryknappar och hjälptexter har blivit tydligare.",
-          "en": "Settings explains GitHub permissions in a table; viewed problems stay acknowledged after reload and signing back in, and repository controls are clearer."
+          "sv": "Inställningar visar GitHub-behörigheter i en tabell med kvitterbara badges; repositoryknappar, hjälptexter och mobilens toppfält med kontot längst till höger har blivit tydligare.",
+          "en": "Settings explains GitHub permissions in a table; viewed problems stay acknowledged after reload and signing back in, and repository controls and the phone top bar, with the account at the right edge, are clearer."
         },
-        "issues": [46, 51, 58, 71, 93]
+        "issues": [46, 51, 58, 71, 93, 96]
       },
       {
         "text": {
