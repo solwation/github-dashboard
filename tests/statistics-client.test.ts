@@ -1,0 +1,143 @@
+import { describe, expect, it } from "vitest";
+import { StatisticsCollector, statisticsLimits, type StatisticsClient } from "../src/lib/statistics-client";
+import { summarizeStatistics, type StatisticsCommit } from "../src/lib/statistics";
+const now = Date.parse("2026-10-16T15:00:00Z");
+const issue = { id: 1, number: 1, created_at: "2026-10-10T00:00:00Z", updated_at: "2026-10-13T00:00:00Z", labels: [{ name: "bug" }], user: { login: "alice" } };
+const commit: StatisticsCommit = { sha: "first", parents: [{ sha: "parent" }], author: { login: "alice" }, commit: { author: { name: "Alice", date: "2026-10-12T01:00:00Z" }, committer: { date: "2026-10-12T02:00:00Z" } } };
+const denied = () => Object.assign(new Error("fixture denied"), { status: 403, permissionDenied: true, rateLimited: false });
+type Reply = { data: unknown; next: string | null };
+function mockClient(handler: (url: URL) => Promise<Reply> | Reply) {
+  const calls: URL[] = [];
+  const client: StatisticsClient = { async request<T>(path: string) { const url = new URL(path, "https://api.github.com"); calls.push(url); return await handler(url) as { data: T; next: string | null }; } };
+  return { calls, client };
+}
+function baseline(url: URL): Reply {
+  if (url.pathname.endsWith("/issues/events")) return { data: [{ id: 1, event: "closed", created_at: "2026-10-13T00:00:00Z", issue, actor: { login: "alice" } }], next: null };
+  if (url.pathname.endsWith("/issues")) return { data: [issue, { ...issue, id: 2, pull_request: {} }], next: null };
+  if (url.pathname.endsWith("/commits")) return { data: [commit, { ...commit, sha: "merge", parents: [{ sha: "first" }, { sha: "other" }] }], next: null };
+  if (url.pathname.includes("/commits/")) return { data: { stats: { additions: 10, deletions: 4 }, files: [{ filename: "first.ts" }] }, next: null };
+  return { data: [], next: null };
+}
+describe("statistics transport and coverage", () => {
+  it("uses bounded, paginated read requests, historical events and non-merge diffs", async () => {
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith("/issues/events") && !url.searchParams.has("page")) return { data: [{ id: 99, event: "closed", created_at: "2020-01-01T00:00:00Z", issue }], next: "/repos/sample/repo/issues/events?page=2" };
+      if (url.pathname.includes("/commits/")) return { data: { stats: { additions: 10, deletions: 4 }, files: [{ filename: url.searchParams.get("page") === "2" ? "second.ts" : "first.ts" }] }, next: url.searchParams.get("page") === "2" ? null : "/repos/sample/repo/commits/first?page=2" };
+      return baseline(url);
+    });
+    const result = await new StatisticsCollector(client).load("sample/repo", now);
+    expect(result.issues!.data).toHaveLength(1);
+    expect(result.events!.data).toHaveLength(1); // Do not assume API event ordering.
+    expect(result.events!.complete).toBe(true);
+    expect(result.commits!.data).toHaveLength(2);
+    expect(result.changes!.data).toEqual([{ sha: "first", date: "2026-10-12T02:00:00Z", contributor: "alice", additions: 10, deletions: 4, files: 2, filesComplete: true }]);
+    expect(calls.some(url => url.pathname.endsWith("/commits/merge"))).toBe(false);
+    const request = calls.find(url => url.pathname.endsWith("/commits"))!;
+    expect(request.searchParams.get("since")).toBe("2026-09-17T00:00:00Z");
+    expect(request.searchParams.get("until")).toBe("2026-10-16T15:00:00.000Z");
+    expect(request.searchParams.has("sha")).toBe(false);
+  });
+  it("deduplicates overlapping pages and marks capped event history incomplete", async () => {
+    const { calls, client } = mockClient(url => url.pathname.endsWith("/issues/events") ? { ...baseline(url), next: `/repos/sample/repo/issues/events?page=${Number(url.searchParams.get("page") || 1) + 1}` } : baseline(url));
+    const data = await new StatisticsCollector(client).load("sample/repo", now);
+    expect(calls.filter(url => url.pathname.endsWith("/issues/events"))).toHaveLength(statisticsLimits.events);
+    expect(data.events!.data).toHaveLength(1);
+    expect(data.events!.complete).toBe(false);
+    expect(summarizeStatistics([data], { from: data.from, to: data.to, label: "", contributor: "" }).complete.closed).toBe(false);
+  });
+  it("silently hides only genuinely inaccessible sources and preserves true zeros", async () => {
+    const { client } = mockClient(url => {
+      if (url.pathname.includes("/commits") || url.pathname.endsWith("/pulls")) throw denied();
+      return baseline(url);
+    });
+    const data = await new StatisticsCollector(client).load("sample/repo", now);
+    expect(data.commits).toBeNull(); expect(data.changes).toBeNull(); expect(data.pulls).toBeNull();
+    expect(data.temporary).toEqual([]);
+    expect(summarizeStatistics([data], { from: data.from, to: data.to, label: "", contributor: "" }).totals).toEqual({ created: 1, closed: 1, reopened: 0, netIssues: 0 });
+  });
+  it("retains previously collected sources for network failures and rate limits", async () => {
+    let failure: Error | null = null;
+    const { calls, client } = mockClient(url => { if (failure) throw failure; return baseline(url); });
+    const collector = new StatisticsCollector(client);
+    const first = await collector.load("sample/repo", now);
+    const count = calls.length;
+    expect(await collector.load("sample/repo", now + 1000)).toBe(first);
+    expect(calls).toHaveLength(count);
+    failure = Object.assign(new Error("limited"), { status: 403, permissionDenied: false, rateLimited: true });
+    const limited = await collector.load("sample/repo", now + 2000, true);
+    expect(limited.issues).toBe(first.issues); expect(limited.events).toBe(first.events);
+    expect(limited.commits).toBe(first.commits); expect(limited.changes!.data).toEqual(first.changes!.data);
+    expect(limited.temporary).toEqual(expect.arrayContaining(["issues", "events", "commits", "pulls"]));
+    failure = new Error("network offline");
+    const offline = await collector.load("sample/repo", now + 3000, true);
+    expect(offline.issues!.data).toEqual(first.issues!.data);
+  });
+  it("does not mistake an unclassified 403, 409, or initial failure for missing rights or zero", async () => {
+    for (const status of [403, 409, 429, 500]) {
+      const { client } = mockClient(() => { throw Object.assign(new Error("temporary"), { status }); });
+      const data = await new StatisticsCollector(client).load("sample/repo", now);
+      expect(data.commits).toBeNull();
+      expect(data.temporary).toContain("commits");
+      expect(data.temporary).toContain("issues");
+    }
+  });
+  it("treats only a positively identified empty Git repository as zero commits", async () => {
+    const { client } = mockClient(url => {
+      if (url.pathname.endsWith("/commits")) throw Object.assign(new Error("Git Repository is empty."), { status: 409, emptyRepository: true });
+      return baseline(url);
+    });
+    const data = await new StatisticsCollector(client).load("sample/repo", now);
+    expect(data.commits!.data).toEqual([]); expect(data.commits!.complete).toBe(true);
+    expect(data.changes!.data).toEqual([]); expect(data.temporary).toEqual([]);
+  });
+  it("hides newly denied cached sources instead of showing the old values", async () => {
+    let revoked = false;
+    const { client } = mockClient(url => { if (revoked && url.pathname.endsWith("/commits")) throw denied(); return baseline(url); });
+    const collector = new StatisticsCollector(client);
+    expect((await collector.load("sample/repo", now)).commits).not.toBeNull();
+    revoked = true;
+    const result = await collector.load("sample/repo", now + 1000, true);
+    expect(result.commits).toBeNull(); expect(result.changes).toBeNull(); expect(result.temporary).toEqual([]);
+  });
+  it("limits commit-detail work, reuses immutable SHA details and marks file truncation", async () => {
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith("/commits")) return { data: Array.from({ length: 65 }, (_, index) => ({ ...commit, sha: `sha${index}` })), next: null };
+      if (url.pathname.includes("/commits/")) return { ...baseline(url), next: `${url.pathname}?page=${Number(url.searchParams.get("page") || 1) + 1}` };
+      return baseline(url);
+    });
+    const collector = new StatisticsCollector(client);
+    const first = await collector.load("sample/repo", now);
+    expect(first.changes!.data).toHaveLength(60); expect(first.changes!.complete).toBe(false);
+    expect(first.changes!.data.every(change => !change.filesComplete)).toBe(true);
+    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(60 * 3);
+    await collector.load("sample/repo", now + 1000, true);
+    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(60 * 3);
+  });
+  it("enforces the concurrency bound across repositories and coalesces simultaneous loads", async () => {
+    let active = 0, maximum = 0;
+    const { client } = mockClient(async url => {
+      active++; maximum = Math.max(maximum, active);
+      await new Promise(resolve => setTimeout(resolve, 1));
+      active--; return baseline(url);
+    });
+    const collector = new StatisticsCollector(client);
+    const [first, again] = await Promise.all([collector.load("sample/one", now), collector.load("sample/one", now), collector.load("sample/two", now), collector.load("sample/three", now)]);
+    expect(first).toBe(again);
+    expect(maximum).toBeLessThanOrEqual(3);
+  });
+  it("does not follow up with authenticated requests after the session is disposed", async () => {
+    const finish: (() => void)[] = [];
+    const { calls, client } = mockClient(async () => {
+      await new Promise<void>(resolve => { finish.push(resolve); });
+      return { data: [], next: "/repos/sample/repo/issues?page=2" };
+    });
+    const collector = new StatisticsCollector(client);
+    const work = collector.load("sample/repo", now);
+    collector.dispose();
+    expect(calls.length).toBeLessThanOrEqual(3);
+    for (const resolve of finish) resolve();
+    await work;
+    expect(calls.length).toBeLessThanOrEqual(3);
+    await expect(new StatisticsCollector(client).load("../outside/repo", now)).rejects.toThrow("Invalid repository");
+  });
+});
