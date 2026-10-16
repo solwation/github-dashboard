@@ -397,7 +397,6 @@ export const english: Record<string, string> = {
   "Ogiltig API-adress.": "Invalid API address.",
   "Sessionen har gått ut. Logga in igen.":
     "Your session has expired. Sign in again.",
-  "Åtkomst nekad eller API-gräns nådd.": "Access denied or API limit reached.",
   " Försök efter {time}.": " Try again after {time}.",
   " Kontrollera tokenens behörigheter.": " Check your token permissions.",
   "GitHub svarade {status}. Kontrollera att du har åtkomst till repot.":
