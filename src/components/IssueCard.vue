@@ -64,12 +64,13 @@ async function loadClosingCommit() {
   }
 }
 watch(
-  () => [
-    props.issue.id,
-    props.issue.html_url,
-    props.issue.state,
-    props.issue.closed_at,
-    props.demo,
+  [
+    () => props.issue.id,
+    () => props.issue.html_url,
+    () => props.issue.state,
+    () => props.issue.closed_at,
+    () => props.demo,
+    () => props.commentsSession,
   ],
   () => {
     revision++;
@@ -194,7 +195,7 @@ const visibleLabels = computed(() =>
       /></span>
     </div>
     <div
-      v-if="col === 'closed' && !demo && loadCommit && commitState !== 'error'"
+      v-if="col === 'closed' && !demo && loadCommit && (commitState === 'loading' || (commitState === 'loaded' && commit))"
       class="closing-commit"
       aria-live="polite"
     >
@@ -231,9 +232,6 @@ const visibleLabels = computed(() =>
           >
         </span>
       </template>
-      <span v-else-if="commitState === 'loaded'">{{
-        t("Ingen stängande commit kopplad")
-      }}</span>
     </div>
   </article>
 </template>
