@@ -139,7 +139,7 @@ async function decryptToken(record: Credential): Promise<string> {
 }
 
 /** Cache uses the credential's non-exportable key, with an authenticated record purpose. */
-export function saveContent(token: string, value: unknown): Promise<void> {
+function saveEncryptedContent(token: string, purpose: string, value: unknown): Promise<void> {
   // Snapshot now, before later reactive UI mutations or queued operations.
   const plaintext = new TextEncoder().encode(JSON.stringify(value));
   return serialize(async () => {
@@ -147,7 +147,7 @@ export function saveContent(token: string, value: unknown): Promise<void> {
     if (!credential || await decryptToken(credential) !== token) return;
     const payload = await encodeContent(plaintext);
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, payload);
+    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(purpose) }, credential.key, payload);
     await transact("readwrite", (store, abort) => {
       const request = store.get(RECORD);
       request.onsuccess = () => {
@@ -155,7 +155,7 @@ export function saveContent(token: string, value: unknown): Promise<void> {
         // A different tab may have logged out or replaced the token during encryption.
         const bytes = new Uint8Array(credential.ciphertext);
         if (current && bytes.length === current.ciphertext.byteLength && bytes.every((byte, i) => byte === new Uint8Array(current.ciphertext)[i])) {
-          try { store.put({ iv, ciphertext }, CONTENT); } catch (cause) { abort(cause); }
+          try { store.put({ iv, ciphertext }, purpose); } catch (cause) { abort(cause); }
         }
       };
       return request;
@@ -165,18 +165,24 @@ export function saveContent(token: string, value: unknown): Promise<void> {
   });
 }
 
-export function loadContent<T>(token: string): Promise<T | null> {
+function loadEncryptedContent<T>(token: string, purpose: string): Promise<T | null> {
   return serialize(async () => {
     const credential = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
     if (!credential || await decryptToken(credential) !== token) return null;
-    const record = await transact<Omit<Credential, "key"> | undefined>("readonly", store => store.get(CONTENT));
+    const record = await transact<Omit<Credential, "key"> | undefined>("readonly", store => store.get(purpose));
     if (!record || record.ciphertext.byteLength > MAX_CONTENT_BYTES + 16) return null;
     try {
-      const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv, additionalData: new TextEncoder().encode(CONTENT) }, credential.key, record.ciphertext);
+      const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv, additionalData: new TextEncoder().encode(purpose) }, credential.key, record.ciphertext);
       return await decodeContent(new Uint8Array(plaintext)) as T;
     } catch { return null; } // Damaged cache must never prevent sign-in.
   });
 }
+
+/** Independent encrypted records share credential binding and atomic logout cleanup. */
+export const saveContent = (token: string, value: unknown) => saveEncryptedContent(token, CONTENT, value);
+export const loadContent = <T>(token: string) => loadEncryptedContent<T>(token, CONTENT);
+export const saveStatistics = (token: string, value: unknown) => saveEncryptedContent(token, "statistics", value);
+export const loadStatistics = <T>(token: string) => loadEncryptedContent<T>(token, "statistics");
 
 export function loadToken(): Promise<string | null> {
   return serialize(async () => {

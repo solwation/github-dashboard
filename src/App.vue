@@ -1275,7 +1275,7 @@ onMounted(async () => {
         </div></template
       >
       <template v-else>
-        <StatisticsView v-if="currentView === 'statistics'" :client="api" :repositories="orderedLanes.map(lane => lane.repo)" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
+        <StatisticsView v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="orderedLanes.map(lane => lane.repo)" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
         <div v-show="currentView === 'overview'">
         <section class="page-heading">
           <div>

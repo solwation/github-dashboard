@@ -137,7 +137,70 @@ describe("statistics transport and coverage", () => {
     expect(calls.length).toBeLessThanOrEqual(3);
     for (const resolve of finish) resolve();
     await work;
+    expect(collector.export()).toEqual([]);
+    expect(collector.cached("sample/repo", now)).toBeUndefined();
+    await expect(collector.load("sample/repo", now)).rejects.toThrow("Statistics session ended");
     expect(calls.length).toBeLessThanOrEqual(3);
     await expect(new StatisticsCollector(client).load("../outside/repo", now)).rejects.toThrow("Invalid repository");
+  });
+});
+
+describe('persistent statistics history reuse', () => {
+  it('restores immediately, refetches the previous partial day and reuses immutable older commit details after two days', async () => {
+    let shifted = false;
+    const historical = { ...commit, sha: 'historical' };
+    const overlap = { ...commit, sha: 'overlap', commit: { committer: { date: '2026-10-16T01:00:00Z' } } };
+    const fresh = { ...commit, sha: 'new', commit: { committer: { date: '2026-10-18T01:00:00Z' } } };
+    const { calls, client } = mockClient(url => url.pathname.endsWith('/commits')
+      ? { data: shifted ? [overlap, fresh] : [historical, overlap], next: null } : baseline(url));
+    const first = new StatisticsCollector(client);
+    await first.load('sample/repo', now);
+    const restored = new StatisticsCollector(client);
+    restored.restore(first.export());
+    expect(restored.cached('sample/repo', now + 2 * 86400000)?.commits?.complete).toBe(false);
+    calls.length = 0; shifted = true;
+    const result = await restored.load('sample/repo', now + 2 * 86400000);
+    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-10-16T00:00:00Z');
+    expect(result.commits!.data.map(commit => commit.sha).sort()).toEqual(['historical', 'new', 'overlap']);
+    expect(result.commits!.complete).toBe(true);
+    expect(calls.filter(url => url.pathname.includes('/commits/')).map(url => url.pathname)).toEqual(['/repos/sample/repo/commits/new']);
+    expect(calls.find(url => url.pathname.endsWith('/issues'))!.searchParams.get('since')).toBe('2026-09-19T00:00:00Z');
+  });
+  it('full revalidation removes rewritten branch history, and partial cached history never enables incremental coverage', async () => {
+    let current: StatisticsCommit[] = [commit];
+    const { calls, client } = mockClient(url => url.pathname.endsWith('/commits') ? { data: current, next: null } : baseline(url));
+    const collector = new StatisticsCollector(client);
+    await collector.load('sample/repo', now);
+    current = [];
+    const forced = await collector.load('sample/repo', now + 86400000, true);
+    expect(forced.commits!.data).toEqual([]);
+    expect(forced.changes!.data).toEqual([]);
+    expect(calls.filter(url => url.pathname.endsWith('/commits')).at(-1)!.searchParams.get('since')).toBe('2026-09-18T00:00:00Z');
+    const partial = { ...forced, commits: { ...forced.commits!, complete: false } };
+    const next = new StatisticsCollector(client); next.restore([partial]); calls.length = 0;
+    await next.load('sample/repo', now + 2 * 86400000);
+    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-19T00:00:00Z');
+  });
+  it('does not promote missing interval data or denied sources to complete after reload', async () => {
+    let failure = false;
+    const { client } = mockClient(url => { if (failure) throw new Error('offline'); return baseline(url); });
+    const first = new StatisticsCollector(client); await first.load('sample/repo', now);
+    const restored = new StatisticsCollector(client); restored.restore(first.export()); failure = true;
+    const offline = await restored.load('sample/repo', now + 2 * 86400000);
+    expect(offline.issues!.complete).toBe(false); expect(offline.events!.complete).toBe(false); expect(offline.commits!.complete).toBe(false);
+    expect(offline.temporary).toContain('commits');
+    const revoked = new StatisticsCollector(mockClient(() => { throw denied(); }).client); revoked.restore(first.export());
+    const deniedData = await revoked.load('sample/repo', now + 86400000);
+    expect(deniedData.commits).toBeNull(); expect(deniedData.issues).toBeNull(); expect(deniedData.changes).toBeNull();
+  });
+  it('revalidates hydrated same-day cache and forces full history after the weekly verification deadline', async () => {
+    const { calls, client } = mockClient(baseline);
+    const first = new StatisticsCollector(client); await first.load('sample/repo', now);
+    const restored = new StatisticsCollector(client); restored.restore(first.export()); calls.length = 0;
+    await restored.load('sample/repo', now + 1000);
+    expect(calls.length).toBeGreaterThan(0);
+    calls.length = 0;
+    await restored.load('sample/repo', now + 7 * 86400000);
+    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-24T00:00:00Z');
   });
 });

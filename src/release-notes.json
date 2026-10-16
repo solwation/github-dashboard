@@ -15,10 +15,10 @@
       },
       {
         "text": {
-          "sv": "Statistik visar de repositories du har valt i sidomenyn, i samma ordning som på tavlan, med dagliga diagram över issues, commits, kodändringar och pull requests för de senaste 30 dagarna. Varje repository har egna filter för datum, label och bidragsgivare. En tydlig laddningsvy visar hur långt hämtningen har kommit, och vid uppdatering ligger tidigare diagram kvar. Mått som din token inte ger tillgång till döljs. Graferna behåller tunna linjer på breda skärmar.",
-          "en": "Statistics shows the repositories you selected in the sidebar, in board order, with daily charts of issues, commits, code changes and pull requests for the last 30 days. Each repository has its own date, label and contributor filters. A clear loading view shows collection progress, and refreshing keeps the previous charts visible. Metrics your token cannot access stay hidden. Charts keep thin lines on wide screens."
+          "sv": "Statistik visar de repositories du har valt i sidomenyn, i samma ordning som på tavlan, med dagliga diagram över issues, commits, kodändringar och pull requests för de senaste 30 dagarna. Varje repository har egna filter för datum, label och bidragsgivare. En tydlig laddningsvy visar hur långt hämtningen har kommit, och vid uppdatering ligger tidigare diagram kvar. Mått som din token inte ger tillgång till döljs. Graferna behåller tunna linjer på breda skärmar. Krypterad statistik visas direkt vid återbesök; tidigare commitdagar och kodmått återanvänds medan föränderliga källor omvalideras.",
+          "en": "Statistics shows the repositories you selected in the sidebar, in board order, with daily charts of issues, commits, code changes and pull requests for the last 30 days. Each repository has its own date, label and contributor filters. A clear loading view shows collection progress, and refreshing keeps the previous charts visible. Metrics your token cannot access stay hidden. Charts keep thin lines on wide screens. Encrypted statistics appear immediately on return; historical commit days and code metrics are reused while mutable sources are revalidated."
         },
-        "issues": [45, 62, 76]
+        "issues": [45, 62, 76, 75]
       },
       {
         "text": {

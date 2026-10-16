@@ -1,4 +1,4 @@
-/** Statistics are snapshots, scoped to one authenticated GitHub client in memory. */
+/** Statistics are credential-bound snapshots; persistent copies are encrypted. */
 export interface StatisticsIssue {
   id: number; number: number; created_at: string; updated_at: string;
   labels: { name: string }[]; user?: { login: string } | null; pull_request?: unknown;
@@ -19,7 +19,7 @@ export interface StatisticsPull {
   id: number; created_at: string; updated_at: string; closed_at: string | null; merged_at: string | null;
   user?: { login: string } | null; labels: { name: string }[];
 }
-export interface StatisticsSource<T> { data: T[]; complete: boolean; fetchedAt: number }
+export interface StatisticsSource<T> { data: T[]; complete: boolean; fetchedAt: number; historyVerifiedAt?: number }
 export interface StatisticsData {
   repository: string; from: string; to: string; fetchedAt: number;
   issues: StatisticsSource<StatisticsIssue> | null;

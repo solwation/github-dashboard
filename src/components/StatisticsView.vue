@@ -5,15 +5,19 @@ import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { StatisticsCollector, type StatisticsClient } from "../lib/statistics-client";
 import { statisticsWindow, type StatisticsData, type StatisticsPreference, type StatisticsPreferences } from "../lib/statistics";
+import { readStatisticsCache, writeStatisticsCache } from "../lib/statistics-cache";
 import { demoStatistics } from "../lib/statistics-demo";
 import StatisticsRepository from "./StatisticsRepository.vue";
-const { t } = useLanguage();
-const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences }>();
+const { t, locale } = useLanguage();
+const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
 const snapshots = shallowRef<Record<string, StatisticsData>>({});
+const preparedRepositories = ref(new Set<string>());
+const renderedRepositories = computed(() => props.repositories.filter(repo => preparedRepositories.value.has(repo.full_name)));
 const loading = ref<Record<string, boolean>>({});
+const cacheFailed = ref(false);
 const failures = ref<Record<string, boolean>>({});
 const busy = computed(() => props.repositories.some(repo => loading.value[repo.full_name]));
 const initialLoading = computed(() => busy.value && !props.repositories.some(repo => {
@@ -25,8 +29,14 @@ const partial = computed(() => props.repositories.some(repo => {
   const data = snapshots.value[repo.full_name];
   return !!data && ([data.issues, data.events, data.commits, data.changes, data.pulls].some(source => source?.complete === false) || !!data.changes?.data.some(change => !change.filesComplete));
 }));
+const historyVerifiedAt = computed(() => {
+  const values = props.repositories.map(repo => snapshots.value[repo.full_name]?.commits).filter(source => source?.historyVerifiedAt && source.historyVerifiedAt < source.fetchedAt).map(source => source!.historyVerifiedAt!);
+  return values.length ? Math.min(...values) : null;
+});
 let collector: StatisticsCollector | null = null;
 let generation = 0;
+let sessionEpoch = 0;
+let restoration: Promise<void> = Promise.resolve();
 function updatePreference(repository: string, value: StatisticsPreference) {
   if (JSON.stringify(preferencesState.value[repository]) === JSON.stringify(value)) return;
   preferencesState.value = { ...preferencesState.value, [repository]: value };
@@ -37,33 +47,68 @@ watch(() => props.preferences, value => {
 }, { deep: true });
 async function load(force = false) {
   const run = ++generation;
+  const epoch = sessionEpoch, activeCollector = collector, token = props.credential;
   const names = props.repositories.map(repo => repo.full_name);
   const selected = new Set(names);
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
-  if (!names.length || (!props.demo && !collector)) { loading.value = {}; return; }
+  if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
   period.value = statisticsWindow();
+  for (const name of names) {
+    const saved = activeCollector?.export().find(data => data.repository === name);
+    const data = activeCollector?.cached(name);
+    if (!snapshots.value[name] && data) snapshots.value = { ...snapshots.value, [name]: data };
+    const preference = preferencesState.value[name];
+    if (saved && preference?.from === saved.from && preference.to === saved.to && (saved.from !== period.value.from || saved.to !== period.value.to)) {
+      updatePreference(name, { ...preference, ...period.value });
+    }
+  }
+  preparedRepositories.value = new Set(names);
   loading.value = Object.fromEntries(names.map(name => [name, true]));
   failures.value = {};
   // One collector owns the semaphore for every section on this page.
   await Promise.all(names.map(async name => {
     try {
-      const data = props.demo ? demoStatistics(name) : await collector!.load(name, Date.now(), force);
+      const data = props.demo ? demoStatistics(name) : await activeCollector!.load(name, Date.now(), force);
       if (run === generation) snapshots.value = { ...snapshots.value, [name]: data };
+      if (epoch === sessionEpoch && activeCollector && token && !props.demo) {
+        try { await writeStatisticsCache(token, activeCollector.export()); if (epoch === sessionEpoch) cacheFailed.value = false; }
+        catch { if (epoch === sessionEpoch) cacheFailed.value = true; }
+      }
     } catch { if (run === generation) failures.value = { ...failures.value, [name]: true }; }
     finally { if (run === generation) loading.value = { ...loading.value, [name]: false }; }
   }));
 }
-watch([() => props.client, () => props.session, () => props.demo], () => {
-  generation++; collector?.dispose(); collector = props.client ? new StatisticsCollector(props.client) : null;
-  snapshots.value = {}; period.value = statisticsWindow();
-  void load();
+watch([() => props.client, () => props.session, () => props.demo, () => props.credential], () => {
+  generation++; const epoch = ++sessionEpoch;
+  collector?.dispose(); collector = props.client ? new StatisticsCollector(props.client) : null;
+  const activeCollector = collector, token = props.credential;
+  snapshots.value = {}; preparedRepositories.value = new Set(); period.value = statisticsWindow(); cacheFailed.value = false;
+  loading.value = Object.fromEntries(props.repositories.map(repo => [repo.full_name, true]));
+  restoration = (async () => {
+    const saved = token && !props.demo ? await readStatisticsCache(token) : [];
+    if (epoch !== sessionEpoch || activeCollector !== collector) return;
+    activeCollector?.restore(saved);
+    const restored: Record<string, StatisticsData> = {};
+    for (const repo of props.repositories) {
+      const data = activeCollector?.cached(repo.full_name);
+      if (data) restored[repo.full_name] = data;
+    }
+    snapshots.value = restored;
+  })();
+  void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
 }, { immediate: true });
-watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => { void load(); });
-onUnmounted(() => { generation++; collector?.dispose(); });
+watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
+  const epoch = sessionEpoch;
+  const selected = new Set(props.repositories.map(repo => repo.full_name));
+  preparedRepositories.value = new Set([...preparedRepositories.value].filter(name => selected.has(name)));
+  void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
+});
+onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
     <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1><p>{{ t("De senaste 30 dagarna, repository för repository.") }}</p></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
+    <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
     <div v-if="initialLoading" class="statistics-loading-splash" role="status" aria-live="polite">
       <RefreshCw class="statistics-loading-spinner" :size="34" aria-hidden="true" />
@@ -72,7 +117,7 @@ onUnmounted(() => { generation++; collector?.dispose(); });
       <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: repositories.length }) }}</small>
     </div>
     <div v-show="!initialLoading" class="statistics-repositories">
-      <StatisticsRepository v-for="repository in repositories" :key="repository.full_name" :repository="repository"
+      <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-failed="!!failures[repository.full_name]"
         :period="period" :preference="preferencesState[repository.full_name]" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
@@ -84,8 +129,10 @@ onUnmounted(() => { generation++; collector?.dispose(); });
         <li>{{ t("Labels avser dagens labels, även när äldre händelser filtreras. Bidragsgivare avser skaparen för issues och pull requests, aktören för issue-händelser och författaren för commits. Ett labelfilter döljer kodstatistik eftersom commits inte har issue-labels.") }}</li>
         <li>{{ t("Commits följer standardbranchens historik och grupperas efter committer-datum i UTC. Merge-commits räknas som commits men deras diff undantas från kodmåtten för att undvika dubbelräkning. Filändringar är summan av berörda filer per commit, inte unika filer i perioden.") }}</li>
         <li>{{ t("Medianålder vid stängning mäter tiden från skapande till varje stängningshändelse i urvalet, inte aktiv arbetstid. Pull requests räknas separat efter skapande, merge och stängning utan merge.") }}</li>
-        <li>{{ t("Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera hämtar igen.") }}</li>
+        <li>{{ t("Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.") }}</li>
+        <li>{{ t("Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från föregående sista UTC-dag, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.") }}</li>
       </ul></details>
+      <p v-if="historyVerifiedAt">{{ t("Äldsta omvalideringen av återanvänd commithistorik: {time} UTC.", { time: new Date(historyVerifiedAt).toLocaleString(locale, { timeZone: 'UTC' }) }) }}</p>
       <p v-if="partial" class="statistics-coverage">{{ t("Delvis data: markerade värden omfattar det underlag som hann hämtas inom sidans gränser. De är inte fullständiga totalsummor.") }}</p>
     </footer>
   </section>

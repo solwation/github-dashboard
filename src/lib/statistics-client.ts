@@ -1,3 +1,4 @@
+import { previewStatistics, validStatisticsRepository, STATISTICS_RETENTION_MS } from "./statistics-cache";
 import {
   commitContributor, commitDate, statisticsWindow,
   type StatisticsChange, type StatisticsCommit, type StatisticsData, type StatisticsEvent,
@@ -14,12 +15,25 @@ const cacheDuration = 5 * 60 * 1000;
 /** Every request passes through a shared gate, including concurrent repository loads. */
 export class StatisticsCollector {
   private readonly cache = new Map<string, StatisticsData>();
+  private readonly restored = new Set<string>();
   private readonly pending = new Map<string, Promise<StatisticsData>>();
   private active = 0;
   private waiting: (() => void)[] = [];
   private disposed = false;
   constructor(private readonly client: StatisticsClient) {}
-  dispose() { this.disposed = true; this.cache.clear(); }
+  dispose() { this.disposed = true; this.cache.clear(); this.restored.clear(); }
+  restore(entries: StatisticsData[]) {
+    if (this.disposed) return;
+    for (const data of entries) {
+      const key = `${data.repository}:${data.from}`;
+      this.cache.set(key, data); this.restored.add(key);
+    }
+  }
+  export() { return [...this.cache.values()]; }
+  cached(repository: string, now = Date.now()) {
+    const data = [...this.cache.values()].filter(data => data.repository === repository && data.fetchedAt <= now && now - data.fetchedAt < STATISTICS_RETENTION_MS).sort((a, b) => b.fetchedAt - a.fetchedAt)[0];
+    return data ? previewStatistics(data, now) : undefined;
+  }
   private async request<T>(path: string) {
     if (this.active >= statisticsLimits.concurrency) await new Promise<void>(resolve => this.waiting.push(resolve));
     else this.active++;
@@ -48,14 +62,16 @@ export class StatisticsCollector {
     return { data, complete: !next, fetchedAt: now };
   }
   async load(repository: string, now = Date.now(), force = false): Promise<StatisticsData> {
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error("Invalid repository");
+    if (!validStatisticsRepository(repository)) throw new Error("Invalid repository");
     const window = statisticsWindow(now), key = `${repository}:${window.from}`;
-    const existing = this.cache.get(key);
-    if (!force && existing && now - existing.fetchedAt < cacheDuration) return existing;
+    if (this.disposed) throw new Error("Statistics session ended");
+    const existing = this.cache.get(key) || [...this.cache.values()].filter(data => data.repository === repository && data.fetchedAt <= now && now - data.fetchedAt < STATISTICS_RETENTION_MS).sort((a, b) => b.fetchedAt - a.fetchedAt)[0];
+    if (!force && existing && existing.from === window.from && existing.fetchedAt <= now && !this.restored.has(key) && now - existing.fetchedAt < cacheDuration) return existing;
     const pending = this.pending.get(key);
     if (pending) return pending;
-    const work = this.collect(repository, now, existing).then(result => {
+    const work = this.collect(repository, now, existing, force).then(result => {
       if (!this.disposed) {
+        for (const [oldKey, data] of this.cache) if (data.repository === repository) { this.cache.delete(oldKey); this.restored.delete(oldKey); }
         this.cache.set(key, result);
         if (this.cache.size > 10) this.cache.delete(this.cache.keys().next().value!);
       }
@@ -64,7 +80,7 @@ export class StatisticsCollector {
     this.pending.set(key, work);
     return work;
   }
-  private async collect(repository: string, now: number, previous?: StatisticsData): Promise<StatisticsData> {
+  private async collect(repository: string, now: number, previous?: StatisticsData, force = false): Promise<StatisticsData> {
     const window = statisticsWindow(now), root = `/repos/${repository}`;
     const since = `${window.from}T00:00:00Z`, until = new Date(now).toISOString();
     const temporary: StatisticsSourceName[] = [];
@@ -76,7 +92,10 @@ export class StatisticsCollector {
       catch (error) {
         if (this.denied(error)) return null;
         temporary.push(name);
-        return (previous?.[name] as StatisticsSource<T> | null | undefined) || null;
+        const old = previous?.[name] as StatisticsSource<T> | null | undefined;
+        if (!old || old.fetchedAt > now || now - old.fetchedAt >= STATISTICS_RETENTION_MS) return null;
+        const covers = previous!.from <= window.from && previous!.to >= window.to;
+        return covers ? old : { ...old, complete: false };
       }
     };
     const [issues, events, commits, pulls] = await Promise.all([
@@ -90,11 +109,21 @@ export class StatisticsCollector {
       }),
       attempt("commits", async () => {
         try {
-          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${since}&until=${until}&per_page=100`, statisticsLimits.commits, now);
-          return { ...source, data: [...new Map(source.data.map(commit => [commit.sha, commit])).values()] };
+          const old = previous?.commits;
+          const verified = old?.historyVerifiedAt ?? old?.fetchedAt ?? 0;
+          const reuse = !force && !!old?.complete && previous!.from <= window.from && previous!.to <= window.to && previous!.to > window.from &&
+            verified <= now && now - verified < STATISTICS_RETENTION_MS;
+          // The previous final day was partial; always refetch it along with new days.
+          const from = reuse ? `${previous!.to}T00:00:00Z` : since;
+          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&until=${until}&per_page=100`, statisticsLimits.commits, now);
+          const historical = reuse ? old!.data.filter(commit => commitDate(commit) >= since && commitDate(commit) < from) : [];
+          const data = [...new Map([...historical, ...source.data].map(commit => [commit.sha, commit])).values()]
+            .filter(commit => commitDate(commit) >= since && commitDate(commit) <= until)
+            .sort((a, b) => Date.parse(commitDate(b)) - Date.parse(commitDate(a)));
+          return { ...source, complete: source.complete && data.length <= 600, data: data.slice(0, 600), historyVerifiedAt: reuse ? verified : now };
         } catch (error) {
           // GitHub returns 409 for an empty Git repository: this is a real zero.
-          if ((error as { status?: number; emptyRepository?: boolean })?.status === 409 && (error as { emptyRepository?: boolean }).emptyRepository === true) return { data: [], complete: true, fetchedAt: now };
+          if ((error as { status?: number; emptyRepository?: boolean })?.status === 409 && (error as { emptyRepository?: boolean }).emptyRepository === true) return { data: [], complete: true, fetchedAt: now, historyVerifiedAt: now };
           throw error;
         }
       }),
