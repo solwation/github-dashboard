@@ -532,6 +532,12 @@ export const english: Record<string, string> = {
   "Kunde inte uppdatera. Försök igen.": "Could not update. Please try again.",
   "Använd en fine-grained token med läsrättighet till Issues och Metadata för de repositories du vill följa. Tokenen sparas krypterat i webbläsarens databas (IndexedDB) tills du loggar ut.":
     "Use a fine-grained token with read access to Issues and Metadata for the repositories you want to follow. Your token is stored encrypted in your browser database (IndexedDB) until you sign out.",
+  // Release notes (#69)
+  "Versionsnyheter": "What's new",
+  "Stäng versionsnyheter": "Close what's new",
+  "Det finns inga versionsnyheter ännu.": "There are no release notes yet.",
+  "Issues:": "Issues:",
+  "Issue #{number} på GitHub": "Issue #{number} on GitHub",
 };
 export function t(
   source: string,

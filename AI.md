@@ -37,6 +37,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 - Keep keyboard access, accessible names, mobile layouts and `prefers-reduced-motion` support when changing UI behavior.
 - `npm test` checks pure logic and transport behavior. `npm run test:e2e` checks browser flows; run `npx playwright install chromium` once if needed. `npm run build` checks types and production output. Run the checks appropriate to the issue; avoid redundant tests that only mirror implementation.
 - For targeted checks use `npx vitest run <affected test files>` and `npx playwright test <affected test files>`. The npm test scripts run entire suites and are appropriate only when the scope justifies them.
+- Keep release notes current: every published user-facing change adds to or updates that day's entry (Europe/Stockholm date, newest day first) in `src/release-notes.json` as part of the same commit, in both Swedish and English. Write coherent text about user benefit, merging related issues into existing sections instead of one line per issue or commit, and keep the related issue numbers in `issues`. Describe only what is actually published on `main`: no invented or unpublished features, repetition, secrets or private repository details. An integrating conductor writes the entry for integrated worker results. Run `npx vitest run tests/release-notes.test.ts` after editing the file.
 - Update `README.md` when behavior or setup changes. Keep this file current when the project workflow changes.
 
 ## /orkester
