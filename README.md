@@ -11,6 +11,7 @@ Follow work across repositories without switching tabs. Backlog sorts by priorit
 - **The context you need:** read issue descriptions, comments and closing commit details, including embedded images linked to GitHub repository files.
 - **Ready when you return:** encrypted local sign-in and content cache, with automatic GitHub updates.
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
+- **Explore activity:** Statistics compares repositories over the latest 30 UTC calendar days, with daily issue, commit, code-change and pull-request charts. Filter by date, current labels or contributor. Unavailable metrics stay hidden; bounded API collection is marked when incomplete.
 - **See changes:** Overview counts briefly highlight increases and decreases, with a daily count of loaded issues closed today in your local timezone.
 - **Hear progress:** enable a repository’s notifications for distinct sounds when work starts, closes, becomes blocked or returns to Backlog. Audio resumes after interacting with the dashboard; browsers may delay background updates.
 

@@ -18,7 +18,7 @@ import {
   type Rules,
 } from "./model";
 export class GitHubApiError extends Error {
-  constructor(message: string, public readonly status: number, public readonly permissionDenied = false, public readonly rateLimited = false) {
+  constructor(message: string, public readonly status: number, public readonly permissionDenied = false, public readonly rateLimited = false, public readonly emptyRepository = false) {
     super(message);
     this.name = "GitHubApiError";
   }
@@ -157,6 +157,7 @@ export class GitHub {
                 { status: response.status },
               ),
         response.status, permissionDenied, rateLimited,
+        response.status === 409 && typeof body?.message === "string" && /^Git Repository is empty\.?$/i.test(body.message),
       );
     }
     this.observePermission(url.pathname, true);

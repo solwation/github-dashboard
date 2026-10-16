@@ -2,9 +2,9 @@ import type { Repo } from './model';
 
 export const permissionDefinitions = [
   { id: 'metadata', name: 'Metadata', feature: 'Repositorynamn, beskrivning och grundinformation.' },
-  { id: 'issues', name: 'Issues', feature: 'Issues, etiketter, kommentarer och tid i pågående arbete.' },
-  { id: 'contents', name: 'Contents', feature: 'Commitdetaljer och tillagd eller borttagen kod.' },
-  { id: 'pull_requests', name: 'Pull requests', feature: 'Information om sammanslagna pull requests och deras koppling till stängda issues.' },
+  { id: 'issues', name: 'Issues', feature: 'Issues, etiketter, kommentarer och tid i pågående arbete. Statistik över issueflödet.' },
+  { id: 'contents', name: 'Contents', feature: 'Commitdetaljer och tillagd eller borttagen kod. Statistik över commits och kodändringar.' },
+  { id: 'pull_requests', name: 'Pull requests', feature: 'Information om sammanslagna pull requests och deras koppling till stängda issues. Statistik över pull requests.' },
 ] as const;
 export type PermissionId = typeof permissionDefinitions[number]['id'];
 export type PermissionStatus = 'granted' | 'missing' | 'unknown';

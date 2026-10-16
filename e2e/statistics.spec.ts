@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 async function openStatistics(page: Page) {
-  await page.locator('.sidebar a, .sidebar button').filter({ hasText: /^(Statistics|Statistik)$/ }).click();
+  await page.getByRole('link', { name: /^(Statistics|Statistik)$/, exact: true }).click();
   await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
 }
 function card(page: Page, name: string) { return page.locator(".statistics-total").filter({ has: page.locator("span", { hasText: name }) }); }
@@ -14,18 +14,19 @@ test("Statistics compares repositories with keyboard-accessible graphs and filte
   await page.getByRole("checkbox", { name: "demo/weekend-project", exact: true }).check();
   await expect(card(page, "Stängda issues").locator("strong")).toHaveText("6");
   await expect(page.getByRole("img", { name: "Stängda issues", exact: true })).toBeVisible();
+  await page.locator(".statistics-chart").screenshot({ path: "/tmp/issueflow-statistics-chart.png" });
   const day = page.getByRole("slider", { name: "Dag i diagrammet" });
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("29");
   await expect(day).toHaveAttribute("aria-valuetext", /demo\/weekend-project/);
   await page.getByText("Visa dagliga värden", { exact: true }).click();
   await expect(page.locator(".daily-values tbody tr")).toHaveCount(30);
-  await page.getByLabel("Nuvarande label", { exact: true }).selectOption("bug");
+  await page.getByRole("combobox", { name: "Nuvarande label", exact: true }).selectOption("bug");
   await expect(card(page, "Commits")).toHaveCount(0);
   await expect(card(page, "Tillagda rader")).toHaveCount(0);
   await expect(card(page, "Stängda issues")).toHaveCount(1);
   await page.getByRole("button", { name: "Återställ filter" }).click();
-  await expect(page.getByLabel("Nuvarande label", { exact: true })).toHaveValue("");
+  await expect(page.getByRole("combobox", { name: "Nuvarande label", exact: true })).toHaveValue("");
   await expect(card(page, "Commits")).toHaveCount(1);
   await expect(page.getByRole("checkbox", { name: "demo/weekend-project", exact: true })).not.toBeChecked();
   for (const width of [320, 390, 650]) {

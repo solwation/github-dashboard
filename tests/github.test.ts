@@ -21,6 +21,14 @@ const issue = {
 };
 afterEach(() => vi.unstubAllGlobals());
 describe("GitHub transport", () => {
+  it("distinguishes an empty Git repository from other conflict responses", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: "Git Repository is empty." }), { status: 409 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: "Conflict" }), { status: 409 })));
+    const client = new GitHub("test-token");
+    await expect(client.request("/repos/owner/test/commits")).rejects.toMatchObject({ status: 409, emptyRepository: true });
+    await expect(client.request("/repos/owner/test/commits")).rejects.toMatchObject({ status: 409, emptyRepository: false });
+  });
   it("follows pagination and sends credentials only to the GitHub API", async () => {
     const mock = vi
       .fn()

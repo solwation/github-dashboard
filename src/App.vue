@@ -39,6 +39,7 @@ import { matchesIssueFilters } from "./lib/issue-filter";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import type { PermissionReport } from "./lib/permissions";
+const StatisticsView = defineAsyncComponent(() => import("./components/StatisticsView.vue"));
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
@@ -106,6 +107,14 @@ function toggleCollapsed(name: string) {
 const rules = ref<Record<string, Rules>>({});
 const editing = ref<string | null>(null);
 const isDemo = ref(false);
+const currentView = ref(window.location.hash === "#statistics" ? "statistics" : "overview");
+async function navigateWorkspace() {
+  currentView.value = window.location.hash === "#statistics" ? "statistics" : "overview";
+  await nextTick();
+  const target = document.getElementById(window.location.hash.slice(1));
+  target?.scrollIntoView({ block: "start" });
+  if (target?.tagName === "MAIN") target.focus({ preventScroll: true });
+}
 const busy = ref(false);
 const error = ref("");
 const now = ref(Date.now());
@@ -671,6 +680,7 @@ function logout() {
   busy.value = false;
   error.value = "";
   query.value = "";
+  currentView.value = "overview";
   repositoryQueries.value = {};
   picker.value = false;
   editing.value = null;
@@ -826,6 +836,7 @@ function resumeStatusAudio(event: Event) {
 }
 onMounted(() => {
   sync.start();
+  window.addEventListener("hashchange", navigateWorkspace);
   document.addEventListener("keydown", handleRefreshShortcut);
   document.addEventListener("pointerdown", resumeStatusAudio, { passive: true });
   document.addEventListener("keydown", resumeStatusAudio);
@@ -834,6 +845,7 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(tick);
   sync.stop();
+  window.removeEventListener("hashchange", navigateWorkspace);
   document.removeEventListener("keydown", handleRefreshShortcut);
   document.removeEventListener("pointerdown", resumeStatusAudio);
   document.removeEventListener("keydown", resumeStatusAudio);
@@ -874,11 +886,17 @@ onMounted(async () => {
         ><small>a github projekt dashboard</small></span
       ></a
     ><span class="nav-caption">WORKSPACE</span>
-    <a class="nav-item active" href="#overview" :aria-label="t('Översikt')"
-      :aria-current="loggedIn || isDemo ? 'page' : undefined">
+    <nav class="workspace-navigation">
+    <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')"
+      :aria-current="(loggedIn || isDemo) && currentView === 'overview' ? 'page' : undefined">
       <LayoutDashboard :size="18" /> {{ t("Översikt") }}
       <span class="nav-count">{{ lanes.length }}</span>
     </a>
+    <a v-if="loggedIn || isDemo" class="nav-item statistics-nav" :class="{ active: currentView === 'statistics' }" href="#statistics"
+      :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined">
+      <Activity :size="18" /><span>{{ t("Statistik") }}</span>
+    </a>
+    </nav>
     <SidebarRepositories
       :repos="sidebarRepos"
       :now="now"
@@ -900,7 +918,7 @@ onMounted(async () => {
   <div class="workspace">
     <header class="topbar">
       <div class="breadcrumb">
-        Workspace <span>/</span><strong>{{ t("Översikt") }}</strong>
+        Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
         <LanguageSettings :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
@@ -941,7 +959,7 @@ onMounted(async () => {
         </button>
       </div>
     </header>
-    <main id="overview" tabindex="-1">
+    <main :id="currentView === 'statistics' && (loggedIn || isDemo) ? 'statistics' : 'overview'" tabindex="-1">
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
       <div
         v-if="notificationNotice"
@@ -1081,8 +1099,10 @@ onMounted(async () => {
           </div>
         </div></template
       >
-      <template v-else
-        ><section class="page-heading">
+      <template v-else>
+        <StatisticsView v-if="currentView === 'statistics'" :client="api" :repositories="repos" :demo="isDemo" :session="generation" />
+        <div v-show="currentView === 'overview'">
+        <section class="page-heading">
           <div>
             <div class="eyebrow">{{ t("DITT ARBETE, SAMLAT") }}</div>
             <h1>
@@ -1347,7 +1367,7 @@ onMounted(async () => {
               ? t("Fiktiva exempeldata")
               : t("Läsande vy · ändra issues på GitHub")
           }}</span>
-        </footer></template
+        </footer></div></template
       >
     </main>
   </div>
