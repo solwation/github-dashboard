@@ -95,7 +95,7 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
   const prompt = page.locator(".version-update");
   await expect(prompt).toBeVisible();
   await expect(prompt).toContainText("En ny version av Issueflow finns tillgänglig.");
-  await expect(prompt).toContainText("sekunder");
+  await expect(prompt.locator(".primary")).toHaveText(/^Uppdatera nu \(\d+\)$/);
   await expectBuild(page, commits[0]!);
 
   await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
@@ -149,7 +149,7 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
   const otherPrompt = otherTab.locator(".version-update");
   await expect(otherPrompt).toBeVisible();
   await hide(otherTab);
-  await expect(otherPrompt).toContainText("10 sekunder");
+  await expect(otherPrompt.locator(".primary")).toHaveText(/^Uppdatera nu \(\d+\)$/);
   const countdownStarted = Date.now();
   await expect(otherPrompt).toHaveCount(0, { timeout: 25000 });
   expect(Date.now() - countdownStarted).toBeGreaterThanOrEqual(9000);
@@ -160,7 +160,7 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
   version = 0;
   await discover(page);
   await expect(prompt).toBeVisible();
-  await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await page.getByRole("button", { name: /^Uppdatera nu(?: \(\d+\))?$/ }).click();
   await expect(prompt).toHaveCount(0);
   await expectBuild(page, commits[0]!);
   await context.setOffline(true);
@@ -190,12 +190,12 @@ test("real worker takeover survives cleanup failure across existing tabs and ret
   failCleanup = true;
   await discover(page);
   await expect(page.locator(".version-update")).toBeVisible();
-  await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await page.getByRole("button", { name: /^Uppdatera nu(?: \(\d+\))?$/ }).click();
   await expect(page.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
   await expectBuild(page, commits[1]!);
   await expect(other.locator(".version-update")).toBeVisible();
   // This tab applies an already-activated worker; it must not wait for another activation.
-  await other.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await other.getByRole("button", { name: /^Uppdatera nu(?: \(\d+\))?$/ }).click();
   await expect(other.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
   await expectBuild(other, commits[1]!);
   expect(await other.evaluate(() => localStorage.getItem("update-regression-setting"))).toBe("preserved");
@@ -228,7 +228,7 @@ test("failed shell installation keeps the old app working and can be retried aft
   failInstall = false;
   await discover(page);
   await expect(page.locator(".version-update")).toBeVisible();
-  await page.getByRole("button", { name: "Uppdatera nu", exact: true }).click();
+  await page.getByRole("button", { name: /^Uppdatera nu(?: \(\d+\))?$/ }).click();
   await expect(page.locator(".version-update")).toHaveCount(0, { timeout: 25000 });
   await expectBuild(page, commits[1]!);
 });
@@ -263,10 +263,11 @@ test("the prompt summarizes notes published with the new version and Read more o
     await page.waitForTimeout(11_000);
     await expectBuild(page, commits[0]!);
     await expect(notes).toBeVisible();
+    await expect(prompt.locator(".primary")).toHaveText("Uppdatera nu");
     await page.keyboard.press("Escape");
     await expect(notes).toBeHidden();
     await expect(readMore).toBeFocused();
-    await expect(prompt).toContainText("sekunder");
+    await expect(prompt.locator(".primary")).toHaveText(/^Uppdatera nu \(\d+\)$/);
     await prompt.getByRole("button", { name: "Inte nu", exact: true }).click();
     await expect(prompt).toHaveCount(0);
   } finally {

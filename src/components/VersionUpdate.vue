@@ -28,12 +28,11 @@ const titleId = useId();
       <p v-if="summary" class="version-update-summary">{{ summary }}</p>
       <p v-if="error">{{ t(error) }}</p>
       <p v-else-if="applying">{{ t("Uppdaterar…") }}</p>
-      <p v-else-if="counting">{{ t("Uppdaterar automatiskt om {seconds} sekunder.", { seconds }) }}</p>
     </div>
     <div class="version-update-actions">
       <button v-if="summary" type="button" class="button" @click="emit('read-more')">{{ t("Läs mer") }}</button>
       <button type="button" class="button" :disabled="applying" @click="emit('defer')">{{ t("Inte nu") }}</button>
-      <button type="button" class="button primary" :disabled="applying" @click="emit('install')">{{ t("Uppdatera nu") }}</button>
+      <button type="button" class="button primary" :disabled="applying" @click="emit('install')">{{ counting ? t("Uppdatera nu ({seconds})", { seconds }) : t("Uppdatera nu") }}</button>
     </div>
   </aside>
 </template>
