@@ -1208,9 +1208,10 @@ onMounted(async () => {
                 <h2>
                   <a
                     :href="lane.repo.html_url"
+                    :title="lane.repo.name"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >{{ lane.repo.name }}<ArrowRight :size="14" /></a
+                    ><span class="repository-name-text">{{ lane.repo.name }}</span><ArrowRight :size="14" /></a
                   ><span v-if="lane.repo.private" class="private-badge">{{
                     t("Privat")
                   }}</span>
@@ -1234,11 +1235,7 @@ onMounted(async () => {
                     @click="repositoryQueries[lane.repo.full_name] = ''"><X :size="13" aria-hidden="true" /></button>
                 </div>
               </div>
-              <span class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
-                <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
-                <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
-                <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepos[laneIndex]?.closed || 0 }) }}</span>
-              </span>
+              <div class="lane-actions">
               <button
                 v-if="!isDemo"
                 class="notification-toggle"
@@ -1278,7 +1275,13 @@ onMounted(async () => {
               >
                 <Settings2 :size="16" />
               </button>
+              </div>
             </div>
+              <span class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
+                <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
+                <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
+                <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepos[laneIndex]?.closed || 0 }) }}</span>
+              </span>
           </header>
           <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
           <p v-if="(query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">

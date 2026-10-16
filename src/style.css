@@ -1167,7 +1167,7 @@ h1 {
   .stat-label {
     font-size: 10px;
   }
-  .lane-meta > span:not(.workflow-badge) {
+  .lane-actions > span:not(.workflow-badge) {
     display: none;
   }
   .column-header {
@@ -1553,18 +1553,24 @@ h1 {
 
 /* Repository collapse controls and summaries adapt to narrow screens. */
 .lane-header { flex-wrap: wrap; }
+.lane-title { flex: 1 1 220px; }
 .lane-title > div { min-width: 0; }
 .lane-title h2 a { min-width: 0; overflow-wrap: anywhere; }
 .lane-title h2 a svg { flex-shrink: 0; }
-.lane-meta { flex-wrap: wrap; min-width: 0; }
-.lane-summary { display: none; flex-wrap: wrap; gap: 5px 12px; font-size: 10px; white-space: normal; }
-.repo-lane.is-collapsed .lane-meta > .lane-summary { display: flex; }
+.repository-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-title .private-badge { flex-shrink: 0; }
+.lane-meta { flex: 1 1 320px; flex-wrap: nowrap; justify-content: flex-end; min-width: 0; }
+.lane-actions { display: flex; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 10px; }
+.lane-actions > button { flex-shrink: 0; }
+.lane-summary { width: 100%; display: none; flex-wrap: wrap; gap: 5px 12px; font-size: 10px; white-space: normal; }
+.repo-lane.is-collapsed .lane-summary { display: flex; }
 .is-collapsed .lane-header { border-bottom: 0; }
 .collapse-project { flex-shrink: 0; }
 @media (max-width: 650px) {
   .lane-header { gap: 8px; }
-  .lane-title { width: 100%; }
-  .lane-meta { width: 100%; gap: 8px 12px; }
+  .lane-title { width: 100%; flex-basis: 100%; }
+  .lane-meta { width: 100%; flex-basis: 100%; gap: 8px; }
+  .lane-actions { gap: 8px; }
   .collapse-project { min-width: 44px; min-height: 44px; }
   .lane-summary { width: 100%; order: 1; }
 }
