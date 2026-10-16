@@ -2,63 +2,70 @@
   {
     "date": "2026-10-16",
     "summary": {
-      "sv": "Versionsnyheter och uppdateringar du själv styr, en ny statistikvy, tydligare signaler när arbete ändras eller fastnar, underärenden och nyaste kommentarer först samt en rättighetsöversikt i Inställningar.",
-      "en": "Release notes and updates on your terms, a new Statistics view, clearer signals when work changes or stalls, sub-issues and newest-first comments, and a permissions overview in Settings."
+      "sv": "Statistik, tydligare arbetsstatus och enklare uppdateringar, kommentarer, behörigheter och QR-synk.",
+      "en": "Statistics, clearer work status, and simpler updates, comments, permissions and QR sync."
     },
     "sections": [
       {
         "text": {
-          "sv": "Versionen, byggdatumet och status för senaste versionskontroll visas nu längst ned i vänstermenyn, tillsammans med de här versionsnyheterna, som sammanfattar förbättringarna dag för dag. När en ny version finns berättar uppdateringsrutan kort vad den innehåller, med knapparna staplade under varandra. Uppdateringen räknar ned i tio sekunder även i en synlig flik; öppna dialoger pausar nedräkningen. Välj Uppdatera nu, eller Inte nu för att slippa frågan resten av dagen. En röd (!)-markering vid versionen visar att uppdateringen väntar, och den kan installeras när du vill, även via Inställningar → Automatiska uppdateringar.",
-          "en": "The version, build date and version-check status now appear at the bottom of the sidebar, together with these release notes, which summarise improvements day by day. When a new version is available, the update prompt briefly describes what it brings, with vertically stacked action buttons. Updates count down for ten seconds in visible tabs too; open dialogs pause the countdown. Choose Update now, or Not now to skip the prompt for the rest of the day. A red (!) marker next to the version shows that the update is waiting, and you can install it whenever you like, also from Settings → Automatic updates."
+          "sv": "Kortare versionsnyheter och kontrollstatus i sidomenyn; staplade uppdateringsknappar, tio sekunders nedräkning med dialogpaus och uppskjutning resten av dagen.",
+          "en": "Shorter sidebar release notes and version-check status, with stacked update buttons, a ten-second countdown, dialog pauses and day-long deferral."
         },
-        "issues": [52, 69, 70, 77, 78, 82]
+        "issues": [52, 69, 70, 77, 78, 82, 79]
       },
       {
         "text": {
-          "sv": "Statistik visar de repositories du har valt i sidomenyn, i samma ordning som på tavlan, med dagliga diagram över issues, commits, kodändringar och pull requests för de senaste 30 dagarna. Varje repository har egna filter för datum, label och bidragsgivare. En tydlig laddningsvy visar hur långt hämtningen har kommit, och vid uppdatering ligger tidigare diagram kvar. Mått som din token inte ger tillgång till döljs. Graferna behåller tunna linjer på breda skärmar. Krypterad statistik visas direkt vid återbesök; tidigare commitdagar och kodmått återanvänds medan föränderliga källor omvalideras.",
-          "en": "Statistics shows the repositories you selected in the sidebar, in board order, with daily charts of issues, commits, code changes and pull requests for the last 30 days. Each repository has its own date, label and contributor filters. A clear loading view shows collection progress, and refreshing keeps the previous charts visible. Metrics your token cannot access stay hidden. Charts keep thin lines on wide screens. Encrypted statistics appear immediately on return; historical commit days and code metrics are reused while mutable sources are revalidated."
+          "sv": "Statistik visar valda projekt i ordning med egna filter, tydlig laddning och tunna graflinjer; tidigare diagram behålls medan nya hämtas.",
+          "en": "Statistics stacks selected projects with independent filters, clear loading and thin chart lines, retaining existing charts while fresh data loads."
         },
-        "issues": [45, 62, 76, 75]
+        "issues": [45, 62, 76]
       },
       {
         "text": {
-          "sv": "Översikten visar när antalet ärenden ökar eller minskar, i färg efter om arbete blev klart eller gick tillbaka till Backlog, och räknar dagens stängningar i din lokala tidszon. Kortet Repositories visar hur många valda projekt som har aktivt arbete, även på mobilen. Nya ärenden i Backlog får en grön markering tills du har läst dem, och arbete som legat för länge i Pågående – som standard 30 minuter – blir rött och visas i en notis som du kan kvittera.",
-          "en": "Overview now highlights when counts go up or down, coloured by whether work was completed or returned to Backlog, and counts today's closures in your local time zone. The Repositories card shows how many selected projects have active work, on mobile too. New Backlog issues get a green marker until you have read them, and work that stays In progress too long – 30 minutes by default – turns red and appears in a notice you can acknowledge."
+          "sv": "Krypterad statistik visas direkt vid återbesök; äldre commitdagar och kodmått återanvänds medan föränderliga källor omvalideras.",
+          "en": "Encrypted statistics appear immediately on return; historical commit days and code metrics are reused while mutable sources are revalidated."
+        },
+        "issues": [75]
+      },
+      {
+        "text": {
+          "sv": "Översikten visar statusändringar, dagens stängningar och aktiva projekt; nya Backlog-ärenden blir gröna och långvarigt pågående arbete får kvitterbara timeoutvarningar.",
+          "en": "Overview highlights status changes, today's closures and active projects; new Backlog issues turn green, while stalled work gets timeout warnings you can acknowledge."
         },
         "issues": [48, 64, 55, 56]
       },
       {
         "text": {
-          "sv": "Överordnade ärenden visar hur många underärenden som är stängda, och underärenden länkar till sitt överordnade ärende, även mellan repositories. Kommentarer visas med de nyaste först över alla sidor, med levande relativa tider den första veckan. Kommentarsfönstret får fokus, scrollar inom sin ram och stängs inte längre av bakgrundsuppdateringar. Bilder från repositoryfiler på GitHub visas nu i issuebeskrivningar.",
-          "en": "Parent issues show how many of their sub-issues are closed, and sub-issues link to their parent, across repositories too. Comments are shown newest first across all pages, with live relative times for the first week. The comments window receives focus, scrolls within its frame and no longer closes during background updates. Images from GitHub repository files now display in issue descriptions."
+          "sv": "Ärendekort visar underärendenas framsteg och parentlänkar; kommentarer visas nyast först med relativa tider i stabila popupfönster, och GitHub-bilder fungerar.",
+          "en": "Issue cards show sub-issue progress and parent links; comments appear newest first with relative times in stable dialogs, and GitHub images display correctly."
         },
         "issues": [66, 67, 65, 49, 61, 42]
       },
       {
         "text": {
-          "sv": "Varje repository har ett eget sökfilter i sitt sidhuvud. Ändrat projekturval visas direkt, med laddningsstatus för nya projekt och befintliga data kvar. Med notiser påslagna spelar ett repository olika ljud när arbete startar, stängs, blockeras eller går tillbaka till Backlog, och en ljudvarning du har stängt förblir tyst.",
-          "en": "Each repository has its own search filter in its header. Repository selection changes appear immediately, with loading status for new projects and existing data kept visible. With notifications turned on, a repository plays distinct sounds when work starts, closes, becomes blocked or returns to Backlog, and an audio warning you have dismissed stays silent."
+          "sv": "Sök per repository och se projektval direkt; notiser ger olika statusljud utan att stängda ljudvarningar återkommer.",
+          "en": "Search each repository and see selection changes immediately; notifications play distinct status sounds without repeating dismissed audio warnings."
         },
         "issues": [43, 44, 59, 73]
       },
       {
         "text": {
-          "sv": "Inställningar har fått en ruta för GitHub-behörigheter som kontrollerar åtkomsten automatiskt och förklarar i en tabell vilka funktioner varje läsbehörighet ger. En röd siffra på Inställningar, och på knappen för GitHub-behörigheter inne i Inställningar, visar saknade behörigheter tills du har sett dem. Instruktionerna för issueflödet öppnas i ett eget brett fönster där guiden kan läsas, kopieras eller laddas ned. Repositoryinställningarnas knapp ligger kvar längst till höger och en dubblerad hjälptext är borttagen.",
-          "en": "Settings has a GitHub permissions dialog that checks access automatically and explains in a table which features each read permission enables. A red count on Settings, and on the GitHub permissions button inside Settings, shows missing permissions until you have viewed them. The issue workflow instructions open in their own wide window, where the guide can be read, copied or downloaded. The repository settings button stays at the right edge, and a duplicated help text has been removed."
+          "sv": "Inställningar förklarar GitHub-behörigheter med kvitterbara badges och visar arbetsflödesguiden separat; repositoryknappar ligger rätt och dubblerad hjälptext är borttagen.",
+          "en": "Settings explains permissions with badges that clear once viewed; a separate workflow guide, aligned repository controls and shorter help simplify navigation."
         },
         "issues": [46, 47, 51, 58, 71]
       },
       {
         "text": {
-          "sv": "QR-synkning fungerar åt båda hållen medan du är inloggad, så att konto, valda inställningar och vy kan föras över mellan dina enheter. Kameraskanningen kan öppnas direkt från QR-popupen och finns även kvar i Inställningar, där genvägarna nu har samma storlek och en gemensam placering. Startsidan beskriver nu tydligt att Issueflow är till för att följa AI-agenters arbete via GitHub-issues.",
-          "en": "QR sync now works in both directions while you are signed in, transferring your account, chosen settings and view between your devices. Camera scanning opens directly from the QR popup and remains available in Settings, where shortcuts now share a consistent size and placement. The start page now clearly explains that Issueflow is for following AI agents' work through GitHub issues."
+          "sv": "QR-synk överför konto och inställningar åt båda hållen utan utloggning, med enklare skanningsgenvägar; startsidan förklarar fokus på AI-agenters arbete.",
+          "en": "QR sync transfers accounts and settings both ways without signing out, with easier scanning shortcuts; the start page explains the AI-agent focus."
         },
         "issues": [63, 54, 72, 74]
       },
       {
         "text": {
-          "sv": "Stabilare vardag: sidomenyn återställs från cachen utan missvisande startlägen, appuppdateringar slutförs även när nya versioner aktiveras samtidigt, och commitdetaljer som inte går att hämta döljs. En granskning rättade även kvarglömd text och en dubbel behörighetspost i Inställningar, sparade språkvalet korrekt för inloggade och gjorde att förändringar i Översikten följer aktiva filter.",
-          "en": "Everyday reliability: the sidebar restores from the cache without misleading startup states, app updates complete even when new versions activate at the same time, and commit details that cannot be loaded are hidden. A review also fixed stray text and a duplicate permissions entry in Settings, saved the language choice correctly for signed-in users and made Overview changes respect active filters."
+          "sv": "Cachad vy återställs lugnare, uppdateringar aktiveras säkrare och otillgängliga commitdetaljer döljs; Inställningar, språkminne och filtrerade översiktssiffror har rättats.",
+          "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
         "issues": [53, 57, 60, 68]
       }
@@ -67,56 +74,56 @@
   {
     "date": "2026-10-15",
     "summary": {
-      "sv": "Issueflow lanserades med tavla per repository, krypterad inloggning, appinstallation, svenska och engelska samt överföring till mobilen med QR-kod.",
-      "en": "Issueflow launched with a board per repository, encrypted sign-in, app installation, Swedish and English, and QR transfer to your phone."
+      "sv": "Issueflow lanseras med repositorytavlor, krypterad inloggning, mobilapp, språkval och QR-överföring.",
+      "en": "Issueflow launches with repository boards, encrypted sign-in, an installable app, language options and QR transfer."
     },
     "sections": [
       {
         "text": {
-          "sv": "Issueflow samlar dina repositories på en tavla med kolumnerna Backlog, Pågående och Stängda. Backlog sorteras efter prioritet, Pågående visar hur länge arbetet har pågått och Stängda visar de senaste 30 dagarna. Tavlan använder hela skärmbredden på stora skärmar och staplar kolumnerna på mobilen. Backlogkort visar en kompakt, levande ålder, och länken till översikten fungerar på både mobil och dator.",
-          "en": "Issueflow gathers your repositories on one board with Backlog, In progress and Closed columns. Backlog is sorted by priority, In progress shows how long work has been active and Closed covers the last 30 days. The board uses the full width of large screens and stacks columns on phones. Backlog cards show a compact, live age, and the Overview link works on both phone and desktop."
+          "sv": "Tavlan samlar prioriterad Backlog, tid i Pågående och senaste 30 dagarnas stängningar; responsiv layout, levande ärendeålder och fungerande översiktsnavigation.",
+          "en": "The board combines prioritised Backlog, elapsed work time and 30 days of closures, with responsive layouts, live issue ages and working navigation."
         },
         "issues": [11, 27, 24, 28, 40]
       },
       {
         "text": {
-          "sv": "Nyss stängda ärenden glider in med en kort animation och kan ge webbläsarnotiser per repository. Nyligen stängda visar levande relativ tid, flyttade ärenden förblir markerade tills de har lästs eller gått ut, och sidomenyn sammanfattar aktiviteten i varje repository. Synkroniseringen anpassar sig efter aktiviteten och backar vid fel.",
-          "en": "Newly closed issues slide in with a short animation and can trigger browser notifications per repository. Recent closures show a live relative time, moved issues stay highlighted until read or expired, and the sidebar summarises each repository's activity. Synchronisation adapts to activity and backs off on errors."
+          "sv": "Stängningar animeras och kan ge notiser; relativa tider, läsmarkeringar och sidomenyn visar aktivitet medan synkroniseringen anpassas efter arbete och fel.",
+          "en": "Closures animate and can trigger notifications; relative times, read markers and sidebar summaries show activity while synchronisation adapts to work and errors."
         },
         "issues": [2, 17, 22, 14, 13]
       },
       {
         "text": {
-          "sv": "Issuebeskrivningar kan fällas ut med säker Markdown, kommentarer läses vid behov och stängda ärenden visar vilken commit eller sammanslagen pull request som stängde dem.",
-          "en": "Issue descriptions expand with safe Markdown, comments can be read on demand, and closed issues show the commit or merged pull request that closed them."
+          "sv": "Läs issuebeskrivningar och kommentarer med säker Markdown, och se vilken commit eller sammanslagen pull request som stängde ärendet.",
+          "en": "Read issue descriptions and comments with safe Markdown, and see the commit or merged pull request that closed an issue."
         },
         "issues": [15, 30, 12]
       },
       {
         "text": {
-          "sv": "Du styr själv layouten: ändra projektens ordning med draghandtaget i sidomenyn via mus, pekskärm eller tangentbord, fäll ihop repositories och välj hur många kort varje kolumn visar, globalt eller per repository. Repositories väljs med plustecknet på kortet Repositories i översikten, och F5 eller Ctrl+R uppdaterar datan i stället för en separat knapp.",
-          "en": "You control the layout: reorder projects with the drag handle in the sidebar using mouse, touch or keyboard, collapse repositories and choose how many cards each column shows, globally or per repository. Repositories are chosen with the plus button on the Repositories card in Overview, and F5 or Ctrl+R refreshes data instead of a separate button."
+          "sv": "Ordna och fäll ihop projekt, välj kolumngränser och repositories från översiktskortet; F5 eller Ctrl+R uppdaterar data utan omladdning.",
+          "en": "Reorder and collapse projects, set column limits and choose repositories from Overview; F5 or Ctrl+R refreshes data without reloading."
         },
         "issues": [21, 36, 29, 31, 23, 33]
       },
       {
         "text": {
-          "sv": "Inloggningen sparas krypterad i webbläsaren och tas bara bort när du bekräftar utloggning. Den senaste tavlan sparas också krypterat och visas direkt vid start medan GitHub kontrolleras i bakgrunden, utan rutinmässiga startmeddelanden, och även stora tavlor ryms tack vare komprimering. Med en lokal QR-kod kan du öppna Issueflow på mobilen, och en installerad mobilapp kan logga in genom att skanna koden.",
-          "en": "Your sign-in is stored encrypted in the browser and removed only when you confirm logout. The latest board is also saved encrypted and appears immediately at startup while GitHub is checked in the background, without routine startup notices, and large boards fit thanks to compression. A local QR code opens Issueflow on your phone, and an installed mobile app can sign in by scanning it."
+          "sv": "Krypterad inloggning och komprimerad tavlecache återställs utan startnotiser; QR-koder överför inloggningen till mobilen och kan skannas i appen.",
+          "en": "Encrypted sign-in and compressed board cache restore without startup notices; QR codes transfer sign-in to your phone and scan inside the app."
         },
         "issues": [8, 25, 26, 41, 4, 19]
       },
       {
         "text": {
-          "sv": "Issueflow kan installeras som app, och appens skal öppnas även utan nätverk. Nya versioner installeras automatiskt efter en nedräkning på tio sekunder, utan att fastna på en gammal cachad version, och Inställningar visar när den körda versionen byggdes och från vilken commit.",
-          "en": "Issueflow can be installed as an app, and its shell opens even without a network connection. New versions install automatically after a ten-second countdown without getting stuck on an old cached version, and Settings shows when the running version was built and from which commit."
+          "sv": "Installera appen och öppna appskalet offline; versionsuppdateringar räknar ned tio sekunder och byggdatum samt commit visas i Inställningar.",
+          "en": "Install the app and open its shell offline; updates count down ten seconds, with build date and commit available in Settings."
         },
         "issues": [3, 7, 37, 35]
       },
       {
         "text": {
-          "sv": "Gränssnittet finns på svenska och engelska, väljs efter webbläsarens språk och kan ändras i Inställningar. Guiden ISSUEFLOW.md publicerades så att du och din AI-assistent använder status, prioritet och labels på samma sätt som tavlan. Dokumentationen kortades och fick upphovsuppgifter och MIT-licens.",
-          "en": "The interface is available in Swedish and English, follows your browser language and can be changed in Settings. The ISSUEFLOW.md guide was published so you and your AI assistant use status, priority and labels the same way as the board. The documentation was shortened and gained author credits and an MIT license."
+          "sv": "Välj svenska eller engelska och dela ISSUEFLOW.md med din assistent; kortare dokumentation, upphovsuppgifter och MIT-licens gör projektet lättare att använda.",
+          "en": "Choose Swedish or English and share ISSUEFLOW.md with your assistant; shorter documentation, author credits and an MIT license make the project easier to use."
         },
         "issues": [9, 5, 34, 38]
       }
