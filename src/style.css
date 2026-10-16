@@ -795,6 +795,21 @@ h1 {
   border-color: #f4d7ce;
   color: #a45743;
 }
+.timeout-notices {
+  display: grid;
+  min-width: 0;
+}
+.timeout-notices > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.timeout-notices span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .demo-notice {
   background: #eef6f2;
   border-color: #d7e9e1;
