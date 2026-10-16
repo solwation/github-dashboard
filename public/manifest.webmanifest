@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Issueflow",
   "short_name": "Issueflow",
-  "description": "A GitHub project dashboard",
+  "description": "Track your AI agents’ work through GitHub issues.",
   "lang": "en",
   "start_url": "./",
   "scope": "./",

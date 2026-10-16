@@ -968,7 +968,7 @@ onMounted(async () => {
       ><span class="brand-icon"><Layers3 :size="23" /></span
       ><span class="brand-copy"
         >issueflow<span class="brand-dot">.</span
-        ><small>a github projekt dashboard</small></span
+        ><small>{{ t("AI-agenter · GitHub-issues") }}</small></span
       ></a
     ><span class="nav-caption">WORKSPACE</span>
     <nav class="workspace-navigation">
@@ -1081,17 +1081,17 @@ onMounted(async () => {
         ><div class="welcome">
           <span class="eyebrow"
             ><span class="repo-dot" />
-            {{ t("MINDRE LETANDE. MER FRAMÅT.") }}</span
+            {{ t("DINA AGENTER. DITT FLÖDE.") }}</span
           >
           <h1>
-            {{ t("Alla dina projekt.") }}<br /><span>{{
-              t("Ett tydligt flöde.")
+            {{ t("Följ dina AI-agenter.") }}<br /><span>{{
+              t("Via GitHub-issues.")
             }}</span>
           </h1>
           <p>
             {{
               t(
-                "Från första idén till sista fixen. Följ dina GitHub-issues i en samlad vy som anpassar sig efter hur du jobbar.",
+                "En samlad överblick över vad agenterna planerar, arbetar med och har slutfört i dina repositories. Fungerar även för issues du arbetar med själv.",
               )
             }}
           </p>
