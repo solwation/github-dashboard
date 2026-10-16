@@ -177,6 +177,17 @@ async function navigateWorkspace() {
   if (target?.tagName === "MAIN") target.focus({ preventScroll: true });
 }
 const busy = ref(false);
+// A manual refresh requested during a partial background sync runs right after it, instead of
+// being dropped. A full refresh already in flight satisfies it.
+let refreshRequested = false;
+let fullRefreshRunning = false;
+watch(busy, (running) => {
+  if (running) return;
+  fullRefreshRunning = false;
+  if (!refreshRequested) return;
+  refreshRequested = false;
+  void refresh();
+});
 const error = ref("");
 const now = ref(Date.now());
 const refreshed = ref<number | null>(null);
@@ -742,8 +753,16 @@ function reconcileSelection() {
   for (const name of lastSynced.keys()) if (!selected.value.includes(name)) lastSynced.delete(name);
   for (const name of lastFullSynced.keys()) if (!selected.value.includes(name)) lastFullSynced.delete(name);
 }
-async function refresh(incremental = false, replacePending = false) {
-  if (!api || (busy.value && !replacePending)) return;
+async function refresh(incremental = false, replacePending = false, manual = false) {
+  if (!api) {
+    refreshRequested = false;
+    return;
+  }
+  if (busy.value && !replacePending) {
+    if (manual && !fullRefreshRunning) refreshRequested = true;
+    return;
+  }
+  refreshRequested = false;
   const client = api, run = generation, selection = selectionRevision;
   const current = () => run === generation && client === api && selection === selectionRevision;
   if (repositoryRequestClient !== client) {
@@ -758,6 +777,7 @@ async function refresh(incremental = false, replacePending = false) {
     return;
   }
   busy.value = true;
+  fullRefreshRunning = !incremental;
   error.value = "";
   const targets = repos.value.filter(repo => selected.value.includes(repo.full_name)).sort((a, b) =>
     Number(!!lanes.value.find(lane => lane.repo.full_name === b.full_name)?.loading) - Number(!!lanes.value.find(lane => lane.repo.full_name === a.full_name)?.loading));
@@ -1043,7 +1063,7 @@ function handleRefreshShortcut(event: KeyboardEvent) {
   if (!loggedIn.value || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
   // Prevent document reload even while a fetch is already running.
   event.preventDefault();
-  if (!event.repeat && !authBusy.value) void refresh();
+  if (!event.repeat && !authBusy.value) void refresh(false, false, true);
 }
 function resumeStatusAudio(event: Event) {
   if (event.isTrusted && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
@@ -1342,7 +1362,7 @@ onMounted(async () => {
           </button>
         </div>
         <OverviewSummary :query="query" :repository-queries="repositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
-          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :now="now" :logged-in="loggedIn" :busy="busy"
+          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :now="now" :logged-in="loggedIn"
           @choose-repositories="picker = true" />
         <div class="board-toolbar">
           <label class="search"

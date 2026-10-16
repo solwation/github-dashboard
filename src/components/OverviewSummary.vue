@@ -7,7 +7,7 @@ import { countActiveRepositories, countClosedToday, emptyCounts, OVERVIEW_DELTA_
 const props = defineProps<{
   query?: string; repositoryQueries?: Record<string, string>;
   counts: OverviewCounts; lanes: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
-  live: boolean; session: number | string; now: number; loggedIn: boolean; busy: boolean;
+  live: boolean; session: number | string; now: number; loggedIn: boolean;
 }>();
 const emit = defineEmits<{ chooseRepositories: [] }>();
 const { t } = useLanguage();
@@ -57,7 +57,7 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
     <div class="stat repository-stat">
       <span class="stat-icon repos"><Layers3 :size="20" /></span>
       <div><span class="stat-label">Repositories</span><strong>{{ totalRepositories }}<small class="repository-active" tabindex="0" :title="activeDefinition" :aria-label="t('{count} aktiva projekt. {definition}', { count: activeRepositories, definition: activeDefinition })">{{ t("{count} aktiva", { count: activeRepositories }) }}</small></strong></div>
-      <button v-if="loggedIn" class="icon-button repository-stat-action" :aria-label="t('Välj repositories')" :title="t('Välj repositories')" :disabled="busy" @click="emit('chooseRepositories')"><Plus :size="16" aria-hidden="true" /></button>
+      <button v-if="loggedIn" class="icon-button repository-stat-action" :aria-label="t('Välj repositories')" :title="t('Välj repositories')" @click="emit('chooseRepositories')"><Plus :size="16" aria-hidden="true" /></button>
     </div>
     <div v-for="card in cards" :key="card.key" class="stat" :data-stat="card.key" :class="{ 'stat-positive': deltas[card.key] && outcomes[card.key] === 'positive', 'stat-negative': deltas[card.key] && outcomes[card.key] === 'negative' }">
       <span class="stat-icon" :class="card.style"><component :is="card.icon" :size="20" /></span>

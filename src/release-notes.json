@@ -92,6 +92,13 @@
       },
       {
         "text": {
+          "sv": "F5 eller Ctrl+R under en bakgrundsuppdatering hämtar ändå färska data efteråt, och Välj repositories går alltid att nå med tangentbordet.",
+          "en": "F5 or Ctrl+R during a background update still fetches fresh data afterwards, and Choose repositories stays reachable by keyboard."
+        },
+        "issues": [98]
+      },
+      {
+        "text": {
           "sv": "GitHub Actions kontrollerar återstående arbete före publicering; orkestern integrerar isolerade arbetsgrenar och bevakar nya issues i en timme efter verifierad leverans.",
           "en": "GitHub Actions checks remaining work before publishing; orkester integrates isolated branches and watches for new issues for an hour after verified delivery."
         },

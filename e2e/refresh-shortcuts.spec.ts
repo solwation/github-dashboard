@@ -57,23 +57,26 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
   await page.getByRole("textbox", { name: "Sök issues" }).fill("Keep");
   await page.getByRole("checkbox", { name: "Dölj koordinationsärenden" }).uncheck();
   const requests = api.requests();
+  // The post-connect background reconcile may be incremental; only the shortcuts' fetches are checked.
+  const incremental = api.incrementalRequests.length;
   api.next();
   api.pause();
   await page.keyboard.press("Control+r");
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
   await expect(page.getByRole("status").filter({ hasText: "Hämtar…" })).toBeVisible();
   await expect(page.locator("#repo-1 .issue-title")).toHaveText("Keep task version 1");
-  await expect.poll(api.requests).toBe(requests + 1);
+  // Both selected repositories load concurrently while the gate holds them.
+  await expect.poll(api.requests).toBe(requests + 2);
   await page.keyboard.press("Control+r");
   await page.keyboard.press("Meta+r");
   await page.keyboard.press("F5");
-  expect(api.requests()).toBe(requests + 1);
+  expect(api.requests()).toBe(requests + 2);
   await expectSameDocument(page);
   api.release();
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
   await expect(page.locator("#repo-1 .issue-title")).toHaveText("Keep task version 2");
   expect(api.requests()).toBe(requests + 2);
-  expect(api.incrementalRequests).toEqual([]);
+  expect(api.incrementalRequests.slice(incremental)).toEqual([]);
   await expect(page.locator(".repo-lane h2 a")).toHaveText(["beta", "alpha"]);
   await expect(page.getByRole("button", { name: "Expandera beta", exact: true })).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("textbox", { name: "Sök issues" })).toHaveValue("Keep");
@@ -111,4 +114,57 @@ test("hard reload modifiers are not intercepted, and welcome/demo retain browser
       return event.defaultPrevented;
     })).toBe(false);
   }
+});
+
+test("a refresh shortcut pressed during a background sync runs a full refresh once that sync finishes", async ({ page }) => {
+  await page.clock.install();
+  let version = 1;
+  let openRequests = 0;
+  let activeRequests = 0;
+  let release = () => {};
+  let gate: Promise<void> | undefined;
+  const repo = { id: 1, name: "alpha", full_name: "sample/alpha", private: false, html_url: "https://github.com/sample/alpha", owner: { login: "sample" } };
+  const task = () => {
+    const date = new Date().toISOString();
+    return { id: 1, number: 1, title: `Active task version ${version}`, body: "Fixture", comments: 0, state: "open",
+      labels: [{ name: "in-progress", color: "123456" }], assignees: [], created_at: date, updated_at: date, closed_at: null,
+      html_url: "https://github.com/sample/alpha/issues/1" };
+  };
+  await page.route("https://api.github.com/**", async route => {
+    const url = new URL(route.request().url());
+    let data: unknown = [];
+    if (url.pathname === "/user") data = { login: "background-refresh", avatar_url: "" };
+    else if (url.pathname === "/user/repos") data = [repo];
+    else if (url.pathname === "/repos/sample/alpha/issues/1") {
+      activeRequests++;
+      await gate;
+      data = task();
+    } else if (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open") {
+      openRequests++;
+      data = [task()];
+    }
+    await route.fulfill({ json: data });
+  });
+  await page.addInitScript(() => localStorage.setItem("issueflow:background-refresh", JSON.stringify({ selected: ["sample/alpha"] })));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
+  await page.getByLabel("GitHub personal access token").fill("fictional-background-token");
+  await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
+  await expect(page.locator(".issue-title")).toHaveText("Active task version 1");
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+
+  // Hold the 15-second active-issue sync open, then ask for a full refresh.
+  gate = new Promise(resolve => { release = resolve; });
+  await page.clock.runFor(16_000);
+  await expect.poll(() => activeRequests).toBeGreaterThan(0);
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
+  const before = openRequests;
+  version = 2;
+  await page.keyboard.press("F5");
+  expect(openRequests).toBe(before);
+  gate = undefined;
+  release();
+  await expect.poll(() => openRequests).toBe(before + 1);
+  await expect(page.locator(".issue-title")).toHaveText("Active task version 2");
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
 });
