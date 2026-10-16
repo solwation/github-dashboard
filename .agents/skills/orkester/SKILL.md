@@ -7,11 +7,19 @@ Read the repository's root AI.md. Act as the conductor: own the task breakdown, 
 
 Start the requested workflow immediately. Inspect open issues and existing claims; identify independent work and actual dependencies. Continue within the user's authorized scope. If no scope is provided, select actionable unclaimed issues by priority, oldest first; do not expand an explicitly bounded task into the entire backlog.
 
-Choose useful concurrency from both available agent slots and local resources (`nproc`, available memory, current workload). Reserve capacity for the conductor and verification. Use roughly three active issues as an initial working limit, then adapt to measured CPU/memory headroom, available slots and independent file ownership. Do not fill all slots automatically. Include integration and browser-test load in that budget; queued integration is paused work and must not retain in-progress. Reduce concurrency when reviews, tests or overlapping changes become the bottleneck. If subagent tools are unavailable, explain that and run the same issue flow sequentially.
+Normally run **two active issues; three is the hard repository-wide maximum** unless the user explicitly instructs a higher limit. Count all `in-progress` issues, including other sessions and the conductor's own implementation, review, integration and verification. Agent slots, CPU/memory headroom and independent files are constraints that may reduce concurrency, not permission to raise this maximum. Reserve resources for the conductor and browser testing; do not fill all tool slots automatically. If subagent tools are unavailable, explain that and run the same issue flow sequentially.
+
+Before every assignment, resume or integration:
+
+1. Fetch the complete open issue queue with pagination and inspect all active claims.
+2. Record each active issue number, owner and phase (implementation, review, integration or verification). Count the conductor's work too.
+3. Remove this session's active/owner labels from delivered work immediately when it enters a waiting queue. Never change another session's claim. Waiting for deployment does not keep a slot active; reclaim one when verification actually begins.
+4. Check that the proposed work is independent and the resulting total is at most three (normally two). If capacity is full, finish or pause something first. Register new user requests in the backlog without immediately starting them.
+5. Claim the issue, re-read the queue to detect races, then start. Preserve every paused worktree and commit. On worker delivery, release the claim before assigning the worker another issue; review/integration must reclaim capacity through this same check.
 
 Give each worker one issue, acceptance criteria, explicit file ownership, dependencies and a separate Git worktree/branch. Use a common committed baseline. Workers may share read-only dependencies only; they must not change shared node_modules or lockfiles concurrently. The conductor owns package changes, overlapping integrations and final pushes to main. Where files overlap, workers return isolated commits and the conductor resolves them deliberately; never overwrite another worker's changes.
 
-Mark actively worked issues in-progress. Each worker handles one issue at a time and returns its commit, tests and integration notes. Workers do not push main or close issues before the conductor validates their integration. Remove the label when a worker pauses or the integrated issue is complete.
+Mark actively worked issues in-progress. Each worker handles one issue at a time and returns its commit, tests and integration notes. Workers do not push main or close issues before the conductor validates their integration. Remove active and owner labels immediately on pause or delivery into the integration queue, and on completion. An unintegrated result is not an active worker assignment.
 
 Review and integrate commits in dependency order. Run appropriate combined checks and verify GitHub Pages deployment after pushing. Keep progress updates concise. Report completed issues and genuine outstanding work. Preserve unfinished branches/worktrees until their work is safely integrated; never discard unknown work while cleaning up.
 
