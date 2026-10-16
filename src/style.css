@@ -442,6 +442,26 @@ h1 {
   align-items: center;
   gap: 6px;
   margin-left: auto;
+  flex-shrink: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.updated-text {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.updated-text::before {
+  content: attr(data-reserve);
+  white-space: pre;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+.updated-text > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .updated i {
   background: #48a98f;
@@ -1324,7 +1344,7 @@ h1 {
   .updated {
     font-size: 9px;
   }
-  .updated > span {
+  .updated > .sync-mode {
     display: none;
   }
   .lane-header {

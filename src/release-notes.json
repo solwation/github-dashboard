@@ -106,10 +106,10 @@
       },
       {
         "text": {
-          "sv": "F5 eller Ctrl+R under en bakgrundsuppdatering hämtar ändå färska data efteråt, och Välj repositories går alltid att nå med tangentbordet.",
-          "en": "F5 or Ctrl+R during a background update still fetches fresh data afterwards, and Choose repositories stays reachable by keyboard."
+          "sv": "F5 eller Ctrl+R under en bakgrundsuppdatering hämtar ändå färska data efteråt, uppdateringsstatusen flyttar inte tavlorna på telefon och Välj repositories nås med tangentbordet.",
+          "en": "F5 or Ctrl+R during a background update still fetches fresh data afterwards, the refresh status no longer shifts boards on phones, and Choose repositories stays keyboard-reachable."
         },
-        "issues": [98]
+        "issues": [98, 111]
       },
       {
         "text": {
