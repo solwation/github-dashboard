@@ -53,8 +53,8 @@ const titleId = useId();
   justify-content: space-between;
   border: 1px solid var(--green, #147d69);
   border-radius: 0.9rem;
-  background: #fff;
-  color: #273a3c;
+  background: var(--surface);
+  color: var(--text);
   padding: 1rem 1.25rem;
   box-shadow: 0 8px 32px #273a3c24;
 }

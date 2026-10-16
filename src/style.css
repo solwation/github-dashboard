@@ -1,12 +1,30 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@500;600;650;700;750;800&display=swap");
 :root {
   font-family: "DM Sans", system-ui, sans-serif;
-  color: #273a3c;
-  background: #f6f7f9;
+  color: var(--text);
+  background: var(--bg);
   font-synthesis: none;
+  color-scheme: light;
+  /* Theme tokens: light values here, dark values in the theme section at the end. */
+  --bg: #f6f7f9;
+  --surface: #fff;
+  --text: #273a3c;
   --green: #147d69;
+  --on-green: #fff;
   --muted: #758286;
   --line: #e4e8eb;
+  --input-border: #dce3e5;
+  --code-bg: #f1f5f4;
+  --hover: #f1f5f4;
+  --focus: #35a991;
+  --chart-1: #147d69;
+  --chart-2: #4b62b2;
+  --chart-3: #ae522b;
+  --chart-4: #8c4799;
+  --chart-5: #516c31;
+  --chart-axis: #aab6b7;
+  --chart-grid: #e4e8eb;
+  --chart-text: #56696b;
 }
 * {
   box-sizing: border-box;
@@ -44,7 +62,7 @@ button {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-  outline: 3px solid #35a991;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 input[type="checkbox"] {
@@ -54,7 +72,7 @@ input[type="checkbox"] {
   width: 226px;
   position: fixed;
   inset: 0 auto 0 0;
-  background: #fff;
+  background: var(--surface);
   border-right: 1px solid var(--line);
   padding: 32px 20px;
   display: flex;
@@ -73,7 +91,7 @@ input[type="checkbox"] {
 }
 .brand-icon {
   background: var(--green);
-  color: white;
+  color: var(--on-green);
   border-radius: 10px;
   width: 36px;
   height: 37px;
@@ -182,7 +200,7 @@ input[type="checkbox"] {
 }
 .topbar {
   height: 78px;
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
@@ -287,7 +305,7 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #dde3e6;
   padding: 10px 14px;
   border-radius: 6px;
@@ -297,12 +315,12 @@ h1 {
   min-height: 37px;
 }
 .button:hover {
-  background: #f1f5f4;
+  background: var(--hover);
 }
 .button.primary {
   background: var(--green);
   border-color: var(--green);
-  color: #fff;
+  color: var(--on-green);
   box-shadow: 0 2px 3px #103b2a0b;
 }
 .button.primary:hover {
@@ -319,7 +337,7 @@ h1 {
 }
 .stat {
   padding: 23px 20px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 9px;
   display: flex;
@@ -402,7 +420,7 @@ h1 {
   flex-wrap: wrap;
 }
 .search {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   display: flex;
@@ -451,7 +469,7 @@ h1 {
 .repo-lane {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
+  background: var(--surface);
   margin-bottom: 25px;
   overflow: hidden;
   scroll-margin-top: 20px;
@@ -618,7 +636,7 @@ h1 {
   gap: 10px;
 }
 .issue-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #e4e9ec;
   border-radius: 7px;
   padding: 13px 14px;
@@ -740,7 +758,7 @@ h1 {
 }
 .assignees img {
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid var(--surface);
 }
 .column-empty {
   border: 1px dashed #e4e9ec;
@@ -893,7 +911,7 @@ h1 {
   margin: 0 5px 18px;
 }
 .illustration-card {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 20px;
@@ -940,7 +958,7 @@ h1 {
 .token-form {
   max-width: 470px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 9px;
   padding: 22px;
   margin-top: 25px;
@@ -962,7 +980,7 @@ h1 {
 .token-form input,
 .rule-field input {
   width: 100%;
-  border: 1px solid #dce3e5;
+  border: 1px solid var(--input-border);
   border-radius: 5px;
   padding: 11px;
   font-size: 12px;
@@ -991,7 +1009,7 @@ h1 {
   max-height: 90dvh;
   overflow: auto;
   border-radius: 13px;
-  background: white;
+  background: var(--surface);
   padding: 28px;
   box-shadow: 0 25px 90px #10263133;
 }
@@ -1486,7 +1504,7 @@ h1 {
   }
   100% {
     border-color: #e4e9ec;
-    background: #fff;
+    background: var(--surface);
     box-shadow: 0 2px 2px #20394b02;
   }
 }
@@ -1568,15 +1586,16 @@ h1 {
     display: none;
   }
 }
-#language-preference {
+#language-preference,
+#theme-preference {
   display: block;
   width: 100%;
   margin-top: 8px;
   padding: 11px;
-  border: 1px solid #dce3e5;
+  border: 1px solid var(--input-border);
   border-radius: 5px;
   color: inherit;
-  background: white;
+  background: var(--surface);
   font: inherit;
   font-size: 13px;
 }
@@ -1631,4 +1650,201 @@ h1 {
 @media (max-width: 650px) {
   .workspace-navigation { display: flex; gap: 4px; width: auto; }
   .statistics-nav span { display: none; }
+}
+
+/* Dark theme. theme.ts (and index.html before first paint) sets data-theme on <html>
+   from the Auto/Light/Dark preference; Auto follows prefers-color-scheme. Text colors
+   below meet WCAG AA (4.5:1) on their backgrounds; graphics and borders 3:1 where meaningful. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1719;
+  --surface: #172124;
+  --surface-sunken: #131c1f;
+  --card: #1c282c;
+  --text: #e2e9ea;
+  --text-strong: #f1f5f5;
+  --green: #3fbc9c;
+  --on-green: #05201a;
+  --muted: #9db0b4;
+  --faint: #8fa2a6;
+  --line: #2b3a3f;
+  --input-border: #4d6166;
+  --code-bg: #223035;
+  --hover: #223135;
+  --focus: #5fd3b5;
+  --tint-green: #163a31;
+  --tint-amber: #3a2f17;
+  --tint-blue: #182c45;
+  --tint-red: #3d1d21;
+  --tint-purple: #2a2643;
+  --accent-green: #6fd0ac;
+  --accent-amber: #e0b765;
+  --accent-blue: #7fb2ec;
+  --accent-red: #f19a9a;
+  --accent-purple: #b5a8e6;
+  --chart-1: #3fbc9c;
+  --chart-2: #8ea2f0;
+  --chart-3: #e98b5f;
+  --chart-4: #c690d6;
+  --chart-5: #9cc26a;
+  --chart-axis: #5d7176;
+  --chart-grid: #2b3a3f;
+  --chart-text: #a6b5b8;
+}
+/* Repository palette colors are lifted toward white so every hue keeps at least 4:1 on dark surfaces. */
+:root[data-theme="dark"] .sidebar-repository .repo-dot,
+:root[data-theme="dark"] .card-repository i,
+:root[data-theme="dark"] .issue-card.has-repository::after {
+  background-color: color-mix(in srgb, var(--repository-color) 75%, white);
+}
+:root[data-theme="dark"] .card-repository {
+  border-color: color-mix(in srgb, var(--repository-color) 55%, var(--card));
+  background: color-mix(in srgb, var(--repository-color) 22%, var(--card));
+  color: var(--text);
+}
+:root[data-theme="dark"] .nav-caption,
+:root[data-theme="dark"] .breadcrumb,
+:root[data-theme="dark"] .connection,
+:root[data-theme="dark"] .icon-button,
+:root[data-theme="dark"] .eyebrow,
+:root[data-theme="dark"] .stat-label,
+:root[data-theme="dark"] .stat small,
+:root[data-theme="dark"] .search,
+:root[data-theme="dark"] .search input::placeholder,
+:root[data-theme="dark"] .coord-toggle,
+:root[data-theme="dark"] .updated,
+:root[data-theme="dark"] .lane-title a svg,
+:root[data-theme="dark"] .repo-owner,
+:root[data-theme="dark"] .private-badge,
+:root[data-theme="dark"] .lane-meta,
+:root[data-theme="dark"] .column-hint,
+:root[data-theme="dark"] .issue-number,
+:root[data-theme="dark"] .issue-number svg,
+:root[data-theme="dark"] .issue-title svg,
+:root[data-theme="dark"] .label,
+:root[data-theme="dark"] .closed-date,
+:root[data-theme="dark"] .column-empty,
+:root[data-theme="dark"] .board-footer,
+:root[data-theme="dark"] .welcome p.privacy-note,
+:root[data-theme="dark"] .intro-description,
+:root[data-theme="dark"] .repo-option small,
+:root[data-theme="dark"] .modal-footer,
+:root[data-theme="dark"] .brand-copy small,
+:root[data-theme="dark"] .sidebar-footer,
+:root[data-theme="dark"] .sidebar-version,
+:root[data-theme="dark"] .sidebar-version-caption,
+:root[data-theme="dark"] .project-drag-handle,
+:root[data-theme="dark"] .notification-toggle {
+  color: var(--faint);
+}
+:root[data-theme="dark"] .repo-owner span { color: var(--line); }
+:root[data-theme="dark"] .breadcrumb strong,
+:root[data-theme="dark"] .search input,
+:root[data-theme="dark"] .empty-state h2 { color: var(--text-strong); }
+:root[data-theme="dark"] .nav-item.active { background: var(--tint-green); color: var(--accent-green); }
+:root[data-theme="dark"] .nav-count { background: #1f4a3f; }
+:root[data-theme="dark"] .icon-button:hover,
+:root[data-theme="dark"] .project-drag-handle:hover,
+:root[data-theme="dark"] .project-drag-handle.dragging { background: var(--hover); color: var(--text); }
+:root[data-theme="dark"] .button { border-color: var(--input-border); }
+:root[data-theme="dark"] .button.primary { border-color: var(--green); }
+:root[data-theme="dark"] .button.primary:hover { background: #5fd3b5; }
+:root[data-theme="dark"] .search:focus-within { box-shadow: 0 0 0 2px #3fbc9c33; }
+:root[data-theme="dark"] .stat-icon.repos { background: var(--tint-purple); color: var(--accent-purple); }
+:root[data-theme="dark"] .stat-icon.backlog { background: var(--tint-blue); color: var(--accent-blue); }
+:root[data-theme="dark"] .stat-icon.progress { background: var(--tint-amber); color: var(--accent-amber); }
+:root[data-theme="dark"] .stat-icon.closed { background: var(--tint-green); color: var(--accent-green); }
+:root[data-theme="dark"] .stat-positive { background-color: #15302a; border-color: #3f8a68; }
+:root[data-theme="dark"] .stat-negative { background-color: #33201c; border-color: #9a5b48; }
+:root[data-theme="dark"] .stat-delta { color: var(--muted); }
+:root[data-theme="dark"] .stat-positive .stat-delta,
+:root[data-theme="dark"] .stat-today { color: var(--accent-green); }
+:root[data-theme="dark"] .stat-negative .stat-delta { color: #f0a58f; }
+:root[data-theme="dark"] .stat-today-note { color: var(--faint); }
+:root[data-theme="dark"] .repo-avatar { background: var(--tint-green); color: var(--accent-green); border-color: #24493f; }
+:root[data-theme="dark"] .repo-lane:nth-of-type(2n) .repo-avatar { background: var(--tint-purple); color: var(--accent-purple); border-color: #3a3560; }
+:root[data-theme="dark"] .private-badge { border-color: var(--input-border); }
+:root[data-theme="dark"] .workflow-badge { background: var(--hover); color: var(--muted); }
+:root[data-theme="dark"] .board-column { background: var(--surface-sunken); }
+:root[data-theme="dark"] .column-header { border-bottom-color: var(--line); }
+:root[data-theme="dark"] .column-heading i { border-color: #7f93a8; }
+:root[data-theme="dark"] .column-count { background: var(--hover); color: var(--muted); }
+:root[data-theme="dark"] .progress .column-count { background: var(--tint-amber); color: var(--accent-amber); }
+:root[data-theme="dark"] .closed .column-count { background: var(--tint-green); color: var(--accent-green); }
+:root[data-theme="dark"] .issue-card { background: var(--card); border-color: #30424a; }
+:root[data-theme="dark"] .issue-card:hover { border-color: #4f6d66; }
+:root[data-theme="dark"] .issue-card.progress { border-left-color: #b8954f; }
+:root[data-theme="dark"] .illustration-card.progress { border-top-color: #b8954f; }
+:root[data-theme="dark"] .closed .issue-number svg { color: var(--accent-green); }
+:root[data-theme="dark"] .priority.high { color: var(--accent-red); background: var(--tint-red); }
+:root[data-theme="dark"] .priority.medium { color: var(--accent-amber); background: var(--tint-amber); }
+:root[data-theme="dark"] .priority.low { color: var(--muted); background: var(--hover); }
+:root[data-theme="dark"] .label { background: var(--surface-sunken); border-color: var(--line); }
+:root[data-theme="dark"] .card-bottom { border-top-color: var(--line); }
+:root[data-theme="dark"] .timer { color: var(--accent-amber); }
+:root[data-theme="dark"] .backlog-age { color: var(--faint); }
+:root[data-theme="dark"] .additions { color: var(--accent-green); }
+:root[data-theme="dark"] .deletions { color: var(--accent-red); }
+:root[data-theme="dark"] .column-empty { border-color: var(--line); }
+:root[data-theme="dark"] .show-more,
+:root[data-theme="dark"] .empty-state > svg,
+:root[data-theme="dark"] .welcome .eyebrow,
+:root[data-theme="dark"] .intro-tag { color: var(--accent-green); }
+:root[data-theme="dark"] .issue-card.unread-move { border-color: #5b9be0; box-shadow: 0 0 0 2px #5b9be055; background: #18293a; }
+:root[data-theme="dark"] .issue-card.unread-created { border-color: #4fae78; box-shadow: 0 0 0 2px #4fae7844; background: #172d24; }
+:root[data-theme="dark"] .issue-card.issue-timeout { border-color: #e06b78; background: #33191d; box-shadow: 0 0 0 2px #e06b7833; }
+:root[data-theme="dark"] .movement-marker { background: #1d3a5a; color: #a9cdf5; }
+:root[data-theme="dark"] .movement-marker:focus-visible { outline-color: #a9cdf5; }
+:root[data-theme="dark"] .unread-created .movement-marker { background: #1d4532; color: #a6e3bf; }
+:root[data-theme="dark"] .unread-created .movement-marker:focus-visible { outline-color: #a6e3bf; }
+:root[data-theme="dark"] .timeout-warning { color: var(--accent-red); }
+:root[data-theme="dark"] .timeout-acknowledge { background: var(--card); color: var(--accent-red); border-color: #e06b78; }
+:root[data-theme="dark"] .timeout-acknowledge:focus-visible { outline-color: #e06b78; }
+:root[data-theme="dark"] .notice { border-color: #3a4530; background: #1d241a; color: #c3cfaa; }
+:root[data-theme="dark"] .notice.error { background: var(--tint-red); border-color: #6a343a; color: var(--accent-red); }
+:root[data-theme="dark"] .demo-notice,
+:root[data-theme="dark"] .notification-notice { background: var(--tint-green); border-color: #24493f; color: #a9dcc8; }
+:root[data-theme="dark"] .intro-board { background: linear-gradient(#172124, transparent); }
+:root[data-theme="dark"] .illustration-card { background: var(--card); }
+:root[data-theme="dark"] .skeleton { background: #2b3a3f; }
+:root[data-theme="dark"] .intro-tag { background: var(--tint-green); }
+:root[data-theme="dark"] .repo-option { border-bottom-color: var(--line); }
+:root[data-theme="dark"] .notification-toggle { background: var(--surface-sunken); border-color: var(--line); }
+:root[data-theme="dark"] .notification-toggle.enabled { color: var(--accent-green); background: var(--tint-green); border-color: #24493f; }
+:root[data-theme="dark"] .notification-toggle:hover { border-color: #4f6d66; }
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .native-modal { border: 1px solid var(--line); box-shadow: 0 25px 90px #00000080; }
+:root[data-theme="dark"] .modal-backdrop,
+:root[data-theme="dark"] .native-modal::backdrop { background: #000000a0; }
+:root[data-theme="dark"] .permissions-table thead { background: var(--surface-sunken); }
+:root[data-theme="dark"] .granted,
+:root[data-theme="dark"] .public-read { color: var(--accent-green); }
+:root[data-theme="dark"] .missing { color: var(--accent-red); }
+:root[data-theme="dark"] .sidebar-repository .backlog { color: var(--muted); }
+:root[data-theme="dark"] .sidebar-repository .progress { color: var(--accent-amber); }
+:root[data-theme="dark"] .sidebar-repository .closed { color: var(--accent-green); }
+:root[data-theme="dark"] :is(input:not([type]), input[type="text"], input[type="search"], input[type="password"], input[type="number"], input[type="date"], select, textarea) {
+  background-color: var(--surface-sunken);
+  color: var(--text);
+  border-color: var(--input-border);
+}
+:root[data-theme="dark"] :is(.search, .repository-search) input { background: transparent; }
+:root[data-theme="dark"] .version-update { box-shadow: 0 8px 32px #00000080; }
+:root[data-theme="dark"] .image-picker:focus-within { outline-color: #a3b1ff; }
+:root[data-theme="dark"] .issue-card.just-closed { animation-name: closed-arrival, closed-glow-dark; }
+@keyframes closed-glow-dark {
+  0%,
+  25% {
+    border-color: #4fae78;
+    background: #173a2b;
+    box-shadow: 0 0 0 3px #4fae7833;
+  }
+  100% {
+    border-color: #30424a;
+    background: var(--card);
+    box-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dark"] .issue-card.just-closed { border-color: #4fae78; background: #173a2b; }
 }

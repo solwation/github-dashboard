@@ -68,7 +68,7 @@ function cancel(event?: Event) {
   border: 1px solid var(--line);
   border-radius: 1rem;
   color: inherit;
-  background: #fff;
+  background: var(--surface);
 }
 .logout-dialog::backdrop {
   background: rgb(0 0 0 / 65%);

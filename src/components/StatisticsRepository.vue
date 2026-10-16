@@ -89,15 +89,15 @@ function reset() { state.value = normalize({ ...state.value, from: props.period.
 .statistics-repository-heading h2 { margin: 0 0 18px; font-size: 23px; overflow-wrap: anywhere; }
 .statistics-repository-heading a { color: inherit; text-decoration: none; }
 .statistics-repository-heading a:hover { text-decoration: underline; }
-.statistics-filters, .statistics-panel { padding: 20px; border: 1px solid var(--line); background: white; border-radius: 10px; margin-bottom: 20px; min-width: 0; }
+.statistics-filters, .statistics-panel { padding: 20px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; margin-bottom: 20px; min-width: 0; }
 .statistics-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; }
 .statistics-filter-grid label, .statistics-panel-heading label { display: grid; gap: 6px; font-size: 12px; min-width: 0; }
-.statistics-filter-grid input, select { width: 100%; min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: white; color: inherit; }
+.statistics-filter-grid input, select { width: 100%; min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: inherit; }
 .statistics-filter-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .statistics-message, .statistics-source-time { font-size: 12px; color: var(--muted); }
 .statistics-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(155px, 100%), 1fr)); gap: 12px; margin: 20px 0; }
-.statistics-total { padding: 15px; border-radius: 8px; background: white; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
-.statistics-total > span { color: #56696b; font-size: 12px; }
+.statistics-total { padding: 15px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.statistics-total > span { color: var(--chart-text); font-size: 12px; }
 .statistics-total strong { font-size: 26px; }
 .statistics-total small { font-size: 11px; font-weight: 400; color: var(--muted); }
 .statistics-panel h3 { font-size: 16px; margin: 0 0 15px; }
@@ -113,7 +113,7 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
 .statistics-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
 .statistics-empty h3 { font-size: 18px; }
 .statistics-empty p { font-size: 13px; }
-.statistics-repository-loading { display: flex; align-items: center; gap: 16px; min-height: 150px; padding: 25px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.statistics-repository-loading { display: flex; align-items: center; gap: 16px; min-height: 150px; padding: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .statistics-repository-loading strong { display: block; font-size: 15px; }
 .statistics-repository-loading p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .statistics-refreshing { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin: 0 0 15px; }

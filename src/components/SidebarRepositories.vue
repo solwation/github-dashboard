@@ -36,7 +36,7 @@ function lastChange(changedAt: string | null) {
     <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
     <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="!statistics && revealRepository(repo.id)" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repository-name">
-        <span class="repo-dot" :style="{ backgroundColor: repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
+        <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
       </span>
@@ -71,7 +71,7 @@ function lastChange(changedAt: string | null) {
   border-radius: 4px;
 }
 .sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
-.repo-dot { width: 11px; height: 11px; box-shadow: none; }
+.repo-dot { width: 11px; height: 11px; box-shadow: none; background-color: var(--repository-color); }
 .repository-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .repository-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .repository-counts { display: flex; flex-wrap: wrap; gap: 11px; padding-left: 19px; font-size: 10px; font-variant-numeric: tabular-nums; }

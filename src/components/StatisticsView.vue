@@ -162,7 +162,7 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
 .statistics-empty h2 { font-size: 18px; }
 .statistics-empty p { font-size: 13px; }
-.statistics-loading-splash { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 300px; padding: 36px 20px; border: 1px solid var(--line); border-radius: 12px; background: white; text-align: center; }
+.statistics-loading-splash { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 300px; padding: 36px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: center; }
 .statistics-loading-splash h2 { margin: 0; font-size: 21px; }
 .statistics-loading-splash p { max-width: 420px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .statistics-loading-splash small { margin-top: 6px; color: var(--muted); font-size: 12px; }

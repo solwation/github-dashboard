@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.release-notes-dialog { box-sizing: border-box; width: min(44rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: min(90dvh, calc(100dvh - 2rem)); overflow: hidden; border: 1px solid var(--line); border-radius: .8rem; padding: 1.2rem; color: var(--text, #273a3c); background: white; }
+.release-notes-dialog { box-sizing: border-box; width: min(44rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: min(90dvh, calc(100dvh - 2rem)); overflow: hidden; border: 1px solid var(--line); border-radius: .8rem; padding: 1.2rem; color: var(--text); background: var(--surface); }
 .release-notes-dialog[open] { display: flex; flex-direction: column; animation: release-notes-in .18s ease-out; }
 .release-notes-dialog::backdrop { background: #102b2a88; }
 .release-notes-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-shrink: 0; }

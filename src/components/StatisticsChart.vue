@@ -26,7 +26,8 @@ onBeforeUnmount(() => {
 });
 const dates = computed(() => props.series[0]?.days.map(day => day.date) || []);
 watch(dates, dates => { selected.value = Math.min(selected.value, Math.max(0, dates.length - 1)); });
-const colors = ["#147d69", "#4b62b2", "#ae522b", "#8c4799", "#516c31"];
+// Theme tokens from style.css, so series stay legible in light and dark mode.
+const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 const bounds = computed(() => {
   const values = props.series.flatMap(series => series.days.map(day => day.values[props.metric] || 0));
   return { min: Math.min(0, ...values), max: Math.max(1, ...values) };
@@ -41,15 +42,15 @@ const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${pro
   <div class="statistics-chart">
     <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title">
       <title>{{ title }}</title>
-      <line x1="48" :y1="y(0)" :x2="plotEnd" :y2="y(0)" stroke="#aab6b7" />
-      <line x1="48" y1="30" :x2="plotEnd" y2="30" stroke="#e4e8eb" />
+      <line class="chart-axis" x1="48" :y1="y(0)" :x2="plotEnd" :y2="y(0)" />
+      <line class="chart-grid" x1="48" y1="30" :x2="plotEnd" y2="30" />
       <text x="43" y="34" text-anchor="end">{{ number(bounds.max) }}</text>
       <text x="43" y="219" text-anchor="end">{{ number(bounds.min) }}</text>
       <text x="48" y="246">{{ dates[0] }}</text><text :x="plotEnd" y="246" text-anchor="end">{{ dates[dates.length - 1] }}</text>
-      <line v-if="dates.length" :x1="x(selected)" y1="30" :x2="x(selected)" y2="215" stroke="#aab6b7" stroke-dasharray="3 4" />
+      <line v-if="dates.length" :x1="x(selected)" y1="30" :x2="x(selected)" y2="215" class="chart-axis" stroke-dasharray="3 4" />
       <g v-for="(series, index) in series" :key="series.name">
-        <polyline :points="points(series.days)" fill="none" :stroke="colors[index % colors.length]" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="index ? `${8 - index} ${index + 2}` : undefined" />
-        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(day.values[metric] || 0)" :r="selected === dayIndex ? 5 : 3" :fill="colors[index % colors.length]" @mouseenter="selected = dayIndex" @click="selected = dayIndex"><title>{{ series.name }} · {{ day.date }}: {{ day.values[metric] || 0 }}</title></circle>
+        <polyline :points="points(series.days)" fill="none" :style="{ stroke: colors[index % colors.length] }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="index ? `${8 - index} ${index + 2}` : undefined" />
+        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(day.values[metric] || 0)" :r="selected === dayIndex ? 5 : 3" :style="{ fill: colors[index % colors.length] }" @mouseenter="selected = dayIndex" @click="selected = dayIndex"><title>{{ series.name }} · {{ day.date }}: {{ day.values[metric] || 0 }}</title></circle>
       </g>
     </svg>
     <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><i :style="{ background: colors[index % colors.length] }" />{{ series.name }}</span></div>
@@ -64,16 +65,18 @@ const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${pro
 .statistics-chart { min-width: 0; }
 svg { width: 100%; height: 255px; display: block; overflow: hidden; }
 svg line { vector-effect: non-scaling-stroke; }
-svg text { fill: #56696b; font: 11px system-ui; }
+svg text { fill: var(--chart-text); font: 11px system-ui; }
+.chart-axis { stroke: var(--chart-axis); }
+.chart-grid { stroke: var(--chart-grid); }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px; margin: 10px 0; }
 .chart-legend span { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .chart-legend i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .chart-day { display: grid; gap: 6px; font-size: 12px; }
-.chart-day input { width: 100%; accent-color: #147d69; }
+.chart-day input { width: 100%; accent-color: var(--green); }
 .chart-selection { display: block; font-size: 12px; margin: 8px 0 16px; overflow-wrap: anywhere; }
 .daily-values summary { cursor: pointer; font-size: 13px; }
 .statistics-table-scroll { overflow: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
 caption { text-align: left; margin: 8px 0; }
-th, td { padding: 9px; text-align: left; border-bottom: 1px solid #e4e8eb; white-space: nowrap; }
+th, td { padding: 9px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
 </style>
