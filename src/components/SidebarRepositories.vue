@@ -29,13 +29,14 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
     <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
-    <a class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="lastChange(repo.changedAt)">
+    <a class="repo-nav sidebar-repository" :href="'#repo-' + repo.id" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repository-name">
         <span class="repo-dot" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
       </span>
-      <span class="repository-counts">
+      <span v-if="repo.loading" class="repository-counts">{{ t("Hämtar…") }}</span>
+      <span v-else-if="!repo.unavailable" class="repository-counts">
         <span class="status-count backlog" :title="t('Backlog: {count}', { count: repo.backlog })"><Circle :size="11" aria-hidden="true" /><span class="sr-only">Backlog: </span>{{ repo.backlog }}</span>
         <span class="status-count progress" :title="t('Pågående: {count}', { count: repo.progress })"><Clock3 :size="11" aria-hidden="true" /><span class="sr-only">{{ t('Pågående') }}: </span>{{ repo.progress }}</span>
         <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck :size="11" aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span>{{ repo.closed }}</span>

@@ -39,6 +39,8 @@ export interface Repo {
   language?: string | null;
 }
 export interface Lane {
+  /** A newly selected repository has no issue snapshot until its first read finishes. */
+  loading?: boolean;
   repo: Repo;
   issues: Issue[];
   labels: Label[];

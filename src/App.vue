@@ -40,6 +40,7 @@ import { TimeoutTracker, DEFAULT_TIMEOUT_MINUTES, parseTimeoutMinutes, type Time
 import { ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
+import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import LogoutDialog from "./components/LogoutDialog.vue";
@@ -177,7 +178,7 @@ async function persistContent() {
   if (!user.value || !sessionToken.value || !api || isDemo.value) return;
   const run = generation;
   try {
-    await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value,
+    await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value.filter(lane => !lane.loading),
       syncedAt: refreshed.value, responses: api.exportResponses(), timeoutAcknowledgements: timeoutTracker.exportAcknowledgements() });
     if (run === generation) cacheWarning.value = "";
   } catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
@@ -386,6 +387,7 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
   }
 }
 function closureFeedback(result: Lane[], fullSnapshot = true) {
+  result = result.filter(lane => !lane.loading);
   relationsRevision.value++;
   activity.retain(selected.value);
   activity.update(result, rules.value, Date.now(), { discoverNew: fullSnapshot, observedAt: Object.fromEntries(lastSynced) });
@@ -411,6 +413,9 @@ function closureFeedback(result: Lane[], fullSnapshot = true) {
 }
 let api: GitHub | null = null;
 let generation = 0;
+let selectionRevision = 0;
+const repositoryRequests = new RepositoryRequestQueue();
+let repositoryRequestClient: GitHub | null = null;
 watch([lanes, rules, now, timeoutMinutes, timeoutRevision, showingCache, restoring, busy, hideCoordination], () => {
   if (busy.value) return;
   const result = timeoutTracker.scan(lanes.value, rules.value, timeoutMinutes.value, now.value,
@@ -610,9 +615,8 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       const available = await api.repos();
       repos.value = available;
       applyImportedPreferences(imported, available);
-      lanes.value = lanes.value.filter(lane => selected.value.includes(lane.repo.full_name));
-      if (selected.value.length) await refresh();
-      else { showingCache.value = false; await persistContent(); }
+      reconcileSelection();
+      await refresh(false, true);
       return;
     }
     const next = new GitHub(token);
@@ -671,8 +675,8 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
     } else restorePreferences(available);
     if (imported) applyImportedPreferences(imported, available);
-    lanes.value = lanes.value.filter(lane => selected.value.includes(lane.repo.full_name) && available.some(repo => repo.full_name === lane.repo.full_name));
-    if (selected.value.length) await refresh();
+    reconcileSelection();
+    if (selected.value.length) await refresh(false, true);
     else { picker.value = true; showingCache.value = false; await persistContent(); }
     if (storageWarning) error.value = storageWarning;
   } catch (e) {
@@ -684,78 +688,89 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
 function message(e: unknown) {
   return e instanceof Error ? t(e.message) : t("Något gick fel. Försök igen.");
 }
-async function refresh(incremental = false) {
-  if (!api || busy.value) return;
-  const client = api;
-  const run = generation;
+function reconcileSelection() {
+  selectionRevision++;
+  busy.value = false;
+  const accessible = new Set(repos.value.map(repo => repo.full_name));
+  selected.value = [...new Set(selected.value)].filter(name => accessible.has(name));
+  lanes.value = selectedLanes(lanes.value, repos.value, selected.value);
+  closureTracker.retain(selected.value);
+  activity.retain(selected.value);
+  activityRevision.value++;
+  statusTracker.retain(selected.value);
+  statusPlayer.clear();
+  recentClosures.value = new Set([...recentClosures.value].filter(key => selected.value.some(name => key.startsWith(name + ":"))));
+  timedOut.value = timedOut.value.filter(entry => selected.value.includes(entry.repo));
+  for (const name of lastSynced.keys()) if (!selected.value.includes(name)) lastSynced.delete(name);
+  for (const name of lastFullSynced.keys()) if (!selected.value.includes(name)) lastFullSynced.delete(name);
+}
+async function refresh(incremental = false, replacePending = false) {
+  if (!api || (busy.value && !replacePending)) return;
+  const client = api, run = generation, selection = selectionRevision;
+  const current = () => run === generation && client === api && selection === selectionRevision;
+  if (repositoryRequestClient !== client) {
+    repositoryRequests.clear();
+    repositoryRequestClient = client;
+  }
+  lanes.value = selectedLanes(lanes.value, repos.value, selected.value);
+  if (!selected.value.length) {
+    busy.value = false;
+    showingCache.value = false;
+    await persistContent();
+    return;
+  }
   busy.value = true;
   error.value = "";
+  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name)).sort((a, b) =>
+    Number(!!lanes.value.find(lane => lane.repo.full_name === b.full_name)?.loading) - Number(!!lanes.value.find(lane => lane.repo.full_name === a.full_name)?.loading));
+  const result: Lane[] = [];
+  let cursor = 0;
   try {
-    const result: Lane[] = [];
-    // Fetch repositories in small batches, retaining a separate error per lane.
-    for (const repo of repos.value.filter((r) =>
-      selected.value.includes(r.full_name),
-    )) {
-      try {
-        const started = Date.now();
-        const previous = lanes.value.find(
-          (lane) => lane.repo.full_name === repo.full_name,
-        );
-        const since = lastSynced.get(repo.full_name);
-        result.push(
-          incremental &&
-            previous &&
-            !previous.error &&
-            since &&
-            (lastFullSynced.get(repo.full_name) || 0) > started - 30 * 60000
-            ? await client.syncLane(
-                previous,
-                rules.value[repo.full_name] || {},
-                since,
-              )
-            : await client.lane(repo, rules.value[repo.full_name] || {}),
-        );
-        if (run === generation) {
-          lastSynced.set(repo.full_name, started);
-          if (
-            !incremental ||
-            !previous ||
-            previous.error ||
-            !since ||
-            (lastFullSynced.get(repo.full_name) || 0) <= started - 30 * 60000
-          )
-            lastFullSynced.set(repo.full_name, started);
+    if (!incremental) client.invalidateIssueRelations();
+    await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
+      while (cursor < targets.length && current()) {
+        const repo = targets[cursor++]!;
+        try {
+          const repoRules = { ...rules.value[repo.full_name] };
+          const key = JSON.stringify([repo.full_name, Object.entries(repoRules).sort(([a], [b]) => a.localeCompare(b))]);
+          const loaded = await repositoryRequests.run(key, async () => {
+            if (run !== generation || client !== api || !selected.value.includes(repo.full_name)) throw new RepositoryRequestCancelled();
+            const started = Date.now();
+            const previous = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
+            const since = lastSynced.get(repo.full_name);
+            const full = !incremental || !previous || previous.loading || previous.error || !since || (lastFullSynced.get(repo.full_name) || 0) <= started - 30 * 60000;
+            const lane = full ? await client.lane(repo, repoRules) : await client.syncLane(previous!, repoRules, since!);
+            return { lane, started, full };
+          });
+          if (!current() || !selected.value.includes(repo.full_name)) continue;
+          lastSynced.set(repo.full_name, loaded.started);
+          if (loaded.full) lastFullSynced.set(repo.full_name, loaded.started);
+          result.push(loaded.lane);
+          closureFeedback([loaded.lane]);
+          lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? loaded.lane : lane);
+        } catch (cause) {
+          if (!current() || cause instanceof RepositoryRequestCancelled) continue;
+          const old = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
+          if (!old || !selected.value.includes(repo.full_name)) continue;
+          const failed = { ...old, loading: false, error: message(cause) };
+          result.push(failed);
+          lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? failed : lane);
         }
-      } catch (e) {
-        const old = lanes.value.find(
-          (l) => l.repo.full_name === repo.full_name,
-        );
-        result.push({
-          ...old,
-          repo,
-          issues: old?.issues || [],
-          labels: old?.labels || [],
-          error: message(e),
-        });
       }
-    }
-    if (run === generation) {
-      if (!incremental) client.invalidateIssueRelations();
-      closureTracker.retain(selected.value);
-      closureFeedback(result);
-      lanes.value = result;
+    }));
+    if (current()) {
       if (result.every(lane => !lane.error)) {
         refreshed.value = Date.now();
         showingCache.value = false;
       }
       await persistContent();
-      if (incremental && result.some((lane) => lane.error))
-        throw new Error(result.find((lane) => lane.error)!.error);
+      if (incremental && result.some(lane => lane.error)) throw new Error(result.find(lane => lane.error)!.error);
     }
   } finally {
-    if (run === generation) busy.value = false;
+    if (current()) busy.value = false;
   }
 }
+
 function toggleRepo(name: string) {
   pendingSelected.value = pendingSelected.value.includes(name)
     ? pendingSelected.value.filter((n) => n !== name)
@@ -763,13 +778,15 @@ function toggleRepo(name: string) {
 }
 async function applyRepos() {
   selected.value = [...pendingSelected.value];
-  closureTracker.retain(selected.value);
+  reconcileSelection();
   picker.value = false;
   save();
-  await refresh();
+  await refresh(false, true);
 }
 function showDemo() {
   generation++;
+  selectionRevision++;
+  repositoryRequests.clear();
   clearClosureFeedback();
   isDemo.value = true;
   columnLimit.value = defaultColumnLimit;
@@ -806,6 +823,8 @@ function logout() {
   sessionToken.value = "";
   handoffOpen.value = false;
   generation++;
+  selectionRevision++;
+  repositoryRequests.clear();
   clearClosureFeedback();
   notificationRepos.value = [];
   notificationPending.value = null;
@@ -884,7 +903,9 @@ const tick = setInterval(() => (now.value = Date.now()), 1000);
 async function refreshActive() {
   if (!api || busy.value) return;
   const client = api,
-    run = generation;
+    run = generation,
+    selection = selectionRevision;
+  const current = () => run === generation && client === api && selection === selectionRevision;
   busy.value = true;
   const result = lanes.value.map((lane) => ({
     ...lane,
@@ -904,7 +925,7 @@ async function refreshActive() {
   try {
     await Promise.all(
       Array.from({ length: Math.min(3, tasks.length) }, async () => {
-        while (cursor < tasks.length) {
+        while (cursor < tasks.length && current()) {
           const { lane, issue } = tasks[cursor++]!;
           try {
             const updated = await client.activeIssue(
@@ -928,15 +949,15 @@ async function refreshActive() {
         }
       }),
     );
-    if (run === generation) {
+    if (current()) {
       closureFeedback(result, false);
       lanes.value = result;
       if (!showingCache.value) refreshed.value = Date.now();
       await persistContent();
     }
-    if (failure) throw failure;
+    if (failure && current()) throw failure;
   } finally {
-    if (run === generation) busy.value = false;
+    if (current()) busy.value = false;
   }
 }
 const sync = createIssueSync({
@@ -1277,7 +1298,7 @@ onMounted(async () => {
           </button>
         </div>
         <OverviewSummary :query="query" :repository-queries="repositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
-          :live="!showingCache && !restoring" :session="generation" :now="now" :logged-in="loggedIn" :busy="busy"
+          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :now="now" :logged-in="loggedIn" :busy="busy"
           @choose-repositories="picker = true" />
         <div class="board-toolbar">
           <label class="search"
@@ -1403,9 +1424,9 @@ onMounted(async () => {
                   }}</span
                 >
               </button>
-              <span class="workflow-badge"
+              <span v-if="!lane.loading" class="workflow-badge"
                 ><Check :size="12" />{{ workflow(lane.labels) }}</span
-              ><span>{{ laneIssues(lane).length }} issues</span
+              ><span v-if="!lane.loading && (!lane.error || lane.issues.length)">{{ laneIssues(lane).length }} issues</span><span v-else-if="lane.loading">{{ t("Hämtar…") }}</span
               ><button
                 v-if="!isDemo"
                 class="icon-button"
@@ -1417,14 +1438,14 @@ onMounted(async () => {
               </button>
               </div>
             </div>
-              <span class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
+              <span v-if="!lane.loading && (!lane.error || lane.issues.length)" class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
                 <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
                 <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
                 <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepos[laneIndex]?.closed || 0 }) }}</span>
               </span>
           </header>
           <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
-          <p v-if="(query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">
+          <p v-if="!lane.loading && !lane.error && (query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">
             {{ t("Inga issues i {name} matchar filtren.", { name: lane.repo.full_name }) }}
           </p>
           <div v-if="lane.error" class="notice error" role="alert">
@@ -1437,7 +1458,11 @@ onMounted(async () => {
               )
             }}
           </div>
-          <div class="swimlane">
+          <div v-if="lane.loading" class="repository-loading" role="status" aria-live="polite">
+            <RefreshCw class="spinning" :size="21" aria-hidden="true" />
+            {{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}
+          </div>
+          <div v-else-if="!lane.error || lane.issues.length" class="swimlane">
             <section
               v-for="col in columns"
               :key="col.key"
@@ -1582,7 +1607,7 @@ onMounted(async () => {
       </div>
       <div class="modal-footer">
         <span>{{ pendingSelected.length }}{{ t(" valda") }}</span
-        ><button class="button primary" :disabled="busy" @click="applyRepos">
+        ><button class="button primary" @click="applyRepos">
           {{ t("Visa översikt") }} <ArrowRight :size="16" />
         </button>
       </div>
@@ -1673,4 +1698,7 @@ onMounted(async () => {
 .repository-search input { width: 100%; min-width: 0; padding-block: 7px; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
 .repository-search:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
 .repository-filter-empty { margin: 0; padding: 0 18px 14px; color: var(--muted); font-size: 13px; }
+
+.repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.repository-loading svg { flex-shrink: 0; }
 </style>

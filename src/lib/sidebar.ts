@@ -9,6 +9,8 @@ export interface SidebarRepository {
   closed: number;
   changedAt: string | null;
   unreadAt?: string | null;
+  loading?: boolean;
+  unavailable?: boolean;
 }
 
 /** Summarize the loaded lanes before text search. Closed issues already use the API's 30-day window. */
@@ -27,6 +29,8 @@ export function summarizeLanes(
       progress: 0,
       closed: 0,
       changedAt: null,
+      ...(lane.loading ? { loading: true } : {}),
+      ...(lane.error && !lane.issues.length ? { unavailable: true } : {}),
       ...(unreadAt ? { unreadAt: null } : {}),
     };
     let latest = -Infinity;

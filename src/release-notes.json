@@ -36,10 +36,10 @@
       },
       {
         "text": {
-          "sv": "Varje repository har ett eget sökfilter i sitt sidhuvud. Med notiser påslagna spelar ett repository olika ljud när arbete startar, stängs, blockeras eller går tillbaka till Backlog, och en ljudvarning du har stängt förblir tyst.",
-          "en": "Each repository has its own search filter in its header. With notifications turned on, a repository plays distinct sounds when work starts, closes, becomes blocked or returns to Backlog, and an audio warning you have dismissed stays silent."
+          "sv": "Varje repository har ett eget sökfilter i sitt sidhuvud. Ändrat projekturval visas direkt, med laddningsstatus för nya projekt och befintliga data kvar. Med notiser påslagna spelar ett repository olika ljud när arbete startar, stängs, blockeras eller går tillbaka till Backlog, och en ljudvarning du har stängt förblir tyst.",
+          "en": "Each repository has its own search filter in its header. Repository selection changes appear immediately, with loading status for new projects and existing data kept visible. With notifications turned on, a repository plays distinct sounds when work starts, closes, becomes blocked or returns to Backlog, and an audio warning you have dismissed stays silent."
         },
-        "issues": [43, 44, 59]
+        "issues": [43, 44, 59, 73]
       },
       {
         "text": {
