@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Växla mellan separata projekttavlor och en gemensam board; kortens repositorynamn och färger matchar vänstermenyn och vyvalet följer QR-synken.",
+          "en": "Switch between separate project boards and one combined board; repository names and colors match the sidebar, and QR sync carries your view choice."
+        },
+        "issues": [81]
+      },
+      {
+        "text": {
           "sv": "Kortare versionsnyheter och kontrollstatus i sidomenyn; staplade uppdateringsknappar, nedräkning i uppdateringsknappen med dialogpaus och uppskjutning resten av dagen.",
           "en": "Shorter sidebar release notes and version-check status, with stacked update buttons, a button countdown, dialog pauses and day-long deferral."
         },

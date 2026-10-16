@@ -15,6 +15,9 @@ test("split defaults on; combined columns retain local/global filtering, colors,
   const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
   await expect(split).toBeChecked(); await expect(page.locator(".repo-lane")).toHaveCount(3);
   const colors = await matchingColors(page);
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("5");
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
   await split.focus(); await page.keyboard.press("Space");
   const board = page.locator(".combined-board");
   await expect(board.locator(".board-column")).toHaveCount(3);
