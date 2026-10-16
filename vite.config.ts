@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { bundledReleaseNotes, RELEASE_NOTES_FILE } from "./src/lib/release-notes.ts";
+
+type BuildInfo = { builtAt: string | null; commit: string | null };
 
 function commitHash(): string | null {
   const actionsHash = process.env.GITHUB_ACTIONS && process.env.GITHUB_SHA;
@@ -50,14 +53,44 @@ function appShell(): Plugin {
     },
   };
 }
-export default defineConfig(({ command }) => ({
-  plugins: [vue(), appShell()],
-  base: process.env.GITHUB_ACTIONS ? "/github-dashboard/" : "./",
-  define: {
-    __WORKFLOW_GUIDE__: JSON.stringify(readFileSync(new URL("./public/ISSUEFLOW.md", import.meta.url), "utf8")),
-    __BUILD_INFO__: JSON.stringify({
-      builtAt: command === "build" ? new Date().toISOString() : null,
-      commit: commitHash(),
-    }),
-  },
-}));
+
+/**
+ * Publishes the bundled release notes with this build's identity, so an older
+ * installed version can fetch what is new without a token. Deliberately not in
+ * the service-worker shell list: it must always come from the network.
+ */
+function releaseNotes(build: BuildInfo): Plugin {
+  const source = () =>
+    JSON.stringify({ build, days: bundledReleaseNotes }, null, 2) + "\n";
+  return {
+    name: "issueflow-release-notes",
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: RELEASE_NOTES_FILE, source: source() });
+    },
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        if (request.url?.split("?")[0].endsWith("/" + RELEASE_NOTES_FILE)) {
+          response.setHeader("Content-Type", "application/json; charset=utf-8");
+          response.setHeader("Cache-Control", "no-store");
+          response.end(source());
+        } else next();
+      });
+    },
+  };
+}
+
+export default defineConfig(({ command }) => {
+  // One identity for the bundle constant and the published release notes.
+  const buildInfo: BuildInfo = {
+    builtAt: command === "build" ? new Date().toISOString() : null,
+    commit: commitHash(),
+  };
+  return {
+    plugins: [vue(), appShell(), releaseNotes(buildInfo)],
+    base: process.env.GITHUB_ACTIONS ? "/github-dashboard/" : "./",
+    define: {
+      __WORKFLOW_GUIDE__: JSON.stringify(readFileSync(new URL("./public/ISSUEFLOW.md", import.meta.url), "utf8")),
+      __BUILD_INFO__: JSON.stringify(buildInfo),
+    },
+  };
+});

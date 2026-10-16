@@ -30,6 +30,14 @@ Settings includes an Issue workflow instructions button that opens a separate, w
 
 Settings → GitHub permissions shows verified access and explains which features each read permission enables. A red Settings badge counts permissions with confirmed missing access.
 
+## Release notes
+
+What's new is written per day in Swedish and English in [`src/release-notes.json`](src/release-notes.json), newest day first. Each day has a short summary and a few readable sections about user benefit, each listing the related issue numbers. Only changes published on `main` are included; no secrets or private repository content.
+
+The build bundles the notes and also publishes `release-notes.json` next to `index.html` with the build identity (`builtAt`, `commit`). An older installed version can fetch it without a token, sign-in or AI access to show what changed since it was built; the file is always fetched from the network, never from the app-shell cache.
+
+Keeping notes current: every published user-facing change adds to or updates that day's entry (Europe/Stockholm date) in the same commit. Merge related work into the existing sections rather than adding one line per issue or commit, and do not describe unpublished or later-replaced behavior. `tests/release-notes.test.ts` validates the file.
+
 ## Run locally
 
 Requires Node 22.20+.
