@@ -690,10 +690,13 @@ function restorePreferences(available: Repo[]) {
       /* Ignore invalid preferences. */
     }
 }
-async function connect(token: string, imported?: HandoffSettings, cached?: ContentSnapshot | null) {
-  if (authBusy.value) return;
+/** Resolves true when the account connected live; failures are shown in `error` instead of thrown. */
+async function connect(token: string, imported?: HandoffSettings, cached?: ContentSnapshot | null): Promise<boolean> {
+  if (authBusy.value) return false;
   authBusy.value = true;
   error.value = "";
+  // Set once GitHub accepted the token, so a later board refresh failure still counts as connected.
+  let connected = false;
   try {
     if (imported && token === sessionToken.value && api && user.value && !isDemo.value) {
       const available = await api.repos();
@@ -701,7 +704,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       applyImportedPreferences(imported, available);
       reconcileSelection();
       await refresh(false, true);
-      return;
+      return true;
     }
     const next = new GitHub(token);
     if (cached) {
@@ -722,6 +725,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     }
     const identity = await next.user();
     const available = await next.repos();
+    connected = true;
     let storageWarning = "";
     try {
       await saveToken(token);
@@ -763,8 +767,10 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     if (selected.value.length) await refresh(false, true);
     else { picker.value = true; showingCache.value = false; await persistContent(); }
     if (storageWarning) error.value = storageWarning;
+    return true;
   } catch (e) {
     error.value = message(e);
+    return connected;
   } finally {
     authBusy.value = false;
   }
@@ -1156,14 +1162,22 @@ onUnmounted(() => {
   clearClosureFeedback();
 });
 onMounted(async () => {
+  // A rejected handoff or OAuth link must not hide a saved session: remember its error,
+  // restore the saved board as usual and show the error over it.
+  let linkError = "";
   try {
     // Remove recognized credential fragments before authentication or network calls.
-    const incoming = consumeHandoff();
+    let incoming: ReturnType<typeof consumeHandoff> = null;
+    try { incoming = consumeHandoff(); } catch (e) { linkError = message(e); }
     if (incoming) {
       let remembered: string | null = null, vaultError: unknown;
       try { remembered = await loadToken(); } catch (e) { vaultError = e; }
       if (remembered === incoming.token || (!remembered && !vaultError)) {
-        await connect(incoming.token, incoming);
+        if (await connect(incoming.token, incoming) || !remembered) return;
+        // The saved token itself failed to connect live; fall back to its cached board.
+        linkError = error.value;
+        savedSession.value = true;
+        await connect(remembered, undefined, await readSnapshot(remembered));
         return;
       }
       savedSession.value = true;
@@ -1175,16 +1189,21 @@ onMounted(async () => {
       } catch (e) {
         lookupError = message(e);
       }
-      if (confirmed) await connect(incoming.token, incoming);
-      else if (remembered) await connect(remembered, undefined, snapshot);
-      else error.value = message(vaultError);
+      if (confirmed) {
+        if (await connect(incoming.token, incoming)) return;
+        linkError = error.value;
+      }
+      if (remembered) await connect(remembered, undefined, snapshot);
+      else if (!linkError) error.value = message(vaultError);
       if (lookupError && !error.value) error.value = lookupError;
       return;
     }
-    const oauthToken = await callback();
+    // callback() scrubs ?code/?error from the address before its token exchange or any failure.
+    let oauthToken: string | null = null;
+    try { oauthToken = await callback(); } catch (e) { linkError ||= message(e); }
     if (oauthToken) {
-      await connect(oauthToken);
-      return;
+      if (await connect(oauthToken)) return;
+      linkError = error.value;
     }
     const remembered = await loadToken();
     if (remembered) {
@@ -1195,6 +1214,8 @@ onMounted(async () => {
     if (e instanceof VaultError) savedSession.value = true;
     error.value = message(e);
   } finally {
+    // A genuine restore error takes precedence; otherwise the link error stays visible.
+    if (linkError && !error.value) error.value = linkError;
     restoring.value = false;
   }
 });
