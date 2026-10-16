@@ -5,39 +5,31 @@ import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import GitHubPermissions from "./GitHubPermissions.vue";
 import NoticeBadge from "./NoticeBadge.vue";
+import { permissionProblemKey, reconcilePermissionAcknowledgements } from "../lib/permission-acknowledgements";
 import { missingPermissionCount, type PermissionReport } from "../lib/permissions";
 import { computed } from "vue";
 import { Settings2, X } from "@lucide/vue";
 import { useLanguage, type LanguagePreference } from "../lib/i18n";
 const { t, preference, setLanguage } = useLanguage();
-const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number }>(), { permissions: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
-const acknowledgedMissing = ref(new Set<string>());
+const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number }>(), { permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
+const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
-const permissionKey = (permission: string, repo: string) => `${permission}:${repo}`;
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
-  ...entry, repositories: entry.repositories.filter(repo => !acknowledgedMissing.value.has(permissionKey(entry.permission, repo.repo))),
+  ...entry, repositories: entry.repositories.filter(repo => !acknowledgedMissing.value.has(permissionProblemKey(entry.permission, repo.repo))),
 }))));
 // Notices per Settings submenu; the Settings button shows their total.
 const submenuNotices = computed(() => ({ permissions: missingCount.value }));
 const settingsNotices = computed(() => Object.values(submenuNotices.value).reduce((total, count) => total + count, 0));
 function acknowledgePermissions() {
   permissionsOpen.value = true;
-  const seen = new Set(acknowledgedMissing.value);
-  for (const entry of props.permissions) for (const repo of entry.repositories) {
-    if (repo.status === "missing") seen.add(permissionKey(entry.permission, repo.repo));
-  }
-  acknowledgedMissing.value = seen;
+  const next = reconcilePermissionAcknowledgements(props.permissionAcknowledgements, props.permissions, true);
+  if (JSON.stringify(next) !== JSON.stringify(props.permissionAcknowledgements)) emit("update:permissionAcknowledgements", next);
 }
-watch(() => props.permissionsSession, () => { acknowledgedMissing.value = new Set(); permissionsOpen.value = false; });
+watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
-  const seen = new Set(acknowledgedMissing.value);
-  for (const entry of props.permissions) for (const repo of entry.repositories) {
-    if (repo.status === "granted" || repo.reason === "public-access") seen.delete(permissionKey(entry.permission, repo.repo));
-  }
-  acknowledgedMissing.value = seen;
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
+const emit = defineEmits<{ scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const minutes = parseTimeoutMinutes(input.value);

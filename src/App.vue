@@ -47,6 +47,7 @@ import { combinedItems, boardEntryKey } from "./lib/combined-board";
 import { reconcileRepositoryColors } from "./lib/repository-color";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
+import { restorePermissionAcknowledgements, reconcilePermissionAcknowledgements } from "./lib/permission-acknowledgements";
 import type { PermissionReport } from "./lib/permissions";
 import type { StatisticsPreferences } from "./lib/statistics";
 const statisticsPreferences = ref<StatisticsPreferences>({});
@@ -259,6 +260,11 @@ const scannerOpen = ref(false);
 const commitRetry = ref(0);
 const relationsRevision = ref(0);
 const permissionReport = ref<PermissionReport>([]);
+const permissionAcknowledgements = ref<string[]>([]);
+function setPermissionAcknowledgements(value: string[]) {
+  permissionAcknowledgements.value = restorePermissionAcknowledgements(value);
+  save();
+}
 const permissionsChecking = ref(false);
 let permissionRun = 0;
 const permissionRepos = computed(() => repos.value.filter(repo => selected.value.includes(repo.full_name)));
@@ -271,6 +277,8 @@ async function refreshPermissions(force = false) {
   try {
     const report = await client.checkPermissions(permissionRepos.value, { force });
     if (run === permissionRun && client === api && session === generation) {
+      const acknowledgements = reconcilePermissionAcknowledgements(permissionAcknowledgements.value, report);
+      if (JSON.stringify(acknowledgements) !== JSON.stringify(permissionAcknowledgements.value)) setPermissionAcknowledgements(acknowledgements);
       permissionReport.value = report;
       if (force) commitRetry.value++;
     }
@@ -573,6 +581,7 @@ function save() {
         repositoryColumnLimits: repositoryColumnLimits.value,
         notificationRepos: notificationRepos.value,
         activityRead: activity.acknowledgements(),
+        permissionAcknowledgements: permissionAcknowledgements.value,
         timeoutMinutes: timeoutMinutes.value,
       }),
     );
@@ -581,6 +590,7 @@ function save() {
   }
 }
 function restorePreferences(available: Repo[]) {
+    permissionAcknowledgements.value = [];
     repositoryColors.value = {};
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
@@ -602,6 +612,7 @@ function restorePreferences(available: Repo[]) {
         projectOrder.value = layout.order;
         collapsedRepos.value = layout.collapsed;
         activity.restore(saved.activityRead);
+        permissionAcknowledgements.value = restorePermissionAcknowledgements(saved.permissionAcknowledgements);
         selected.value = Array.isArray(saved.selected)
           ? saved.selected.filter(
               (n: unknown) =>
@@ -808,6 +819,7 @@ async function applyRepos() {
   await refresh(false, true);
 }
 function showDemo() {
+  permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   splitByRepository.value = true;
   combinedLimits.value = {};
@@ -840,6 +852,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   showingCache.value = false;
   cacheWarning.value = "";
@@ -1121,7 +1134,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
