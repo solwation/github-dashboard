@@ -168,6 +168,8 @@ async function navigateWorkspace() {
   currentView.value = window.location.hash === "#statistics" ? "statistics" : "overview";
   await nextTick();
   const target = document.getElementById(window.location.hash.slice(1));
+  const repositoryControls = target?.closest("details");
+  if (repositoryControls) repositoryControls.open = true;
   target?.scrollIntoView({ block: "start" });
   if (target?.tagName === "MAIN") target.focus({ preventScroll: true });
 }

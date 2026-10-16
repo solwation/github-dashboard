@@ -27,7 +27,12 @@ test("split defaults on; combined columns retain local/global filtering, colors,
   await board.locator(".closed").getByRole("button", { name: "Visa fler", exact: true }).click();
   await expect(board.locator(".issue-card")).toHaveCount(17);
   expect(await matchingColors(page)).toEqual(colors);
+  const sidebarProject = page.locator('.sidebar-repository-row[data-repository="demo/design-system"] .sidebar-repository');
+  await sidebarProject.click();
+  await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
   await board.getByText("Repositoryfilter och inställningar", { exact: true }).click();
+  await sidebarProject.click(); // The same hash must also reveal a manually closed panel.
+  await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
   await page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true }).fill("missing");
   await expect(board.locator(".issue-card")).toHaveCount(9);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("startsidan");
@@ -107,6 +112,11 @@ test("combined cards with colliding IDs use their own comments, commits and pers
   await page.goto("/#issueflow-handoff=" + transferred);
   await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).toBeChecked();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
+  const combinedTransfer = encodeHandoff({ token: "fictional-combined-token", selected: ["sample/alpha", "sample/beta"], rules: {}, preferences: { splitByRepository: false } });
+  await page.goto("about:blank");
+  await page.goto("/#issueflow-handoff=" + combinedTransfer);
+  await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).not.toBeChecked();
+  await expect(page.locator(".combined-board .issue-card")).toHaveCount(6);
 });
 
 test("new repository selection appears as loading in combined mode while retained cards remain", async ({ page }) => {
