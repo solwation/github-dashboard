@@ -92,6 +92,13 @@
       },
       {
         "text": {
+          "sv": "Ett tillfälligt fel vid hämtning av tidslinjen ger inte längre kvarstående tidtagarvarningar eller tystade timeout-notiser efter nästa synk.",
+          "en": "A temporary timeline fetch error no longer leaves lingering timer warnings or silenced timeout notifications after the next sync."
+        },
+        "issues": [106]
+      },
+      {
+        "text": {
           "sv": "Cachad vy återställs lugnare, uppdateringar aktiveras säkrare och otillgängliga commitdetaljer döljs; Inställningar, språkminne och filtrerade översiktssiffror har rättats.",
           "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
