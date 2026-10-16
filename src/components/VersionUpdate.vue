@@ -67,10 +67,9 @@ const titleId = useId();
 .version-update-summary { white-space: pre-line; line-height: 1.5; overflow-wrap: anywhere; }
 .version-update-build { color: var(--muted); }
 .version-update-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
   gap: 0.5rem;
+  min-width: 9rem;
   flex-shrink: 0;
 }
 @media (max-width: 540px) {
@@ -80,7 +79,5 @@ const titleId = useId();
     bottom: max(0.75rem, env(safe-area-inset-bottom));
     padding: 1rem;
   }
-  .version-update-actions { justify-content: stretch; }
-  .version-update-actions .button { flex: 1 1 auto; justify-content: center; }
 }
 </style>
