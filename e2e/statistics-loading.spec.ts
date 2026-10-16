@@ -10,18 +10,20 @@ async function connect(page: Page, names: string[]) {
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-statistics-loading-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
-  for (const name of names) await page.getByRole("checkbox", { name: `sample/${name}`, exact: true }).check();
+  for (const name of names) await page.getByRole("checkbox", { name: new RegExp(`sample/${name}`) }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
   await page.getByRole("link", { name: "Statistik", exact: true }).click();
 }
 
 test("Statistics waits clearly, completes repositories independently and retains values while refreshing", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
   await page.setViewportSize({ width: 320, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   const names = ["alpha", "bravo"];
   const repos = names.map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, description: null, private: true, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
   const timestamp = new Date().toISOString();
-  const issue = { id: 1, number: 1, created_at: timestamp, updated_at: timestamp, labels: [], user: { login: "sample" } };
+  const issue = { id: 1, number: 1, title: "Loading fixture", state: "open", closed_at: null, assignees: [], html_url: "https://github.com/sample/alpha/issues/1", created_at: timestamp, updated_at: timestamp, labels: [], user: { login: "sample" } };
   let waits = { alpha: gate(), bravo: gate() };
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
@@ -77,6 +79,7 @@ test("Statistics waits clearly, completes repositories independently and retains
   waits.alpha.resolve(); waits.bravo.resolve();
   await expect(refresh).toBeEnabled();
   await expect(page.locator(".statistics-refreshing")).toHaveCount(0);
+  expect(errors).toEqual([]);
 });
 
 test("Statistics distinguishes unavailable optional data from an initial temporary fetch failure", async ({ page }) => {

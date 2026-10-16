@@ -35,6 +35,13 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Hämtar och sammanställer statistik": "Fetching and preparing statistics",
+  "Vi hämtar underlaget från GitHub. Statistiken visas så snart den är klar.": "We are fetching the source data from GitHub. Statistics will appear as soon as they are ready.",
+  "Hämtning avslutad för {done} av {total} repositories.": "Fetching finished for {done} of {total} repositories.",
+  "Vänta medan underlaget för {name} hämtas.": "Please wait while source data for {name} is fetched.",
+  "Uppdaterar statistik. Tidigare värden visas under tiden.": "Refreshing statistics. Previous values remain visible.",
+  "Statistiken kunde inte hämtas just nu. Försök igen senare.": "Statistics could not be fetched right now. Try again later.",
+
   "Skapat i Backlog": "Created in backlog",
   "Nyligen skapat i Backlog. Markera som läst": "Recently created in Backlog. Mark as read",
 
