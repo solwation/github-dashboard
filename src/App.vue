@@ -40,6 +40,8 @@ import { matchesIssueFilters } from "./lib/issue-filter";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
 import type { PermissionReport } from "./lib/permissions";
+import type { StatisticsPreferences } from "./lib/statistics";
+const statisticsPreferences = ref<StatisticsPreferences>({});
 const StatisticsView = defineAsyncComponent(() => import("./components/StatisticsView.vue"));
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
@@ -1144,7 +1146,7 @@ onMounted(async () => {
         </div></template
       >
       <template v-else>
-        <StatisticsView v-if="currentView === 'statistics'" :client="api" :repositories="repos" :demo="isDemo" :session="generation" />
+        <StatisticsView v-if="currentView === 'statistics'" :client="api" :repositories="orderedLanes.map(lane => lane.repo)" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
         <div v-show="currentView === 'overview'">
         <section class="page-heading">
           <div>

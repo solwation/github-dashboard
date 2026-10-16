@@ -12,7 +12,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await openStatistics(page);
   const sections = page.locator(".statistics-repository");
   await expect(sections).toHaveCount(3);
-  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/design-system", "demo/weekend-project", "demo/personal-website"]);
+  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/design-system", "demo/personal-website", "demo/weekend-project"]);
   await expect(page.locator(".statistics-view input[type=checkbox], .statistics-view .repository-selection, .statistics-active-filters")).toHaveCount(0);
   const design = sections.filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
   const weekend = sections.filter({ has: page.getByRole("heading", { name: "demo/weekend-project", exact: true }) });
@@ -34,7 +34,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
   const reorder = page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna weekend-project med/ });
   await reorder.focus(); await page.keyboard.press("ArrowUp");
-  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/weekend-project", "demo/design-system", "demo/personal-website"]);
+  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/design-system", "demo/weekend-project", "demo/personal-website"]);
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
   for (const width of [320, 390, 650]) {
     await page.setViewportSize({ width, height: 844 });
@@ -60,7 +60,7 @@ test("Statistics hides inaccessible metrics silently and retains issue values af
     if (url.pathname.endsWith("/commits") || url.pathname.endsWith("/pulls")) return route.fulfill({ status: 403, json: { message: "Resource not accessible by personal access token" } });
     if (url.pathname.endsWith("/issues/events")) {
       if (fail) return route.fulfill({ status: 429, headers: { "retry-after": "60" }, json: { message: "API rate limit exceeded" } });
-      return route.fulfill({ headers: { Link: `<https://api.github.com${url.pathname}?per_page=100&page=${Number(url.searchParams.get("page") || 1) + 1}>; rel="next"` }, json: [{ id: 1, event: "closed", created_at: now, issue, actor: { login: "sample" } }] });
+      return route.fulfill({ headers: { "Access-Control-Expose-Headers": "Link", Link: `<https://api.github.com${url.pathname}?per_page=100&page=${Number(url.searchParams.get("page") || 1) + 1}>; rel="next"` }, json: [{ id: 1, event: "closed", created_at: now, issue, actor: { login: "sample" } }] });
     }
     if (url.pathname.endsWith("/labels")) return route.fulfill({ json: issue.labels });
     if (url.pathname.endsWith("/issues")) return route.fulfill({ json: url.searchParams.get("state") === "open" ? [] : [issue] });

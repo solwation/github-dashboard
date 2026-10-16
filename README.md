@@ -11,7 +11,7 @@ Follow work across repositories without switching tabs. Backlog sorts by priorit
 - **The context you need:** read issue descriptions, comments and closing commit details, including embedded images linked to GitHub repository files.
 - **Ready when you return:** encrypted local sign-in and content cache, with automatic GitHub updates.
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
-- **Explore activity:** Statistics compares repositories over the latest 30 UTC calendar days, with daily issue, commit, code-change and pull-request charts. Filter by date, current labels or contributor. Unavailable metrics stay hidden; bounded API collection is marked when incomplete.
+- **Explore activity:** Statistics stacks the repositories selected in the sidebar, in their board order, over the latest 30 UTC calendar days, with daily issue, commit, code-change and pull-request charts. Each repository has independent date, current-label and contributor filters. Unavailable metrics stay hidden; bounded API collection is marked when incomplete.
 - **Active projects:** the Repositories card shows how many selected projects have Backlog, In progress or issues closed in the last 30 days, independently of text filters.
 - **See changes:** Overview counts briefly highlight increases and decreases, with a daily count of loaded issues closed today in your local timezone.
 - **Spot stalled work:** Settings defaults to a 30-minute In progress timeout. Verified overdue work turns red and appears in a notice; ignore it for that work period. Acknowledgements stay in the encrypted cache on this device.

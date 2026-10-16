@@ -35,6 +35,8 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Välj repositories i översikten för att se deras statistik.": "Select repositories in Overview to see their statistics.",
+
   "{count} aktiva": "{count} active",
   "{count} aktiva projekt. {definition}": "{count} active projects. {definition}",
   "Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet.": "Active projects have at least one issue in Backlog or In progress, or an issue closed in the last 30 days. Hidden coordination issues are excluded. Text filters do not affect this count.",
