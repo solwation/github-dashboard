@@ -795,8 +795,6 @@ h1 {
   border-color: #f4d7ce;
   color: #a45743;
 }
-.commit-notice { flex-wrap: wrap; }
-.commit-notice > span { flex: 1 1 16rem; }
 .demo-notice {
   background: #eef6f2;
   border-color: #d7e9e1;

@@ -16,7 +16,7 @@ async function setup(page: Page, isPublic = false) {
   await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
   await page.getByLabel('GitHub personal access token').fill('fixture-permissions-token');
   await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
-  for (const repo of repos) await page.getByRole('checkbox', { name: repo.full_name, exact: true }).check();
+  for (const repo of repos) await page.getByRole('checkbox', { name: repo.full_name }).check();
   await page.getByRole('button', { name: 'Visa översikt' }).click();
   await expect(page.locator('.repo-lane')).toHaveCount(2);
   return { recover() { healthy = true; } };

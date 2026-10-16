@@ -40,15 +40,15 @@ const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas
   </section>
 </template>
 <style scoped>
-.permissions { margin-top: 1.5rem; border-top: 1px solid var(--border, #3c4352); padding-top: 1rem; }
+.permissions { font-size: .8125rem; line-height: 1.5; margin-top: 1.5rem; border-top: 1px solid var(--border, #3c4352); padding-top: 1rem; }
 .permissions-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
-.permissions-heading h3 { margin: 0; }
+.permissions-heading h3 { margin: 0; font-size: .875rem; }
 .permission-entry { padding-block: .5rem; }
-.permission-entry h4 { margin-block: .5rem; }
+.permission-entry h4 { margin-block: .5rem; font-size: .8125rem; }
 .permission-repositories { padding-left: 1.2rem; }
 .permission-repositories li { margin-block: .8rem; overflow-wrap: anywhere; }
 .permission-status { display: block; font-weight: 600; margin-bottom: .3rem; }
-.granted { color: #4ade80; }
-.missing { color: #f87171; }
+.granted { color: #167047; }
+.missing { color: #b91c1c; }
 .unknown { color: var(--muted, #adb5c5); }
 </style>

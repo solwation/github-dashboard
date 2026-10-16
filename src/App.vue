@@ -37,7 +37,7 @@ import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import MobileHandoff from "./components/MobileHandoff.vue";
-import ProblemReport from "./components/ProblemReport.vue";
+import type { PermissionReport } from "./lib/permissions";
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
@@ -168,19 +168,35 @@ const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
 const handoffOpen = ref(false);
 const scannerOpen = ref(false);
-const commitProblems = ref(new Map<string, { repo: string; issue: Issue }>());
 const commitRetry = ref(0);
-const problemReport = ref<{ open: () => void } | null>(null);
-const hideCommitNotice = ref(false);
-try { hideCommitNotice.value = localStorage.getItem("issueflow:hide-commit-notice") === "true"; } catch { /* Optional preference. */ }
-function setHideCommitNotice(value: boolean) {
-  hideCommitNotice.value = value;
-  try { localStorage.setItem("issueflow:hide-commit-notice", String(value)); } catch { /* Keep session preference. */ }
+const permissionReport = ref<PermissionReport>([]);
+const permissionsChecking = ref(false);
+let permissionRun = 0;
+const permissionRepos = computed(() => repos.value.filter(repo => selected.value.includes(repo.full_name)));
+async function refreshPermissions(force = false) {
+  const client = api;
+  const session = generation;
+  if (!client || !user.value || isDemo.value) return;
+  const run = ++permissionRun;
+  permissionsChecking.value = true;
+  try {
+    const report = await client.checkPermissions(permissionRepos.value, { force });
+    if (run === permissionRun && client === api && session === generation) {
+      permissionReport.value = report;
+      if (force) commitRetry.value++;
+    }
+  } catch {
+    if (run === permissionRun) permissionReport.value = [];
+  } finally {
+    if (run === permissionRun) permissionsChecking.value = false;
+  }
 }
-const activeCommitProblems = computed(() => [...commitProblems.value.values()].filter(problem =>
-  lanes.value.some(lane => lane.repo.full_name === problem.repo && lane.issues.some(issue =>
-    issue.id === problem.issue.id && issue.state === "closed" && issue.closed_at === problem.issue.closed_at)),
-));
+watch([sessionToken, permissionRepos], () => {
+  permissionRun++;
+  permissionReport.value = [];
+  permissionsChecking.value = false;
+  void refreshPermissions();
+}, { flush: "post" });
 const notificationRepos = ref<string[]>([]);
 const notificationNotice = ref("");
 const permission = ref(notificationPermission());
@@ -202,7 +218,6 @@ function clearClosureFeedback() {
   statusTracker.clear();
   statusPlayer.clear();
   activity.clear();
-  commitProblems.value.clear();
   closureTracker.clear();
   recentClosures.value.clear();
   for (const timer of celebrationTimers) clearTimeout(timer);
@@ -354,15 +369,9 @@ function commitLoader(repo: string) {
   const run = generation;
   return client
     ? async (issue: Issue) => {
-        const key = closureKey(repo, issue);
-        try {
-          const result = await client.closingCommit(repo, issue);
-          if (run === generation) commitProblems.value.delete(key);
-          return result;
-        } catch (cause) {
-          if (run === generation) commitProblems.value.set(key, { repo, issue });
-          throw cause;
-        }
+        const result = await client.closingCommit(repo, issue);
+        if (run !== generation || client !== api) throw new Error("Session changed");
+        return result;
       }
     : undefined;
 }
@@ -879,8 +888,8 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :can-view-problems="loggedIn" :problem-count="activeCommitProblems.length"
-          @open-problems="problemReport?.open()" />
+        <LanguageSettings :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+          @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
           v-if="user && sessionToken"
@@ -919,11 +928,6 @@ onMounted(async () => {
     </header>
     <main id="overview" tabindex="-1">
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
-      <div v-if="activeCommitProblems.length && !hideCommitNotice" class="notice commit-notice" role="status">
-        <span>{{ t("Commit-information saknas för {count} issues.", { count: activeCommitProblems.length }) }}</span>
-        <button class="button small" @click="problemReport?.open()">{{ t("Läs mer") }}</button>
-        <button class="button small" @click="setHideCommitNotice(true)">{{ t("Visa inte igen") }}</button>
-      </div>
       <div
         v-if="notificationNotice"
         class="notice notification-notice"
@@ -1484,9 +1488,6 @@ onMounted(async () => {
     </form>
   </div>
   <VersionUpdate />
-  <ProblemReport v-if="loggedIn" ref="problemReport" :problems="activeCommitProblems"
-    :hide-notice="hideCommitNotice" @update:hide-notice="setHideCommitNotice"
-    @retry="commitRetry++" />
   <LogoutDialog
     :open="logoutPrompt"
     :busy="logoutBusy"
