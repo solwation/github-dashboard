@@ -244,3 +244,19 @@ test("comment times update relatively without refetching or moving the discussio
   await expect(page.locator(".comments-dialog time").first()).toHaveText(/^2\s+min\.? ago$/);
   expect(requests).toBe(2);
 });
+
+test("newest comments lead across API pages with stable ties and invalid timestamps last", async ({ page }) => {
+  const dated = (id: number, created_at: string) => ({ ...comment(id, `Message ${id}`), created_at });
+  await connect(page, async (route, url) => {
+    if (url.searchParams.get("page") === "2") return route.fulfill({ json: [
+      dated(4, "2026-10-16T12:00:00Z"), dated(5, "2026-10-16T12:00:00Z"), dated(6, "invalid"),
+    ] });
+    await route.fulfill({ json: [dated(1, "2026-10-14T12:00:00Z"), dated(2, "2026-10-15T12:00:00Z"), dated(3, "invalid")],
+      headers: { Link: '<https://api.github.com/repos/sample/comment-project/issues/1/comments?per_page=100&page=2>; rel="next"', 'Access-Control-Expose-Headers': 'Link' } });
+  });
+  await page.getByRole("button", { name: "102 kommentarer" }).click();
+  const discussion = page.locator(".comments-dialog");
+  await expect(discussion.locator(".comment-markdown")).toHaveText(["Message 4", "Message 5", "Message 2", "Message 1", "Message 3", "Message 6"]);
+  await expect(discussion.locator(".comments-body")).toHaveJSProperty("scrollTop", 0);
+  await expect(discussion.locator("time").first()).toHaveAttribute("datetime", "2026-10-16T12:00:00Z");
+});

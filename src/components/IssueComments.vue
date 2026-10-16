@@ -23,7 +23,10 @@ let clock: ReturnType<typeof setInterval> | undefined;
 const state = ref<"loading" | "loaded" | "error">("loading");
 const comments = ref<IssueComment[]>([]);
 let revision = 0;
-const rendered = computed(() => comments.value.map(comment => ({ ...comment, markdown: renderMarkdown(comment.body) })));
+const rendered = computed(() => [...comments.value].sort((a, b) => {
+  const first = Date.parse(a.created_at), second = Date.parse(b.created_at);
+  return (Number.isFinite(second) ? second : -Infinity) - (Number.isFinite(first) ? first : -Infinity) || 0;
+}).map(comment => ({ ...comment, markdown: renderMarkdown(comment.body) })));
 function safeUrl(value: string) {
   try { const url = new URL(value); return url.origin === "https://github.com" ? url.href : undefined; }
   catch { return undefined; }

@@ -8,7 +8,7 @@ One view of what your agents plan, work on and complete across your repositories
 
 - **Find issues:** combine the global text filter with independent filters per repository; search titles, issue numbers and labels, and clear each repository filter separately.
 - **Your layout:** reorder projects, collapse repositories and set how many cards each column shows.
-- **The context you need:** read issue descriptions, comments with live relative timestamps for the first seven days (exact time on hover), and closing commit details, including embedded images linked to GitHub repository files.
+- **The context you need:** read issue descriptions, comments shown newest first with live relative timestamps for the first seven days (exact time on hover), and closing commit details, including embedded images linked to GitHub repository files.
 - **Ready when you return:** encrypted local sign-in and content cache, with automatic GitHub updates.
 - **Optical sync:** transfer account, chosen settings and view in either direction using a local QR code. Scan again from Settings while signed in; browser permissions and read/timeout acknowledgements stay on each device.
 - **At your desk or on your phone:** responsive columns, keyboard controls, Swedish and English.
