@@ -25,6 +25,10 @@ test('Settings counts unique missing permissions, explains repository difference
   await page.setViewportSize({ width: 1280, height: 900 });
   const state = await setup(page);
   await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Inställningar', exact: true });
+  await expect(settings.getByRole('button', { name: 'GitHub permissions', exact: true })).toHaveCount(1);
+  await expect(settings).not.toContainText(/<{7}|={7}|>{7}/);
+
   await expect(page.locator('.permissions-badge')).toHaveText('1');
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });

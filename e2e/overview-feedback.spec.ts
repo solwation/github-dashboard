@@ -19,7 +19,8 @@ async function fixture(page: Page) {
     else if (url.pathname.endsWith("/issues")) {
       const all = stage === 0 ? [issue(1, "open", true), issue(2, "open", true), issue(3, "closed")]
         : stage === 1 ? [issue(1, "open", true), issue(2, "closed", false, true), issue(3, "closed")]
-        : [issue(1, "open"), issue(2, "closed", false, true), issue(3, "closed")];
+        : stage === 2 ? [issue(1, "open"), issue(2, "closed", false, true), issue(3, "closed")]
+        : [issue(1, "open", true), issue(2, "closed", false, true), issue(3, "open", true)];
       if (url.searchParams.get("state") === "open") requests++;
       body = all.filter(issue => issue.state === url.searchParams.get("state"));
     }
@@ -111,4 +112,25 @@ test("summary uses accessible English feedback and static reduced-motion colors 
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   await expect(page.locator(".stat-delta")).toHaveCount(0);
+});
+
+test("filtered badges animate real changes even when hidden changes cancel the global totals", async ({ page }) => {
+  const api = await fixture(page);
+  await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("Fixture 2");
+  await expect(page.locator(".stat-delta")).toHaveCount(0);
+  api.setStage(3);
+  await api.refresh();
+  await expect(card(page, "open").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
+  await expect(card(page, "progress")).toHaveClass(/stat-positive/);
+  await expect(card(page, "closed").locator(".stat-delta")).toHaveText("+1");
+  await expect(page.locator(".stat-delta")).toHaveCount(0, { timeout: 5000 });
+  await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
+  await expect(page.locator(".stat-delta")).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Filtrera issues i sample/alpha", exact: true }).fill("Fixture 2");
+  await expect(page.locator(".stat-delta")).toHaveCount(0);
+  api.setStage(0);
+  await api.refresh();
+  await expect(card(page, "progress").locator(".stat-delta")).toHaveText("+1");
+  await expect(card(page, "closed").locator(".stat-delta")).toHaveText("−1");
 });

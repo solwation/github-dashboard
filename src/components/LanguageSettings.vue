@@ -87,15 +87,11 @@ function change(event: Event) {
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
-<<<<<<< HEAD
-    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
-=======
     <label class="rule-field" for="issue-timeout-minutes">{{ t("Tidsgräns för pågående issues (minuter)") }}</label>
     <input id="issue-timeout-minutes" type="number" min="1" :max="MAX_TIMEOUT_MINUTES" step="1" required
       :value="timeoutMinutes" :disabled="!canEditLimit" aria-describedby="issue-timeout-help" @change="changeTimeout" />
     <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
-    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" />
->>>>>>> 312eaff (feat: track and acknowledge overdue in-progress work locally (#56))
+    <GitHubPermissions :report="permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
     <button v-if="canScan" class="button" @click="dialog?.close(); emit('scan')">{{ t("Läs QR-kod") }}</button>
     <WorkflowGuide />
     <BuildInfo />

@@ -5,6 +5,7 @@ import { useLanguage } from "../lib/i18n";
 import type { Lane, Rules } from "../lib/model";
 import { countActiveRepositories, countClosedToday, emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, type OverviewCounts, type OverviewOutcome } from "../lib/overview-feedback";
 const props = defineProps<{
+  query?: string; repositoryQueries?: Record<string, string>;
   counts: OverviewCounts; lanes: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
   live: boolean; session: number | string; now: number; loggedIn: boolean; busy: boolean;
 }>();
@@ -18,8 +19,8 @@ let previousDisplay: OverviewCounts | null = null;
 function clear(key: keyof OverviewCounts) {
   clearTimeout(timers.get(key)); timers.delete(key); deltas[key] = 0; outcomes[key] = null;
 }
-watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, props.live, props.session], () => {
-  const changes = tracker.update(props.lanes, props.rules, props.hideCoordination, props.live, props.session);
+watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, props.live, props.session, props.query, props.repositoryQueries], () => {
+  const changes = tracker.update(props.lanes, props.rules, props.hideCoordination, props.live, props.session, { query: props.query, repositoryQueries: props.repositoryQueries });
   for (const key of overviewKeys) {
     const visibleChange = previousDisplay ? props.counts[key] - previousDisplay[key] : 0;
     if (changes[key] && visibleChange) {

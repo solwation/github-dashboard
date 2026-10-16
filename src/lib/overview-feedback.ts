@@ -1,3 +1,4 @@
+import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Lane, type Rules } from "./model";
 
 export interface OverviewCounts { open: number; progress: number; closed: number }
@@ -7,11 +8,11 @@ export const OVERVIEW_DELTA_MS = 3000;
 export type OverviewOutcome = "positive" | "negative" | null;
 type IssueColumn = ReturnType<typeof column>;
 
-function snapshot(lane: Lane, rules: Rules, hideCoordination: boolean) {
+function snapshot(lane: Lane, rules: Rules, hideCoordination: boolean, query = "", repositoryQuery = "") {
   const counts = emptyCounts();
   const columns = new Map<number, IssueColumn>();
   for (const issue of lane.issues) {
-    if (columns.has(issue.id) || issue.pull_request || (hideCoordination && isCoordination(issue))) continue;
+    if (columns.has(issue.id) || issue.pull_request || (hideCoordination && isCoordination(issue)) || !matchesIssueFilters(issue, query, repositoryQuery)) continue;
     const col = column(issue, rules);
     columns.set(issue.id, col);
     if (issue.state === "open") counts.open++;
@@ -21,17 +22,17 @@ function snapshot(lane: Lane, rules: Rules, hideCoordination: boolean) {
   return { counts, columns };
 }
 
-/** Baselines track successful GitHub snapshots, never the current text search. */
+/** Filter changes reset the baseline; only subsequent GitHub changes animate visible counts. */
 export class OverviewFeedbackTracker {
   private signature = "";
   private snapshots = new Map<string, ReturnType<typeof snapshot>>();
   progressOutcome: OverviewOutcome = null;
 
-  update(lanes: Lane[], rules: Record<string, Rules>, hideCoordination: boolean, live: boolean, session: string | number): OverviewCounts {
+  update(lanes: Lane[], rules: Record<string, Rules>, hideCoordination: boolean, live: boolean, session: string | number, filters: { query?: string; repositoryQueries?: Record<string, string> } = {}): OverviewCounts {
     this.progressOutcome = null;
     if (!live) { this.clear(); return emptyCounts(); }
     const repos = [...new Set(lanes.map(lane => lane.repo.full_name))].sort();
-    const signature = JSON.stringify([session, hideCoordination, repos.map(repo => [repo, Object.entries(rules[repo] || {}).sort(([a], [b]) => a.localeCompare(b))])]);
+    const signature = JSON.stringify([session, hideCoordination, filters.query || "", repos.map(repo => [repo, filters.repositoryQueries?.[repo] || "", Object.entries(rules[repo] || {}).sort(([a], [b]) => a.localeCompare(b))])]);
     const reset = signature !== this.signature;
     if (reset) this.snapshots.clear();
     this.signature = signature;
@@ -39,7 +40,7 @@ export class OverviewFeedbackTracker {
     for (const lane of lanes) {
       if (lane.error) continue;
       const repo = lane.repo.full_name;
-      const next = snapshot(lane, rules[repo] || {}, hideCoordination);
+      const next = snapshot(lane, rules[repo] || {}, hideCoordination, filters.query, filters.repositoryQueries?.[repo]);
       const before = this.snapshots.get(repo);
       if (!reset && before) {
         for (const key of overviewKeys) delta[key] += next.counts[key] - before.counts[key];

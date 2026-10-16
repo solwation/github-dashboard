@@ -481,7 +481,7 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   applyChosenPreferences(state);
   save();
 }
-watch([query, repositoryQueries, repoQuery, hideCoordination, currentView, statisticsPreferences], () => save(), { deep: true });
+watch([query, repositoryQueries, repoQuery, hideCoordination, currentView, statisticsPreferences, preference], () => save(), { deep: true });
 function storageKey() {
   return `issueflow:${user.value?.login}`;
 }
@@ -1226,7 +1226,7 @@ onMounted(async () => {
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <OverviewSummary :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
+        <OverviewSummary :query="query" :repository-queries="repositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
           :live="!showingCache && !restoring" :session="generation" :now="now" :logged-in="loggedIn" :busy="busy"
           @choose-repositories="picker = true" />
         <div class="board-toolbar">

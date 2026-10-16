@@ -3,8 +3,9 @@ import { expect, test, type Page } from "@playwright/test";
 async function connect(page: Page) {
   let requests = 0;
   await page.route("https://api.github.com/**", async route => {
-    requests++;
     const url = new URL(route.request().url());
+    // Scrolling may lazily request parent metadata; navigation must not refetch the board.
+    if (url.pathname !== "/graphql") requests++;
     let data: unknown = [];
     if (url.pathname === "/user") data = { login: "navigation-fixture", avatar_url: "" };
     if (url.pathname === "/user/repos") data = [{

@@ -39,7 +39,7 @@ npm ci
 npm run dev
 ```
 
-Run affected tests locally before pushing; use `npm run build` for code changes. Browser tests need a one-time `npx playwright install chromium`. Actions only builds and publishes.
+Run affected tests locally before pushing; use `npm run build` for code changes. The build rejects unresolved merge markers, including those that would otherwise render as text in Vue templates. Browser tests need a one-time `npx playwright install chromium`. Actions only builds and publishes.
 
 ## Documentation
 

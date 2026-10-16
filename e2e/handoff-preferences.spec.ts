@@ -82,6 +82,13 @@ test("desktop and mobile optically sync all preferences repeatedly without logou
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   await expect(page.getByRole("textbox", { name: "Sök issues", exact: true })).toHaveValue("return to desktop");
+  // A language-only edit must replace the account preference restored on reload.
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByLabel("Språk", { exact: true }).selectOption("en");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.reload();
+  await expect(page.locator(".repo-lane")).toHaveCount(2);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await mobileContext.close();
 });
 

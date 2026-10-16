@@ -45,7 +45,7 @@ test("scans real QR pixels from an in-app camera stream and stops camera after s
   await page.getByRole("button", { name: "Logga in med QR-kod", exact: true }).click();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   expect(await page.evaluate(() => (window as any).cameraStops)).toBe(1);
-  expect(page.url()).toBe("http://127.0.0.1:5173/");
+  expect(page.url()).toBe("http://127.0.0.1:5173/#overview");
   expect(requests.some(url => url.includes("fixture-scanned-token") || url.includes("issueflow-handoff"))).toBe(false);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(1);

@@ -21,6 +21,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 
 - Inspect `git status` and preserve work you do not own. Use `rg` to find relevant code and project instructions.
 - The user has authorized committing and pushing directly to `main`; no PR or additional confirmation is required for this project's requested work.
+- Resolve merge conflicts completely, including markers inside Vue templates that can compile as visible text. Preserve the intended behavior from both sides and verify their integration together. `npm run build` rejects conflict-marker lines in tracked text files; a successful type check alone does not establish a clean merge.
 - Keep commits scoped to an issue. Reference it with `Fixes #N` when acceptance criteria are satisfied. Remove `in-progress` when closing it. Do not close an issue merely because implementation has started.
 - Before pushing, fetch `origin main`, inspect divergence, and rebase your own commits if necessary without overwriting someone else's changes. Never force-push `main`.
 - Verify appropriate behavior locally, then verify the GitHub Actions / Pages deployment after pushing. Resolve failures before reporting completion.

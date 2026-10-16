@@ -10,6 +10,20 @@ const lane = (issues: Issue[], repo = "a/b", error?: string): Lane => ({
 });
 const update = (tracker: OverviewFeedbackTracker, lanes: Lane[], options: { rules?: Record<string, Rules>; hide?: boolean; live?: boolean; session?: number } = {}) => tracker.update(lanes, options.rules || {}, options.hide || false, options.live ?? true, options.session ?? 1);
 describe("overview change feedback", () => {
+  it("tracks filtered changes even when hidden issues cancel their raw totals", () => {
+    const tracker = new OverviewFeedbackTracker();
+    const visible = { ...issue(1, ["in-progress"]), title: "Visible work" };
+    const hidden = { ...issue(2, [], "closed"), title: "Hidden work" };
+    const first = [lane([visible, hidden])];
+    const changed = [lane([{ ...visible, state: "closed" }, { ...hidden, state: "open", labels: [{ name: "in-progress", color: "fff" }] }])];
+    const filters = { query: "Visible" };
+    expect(tracker.update(first, {}, false, true, 1, filters)).toEqual(emptyCounts());
+    expect(tracker.update(changed, {}, false, true, 1, filters)).toEqual({ open: -1, progress: -1, closed: 1 });
+    expect(tracker.progressOutcome).toBe("positive");
+    expect(tracker.update(changed, {}, false, true, 1, {})).toEqual(emptyCounts());
+    expect(tracker.update(changed, {}, false, true, 1, { repositoryQueries: { "a/b": "Visible" } })).toEqual(emptyCounts());
+    expect(tracker.update(first, {}, false, true, 1, { repositoryQueries: { "a/b": "Visible" } })).toEqual({ open: 1, progress: 1, closed: -1 });
+  });
   it("marks the same progress decrease positive for completion and negative for backlog", () => {
     const tracker = new OverviewFeedbackTracker();
     update(tracker, [lane([issue(1, ["in-progress"])])]);

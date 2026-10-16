@@ -151,7 +151,9 @@ test.describe("phone layout controls", () => {
     await expect(page.locator("#repo-3 h2")).toContainText("charlie-with-a-long-unbroken-repository-name");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // Translate the same accessible controls without changing the stored layout.
-    await page.evaluate(() => localStorage.setItem("issueflow-language", "en"));
+    await page.getByRole("button", { name: "Inställningar", exact: true }).tap();
+    await page.getByLabel("Språk", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "Done", exact: true }).tap();
     await page.reload();
     await expect(page.getByRole("button", { name: "Collapse bravo", exact: true })).toBeVisible();
     await expect(page.locator(".repo-lane .project-drag-handle")).toHaveCount(0);
