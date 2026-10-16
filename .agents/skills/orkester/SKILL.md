@@ -23,6 +23,10 @@ Mark actively worked issues in-progress. Each worker handles one issue at a time
 
 Review and integrate commits in dependency order. Run appropriate combined checks and verify GitHub Pages deployment after pushing. Keep progress updates concise. Report completed issues and genuine outstanding work. Preserve unfinished branches/worktrees until their work is safely integrated; never discard unknown work while cleaning up.
 
+Do not end the session immediately when the queue becomes empty. Once the last issue is solved, the combined batch is published and Pages verification succeeds, record that time and monitor for another 60 minutes. Poll the complete paginated GitHub issue queue about every 60 seconds, using interruptible waits no longer than 60 seconds. New user input interrupts the wait and steers the session normally. Idle monitoring holds no `in-progress` or owner claims and requires no scheduled jobs or external messages.
+
+When new issues arrive, resume within the authorized scope using the normal priority, fresh-queue, claim and capacity checks. Implement, integrate and test the whole current backlog before the next combined publication. After the last new issue is solved, published and verified, reset the monitoring deadline to 60 minutes later. End only after 60 minutes without new work or the user's explicit instruction to stop.
+
 
 ## Practices adapted from Lunden's orkester workflow
 
