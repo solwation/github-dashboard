@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHub } from "../src/lib/github";
+import { setLanguage } from "../src/lib/i18n";
 import type { Repo } from "../src/lib/model";
 const repo: Repo = {
   id: 1,
@@ -19,8 +20,45 @@ const issue = {
   created_at: "2026-01-01",
   assignees: [],
 };
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); setLanguage("auto"); });
 describe("GitHub transport", () => {
+  it("explains a 403 permission denial without a retry time even when GitHub sends X-RateLimit-Reset", async () => {
+    setLanguage("en");
+    const reset = String(Math.floor(Date.now() / 1000) + 1800);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ message: "Resource not accessible by personal access token" }),
+      { status: 403, headers: { "x-ratelimit-remaining": "4999", "x-ratelimit-reset": reset } },
+    )));
+    const client = new GitHub("test-token");
+    const error = await client.request("/repos/owner/test/issues").catch((caught) => caught);
+    expect(error).toMatchObject({ status: 403, permissionDenied: true, rateLimited: false });
+    expect(error.message).toBe("Access denied. Check your token permissions.");
+    expect(client.retryAfterMs()).toBe(0);
+    setLanguage("sv");
+    await expect(client.request("/repos/owner/test/issues")).rejects.toThrow(/^Åtkomst nekad\. Kontrollera tokenens behörigheter\.$/);
+  });
+  it("shows the retry time only for genuine 403/429 rate limits", async () => {
+    setLanguage("en");
+    const resetAt = (Math.floor(Date.now() / 1000) + 1800) * 1000;
+    const time = (ms: number) => new Date(ms).toLocaleTimeString("en-GB");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: "API rate limit exceeded" }),
+        { status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(resetAt / 1000) } }))
+      .mockResolvedValueOnce(new Response("{}", { status: 429, headers: { "retry-after": "60", "x-ratelimit-remaining": "10" } }))
+      .mockResolvedValueOnce(new Response("{}", { status: 429 })));
+    const exhausted = await new GitHub("test-token").request("/user").catch((caught) => caught);
+    expect(exhausted).toMatchObject({ status: 403, rateLimited: true, permissionDenied: false });
+    expect(exhausted.message).toBe(`GitHub API rate limit reached. Try again after ${time(resetAt)}.`);
+    const secondary = new GitHub("test-token");
+    const before = Date.now();
+    const retried = await secondary.request("/user").catch((caught) => caught);
+    expect(retried).toMatchObject({ status: 429, rateLimited: true });
+    expect(retried.message).toMatch(/^GitHub API rate limit reached\. Try again after .+\.$/);
+    expect(secondary.retryAfterMs()).toBeGreaterThan(59000);
+    expect([time(before + 60000), time(Date.now() + 60000)]).toContain(retried.message.match(/after (.+)\.$/)[1]);
+    const unknown = await new GitHub("test-token").request("/user").catch((caught) => caught);
+    expect(unknown.message).toBe("GitHub API rate limit reached. Try again later.");
+  });
   it("distinguishes an empty Git repository from other conflict responses", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: "Git Repository is empty." }), { status: 409 }))
