@@ -54,6 +54,7 @@ export default defineConfig(({ command }) => ({
   plugins: [vue(), appShell()],
   base: process.env.GITHUB_ACTIONS ? "/github-dashboard/" : "./",
   define: {
+    __WORKFLOW_GUIDE__: JSON.stringify(readFileSync(new URL("./public/ISSUEFLOW.md", import.meta.url), "utf8")),
     __BUILD_INFO__: JSON.stringify({
       builtAt: command === "build" ? new Date().toISOString() : null,
       commit: commitHash(),

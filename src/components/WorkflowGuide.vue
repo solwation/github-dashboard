@@ -3,7 +3,7 @@ import { computed, ref, useId } from "vue";
 import { X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { renderMarkdown } from "../lib/markdown";
-import guideSource from "../../public/ISSUEFLOW.md?raw";
+const guideSource = __WORKFLOW_GUIDE__;
 const { t } = useLanguage();
 const dialog = ref<HTMLDialogElement | null>(null);
 const trigger = ref<HTMLButtonElement | null>(null);
