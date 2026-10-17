@@ -54,9 +54,11 @@ test("one global list mode for every repository and the combined board keeps fil
     await expect(toggle.getByRole("button", { name: "Lista", exact: true })).toBeInViewport();
   }
   // #151: on desktop the toggle takes the toolbar's far-right slot, without horizontal scroll.
-  for (const width of [768, 1280, 1440]) {
+  for (const width of [768, 800, 950, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await noPageScroll(page)).toBe(true);
+    // Only the view toggle is pushed right; the checkboxes stay packed on the left (#151).
+    expect(await page.locator(".board-toolbar .coord-toggle").evaluateAll(nodes => nodes.map(node => getComputedStyle(node).marginLeft))).toEqual(["0px", "0px"]);
     const edges = await page.locator(".board-toolbar").evaluate(node => {
       const box = node.getBoundingClientRect(), style = getComputedStyle(node);
       const toggle = node.querySelector(".board-mode-toggle")!.getBoundingClientRect();

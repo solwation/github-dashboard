@@ -1235,9 +1235,6 @@ h1 {
   .illustration-card {
     padding: 15px;
   }
-  .coord-toggle {
-    margin-left: auto;
-  }
 }
 @media (max-width: 650px) {
   .sidebar {
