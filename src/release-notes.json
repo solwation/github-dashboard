@@ -78,6 +78,20 @@
       },
       {
         "text": {
+          "sv": "Installerad app i Chrome kan visa notiser om stängda, påbörjade och tidsöverskridna issues i bevakade repositories även när appen är stängd.",
+          "en": "The installed app in Chrome can notify you about closed, started and timed-out issues in watched repositories even while it is closed."
+        },
+        "issues": [129, 130]
+      },
+      {
+        "text": {
+          "sv": "Appen startar snabbare eftersom Markdown-visning och QR-generering laddas först när du öppnar en beskrivning, kommentarer eller mobilöverföringen.",
+          "en": "The app starts faster because Markdown rendering and QR generation load only when you open a description, comments or mobile transfer."
+        },
+        "issues": [124]
+      },
+      {
+        "text": {
           "sv": "Bakgrundssynken gör färre än hälften så många anrop: oförändrade projekt kontrolleras utan att förbruka GitHubs gräns, och relationer hämtas bara vid ändring.",
           "en": "Background sync makes less than half as many requests: unchanged projects are checked without using GitHub's rate limit, and relations reload only when they change."
         },
