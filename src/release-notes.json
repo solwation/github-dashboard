@@ -8,6 +8,20 @@
     "sections": [
       {
         "text": {
+          "sv": "Sidhuvudet med Workspace-sökväg, inställningar och konto stannar överst vid scroll även på dator och surfplatta.",
+          "en": "The header with the workspace path, settings and account now stays at the top while scrolling on desktop and tablet too."
+        },
+        "issues": [153]
+      },
+      {
+        "text": {
+          "sv": "Verktygsraden visar inte längre \"Adaptiv synk\"; Kort/Lista-växeln ligger längst till höger och synkfel visas som ett tydligt meddelande.",
+          "en": "The board toolbar drops \"Adaptive sync\"; the Cards/List switch sits at the far right and sync errors appear as a visible notice."
+        },
+        "issues": [151]
+      },
+      {
+        "text": {
           "sv": "Repository- och boardrubriker visar bara tid eller en snurra uppe till höger; klicka på tiden för att uppdatera direkt.",
           "en": "Repository and board headers show only the time or a spinner at top right; click the time to update immediately."
         },

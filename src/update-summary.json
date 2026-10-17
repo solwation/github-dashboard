@@ -1,11 +1,13 @@
 {
   "baseCommit": "9e6f4f55d8424e02d55b8478d4acaa23ca3a0062",
   "summary": {
-    "sv": "Sparad statistik ger tidsuppskattningar direkt vid start och direkt när man lämnar Statistikvyn.",
-    "en": "Cached statistics provide time estimates immediately on startup and right when leaving Statistics."
+    "sv": "Sidhuvudet stannar överst även på datorn, Kort/Lista ligger längst till höger och tidsuppskattningar syns direkt vid start.",
+    "en": "The header stays pinned on desktop too, Cards/List sits at the far right, and time estimates appear right at startup."
   },
   "issues": [
     148,
-    149
+    149,
+    151,
+    153
   ]
 }
