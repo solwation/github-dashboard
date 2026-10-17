@@ -68,9 +68,12 @@ test("denied camera offers image fallback, imports settings and persists in the 
 test("rejects expired and foreign QR codes without authentication and allows retry", async ({ page }) => {
   const requests = await fixture(page); await denied(page); await page.goto("/");
   await page.getByRole("button", { name: "Logga in med QR-kod", exact: true }).click();
-  for (const url of [createHandoffUrl("https://other.test/", settings).url, createHandoffUrl("http://127.0.0.1:5173/", settings, Date.now() - 600_000).url]) {
-    await image(page, url);
-    await expect(page.getByRole("alert")).toContainText("ogiltig eller har gått ut");
+  for (const [url, text] of [
+    [createHandoffUrl("https://other.test/", settings).url, "QR-koden är ogiltig. Skanna en QR-kod från Issueflow på den andra enheten."],
+    [createHandoffUrl("http://127.0.0.1:5173/", settings, Date.now() - 600_000).url, "QR-koden har gått ut. Skapa en ny kod på den andra enheten."],
+  ]) {
+    await image(page, url!);
+    await expect(page.getByRole("alert")).toContainText(text!);
   }
   expect(requests.some(url => url.startsWith("https://api.github.com/"))).toBe(false);
   await image(page, createHandoffUrl("http://127.0.0.1:5173/", settings).url);

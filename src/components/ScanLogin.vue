@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { Camera, ImagePlus, X } from "@lucide/vue";
 import jsQR from "jsqr";
-import { parseHandoffUrl, type HandoffPayload } from "../lib/handoff";
+import { HandoffError, parseHandoffUrl, type HandoffPayload } from "../lib/handoff";
 import { useLanguage } from "../lib/i18n";
 
 const emit = defineEmits<{ close: []; scanned: [payload: HandoffPayload] }>();
@@ -45,9 +45,11 @@ function accept(value: string) {
     stop();
     closed = true;
     emit("scanned", payload);
-  } catch {
+  } catch (cause) {
     stop();
-    error.value = t("QR-koden är ogiltig eller har gått ut. Skapa en ny kod på den andra enheten.");
+    error.value = cause instanceof HandoffError && cause.reason === "expired"
+      ? t("QR-koden har gått ut. Skapa en ny kod på den andra enheten.")
+      : t("QR-koden är ogiltig. Skanna en QR-kod från Issueflow på den andra enheten.");
   }
 }
 function decode(source: CanvasImageSource, width: number, height: number) {
