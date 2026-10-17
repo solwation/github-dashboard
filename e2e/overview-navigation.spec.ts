@@ -22,6 +22,8 @@ async function connect(page: Page) {
     }
     await route.fulfill({ json: data });
   });
+  // A controlled clock makes the sync scheduler's 1-second ticks deterministic (#142).
+  await page.clock.install();
   await page.goto("/");
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-navigation-token");
@@ -40,6 +42,11 @@ for (const width of [390, 1440]) {
     const search = page.getByRole("textbox", { name: "Sök issues" });
     await search.fill("Keep");
     await expect(page.locator(".issue-title")).toHaveCount(6);
+    // Closing the picker lets the sync scheduler request its first reconcile on the next tick. It is
+    // skipped when that tick lands during the full load and sends one `since` list otherwise (#142).
+    // Fire that tick now, wait for it, and keep time paused so only navigation can add requests.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1500));
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
     const beforeNavigation = requests();
     await page.evaluate(() => {
       Object.assign(window, { documentMarker: "same-document" });
@@ -56,6 +63,9 @@ for (const width of [390, 1440]) {
     await expect(page.locator(".issue-title")).toHaveCount(6);
     await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { documentMarker: string }).documentMarker)).toBe("same-document");
+    // Timers started by navigation still run; the scheduler's next reconcile is minutes away.
+    await page.clock.runFor(5000);
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
     expect(requests()).toBe(beforeNavigation);
     // Keyboard activation also moves focus and the viewport back to the overview.
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
