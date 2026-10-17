@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { build, defineConfig, type Plugin, type Rolldown } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -22,12 +22,46 @@ function commitHash(): string | null {
   }
 }
 
+/**
+ * Bundles the Periodic Background Sync handler (#130) as a classic script for sw.js, so the
+ * worker shares the app's vault, settings store and GitHub client instead of a copy of them.
+ */
+async function backgroundWorker(): Promise<string> {
+  const result = await build({
+    configFile: false,
+    logLevel: "warn",
+    mode: "production",
+    publicDir: false,
+    define: {
+      "process.env.NODE_ENV": JSON.stringify("production"),
+      __VUE_OPTIONS_API__: "false",
+      __VUE_PROD_DEVTOOLS__: "false",
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: "false",
+    },
+    build: {
+      write: false,
+      emptyOutDir: false,
+      minify: true,
+      lib: {
+        entry: fileURLToPath(new URL("./src/lib/background-worker.ts", import.meta.url)),
+        formats: ["iife"],
+        name: "issueflowBackground",
+        fileName: () => "background.js",
+      },
+    },
+  });
+  const outputs = (Array.isArray(result) ? result : [result]) as Rolldown.RolldownOutput[];
+  const chunk = outputs.flatMap((output) => output.output).find((file) => file.type === "chunk");
+  if (!chunk || chunk.type !== "chunk") throw new Error("Background worker bundle is missing.");
+  return chunk.code;
+}
+
 function appShell(): Plugin {
   return {
     name: "issueflow-app-shell",
     enforce: "post",
     apply: "build",
-    generateBundle(_, bundle) {
+    async generateBundle(_, bundle) {
       const files = [
         "./",
         "./manifest.webmanifest",
@@ -49,7 +83,9 @@ function appShell(): Plugin {
       )
         .replace("__CACHE_VERSION__", version)
         .replace("__SHELL_FILES__", JSON.stringify(files));
-      this.emitFile({ type: "asset", fileName: "sw.js", source });
+      // The background handler is isolated in its own IIFE and only adds a periodicsync listener.
+      const background = await backgroundWorker();
+      this.emitFile({ type: "asset", fileName: "sw.js", source: source + "\n" + background });
     },
   };
 }

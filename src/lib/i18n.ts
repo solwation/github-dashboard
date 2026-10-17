@@ -392,6 +392,9 @@ export const english: Record<string, string> = {
   "Starttid okänd": "Start time unknown",
   Stängd: "Closed",
   "Issue stängd": "Issue closed",
+  "Issue påbörjad": "Issue started",
+  "Issue tillbaka i backlog": "Issue moved back to backlog",
+  "Issue återöppnad": "Issue reopened",
   "GitHub-inloggningen avbröts.": "GitHub sign-in was cancelled.",
   "Inloggningen kunde inte verifieras. Försök igen.":
     "Sign-in could not be verified. Please try again.",

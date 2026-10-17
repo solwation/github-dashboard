@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
-function shell() {
+function shell(clients: Record<string, unknown> = {}) {
   const listeners = new Map<string, (event: any) => void>();
   const cache = { addAll: vi.fn().mockResolvedValue(undefined), match: vi.fn().mockResolvedValue(new Response("offline shell")) };
   const fetch = vi.fn().mockResolvedValue(new Response("new shell"));
@@ -14,7 +14,7 @@ function shell() {
     .replace("__SHELL_FILES__", JSON.stringify(["./", "./assets/app-test.js"]));
   runInNewContext(source, {
     URL, Request, fetch,
-    self: { location: { href: "https://example.test/board/sw.js" }, clients: { claim }, skipWaiting, addEventListener: (name: string, listener: (event: any) => void) => listeners.set(name, listener) },
+    self: { location: { href: "https://example.test/board/sw.js" }, clients: { claim, ...clients }, skipWaiting, addEventListener: (name: string, listener: (event: any) => void) => listeners.set(name, listener) },
     caches: cacheStorage,
   });
   return { listeners, cache, fetch, claim, skipWaiting, cacheStorage };
@@ -87,5 +87,32 @@ describe("public service-worker shell", () => {
     }
     expect(fetch).not.toHaveBeenCalled();
     expect(cache.match).not.toHaveBeenCalled();
+  });
+  it("focuses the open app at the issue lane for background-check notifications, or opens it", async () => {
+    const client = { url: "https://example.test/board/#overview", focus: vi.fn().mockResolvedValue(undefined), navigate: vi.fn().mockResolvedValue(undefined) };
+    const matchAll = vi.fn().mockResolvedValue([client]);
+    const openWindow = vi.fn().mockResolvedValue(undefined);
+    const { listeners } = shell({ matchAll, openWindow });
+    const click = async (data: unknown) => {
+      let work: Promise<unknown> = Promise.resolve();
+      const close = vi.fn();
+      listeners.get("notificationclick")!({ notification: { data, close }, waitUntil: (promise: Promise<unknown>) => work = promise });
+      await work;
+      expect(close).toHaveBeenCalledOnce();
+    };
+    await click({ app: "https://example.test/board/#repo-7", url: "https://github.com/acme/board/issues/1" });
+    expect(client.focus).toHaveBeenCalledOnce();
+    expect(client.navigate).toHaveBeenCalledWith("https://example.test/board/#repo-7");
+    expect(openWindow).not.toHaveBeenCalled();
+    matchAll.mockResolvedValueOnce([]);
+    await click({ app: "https://example.test/board/#repo-7" });
+    expect(openWindow).toHaveBeenCalledWith("https://example.test/board/#repo-7");
+    // Foreign or query-bearing app targets are ignored; GitHub issue links keep opening GitHub.
+    openWindow.mockClear();
+    await click({ app: "https://attacker.test/board/#repo-7" });
+    await click({ app: "https://example.test/board/?code=secret" });
+    expect(openWindow).not.toHaveBeenCalled();
+    await click({ url: "https://github.com/acme/board/issues/1" });
+    expect(openWindow).toHaveBeenCalledWith("https://github.com/acme/board/issues/1");
   });
 });

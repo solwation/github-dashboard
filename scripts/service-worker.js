@@ -3,6 +3,14 @@ const CACHE = "issueflow-shell-__CACHE_VERSION__";
 const FILES = __SHELL_FILES__;
 const root = new URL("./", self.location.href);
 const allowed = new Set(FILES.map((path) => new URL(path, root).href));
+const appTarget = (value) => {
+  try {
+    const url = new URL(value);
+    return url.origin === root.origin && url.pathname === root.pathname && !url.search ? url.href : null;
+  } catch {
+    return null;
+  }
+};
 // Stable shell URLs (especially index.html) may still be fresh in the HTTP cache
 // after deployment. A new worker must install the published bytes, not old HTML.
 self.addEventListener("install", (event) =>
@@ -62,6 +70,20 @@ self.addEventListener("fetch", (event) => {
 });
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  const app = appTarget(event.notification.data?.app);
+  if (app) {
+    // Background-check notices (#130) open or focus the app at the issue's repository lane.
+    event.waitUntil(
+      (async () => {
+        const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+        const open = windows.find((client) => client.url.startsWith(root.href) && client.focus);
+        if (!open) return self.clients.openWindow(app);
+        await open.focus();
+        if (open.navigate) await open.navigate(app).catch(() => {});
+      })().catch(() => {}),
+    );
+    return;
+  }
   const target = event.notification.data?.url;
   if (typeof target !== "string") return;
   const url = new URL(target);

@@ -186,6 +186,9 @@ export const saveEncodedContent = (token: string, plaintext: Uint8Array<ArrayBuf
 export const loadContent = <T>(token: string) => loadEncryptedContent<T>(token, CONTENT);
 export const saveStatistics = (token: string, value: unknown) => saveEncryptedContent(token, "statistics", json(value));
 export const loadStatistics = <T>(token: string) => loadEncryptedContent<T>(token, "statistics");
+/** Last state seen by the service worker's periodic background check (#130); cleared with logout like all content. */
+export const saveBackgroundState = (token: string, value: unknown) => saveEncryptedContent(token, "background", json(value));
+export const loadBackgroundState = <T>(token: string) => loadEncryptedContent<T>(token, "background");
 
 export function loadToken(): Promise<string | null> {
   return serialize(async () => {
