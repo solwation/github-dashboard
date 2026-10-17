@@ -185,4 +185,27 @@ describe("GitHub transport", () => {
     expect(lane.issues).toHaveLength(1);
     expect(lane.issues[0]?.startedAt).toBe("2026-10-15T09:00:00Z");
   });
+  it("moves an entry revalidated by 304 to the most recent ETag cache position", async () => {
+    let calls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
+      calls++;
+      return calls > 2 ? new Response(null, { status: 304 }) : new Response(JSON.stringify(url.pathname), { headers: { etag: `"${url.pathname}"` } });
+    }));
+    const client = new GitHub("test-token");
+    await client.request("/a");
+    await client.request("/b");
+    await client.request("/a");
+    expect(client.exportResponses().map(([url]) => url)).toEqual(["https://api.github.com/b", "https://api.github.com/a"]);
+  });
+  it("keeps stable lane ETags exported after many incremental syncs", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: URL, init: RequestInit) => {
+      const headers = init.headers as Record<string, string>;
+      if (url.searchParams.has("since")) return new Response("[]", { headers: { etag: `"${url.search}"` } });
+      return headers["If-None-Match"] ? new Response(null, { status: 304 }) : new Response("[]", { headers: { etag: '"labels"' } });
+    }));
+    const client = new GitHub("test-token");
+    const lane = { repo, labels: [], issues: [] };
+    for (let sync = 0; sync < 150; sync++) await client.syncLane(lane, {}, Date.now() - sync * 120000);
+    expect(client.exportResponses().map(([url]) => url)).toEqual(["https://api.github.com/repos/owner/test/labels?per_page=100"]);
+  });
 });

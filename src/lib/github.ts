@@ -112,26 +112,31 @@ export class GitHub {
   }
   async request<T>(
     path: string,
-    options: { method?: "GET" | "POST"; body?: string } = {},
+    options: { method?: "GET" | "POST"; body?: string; store?: boolean } = {},
   ): Promise<{ data: T; next: string | null }> {
     const url = new URL(path, "https://api.github.com");
     if (url.origin !== "https://api.github.com")
       throw new Error(t("Ogiltig API-adress."));
-    const cacheable = !options.method || options.method === "GET";
+    // One-shot URLs (store: false) would never be revalidated and only evict reusable ETags (#108).
+    const { store = true, ...init } = options;
+    const cacheable = store && (!init.method || init.method === "GET");
     const cached = cacheable ? this.responses.get(url.href) : undefined;
     const response = await fetch(url, {
-      ...options,
+      ...init,
       cache: "no-store",
       headers: {
         Accept: "application/vnd.github+json",
         ...(cached ? { "If-None-Match": cached.etag } : {}),
         Authorization: `Bearer ${this.token}`,
         "X-GitHub-Api-Version": "2022-11-28",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
       },
     });
     if (response.status === 304 && cached) {
       this.observePermission(url.pathname, true);
+      // Keep revalidated entries most recent so exportResponses() retains them (#108).
+      this.responses.delete(url.href);
+      this.responses.set(url.href, cached);
       return { data: cached.data as T, next: cached.next };
     }
     if (!response.ok) {
@@ -192,12 +197,12 @@ export class GitHub {
     return result;
   }
 
-  async all<T>(path: string): Promise<T[]> {
+  async all<T>(path: string, options: { store?: boolean } = {}): Promise<T[]> {
     const result: T[] = [];
     let next: string | null = path;
     while (next) {
       const page: { data: T[]; next: string | null } =
-        await this.request<T[]>(next);
+        await this.request<T[]>(next, options);
       result.push(...page.data);
       next = page.next;
     }
@@ -256,6 +261,7 @@ export class GitHub {
     const [changed, labels] = await Promise.all([
       this.all<Issue>(
         `${root}/issues?state=all&per_page=100&sort=updated&direction=desc&since=${new Date(since - 5000).toISOString()}`,
+        { store: false },
       ),
       this.all<Label>(`${root}/labels?per_page=100`),
     ]);
