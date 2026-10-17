@@ -256,17 +256,45 @@ export class GitHub {
     );
     return this.startTime(repo, data, rules, issue);
   }
-  async syncLane(previous: Lane, rules: Rules, since: number): Promise<Lane> {
-    const root = `/repos/${previous.repo.full_name}`;
-    const [changed, labels] = await Promise.all([
-      this.all<Issue>(
-        `${root}/issues?state=all&per_page=100&sort=updated&direction=desc&since=${new Date(since - 5000).toISOString()}`,
-        { store: false },
-      ),
-      this.all<Label>(`${root}/labels?per_page=100`),
+  /** Revalidates label definitions at most this often during reconciliation (#123). */
+  static readonly LABELS_TTL_MS = 600_000;
+  private readonly labelsCheckedAt = new Map<string, number>();
+  private readonly sinceUrls = new Map<string, string>();
+  private async labels(repoFullName: string) {
+    const labels = await this.all<Label>(`/repos/${repoFullName}/labels?per_page=100`);
+    this.labelsCheckedAt.set(repoFullName, Date.now());
+    return labels;
+  }
+  /**
+   * Incremental lane update from one conditional list request per repository (#123).
+   * `since` should be the start of the repository's last full load: the anchor stays fixed between
+   * full loads, so unchanged repositories answer 304, which GitHub does not count against the rate
+   * limit. Only the current anchor's entry is kept, so superseded URLs never evict stable ETags (#108).
+   * Labels are revalidated when `labels` is not false and the TTL has passed, or when a changed issue
+   * carries a label the lane has not seen.
+   */
+  async syncLane(previous: Lane, rules: Rules, since: number, options: { labels?: boolean } = {}): Promise<Lane> {
+    const name = previous.repo.full_name;
+    const root = `/repos/${name}`;
+    const anchor = Math.floor((since - 5000) / 60000) * 60000;
+    const path = `${root}/issues?state=all&per_page=100&sort=updated&direction=desc&since=${new Date(anchor).toISOString()}`;
+    const href = new URL(path, "https://api.github.com").href;
+    const superseded = this.sinceUrls.get(name);
+    if (superseded && superseded !== href) this.responses.delete(superseded);
+    this.sinceUrls.delete(name);
+    this.sinceUrls.set(name, href);
+    if (this.sinceUrls.size > 200) this.sinceUrls.delete(this.sinceUrls.keys().next().value!);
+    const labelsDue = options.labels !== false && Date.now() - (this.labelsCheckedAt.get(name) ?? 0) >= GitHub.LABELS_TTL_MS;
+    const [changed, revalidated] = await Promise.all([
+      this.all<Issue>(path),
+      labelsDue ? this.labels(name) : undefined,
     ]);
+    // Copy before enrichment: request() returns the objects held in the ETag cache.
+    const candidates = changed.filter((issue) => !issue.pull_request).map((issue) => ({ ...issue }));
+    const known = new Set(previous.labels.map((label) => label.name));
+    const labels = revalidated ?? (candidates.some((issue) => issue.labels.some((label) => !known.has(label.name)))
+      ? await this.labels(name) : previous.labels);
     const issues = new Map(previous.issues.map((issue) => [issue.id, issue]));
-    const candidates = changed.filter((issue) => !issue.pull_request);
     let cursor = 0;
     await Promise.all(
       Array.from({ length: Math.min(3, candidates.length) }, async () => {
@@ -311,7 +339,7 @@ export class GitHub {
       this.all<Issue>(
         `${root}/issues?state=closed&per_page=100&sort=updated&direction=desc&since=${requestSince}`,
       ),
-      this.all<Label>(`${root}/labels?per_page=100`),
+      this.labels(repo.full_name),
     ]);
     // Copy before enrichment: request() returns the objects held in the ETag cache.
     const issues = [

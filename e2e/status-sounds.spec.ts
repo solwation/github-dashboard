@@ -37,6 +37,12 @@ test("status sounds follow repository opt-in and live transitions without replay
     }
     await route.fulfill({ json: data });
   });
+  // Background ticks now carry live data (#123); a shortcut during an in-flight full refresh is
+  // satisfied by it, so wait for idle before asking for a refresh of the changed fixture state.
+  const refreshWhenIdle = async () => {
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await page.keyboard.press("Control+r");
+  };
   await page.goto("/");
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-sound-token");
@@ -49,19 +55,19 @@ test("status sounds follow repository opt-in and live transitions without replay
   await page.getByRole("switch", { name: "Notiser för alpha", exact: true }).click();
   states.alpha!.labels = ["in-progress"];
   states.beta!.labels = ["in-progress"];
-  await page.keyboard.press("Control+r");
+  await refreshWhenIdle();
   await expect.poll(notes).toEqual([440, 554]);
   // A blocked label produces a negative sound even while remaining In progress.
   states.alpha!.labels = ["in-progress", "blocked"];
-  await page.keyboard.press("Control+r");
+  await refreshWhenIdle();
   await expect.poll(notes).toEqual([440, 554, 330, 247, 196]);
   states.alpha!.labels = ["in-progress"];
   states.alpha!.state = "closed";
-  await page.keyboard.press("Control+r");
+  await refreshWhenIdle();
   await expect.poll(notes).toEqual([440, 554, 330, 247, 196, 523, 659, 784]);
   await page.getByRole("switch", { name: "Notiser för alpha", exact: true }).click();
   states.alpha = { state: "open", labels: [] };
-  await page.keyboard.press("Control+r");
+  await refreshWhenIdle();
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
   expect(await notes()).toHaveLength(8);
   await page.reload();
@@ -100,6 +106,12 @@ for (const audioMode of ['unsupported', 'denied'] as const) {
       }
       await route.fulfill({ json: data });
     });
+    // Background ticks now carry live data (#123); a shortcut during an in-flight full refresh is
+    // satisfied by it, so wait for idle before asking for a refresh of the changed fixture state.
+    const refreshWhenIdle = async () => {
+      await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+      await page.keyboard.press("Control+r");
+    };
     await page.goto('/');
     await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
     await page.getByLabel('GitHub personal access token').fill('fictional-silent-token');
@@ -114,16 +126,16 @@ for (const audioMode of ['unsupported', 'denied'] as const) {
     await page.getByRole('button', { name: 'Stäng notismeddelande', exact: true }).click();
     for (let round = 0; round < 2; round++) {
       state = 'open'; labels = ['in-progress']; closedAt = null;
-      await page.keyboard.press('Control+r');
+      await refreshWhenIdle();
       await expect(page.locator('.progress .issue-card')).toHaveCount(1);
       await expect(page.locator('.updated')).toHaveAttribute('aria-busy', 'false');
       await expect(page.locator('.notification-notice')).toHaveCount(0);
       labels = ['in-progress', 'blocked'];
-      await page.keyboard.press('Control+r');
+      await refreshWhenIdle();
       await expect(page.locator('.issue-card .labels')).toContainText('blocked');
       await expect(page.locator('.notification-notice')).toHaveCount(0);
       state = 'closed'; labels = []; closedAt = new Date(Date.now() + round).toISOString();
-      await page.keyboard.press('Control+r');
+      await refreshWhenIdle();
       await expect(page.locator('.closed .issue-card')).toHaveCount(1);
       await expect.poll(() => page.evaluate(() => (window as unknown as { deliveredNotices: string[] }).deliveredNotices.length)).toBe(round + 1);
       await expect(page.locator('.notification-notice')).toHaveCount(0);

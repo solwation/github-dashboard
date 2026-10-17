@@ -205,7 +205,12 @@ describe("GitHub transport", () => {
     }));
     const client = new GitHub("test-token");
     const lane = { repo, labels: [], issues: [] };
-    for (let sync = 0; sync < 150; sync++) await client.syncLane(lane, {}, Date.now() - sync * 120000);
-    expect(client.exportResponses().map(([url]) => url)).toEqual(["https://api.github.com/repos/owner/test/labels?per_page=100"]);
+    const anchor = Date.UTC(2026, 9, 17, 10, 0, 0);
+    for (let sync = 0; sync < 150; sync++) await client.syncLane(lane, {}, anchor - sync * 120000);
+    // Only the current anchor's list is kept; superseded anchors never push stable entries out (#108, #123).
+    expect(client.exportResponses().map(([url]) => url)).toEqual([
+      "https://api.github.com/repos/owner/test/labels?per_page=100",
+      `https://api.github.com/repos/owner/test/issues?state=all&per_page=100&sort=updated&direction=desc&since=${new Date(anchor - 149 * 120000 - 60000).toISOString()}`,
+    ]);
   });
 });

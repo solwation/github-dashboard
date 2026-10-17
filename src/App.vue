@@ -810,7 +810,8 @@ function reconcileSelection() {
   for (const name of lastSynced.keys()) if (!selected.value.includes(name)) lastSynced.delete(name);
   for (const name of lastFullSynced.keys()) if (!selected.value.includes(name)) lastFullSynced.delete(name);
 }
-async function refresh(incremental = false, replacePending = false, manual = false) {
+/** `activeOnly` is the 15-second tick: one conditional list per repository with active issues (#123). */
+async function refresh(incremental = false, replacePending = false, manual = false, activeOnly = false) {
   if (!api) {
     refreshRequested = false;
     return;
@@ -835,8 +836,9 @@ async function refresh(incremental = false, replacePending = false, manual = fal
   }
   busy.value = true;
   fullRefreshRunning = !incremental;
-  error.value = "";
-  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name)).sort((a, b) =>
+  if (!activeOnly) error.value = "";
+  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name) &&
+    (!activeOnly || lanes.value.some(lane => lane.repo.full_name === repo.full_name && laneHasActiveIssues(lane)))).sort((a, b) =>
     Number(!!lanes.value.find(lane => lane.repo.full_name === b.full_name)?.loading) - Number(!!lanes.value.find(lane => lane.repo.full_name === a.full_name)?.loading));
   const result: Lane[] = [];
   let cursor = 0;
@@ -854,7 +856,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
             const previous = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
             const since = lastSynced.get(repo.full_name);
             const full = !incremental || !previous || previous.loading || previous.error || !since || (lastFullSynced.get(repo.full_name) || 0) <= started - 30 * 60000;
-            const lane = full ? await client.lane(repo, repoRules) : await client.syncLane(previous!, repoRules, since!);
+            const lane = full ? await client.lane(repo, repoRules) : await client.syncLane(previous!, repoRules, lastFullSynced.get(repo.full_name)!, { labels: !activeOnly });
             return { lane, started, full };
           });
           if (!current() || !selected.value.includes(repo.full_name)) continue;
@@ -1060,65 +1062,12 @@ function trapFocus(event: KeyboardEvent) {
 }
 onMounted(() => document.addEventListener("keydown", trapFocus));
 onUnmounted(() => document.removeEventListener("keydown", trapFocus));
-async function refreshActive() {
-  if (!api || busy.value) return;
-  const client = api,
-    run = generation,
-    selection = selectionRevision;
-  const current = () => run === generation && client === api && selection === selectionRevision;
-  busy.value = true;
-  const result = lanes.value.map((lane) => ({
-    ...lane,
-    issues: [...lane.issues],
-  }));
-  let failure: unknown = null;
-  const tasks = result.flatMap((lane) =>
-    lane.issues
-      .filter(
-        (issue) =>
-          column(issue, rules.value[lane.repo.full_name]) === "progress" &&
-          (!hideCoordination.value || !isCoordination(issue)),
-      )
-      .map((issue) => ({ lane, issue })),
+function laneHasActiveIssues(lane: Lane) {
+  return lane.issues.some(
+    (issue) =>
+      column(issue, rules.value[lane.repo.full_name]) === "progress" &&
+      (!hideCoordination.value || !isCoordination(issue)),
   );
-  let cursor = 0;
-  try {
-    await Promise.all(
-      Array.from({ length: Math.min(3, tasks.length) }, async () => {
-        while (cursor < tasks.length && current()) {
-          const { lane, issue } = tasks[cursor++]!;
-          try {
-            const updated = await client.activeIssue(
-              lane.repo,
-              issue,
-              rules.value[lane.repo.full_name] || {},
-            );
-            const index = lane.issues.findIndex(
-              (item) => item.id === updated.id,
-            );
-            if (index >= 0) lane.issues[index] = updated;
-            lane.timerWarning = lane.issues.some(
-              (item) =>
-                column(item, rules.value[lane.repo.full_name]) === "progress" &&
-                item.timerError,
-            );
-          } catch (cause) {
-            lane.error = message(cause);
-            failure = cause;
-          }
-        }
-      }),
-    );
-    if (current()) {
-      closureFeedback(result, false);
-      lanes.value = result;
-      if (!showingCache.value) refreshed.value = Date.now();
-      await persistContent();
-    }
-    if (failure && current()) throw failure;
-  } finally {
-    if (current()) busy.value = false;
-  }
 }
 const sync = createIssueSync({
   canSync: () =>
@@ -1133,15 +1082,8 @@ const sync = createIssueSync({
     (!document.hidden ||
       (notificationPermission() === "granted" &&
         selected.value.some((repo) => notificationRepos.value.includes(repo)))),
-  hasActiveIssues: () =>
-    lanes.value.some((lane) =>
-      lane.issues.some(
-        (issue) =>
-          column(issue, rules.value[lane.repo.full_name]) === "progress" &&
-          (!hideCoordination.value || !isCoordination(issue)),
-      ),
-    ),
-  refreshActive,
+  hasActiveIssues: () => lanes.value.some(laneHasActiveIssues),
+  refreshActive: () => refresh(true, false, false, true),
   reconcile: () => refresh(true),
   retryAfterMs: () => api?.retryAfterMs(),
   onError: (cause) => {

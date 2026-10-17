@@ -37,7 +37,12 @@ export function parseIssueRelations(value: unknown): IssueRelations | null {
   return { parent, progress: failed("subIssuesSummary") ? null : subIssueProgress(issue.subIssuesSummary) };
 }
 
-export const RELATIONS_TTL_MS = 60000;
+/**
+ * GraphQL cannot be revalidated with ETags and always costs rate limit. Entries are keyed by the
+ * issue's updated_at and sub_issues_summary, so relation changes on the issue itself refetch at once;
+ * the long TTL only bounds staleness of the parent's title. A full or manual refresh clears the cache (#123).
+ */
+export const RELATIONS_TTL_MS = 600_000;
 /** Account-local, bounded cache; only visible cards request metadata, at most three at once. */
 export class IssueRelationsCache {
   private entries = new Map<string, { at: number; pending: boolean; result: Promise<IssueRelations | null> }>();

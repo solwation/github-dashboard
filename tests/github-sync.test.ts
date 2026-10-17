@@ -85,6 +85,43 @@ describe("conditional and incremental synchronization", () => {
     expect(result.issues.find((issue) => issue.id === 2)?.state).toBe("closed");
     expect(previous.issues[1]?.state).toBe("open");
   });
+  it("revalidates a stable incremental list with ETags and fetches labels only when due or unseen (#123)", async () => {
+    const urls: string[] = [];
+    let body: Issue[] = [make(2, "open", ["in-progress"])];
+    let etag = '"v1"';
+    const fetch = vi.fn(async (url: URL, init: RequestInit) => {
+      urls.push(url.pathname + url.search);
+      const headers = init.headers as Record<string, string>;
+      if (url.pathname.endsWith("/labels")) return new Response(JSON.stringify([{ name: "in-progress", color: "aaa" }, { name: "bug", color: "bbb" }]));
+      if (url.pathname.endsWith("/events")) return new Response("[]");
+      if (headers["If-None-Match"] === etag) return new Response(null, { status: 304 });
+      return new Response(JSON.stringify(body), { headers: { etag } });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const api = new GitHub("test");
+    const anchor = Date.UTC(2026, 9, 17, 10, 0, 30);
+    let lane: Lane = { repo, labels: [{ name: "in-progress", color: "aaa" }], issues: [make(1, "open"), make(2, "open", ["in-progress"])] };
+    lane = await api.syncLane(lane, {}, anchor, { labels: false });
+    lane = await api.syncLane(lane, {}, anchor, { labels: false });
+    const lists = urls.filter(url => url.includes("since="));
+    expect(lists).toHaveLength(2);
+    expect(new Set(lists).size).toBe(1);
+    expect(lists[0]).toContain(`since=${encodeURIComponent("2026-10-17T10:00:00.000Z").replace(/%3A/g, ":")}`);
+    const listCalls = fetch.mock.calls.filter(([url]) => url.searchParams.has("since"));
+    expect((listCalls[1]![1].headers as Record<string, string>)["If-None-Match"]).toBe('"v1"');
+    expect(urls.some(url => url.endsWith("/labels?per_page=100"))).toBe(false);
+    expect(lane.issues.map(issue => issue.id).sort()).toEqual([1, 2]);
+    // A label the lane has not seen loads label definitions even on the active tick.
+    body = [make(1, "open", ["bug"])];
+    etag = '"v2"';
+    lane = await api.syncLane(lane, {}, anchor, { labels: false });
+    expect(urls.filter(url => url.endsWith("/labels?per_page=100"))).toHaveLength(1);
+    expect(lane.labels.map(label => label.name)).toEqual(["in-progress", "bug"]);
+    expect(lane.issues.find(issue => issue.id === 1)?.labels.map(label => label.name)).toEqual(["bug"]);
+    // Reconciliation revalidates labels only after the TTL.
+    await api.syncLane(lane, {}, anchor);
+    expect(urls.filter(url => url.endsWith("/labels?per_page=100"))).toHaveLength(1);
+  });
   it("records server retry delays without discarding API errors", async () => {
     vi.stubGlobal(
       "fetch",
