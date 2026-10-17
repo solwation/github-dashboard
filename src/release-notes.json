@@ -57,6 +57,13 @@
       },
       {
         "text": {
+          "sv": "Oförändrade bakgrundssynkar skriver inte längre om den krypterade cachen, och cachen är ungefär hälften så stor.",
+          "en": "Unchanged background syncs no longer rewrite the encrypted cache, and the cache is about half the size."
+        },
+        "issues": [122]
+      },
+      {
+        "text": {
           "sv": "Bakgrundssynken gör färre än hälften så många anrop: oförändrade projekt kontrolleras utan att förbruka GitHubs gräns, och relationer hämtas bara vid ändring.",
           "en": "Background sync makes less than half as many requests: unchanged projects are checked without using GitHub's rate limit, and relations reload only when they change."
         },
