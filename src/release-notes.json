@@ -22,6 +22,13 @@
       },
       {
         "text": {
+          "sv": "Kontoinställningar som valda repositories, filter och läsmarkeringar sparas krypterade och finns kvar när du loggar in igen.",
+          "en": "Account settings such as selected repositories, filters and read markers are stored encrypted and return when you sign in again."
+        },
+        "issues": [105]
+      },
+      {
+        "text": {
           "sv": "Toppfältet får plats på surfplattebredder utan sidledsscroll, och uppdateringsstatusen flyttar inte tavlorna på telefon.",
           "en": "The top bar fits tablet widths without sideways scrolling, and the refresh status no longer shifts boards on phones."
         },

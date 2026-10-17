@@ -702,9 +702,8 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     if (imported && token === sessionToken.value && api && user.value && !isDemo.value) {
       const available = await api.repos();
       repos.value = available;
-      const saved = applyImportedPreferences(imported, available);
+      await applyImportedPreferences(imported, available);
       reconcileSelection();
-      await saved;
       await refresh(false, true);
       return true;
     }
@@ -766,10 +765,9 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       repositoryColumnLimits.value = Object.fromEntries(Object.entries(repositoryColumnLimits.value).filter(([name]) => accessible.has(name)));
       rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
     } else restorePreferences(available, liveSettings!);
-    const importedSaved = imported ? applyImportedPreferences(imported, available) : null;
+    // Commit imported settings before their lanes appear, so an immediate reload keeps them.
+    if (imported) await applyImportedPreferences(imported, available);
     reconcileSelection();
-    // Commit imported settings before the board appears, so an immediate reload keeps them.
-    await importedSaved;
     if (selected.value.length) await refresh(false, true);
     else { picker.value = true; showingCache.value = false; await persistContent(); }
     if (storageWarning) error.value = storageWarning;
