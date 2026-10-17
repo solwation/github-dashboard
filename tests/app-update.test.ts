@@ -177,6 +177,36 @@ describe("app version updates", () => {
     expect(app.available.value).toBe(false);
     expect(app.reload).not.toHaveBeenCalled();
   });
+  it("confirms the latest version on an uncontrolled page and after the first claim", async () => {
+    vi.useFakeTimers();
+    const app = setup(false);
+    // First visit (or a hard reload): an active worker exists but has not claimed this tab.
+    app.worker.state = "activated";
+    app.registration.active = app.worker;
+    await app.check();
+    expect(app.checked.value).toBe(true);
+    // clients.claim replaces the (absent) controller without being a new app version.
+    app.serviceWorker.controller = app.worker;
+    app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(app.checked.value).toBe(true);
+    expect(app.available.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(app.reload).not.toHaveBeenCalled();
+  });
+  it("recovers the checked status on a visible tab after a failed update check", async () => {
+    const app = setup(true, { hidden: true });
+    app.registration.waiting = null;
+    app.registration.update.mockRejectedValueOnce(new Error("network failure"));
+    await app.check();
+    expect(app.checked.value).toBe(false);
+    const calls = app.registration.update.mock.calls.length;
+    app.setHidden(true);
+    expect(app.registration.update.mock.calls.length).toBe(calls);
+    app.setHidden(false);
+    await vi.waitFor(() => expect(app.checked.value).toBe(true));
+    expect(app.registration.update.mock.calls.length).toBe(calls + 1);
+  });
   it("discovers a waiting update after the first controller claim", async () => {
     vi.useFakeTimers();
     const app = setup(false);

@@ -9,7 +9,7 @@ interface UpdateEnvironment {
   reload(): void;
   /** Injectable clock (epoch ms) for countdowns and the local-midnight deferral. */
   now?(): number;
-  /** Optional page visibility, retained for embedders. */
+  /** Optional page visibility; a visible tab checks for updates on `visibilitychange`. */
   hidden?(): boolean;
   /** Pause automatic installation while a dialog is being used. */
   blocked?(): boolean;
@@ -250,6 +250,18 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     worker.addEventListener("statechange", changed);
     changed();
   }
+  /**
+   * After a successful network update check, the running page is the latest version
+   * when no newer worker is installing, waiting or already controlling this tab.
+   * An uncontrolled page (hard reload, or a first visit before clients.claim) was
+   * itself fetched from the network, so the active worker's version counts; a later
+   * claim is handled by controllerChanged, which checks again.
+   */
+  function upToDate(found: ServiceWorkerRegistration) {
+    if (found.installing || found.waiting) return false;
+    if (!hadController) return Boolean(found.active);
+    return Boolean(sw.controller) && sw.controller === loadedController;
+  }
   function check(): Promise<void> {
     if (checking) return checking;
     if (!active || !environment.online()) { state.checked = false; return Promise.resolve(); }
@@ -270,7 +282,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
       if (registration.waiting) offer(registration.waiting);
       await registration.update();
       if (active && registration.waiting) offer(registration.waiting);
-      if (active) state.checked = environment.online() && !state.available && !registration.installing && !registration.waiting && Boolean(sw.controller) && sw.controller === loadedController;
+      if (active) state.checked = environment.online() && !state.available && upToDate(registration);
     } catch {
       state.checked = false;
       if (active && state.available && !state.applying) {
@@ -293,6 +305,8 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   function visibilityChanged() {
     refreshDeferral();
     schedule();
+    // Returning to the tab corrects a status left unchecked by an earlier failure.
+    if (!(environment.hidden?.() ?? false)) void check();
   }
   function storageChanged(event: Event) {
     const key = (event as StorageEvent).key;
@@ -377,6 +391,7 @@ export function useAppUpdate(): AppUpdate {
         visibility: document,
         appUrl: new URL("./", document.baseURI).href,
         online: () => navigator.onLine,
+        hidden: () => document.hidden,
         blocked: () => Boolean(document.querySelector('dialog[open], [role="dialog"]')),
         reload: () => window.location.reload(),
         storage: browserStorage(),
