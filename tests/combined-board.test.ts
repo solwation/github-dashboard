@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { boardEntryKey, combinedItems } from "../src/lib/combined-board";
 import { demo } from "../src/lib/demo";
 import { sortedIssues } from "../src/lib/model";
-const filters = { query: "", repositoryQueries: {}, hideCoordination: false };
+const filters = { query: "", hideCoordination: false };
 describe("combined issue columns", () => {
   it("keeps the existing sort order when only one repository is selected", () => {
     const [lane] = demo();
@@ -17,10 +17,11 @@ describe("combined issue columns", () => {
     expect(combinedItems(lanes, "backlog", rules, filters).map(entry => entry.lane.repo.name)).toEqual([second!.repo.name, first!.repo.name]);
     expect(combinedItems(lanes, "progress", rules, filters).map(entry => entry.lane.repo.name)).toEqual([first!.repo.name, second!.repo.name]);
   });
-  it("requires global and local filters while isolating repositories and coordination", () => {
+  it("applies the main search across repositories and hides coordination", () => {
     const lanes = demo();
-    const result = combinedItems(lanes, "backlog", {}, { query: "PRIORITY: HIGH", repositoryQueries: { "demo/design-system": "missing" }, hideCoordination: true });
-    expect(result.map(entry => entry.lane.repo.name).sort()).toEqual(["personal-website", "weekend-project"]);
+    const result = combinedItems(lanes, "backlog", {}, { query: "PRIORITY: HIGH", hideCoordination: true });
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.every(entry => entry.issue.labels.some(label => label.name.toLowerCase().includes("priority: high")))).toBe(true);
     lanes[0]!.issues[0]!.labels.push({ name: "agent coordination", color: "fff" });
     expect(combinedItems([lanes[0]!], "backlog", {}, { ...filters, hideCoordination: true }).some(entry => entry.issue.id === lanes[0]!.issues[0]!.id)).toBe(false);
   });

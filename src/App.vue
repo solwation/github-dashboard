@@ -583,19 +583,21 @@ const columns = computed(() => [
     hint: t("Senaste 30 dagarna · nyast först"),
   },
 ]);
+// Per-repository searches belong to the split view only; the combined board uses the main search alone (#132).
+const activeRepositoryQueries = computed<Record<string, string>>(() => splitByRepository.value ? repositoryQueries.value : {});
 // Filtered and sorted once per data or filter change instead of on every render (#120).
 const laneColumns = computed(() => new Map(lanes.value.map((lane) => {
   const issues = lane.issues.filter(
     (i) =>
       (!hideCoordination.value || !isCoordination(i)) &&
-      matchesIssueFilters(i, query.value, repositoryQueries.value[lane.repo.full_name] || ""),
+      matchesIssueFilters(i, query.value, activeRepositoryQueries.value[lane.repo.full_name] || ""),
   );
   const repoRules = rules.value[lane.repo.full_name];
   return [lane.repo.full_name, { issues, ...Object.fromEntries(columns.value.map(col => [col.key, sortedIssues(issues, col.key, repoRules)])) } as Record<string, Issue[]>];
 })));
 function laneIssues(lane: Lane) { return laneColumns.value.get(lane.repo.full_name)?.issues ?? []; }
 function items(lane: Lane, key: string) { return laneColumns.value.get(lane.repo.full_name)?.[key] ?? []; }
-const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, repositoryQueries: repositoryQueries.value, hideCoordination: hideCoordination.value })])));
+const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value })])));
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
 watch(columnLimit, () => { combinedLimits.value = {}; });
 // One set of loaders per repository and session keeps card props stable between renders (#120).
@@ -1505,7 +1507,7 @@ onMounted(async () => {
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <OverviewSummary :query="query" :repository-queries="repositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
+        <OverviewSummary :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
           :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn"
           @choose-repositories="picker = true" />
         <div class="board-toolbar">
@@ -1771,16 +1773,10 @@ onMounted(async () => {
         <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
           <div class="combined-board-head">
           <details class="combined-repository-controls">
-            <summary>{{ t("Repositoryfilter och inställningar") }}</summary>
+            <summary>{{ t("Repositoryinställningar") }}</summary>
             <p class="combined-limit-note">{{ t("Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.") }}</p>
             <div v-for="lane in orderedLanes" :key="lane.repo.full_name" class="combined-repository-control" :id="'repo-' + lane.repo.id">
               <span class="combined-repository-name"><i :style="{ backgroundColor: workspaceRepositoryColors[lane.repo.full_name] }" aria-hidden="true" />{{ lane.repo.full_name }}</span>
-              <div class="repository-filter">
-                <label class="sr-only" :for="'combined-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
-                <div class="repository-search"><Search :size="14" aria-hidden="true" /><input :id="'combined-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]" :placeholder="t('Sök issues, labels eller nummer…')" />
-                  <button class="icon-button repository-filter-clear" :disabled="!repositoryQueries[lane.repo.full_name]" :aria-label="t('Rensa filtret för {name}', { name: lane.repo.full_name })" @click="repositoryQueries[lane.repo.full_name] = ''"><X :size="13" aria-hidden="true" /></button>
-                </div>
-              </div>
               <button v-if="!isDemo" class="notification-toggle" role="switch" :aria-checked="notificationsEnabled(lane.repo.full_name)" :aria-label="t('Notiser för ') + lane.repo.name" :disabled="notificationPending !== null" :class="{ enabled: notificationsEnabled(lane.repo.full_name) }" @click="toggleNotifications(lane.repo.full_name)"><Bell v-if="notificationsEnabled(lane.repo.full_name)" :size="15" /><BellOff v-else :size="15" />{{ t("Notiser") }} {{ notificationsEnabled(lane.repo.full_name) ? t("på") : t("av") }}</button>
               <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Anpassa labels för ') + lane.repo.name"><Settings2 :size="16" /></button>
             </div>
@@ -1856,7 +1852,7 @@ onMounted(async () => {
                     v-else-if="col.key === 'progress'"
                     :size="20"
                   /><Layers3 v-else :size="20" /><span>{{
-                    query || orderedLanes.some(lane => repositoryQueries[lane.repo.full_name])
+                    query
                       ? t("Inga issues matchar filtren")
                       : col.key === "progress"
                       ? t("Inget pågående arbete")
@@ -2051,5 +2047,4 @@ onMounted(async () => {
 .combined-repository-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
 .combined-repository-name { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex: 1 1 180px; overflow-wrap: anywhere; }
 .combined-repository-name i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.combined-repository-control .repository-filter { flex: 1 1 200px; }
 </style>
