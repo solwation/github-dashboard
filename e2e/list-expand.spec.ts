@@ -4,7 +4,7 @@ const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, ful
 const stamp = new Date(Date.now() - 86_400_000).toISOString();
 const noPageScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
-test("tapping a list row expands the full card in place in split and combined view without opening GitHub", async ({ page, context }) => {
+test("desktop expands row details in place with open description while phone opens the full card in a popup", async ({ page, context }) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   const relationRequests: number[] = [];
   await context.route("https://github.com/**", route => route.fulfill({ contentType: "text/html", body: "<title>GitHub stub</title>" }));
@@ -28,6 +28,7 @@ test("tapping a list row expands the full card in place in split and combined vi
     }
     return route.fulfill({ json: [] });
   });
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/"); await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-expand-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
@@ -43,24 +44,29 @@ test("tapping a list row expands the full card in place in split and combined vi
   expect(relationRequests).toEqual([]);
 
   const toggle = alpha.getByRole("button", { name: "alpha task 2", exact: true });
+  const row2 = alpha.locator(".issue-row").filter({ has: page.getByRole("button", { name: "alpha task 2", exact: true }) });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(toggle).toBeFocused();
   const panel = page.locator("#" + await toggle.getAttribute("aria-controls"));
-  const card = panel.locator(".issue-card");
-  await expect(card).toBeVisible();
-  await expect(card.getByRole("link", { name: /alpha task 2/ })).toHaveAttribute("href", "https://github.com/sample/alpha/issues/2");
-  await expect(card.getByRole("link", { name: /Parent plan/ })).toBeVisible();
-  await expect(card.locator(".label")).toHaveText(["enhancement"]);
-  await card.getByRole("button", { name: "Läs mer", exact: true }).click();
-  await expect(card.getByText("Description of alpha task 2")).toBeVisible();
-  await expect(card.locator(".card-repository")).toHaveCount(0);
-  // Several rows may be open; tapping a row's empty area toggles it too.
+  await expect(panel).toBeVisible();
+  // #155: on desktop the row keeps its header columns and shows all details with description already expanded, without a nested bordered card header.
+  await expect(row2.locator(".row-meta .label")).toHaveText(["enhancement"]);
+  await expect(row2.locator(".row-time")).toBeVisible();
+  const detailsCard = panel.locator(".issue-card.row-details-card");
+  await expect(detailsCard).toBeVisible();
+  await expect(detailsCard.locator(".card-top")).toHaveCount(0);
+  await expect(detailsCard.locator(".issue-title")).toHaveCount(0);
+  await expect(detailsCard.getByRole("link", { name: /Parent plan/ })).toBeVisible();
+  await expect(detailsCard.getByText("Description of alpha task 2")).toBeVisible();
+  await expect(detailsCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
+
+  // Several rows may be open on desktop; tapping a row's empty area toggles it too.
   const first = alpha.getByRole("button", { name: "alpha task 1", exact: true });
   await alpha.locator(".issue-row").filter({ has: page.getByRole("button", { name: "alpha task 1", exact: true }) }).locator(".row-time").click();
   await expect(first).toHaveAttribute("aria-expanded", "true");
-  await expect(alpha.locator(".issue-row .issue-card")).toHaveCount(2);
+  await expect(alpha.locator(".issue-row .row-details-card")).toHaveCount(2);
   // Stäng collapses and returns focus to the row; tapping the header row collapses too.
   await panel.getByRole("button", { name: "Stäng", exact: true }).click();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -87,30 +93,65 @@ test("tapping a list row expands the full card in place in split and combined vi
   await (await popup).close();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 
-  // Combined board: same card with the repository, and the repository column remains.
+  // Combined board on desktop & tablet: keeps the repository badge on the row and expands details with open description.
   await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
   const board = page.locator(".combined-board");
   await expect(board.locator(".issue-row")).toHaveCount(4);
   const beta = board.getByRole("button", { name: "beta task 1", exact: true });
   await beta.click();
   await expect(beta).toHaveAttribute("aria-expanded", "true");
-  const row = board.locator(".issue-row").filter({ has: page.getByRole("button", { name: "beta task 1", exact: true }) });
-  await expect(row.locator(".row-repository")).toHaveText("sample/beta");
-  await expect(row.locator(".issue-card .card-repository")).toHaveText("sample/beta");
-  await expect(row.getByRole("link", { name: "Öppna #1 på GitHub", exact: true })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
+  const betaRow = board.locator(".issue-row").filter({ has: page.getByRole("button", { name: "beta task 1", exact: true }) });
+  await expect(betaRow.locator(".row-repository")).toHaveText("sample/beta");
+  await expect(betaRow.getByText("Description of beta task 1")).toBeVisible();
+  await expect(betaRow.getByRole("link", { name: "Öppna #1 på GitHub", exact: true })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
-    for (const width of [320, 390, 430, 768, 1280, 1440]) {
+    for (const width of [768, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await noPageScroll(page)).toBe(true);
-      const [rowBox, cardBox] = await Promise.all([row.boundingBox(), row.locator(".issue-card").boundingBox()]);
+      const [rowBox, cardBox] = await Promise.all([betaRow.boundingBox(), betaRow.locator(".issue-card").boundingBox()]);
       expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width + 1);
     }
   }
+  await beta.click();
+  await expect(beta).toHaveAttribute("aria-expanded", "false");
+
+  // #155: on phones (<= 650px), tapping a row opens a popup dialog showing the full card identical to card view.
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      await beta.click();
+      await expect(beta).toHaveAttribute("aria-expanded", "true");
+      await expect(betaRow.locator(".row-card")).toHaveCount(0);
+      const dialog = page.getByRole("dialog", { name: "beta task 1", exact: true });
+      await expect(dialog).toBeVisible();
+      const popupCard = dialog.locator(".issue-card:not(.row-details-card)");
+      await expect(popupCard).toBeVisible();
+      await expect(popupCard.locator(".card-repository")).toHaveText("sample/beta");
+      await expect(popupCard.getByRole("link", { name: /beta task 1/ })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
+      await expect(popupCard.locator(".label")).toHaveText(["enhancement"]);
+      expect(await noPageScroll(page)).toBe(true);
+      if (width === 320) {
+        await page.keyboard.press("Escape");
+      } else if (width === 390) {
+        await page.locator(".row-popup-backdrop").click({ position: { x: 4, y: 4 } });
+      } else {
+        await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
+      }
+      await expect(dialog).toHaveCount(0);
+      await expect(beta).toHaveAttribute("aria-expanded", "false");
+      await expect(beta).toBeFocused();
+    }
+  }
+
   // Expanded state is in-memory only.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await beta.click();
+  await expect(page.getByRole("dialog", { name: "beta task 1", exact: true })).toBeVisible();
   await page.reload();
   await expect(board.locator(".issue-row")).toHaveCount(4);
-  await expect(board.locator(".issue-row .issue-card")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(popups).toHaveLength(1);
   expect(errors).toEqual([]);
 });

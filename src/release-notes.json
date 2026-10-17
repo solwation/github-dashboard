@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "I listvy på datorn visar en expanderad rad all kortinformation direkt med öppen beskrivning, och på mobilen öppnas kortet som en popup.",
+          "en": "In list view on desktop, an expanded row shows all card details in place with the description open, while on phones the card opens in a popup."
+        },
+        "issues": [155]
+      },
+      {
+        "text": {
           "sv": "I listläget öppnar ett tryck på en rad hela kortet direkt i listan; issuenumret är en separat länk till GitHub.",
           "en": "In list mode, tapping a row expands it into the full card in place; the issue number is a separate link to GitHub."
         },

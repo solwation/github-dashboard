@@ -35,6 +35,8 @@ const props = defineProps<{
   repository?: string;
   showRepository?: boolean;
   assignedColor?: string;
+  defaultExpanded?: boolean;
+  rowDetails?: boolean;
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
@@ -126,15 +128,15 @@ const visibleLabels = computed(() =>
     ref="card"
     class="issue-card"
     :style="repository ? { '--repository-color': assignedColor || repositoryColor(repository) } : undefined"
-    :class="[col, { 'has-repository': !!repository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timedOut && col === 'progress' }]"
+    :class="[col, { 'row-details-card': rowDetails, 'has-repository': !!repository && !rowDetails, 'just-closed': celebrate && col === 'closed' && !rowDetails, 'unread-move': recentMove === true && !rowDetails, 'unread-created': recentMove === 'created' && !rowDetails, 'issue-timeout': timedOut && col === 'progress' && !rowDetails }]"
   >
-    <button v-if="recentMove" class="movement-marker" @click="emit('read')"
+    <button v-if="recentMove && !rowDetails" class="movement-marker" @click="emit('read')"
       :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')">
       {{ recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
       <span aria-hidden="true">✓</span>
     </button>
-    <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
-    <div class="card-top">
+    <span v-if="repository && showRepository && !rowDetails" class="card-repository" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
+    <div v-if="!rowDetails" class="card-top">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
           v-else
@@ -151,6 +153,7 @@ const visibleLabels = computed(() =>
       >
     </div>
     <a
+      v-if="!rowDetails"
       :href="demo ? undefined : issue.html_url"
       :aria-disabled="demo || undefined"
       target="_blank"
@@ -159,7 +162,7 @@ const visibleLabels = computed(() =>
       @click="emit('read')" @auxclick="emit('read')"
       >{{ issue.title }}<ArrowUpRight :size="13"
     /></a>
-    <div class="labels">
+    <div v-if="!rowDetails" class="labels">
       <span
         v-for="label in visibleLabels"
         :key="label.name"
@@ -170,11 +173,12 @@ const visibleLabels = computed(() =>
     </div>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" />
-    <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
+    <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
       <p>{{ t("Timeout: pågående i {duration}, över gränsen {minutes} min.", { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 }) }}</p>
     </div>
-    <div class="card-bottom">
+    <div v-if="!rowDetails || issue.assignees.length" class="card-bottom">
+      <template v-if="!rowDetails">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })">
         {{ backlogAgeLabel(issue.created_at, now, locale) }}
@@ -203,7 +207,7 @@ const visibleLabels = computed(() =>
           })
         "
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
-      ><span class="assignees"
+      ></template><span class="assignees"
         ><img
           v-for="person in issue.assignees.slice(0, 3)"
           :key="person.login"

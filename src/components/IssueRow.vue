@@ -11,8 +11,9 @@ const { t, locale } = useLanguage();
 
 /**
  * One compact list row per issue (#127): the card's markers and time label without its details.
- * Tapping the row expands it in place (#154): the parent passes the full IssueCard as the default
- * slot, which is only rendered (and so only loads data) while expanded. The state is in-memory only.
+ * On desktop/tablet (> 650px), tapping the row expands its details in place with the description
+ * already open (#154, #155). On phones (<= 650px), tapping opens a modal popup showing the full
+ * IssueCard identical to card view (#155). The state is in-memory only.
  */
 const props = defineProps<{
   issue: Issue;
@@ -30,31 +31,52 @@ const emit = defineEmits<{ read: [] }>();
 const row = ref<HTMLElement>();
 const visible = ref(false);
 const toggle = ref<HTMLButtonElement>();
+const popupClose = ref<HTMLButtonElement>();
 const expanded = ref(false);
+const isPhone = ref(typeof window !== "undefined" && window.innerWidth <= 650);
 const panelId = "issue-row-card-" + useId();
+function syncViewport() {
+  if (typeof window !== "undefined") isPhone.value = window.innerWidth <= 650;
+}
 function setExpanded(value: boolean, refocus = false) {
+  syncViewport();
   expanded.value = value;
-  if (value) emit("read");
+  if (value) {
+    emit("read");
+    if (isPhone.value) void nextTick(() => popupClose.value?.focus());
+  }
   if (refocus) void nextTick(() => toggle.value?.focus());
+}
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape" && !event.defaultPrevented && expanded.value && isPhone.value) {
+    event.preventDefault();
+    setExpanded(false, true);
+  }
 }
 /** Pointer taps anywhere on the row's empty areas toggle too; links and buttons keep their own action. */
 function rowClick(event: MouseEvent) {
   const target = event.target as Element | null;
-  if (target?.closest("a, button, .row-card")) return;
+  if (target?.closest("a, button, .row-card, .row-popup-backdrop")) return;
   setExpanded(!expanded.value);
 }
 let observer: IntersectionObserver | undefined;
 onMounted(() => {
+  syncViewport();
+  window.addEventListener("resize", syncViewport);
+  window.addEventListener("keydown", onKeydown);
   if (!("IntersectionObserver" in window)) { visible.value = true; return; }
   observer = new IntersectionObserver(([entry]) => { visible.value = Boolean(entry?.isIntersecting); });
   if (row.value) observer.observe(row.value);
 });
-onBeforeUnmount(() => observer?.disconnect());
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", syncViewport);
+  window.removeEventListener("keydown", onKeydown);
+  observer?.disconnect();
+});
 const col = computed(() => column(props.issue, props.rules));
-// The expanded card has its own clock; the row's time label is hidden meanwhile (#120).
-const now = useIssueClock(() => props.issue, () => col.value, () => visible.value && !expanded.value);
+const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
 const rank = computed(() => priority(props.issue, props.rules));
-const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, 3));
+const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, expanded.value && !isPhone.value ? 4 : 3));
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 </script>
@@ -88,7 +110,7 @@ const timeout = computed(() => props.timedOut && col.value === "progress");
       @click="setExpanded(!expanded)"
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
-    <span v-if="!expanded" class="row-meta">
+    <span class="row-meta">
       <button v-if="recentMove" type="button" class="row-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
@@ -103,7 +125,7 @@ const timeout = computed(() => props.timedOut && col.value === "progress");
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </span>
-    <span v-if="!expanded" class="row-time">
+    <span class="row-time">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ backlogAgeLabel(issue.created_at, now, locale) }}</time
@@ -116,9 +138,17 @@ const timeout = computed(() => props.timedOut && col.value === "progress");
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
       >
     </span>
-    <div v-if="expanded" :id="panelId" class="row-card">
-      <slot />
+    <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
+      <slot :in-popup="false" />
       <button type="button" class="row-close" @click="setExpanded(false, true)"><X :size="13" aria-hidden="true" />{{ t("Stäng") }}</button>
     </div>
+    <Teleport to="body">
+      <div v-if="expanded && isPhone" class="modal-backdrop row-popup-backdrop" @click.self="setExpanded(false, true)">
+        <div :id="panelId" class="row-popup" role="dialog" aria-modal="true" :aria-label="issue.title">
+          <slot :in-popup="true" />
+          <button ref="popupClose" type="button" class="row-close" @click="setExpanded(false, true)"><X :size="13" aria-hidden="true" />{{ t("Stäng") }}</button>
+        </div>
+      </div>
+    </Teleport>
   </li>
 </template>

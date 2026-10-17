@@ -1,12 +1,10 @@
 {
-  "baseCommit": "7abe3185fa7e37f0487ef50e3180d1c241d2d118",
+  "baseCommit": "2907718e013761907409f64dc2b24e9fcf3d9c8a",
   "summary": {
-    "sv": "Tryck på en rad i listläget för att se hela kortet, och översiktskorten visar fler nyckeltal längst ner.",
-    "en": "Tap a row in list mode to see the full card, and the overview cards show more key figures at the bottom."
+    "sv": "I listvyn visar expanderade rader på datorn all kortinformation med öppen beskrivning, och på mobilen öppnas kortet i en popup.",
+    "en": "In list view, expanded rows on desktop show all card details with the description open, and on phones the card opens in a popup."
   },
   "issues": [
-    151,
-    152,
-    154
+    155
   ]
 }

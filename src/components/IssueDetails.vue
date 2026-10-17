@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import { computed, ref, useId } from "vue";
+import { computed, ref, useId, watch } from "vue";
 import { ChevronDown, ChevronUp } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ body?: string | null; comments?: number; issue: Issue; demo?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const props = defineProps<{ body?: string | null; comments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: [] }>();
 function toggle() {
   expanded.value = !expanded.value;
   if (!expanded.value) return;
   emit("read");
-  if (props.body?.trim()) void markdown.load();
 }
 const markdown = useMarkdown();
 const { t } = useLanguage();
-const expanded = ref(false);
+const expanded = ref(Boolean(props.defaultExpanded));
+watch(() => props.defaultExpanded, value => { if (value) expanded.value = true; });
+watch([expanded, () => props.body], ([open, body]) => { if (open && body?.trim()) void markdown.load(); }, { immediate: true });
 const panelId = useId();
 const count = computed(() => Math.max(0, Math.floor(props.comments ?? 0)));
 const rendered = computed(() => expanded.value && markdown.renderer.value ? markdown.renderer.value(props.body) : "");

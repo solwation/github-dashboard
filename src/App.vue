@@ -1829,7 +1829,8 @@ onMounted(async () => {
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
                     @read="readIssue(lane.repo.full_name, issue)"
-                  ><IssueCard v-bind="cardProps(lane, issue)" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                    v-slot="{ inPopup }"
+                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
@@ -1935,7 +1936,8 @@ onMounted(async () => {
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
                     @read="readIssue(lane.repo.full_name, issue)"
-                  ><IssueCard v-bind="cardProps(lane, issue, true)" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                    v-slot="{ inPopup }"
+                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
