@@ -50,10 +50,10 @@
       },
       {
         "text": {
-          "sv": "Tidsetiketter uppdateras bara där det behövs, så stora tavlor med många repositories håller webbläsaren lätt och svarar snabbt.",
-          "en": "Time labels update only where needed, so large boards with many repositories keep the browser light and responsive."
+          "sv": "Stora tavlor startar snabbare från den krypterade cachen, och tidsetiketter uppdateras bara där det behövs så webbläsaren förblir lätt.",
+          "en": "Large boards start faster from the encrypted cache, and time labels update only where needed so the browser stays light."
         },
-        "issues": [120]
+        "issues": [120, 121]
       },
       {
         "text": {
