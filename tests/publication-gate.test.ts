@@ -21,6 +21,7 @@ describe("Actions publication decision", () => {
     expect(decidePublication(fixture({ openIssues: [issue(3), issue(4, ["priority: high", "enhancement"]), issue(1, ["needs-deploy"])] })).allowed).toBe(true);
     expect(decidePublication(fixture({ openIssues: [issue(3, ["in-progress"])] })).reason).toBe("queue-not-ready");
     expect(decidePublication(fixture({ openIssues: [issue(3, ["orkester: session"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["user question"]), issue(1, ["needs-deploy"])] })).allowed).toBe(true);
   });
   it.each([
     issue(1), issue(1, ["priority: high"]), issue(1, ["needs-deploy", "in-progress"]),
