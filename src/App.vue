@@ -57,7 +57,8 @@ const StatisticsView = defineAsyncComponent(() => import("./components/Statistic
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { loadSettings, saveSettings } from "./lib/settings-store";
-import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
+import { readSnapshot, writeSnapshot, SYNCED_AT_PERSIST_MS, type ContentSnapshot } from "./lib/content-cache";
+import { sameLaneContent, sameLaneList } from "./lib/lane-changes";
 import { measureRender } from "./lib/startup-timing";
 import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
@@ -217,13 +218,44 @@ const statusReserve = computed(() => [t("Hämtar…"), t("Väntar på data"),
   ...[new Date(2000, 0, 1, 8, 58), new Date(2000, 0, 1, 20, 58)].map(time => t("Uppdaterad ") + statusTime(time.getTime()))].join("\n"));
 const showingCache = ref(false);
 const cacheWarning = ref("");
-async function persistContent() {
+/** What the last successful encrypted write contained, by identity: lanes are replaced, never mutated. */
+let persisted: { run: number; token: string; user: object; repos: Repo[]; lanes: Lane[]; syncedAt: number } | null = null;
+let persistWaiting: Promise<void> | null = null;
+let persistWaitingChangedOnly = true;
+let persistTail: Promise<void> = Promise.resolve();
+/**
+ * Writes the encrypted content cache. `changedOnly` (background syncs) skips the write when the
+ * board, repositories and identity are the ones already stored and only `syncedAt` moved by less
+ * than SYNCED_AT_PERSIST_MS (#122). Calls made while a write is running coalesce into one
+ * trailing write of the then-current state.
+ */
+function persistContent(changedOnly = false): Promise<void> {
+  persistWaitingChangedOnly &&= changedOnly;
+  if (persistWaiting) return persistWaiting;
+  persistWaitingChangedOnly = changedOnly;
+  const waiting = persistTail.then(() => {
+    persistWaiting = null;
+    const onlyChanged = persistWaitingChangedOnly;
+    persistWaitingChangedOnly = true;
+    return writeContent(onlyChanged);
+  });
+  persistWaiting = waiting;
+  persistTail = waiting.catch(() => {});
+  return waiting;
+}
+async function writeContent(changedOnly: boolean) {
   if (!user.value || !sessionToken.value || !api || isDemo.value) return;
   const run = generation;
+  const state = { run, token: sessionToken.value, user: user.value, repos: repos.value,
+    lanes: lanes.value.filter(lane => !lane.loading), syncedAt: refreshed.value ?? 0 };
+  if (changedOnly && persisted && persisted.run === run && persisted.token === state.token && persisted.user === state.user &&
+    persisted.repos === state.repos && sameLaneList(persisted.lanes, state.lanes) &&
+    Math.abs(state.syncedAt - persisted.syncedAt) < SYNCED_AT_PERSIST_MS) return;
+  persisted = null;
   try {
-    await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value.filter(lane => !lane.loading),
+    await writeSnapshot(state.token, { user: state.user, repos: state.repos, lanes: state.lanes,
       syncedAt: refreshed.value, responses: api.exportResponses() });
-    if (run === generation) cacheWarning.value = "";
+    if (run === generation) { cacheWarning.value = ""; persisted = state; }
   } catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
 }
 const syncError = ref("");
@@ -845,7 +877,8 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     repositoryRequests.clear();
     repositoryRequestClient = client;
   }
-  lanes.value = selectedLanes(lanes.value, repos.value, selected.value);
+  const reconciled = selectedLanes(lanes.value, repos.value, selected.value);
+  if (!sameLaneList(reconciled, lanes.value)) lanes.value = reconciled;
   if (!selected.value.length) {
     busy.value = false;
     showingCache.value = false;
@@ -880,16 +913,21 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           if (!current() || !selected.value.includes(repo.full_name)) continue;
           lastSynced.set(repo.full_name, loaded.started);
           if (loaded.full) lastFullSynced.set(repo.full_name, loaded.started);
-          result.push(loaded.lane);
-          closureFeedback([loaded.lane]);
-          lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? loaded.lane : lane);
+          // An unchanged sync (e.g. all 304) keeps the shown lane object, so nothing re-renders or is rewritten (#122).
+          const shown = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
+          const lane = sameLaneContent(shown, loaded.lane) ? shown : loaded.lane;
+          result.push(lane);
+          closureFeedback([lane]);
+          if (lane !== shown) lanes.value = lanes.value.map(entry => entry.repo.full_name === repo.full_name ? lane : entry);
         } catch (cause) {
           if (!current() || cause instanceof RepositoryRequestCancelled) continue;
           const old = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           if (!old || !selected.value.includes(repo.full_name)) continue;
-          const failed = { ...old, loading: false, error: message(cause) };
+          const reason = message(cause);
+          // A repeated identical failure keeps the shown lane instead of rewriting the cache again.
+          const failed = !old.loading && old.error === reason ? old : { ...old, loading: false, error: reason };
           result.push(failed);
-          lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? failed : lane);
+          if (failed !== old) lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? failed : lane);
         }
       }
     }));
@@ -898,7 +936,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
         refreshed.value = Date.now();
         showingCache.value = false;
       }
-      await persistContent();
+      await persistContent(incremental);
       if (incremental && result.some(lane => lane.error)) throw new Error(result.find(lane => lane.error)!.error);
     }
   } finally {

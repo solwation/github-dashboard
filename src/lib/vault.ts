@@ -140,9 +140,7 @@ async function decryptToken(record: Credential): Promise<string> {
 }
 
 /** Cache uses the credential's non-exportable key, with an authenticated record purpose. */
-function saveEncryptedContent(token: string, purpose: string, value: unknown): Promise<void> {
-  // Snapshot now, before later reactive UI mutations or queued operations.
-  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+function saveEncryptedContent(token: string, purpose: string, plaintext: Uint8Array<ArrayBuffer>): Promise<void> {
   return serialize(async () => {
     const credential = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
     if (!credential || await decryptToken(credential) !== token) return;
@@ -180,9 +178,13 @@ function loadEncryptedContent<T>(token: string, purpose: string): Promise<T | nu
 }
 
 /** Independent encrypted records share credential binding and atomic logout cleanup. */
-export const saveContent = (token: string, value: unknown) => saveEncryptedContent(token, CONTENT, value);
+// Serialize now, before later reactive UI mutations or queued operations.
+const json = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+export const saveContent = (token: string, value: unknown) => saveEncryptedContent(token, CONTENT, json(value));
+/** UTF-8 JSON bytes the caller already serialized and measured, so nothing is serialized twice (#122). */
+export const saveEncodedContent = (token: string, plaintext: Uint8Array<ArrayBuffer>) => saveEncryptedContent(token, CONTENT, plaintext);
 export const loadContent = <T>(token: string) => loadEncryptedContent<T>(token, CONTENT);
-export const saveStatistics = (token: string, value: unknown) => saveEncryptedContent(token, "statistics", value);
+export const saveStatistics = (token: string, value: unknown) => saveEncryptedContent(token, "statistics", json(value));
 export const loadStatistics = <T>(token: string) => loadEncryptedContent<T>(token, "statistics");
 
 export function loadToken(): Promise<string | null> {
