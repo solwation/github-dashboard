@@ -106,6 +106,26 @@ describe("background statistics scheduling", () => {
     expect(delivered).toEqual(["sample/two@cache", "sample/one@new"]);
     expect(h.writes).toHaveLength(1);
   });
+  it("hands cached statistics over while collection waits for quiet input, and again after another writer refreshed them (#148)", async () => {
+    const delivered: string[] = [];
+    const entry = (fetchedAt: number) => ({ repository: "sample/one", ...statisticsWindow(fetchedAt), fetchedAt, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] }) as StatisticsData;
+    const h = harness({ cache: [entry(now - 1000)], collected: data => { delivered.push(`${data.repository}@${now - data.fetchedAt}`); } });
+    h.background.start(0);
+    h.interactions.forEach(callback => callback());
+    await h.cycle();
+    expect(h.background.lastPause).toBe("interaction");
+    expect(h.calls).toHaveLength(0);
+    expect(delivered).toEqual(["sample/one@1000"]);
+    // The Statistics view rewrites the cache; the next portion finds nothing to collect but delivers the refresh.
+    h.advance(BACKGROUND_INTERACTION_QUIET_MS);
+    await h.background.tick();
+    expect(delivered).toEqual(["sample/one@1000"]);
+    h.cache().splice(0, 1, entry(now - 10));
+    h.background.wake();
+    await h.cycle();
+    expect(delivered).toEqual(["sample/one@1000", "sample/one@10"]);
+    expect(h.calls).toHaveLength(0);
+  });
   it("collects one repository per portion, missing first, and idles once everything is fresh", async () => {
     const h = harness({ repositories: ["sample/one", "sample/two"] });
     h.background.start(0);

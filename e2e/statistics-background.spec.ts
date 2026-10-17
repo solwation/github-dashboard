@@ -88,6 +88,17 @@ test('background collection fills the cache so Statistics opens immediately with
   await expect(page.locator('.statistics-loading-splash')).toHaveCount(0);
 });
 
+test('continuous wheel scrolling on desktop does not starve background collection (#148)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const state = await signIn(page, 'fixture-background-wheel');
+  await page.mouse.move(700, 500);
+  await expect.poll(async () => {
+    for (let i = 0; i < 5; i++) { await page.mouse.wheel(0, 40); await page.clock.runFor(1000); }
+    return hasStatistics(page);
+  }, { timeout: 60000 }).toBe(true);
+  expect(state.stats.length).toBeGreaterThan(0);
+});
+
 test('background collection waits while the tab is hidden', async ({ page }) => {
   const state = await signIn(page, 'fixture-background-hidden');
   await setHidden(page, true);

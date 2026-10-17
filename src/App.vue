@@ -1250,6 +1250,8 @@ function restartStatisticsBackground() {
   }, () => undefined);
 }
 watch([sessionToken, user, isDemo], restartStatisticsBackground);
+// Statistics the view collected reach the board's work starts as soon as the board is back (#148).
+watch(currentView, (view, previous) => { if (previous === "statistics" && view !== "statistics") statisticsBackground?.wake(); });
 function handleRefreshShortcut(event: KeyboardEvent) {
   if (!loggedIn.value || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
   // Prevent document reload even while a fetch is already running.

@@ -40,8 +40,10 @@ export interface BackgroundOptions {
   modules?: () => Promise<BackgroundModules>;
   environment?: BackgroundEnvironment;
   /**
-   * Receives cached statistics (once per run) and each newly collected repository, e.g. so the
-   * board can derive closed issues' work starts from the events without requests (#141).
+   * Receives cached statistics and each newly collected repository, e.g. so the board can derive
+   * closed issues' work starts from the events without requests (#141). Cached entries are handed
+   * over on the first tick even while collection itself must wait (interaction, busy, hidden), and
+   * again whenever another writer (the Statistics view) refreshed them (#148).
    */
   collected?(data: StatisticsData): void;
 }
@@ -95,7 +97,9 @@ export function browserEnvironment(): BackgroundEnvironment {
     },
     delay(callback, ms) { const handle = window.setTimeout(callback, ms); return () => window.clearTimeout(handle); },
     onInteraction(callback) {
-      const events = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
+      // Deliberate input only: wheel events fire continuously while scrolling on desktop and would
+      // starve collection there, while a touch scroll counts once per gesture (#148).
+      const events = ["pointerdown", "keydown", "touchstart"] as const;
       for (const name of events) window.addEventListener(name, callback, { passive: true, capture: true });
       return () => { for (const name of events) window.removeEventListener(name, callback, { capture: true }); };
     },
@@ -129,6 +133,8 @@ export class StatisticsBackground {
   private working = false;
   private lastInteraction = -Infinity;
   private readonly failures = new Map<string, number>();
+  /** fetchedAt of each repository's statistics last handed to `collected`. */
+  private readonly delivered = new Map<string, number>();
   private deliveredCache = false;
   /** Exposed for tests and diagnostics. */
   lastPause: PauseReason | null = null;
@@ -142,6 +148,10 @@ export class StatisticsBackground {
     this.running = true;
     this.unsubscribe = this.environment.onInteraction(() => { this.lastInteraction = this.environment.now(); });
     this.arm(delay);
+  }
+  /** Runs the next tick soon, e.g. after the Statistics view refreshed the cache (#148). */
+  wake() {
+    if (this.running && !this.working) this.arm(0);
   }
   stop() {
     this.running = false;
@@ -174,6 +184,14 @@ export class StatisticsBackground {
   /** One portion: at most one repository, then reschedule. */
   async tick() {
     if (!this.running || this.working) return;
+    if (!this.deliveredCache && this.options.collected && this.options.allowed()) {
+      // Reading the local cache sends no request, so it does not wait for quiet input (#148).
+      this.working = true;
+      try { this.deliverCached(await (await this.modules()).read(this.options.token, this.environment.now())); }
+      catch { /* Retried with the next portion. */ }
+      finally { this.working = false; }
+      if (!this.running) return;
+    }
     const paused = this.pauseReason();
     if (paused) { this.lastPause = paused; this.arm(BACKGROUND_PAUSE_RETRY_MS); return; }
     this.working = true;
@@ -195,7 +213,7 @@ export class StatisticsBackground {
     const { token } = this.options;
     const now = this.environment.now();
     const cached = await modules.read(token, now);
-    if (!this.deliveredCache && this.running) { this.deliveredCache = true; this.deliver(cached); }
+    if (this.running) this.deliverCached(cached);
     const repository = nextBackgroundRepository(this.options.repositories(), cached, modules.window(now), now, this.failures);
     if (!repository) return "none";
     const gate = this.gatedClient();
@@ -222,8 +240,16 @@ export class StatisticsBackground {
       return "failed";
     } finally { collector.dispose(); }
   }
+  /** Hands over cached entries not yet delivered in this run, or refreshed since (#148). */
+  private deliverCached(cached: StatisticsData[]) {
+    this.deliveredCache = true;
+    this.deliver(cached.filter(entry => this.delivered.get(entry.repository) !== entry.fetchedAt));
+  }
   private deliver(entries: StatisticsData[]) {
-    for (const entry of entries) { try { this.options.collected?.(entry); } catch { /* A consumer failure never stops collection. */ } }
+    for (const entry of entries) {
+      this.delivered.set(entry.repository, entry.fetchedAt);
+      try { this.options.collected?.(entry); } catch { /* A consumer failure never stops collection. */ }
+    }
   }
   /** One request at a time, and each request first rechecks every pause condition. */
   private gatedClient() {

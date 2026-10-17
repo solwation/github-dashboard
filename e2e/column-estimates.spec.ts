@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // Column estimates (#140): median of closed issues' in-progress time, counted down by a local clock.
 // Closed fixture issues carry `startedAt` directly, the form estimates.ts reads (#141 will fill it from timelines).
@@ -7,6 +7,24 @@ const base = Date.parse('2026-10-15T10:00:00Z');
 const repos = ['estimate-fixture', 'sparse-fixture'].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: true, description: '', html_url: `https://github.com/sample/${name}`, owner: { login: 'sample' } }));
 const iso = (ms: number) => new Date(ms).toISOString();
 const noPageScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+/** Visible, unclipped estimates in the Pågående and Backlog headers at desktop, tablet and phone widths (#148). */
+async function estimatesFit(page: Page, scope: Locator, progressText: RegExp, backlogText: RegExp) {
+  for (const [width, height] of [[1440, 900], [1280, 900], [768, 1024], [390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    for (const [column, text] of [['progress', progressText], ['backlog', backlogText]] as const) {
+      const estimate = scope.locator(`.${column} .column-estimate`).first();
+      await expect(estimate, `${column} at ${width}px`).toBeVisible();
+      await expect(estimate).toHaveText(text);
+      const fits = await estimate.evaluate(element => {
+        const box = element.getBoundingClientRect(), column = element.closest('.board-column')!.getBoundingClientRect();
+        return box.width > 0 && box.left >= column.left - 0.5 && box.right <= column.right + 0.5 && element.scrollWidth <= element.clientWidth + 1;
+      });
+      expect(fits, `${column} estimate fits its column at ${width}px`).toBe(true);
+    }
+    expect(await noPageScroll(page)).toBe(true);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+}
 
 function fixture(page: Page, state: { closedActive: boolean; closedAt: number }) {
   const issue = (repo: typeof repos[number], number: number, fields: Record<string, unknown>) => ({ id: repo.id * 100 + number, number, title: `${repo.name} ${number}`, body: '', comments: 0,
@@ -66,11 +84,13 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await page.clock.fastForward(5 * minute);
   await expect(progress).toHaveText(/≈ 15 min kvar/);
   await expect(backlog).toHaveText(/≈ 1 h 15 min/);
+  await estimatesFit(page, lane, /≈ 15 min kvar/, /≈ 1 h 15 min/);
 
   // List mode keeps the header estimate.
   await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Lista', exact: true }).click();
   await expect(lane.locator('.issue-row').first()).toBeVisible();
   await expect(progress).toHaveText(/≈ 15 min kvar/);
+  await estimatesFit(page, lane, /≈ 15 min kvar/, /≈ 1 h 15 min/);
 
   // Combined board: the slowest repository with an estimate decides; the sparse repository is skipped.
   await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
@@ -80,6 +100,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await expect(board.locator('.progress .column-estimate')).toHaveAttribute('title', /Median per repository från 3 stängda ärenden i 1 repositories/);
   await expect(board.locator('.issue-row').first()).toBeVisible();
   await expect(board.locator('.backlog .column-estimate')).toHaveText(/≈ 1 h 15 min/);
+  await estimatesFit(page, board, /≈ 15 min kvar/, /≈ 1 h 15 min/);
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await noPageScroll(page)).toBe(true);
