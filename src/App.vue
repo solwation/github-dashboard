@@ -393,7 +393,8 @@ async function importScanned(payload: HandoffSettings) {
   await connect(payload.token, payload);
 }
 const commitRetry = ref(0);
-const relationsRevision = ref(0);
+// Bumped per repository so a sync only revalidates relations on that repository's cards (#149).
+const relationsRevisions = ref<Record<string, number>>({});
 const permissionReport = ref<PermissionReport>([]);
 const permissionAcknowledgements = ref<string[]>([]);
 function setPermissionAcknowledgements(value: string[]) {
@@ -549,7 +550,7 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
 }
 function closureFeedback(result: Lane[], fullSnapshot = true) {
   result = result.filter(lane => !lane.loading);
-  relationsRevision.value++;
+  relationsRevisions.value = { ...relationsRevisions.value, ...Object.fromEntries(result.map(lane => [lane.repo.full_name, (relationsRevisions.value[lane.repo.full_name] ?? 0) + 1])) };
   activity.retain(selected.value);
   activity.update(result, rules.value, Date.now(), { discoverNew: fullSnapshot, observedAt: Object.fromEntries(lastSynced) });
   activityRevision.value++;
@@ -967,7 +968,8 @@ async function refresh(incremental = false, replacePending = false, manual = fal
   const result: Lane[] = [];
   let cursor = 0;
   try {
-    if (!incremental) client.invalidateIssueRelations();
+    // A targeted refresh only drops and refetches relations for the repositories it updates (#149).
+    if (!incremental) client.invalidateIssueRelations(only);
     await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
       while (cursor < targets.length && current()) {
         const repo = targets[cursor++]!;
@@ -1830,7 +1832,7 @@ onMounted(async () => {
                   :repository="lane.repo.full_name"
                   :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                   :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
-                  :relations-revision="relationsRevision"
+                  :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
                   :rules="rules[lane.repo.full_name] || {}"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"
                   :timeout-minutes="timeoutMinutes"
@@ -1953,7 +1955,7 @@ onMounted(async () => {
                   show-repository
                   :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                   :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
-                  :relations-revision="relationsRevision"
+                  :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
                   :rules="rules[lane.repo.full_name] || {}"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"
                   :timeout-minutes="timeoutMinutes"

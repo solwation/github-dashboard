@@ -47,6 +47,16 @@ describe("native issue relations", () => {
     const refreshed = cache.get("owner/repo", issue()); complete(null); await refreshed;
     expect(fetch).toHaveBeenCalledTimes(4);
   });
+  it("clears only the named repositories so a targeted refresh keeps other repositories' relations (#149)", async () => {
+    const fetch = vi.fn(async () => null);
+    const cache = new IssueRelationsCache(fetch);
+    await cache.get("owner/one", issue()); await cache.get("owner/two", issue());
+    expect(fetch).toHaveBeenCalledTimes(2);
+    cache.clear(["owner/one"]);
+    await cache.get("owner/one", issue()); await cache.get("owner/two", issue());
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch).toHaveBeenLastCalledWith("owner/one", 1);
+  });
   it("limits relationship requests across repositories to three and releases slots after failures", async () => {
     let active = 0, maximum = 0;
     const pending: (() => void)[] = [];

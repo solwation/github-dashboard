@@ -105,7 +105,7 @@ export class GitHub {
     return parseIssueRelations(response.data);
   });
   issueRelations(repository: string, issue: Issue) { return this.relations.get(repository, issue); }
-  invalidateIssueRelations() { this.relations.clear(); }
+  invalidateIssueRelations(repositories?: readonly string[]) { this.relations.clear(repositories); }
   constructor(private token: string) {}
   exportResponses() {
     return [...this.responses.entries()].slice(-100);

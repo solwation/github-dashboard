@@ -49,7 +49,11 @@ export class IssueRelationsCache {
   private active = 0;
   private waiting: (() => void)[] = [];
   constructor(private fetchRelations: (repository: string, number: number) => Promise<IssueRelations | null>) {}
-  clear() { this.entries.clear(); }
+  /** Drops cached relations, only for the given repositories when named (#149). */
+  clear(repositories?: readonly string[]) {
+    if (!repositories) { this.entries.clear(); return; }
+    for (const key of [...this.entries.keys()]) if (repositories.includes(JSON.parse(key)[0])) this.entries.delete(key);
+  }
   get(repository: string, issue: { id: number; number: number; updated_at: string; sub_issues_summary?: unknown }) {
     const key = JSON.stringify([repository, issue.id, issue.number, issue.updated_at, issue.sub_issues_summary]);
     const previous = this.entries.get(key);

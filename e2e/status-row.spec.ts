@@ -19,6 +19,7 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
   let gate: Promise<void> | undefined;
   let release = () => {};
   const requests: Record<string, number> = { alpha: 0, beta: 0 };
+  const relations: Record<string, number> = { alpha: 0, beta: 0 };
   const repos = ["alpha", "beta"].map((name, index) => ({
     id: index + 1, name, full_name: `sample/${name}`, private: false, description: "A repository with a fairly long description text",
     html_url: `https://github.com/sample/${name}`, owner: { login: "sample" },
@@ -28,6 +29,10 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
     let data: unknown = [];
     if (url.pathname === "/user") data = { login: "status-row-fixture", avatar_url: "" };
     if (url.pathname === "/user/repos") data = repos;
+    if (url.pathname === "/graphql") {
+      const name = (route.request().postDataJSON() as { variables?: { name?: string } }).variables?.name;
+      if (name && name in relations) relations[name]!++;
+    }
     const repo = repos.find(repo => url.pathname === `/repos/${repo.full_name}/issues`);
     if (repo && url.searchParams.get("state") === "open") {
       requests[repo.name]!++;
@@ -52,6 +57,7 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
     pause: () => { gate = new Promise(resolve => { release = resolve; }); },
     release: () => { gate = undefined; release(); },
     requests: () => ({ ...requests }),
+    relations: () => ({ ...relations }),
   };
 }
 
@@ -195,9 +201,14 @@ test("the header status refreshes its repository on click and keyboard, ignoring
   await page.keyboard.press("Enter");
   expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta });
   await expect(beta.locator(".lane-sync")).toHaveText(copy.sv.updated);
+  const relationsBefore = api.relations();
   api.release();
   await expect(alphaSpinner).toHaveCount(0);
   await expect(alphaStatus).toHaveText(copy.sv.updated);
+  // A targeted refresh revalidates relations only for the clicked repository's cards (#149).
+  await expect.poll(() => api.relations().alpha).toBeGreaterThan(relationsBefore.alpha);
+  await page.waitForTimeout(500);
+  expect(api.relations().beta).toBe(relationsBefore.beta);
   await expect(alphaStatus).toBeFocused();
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
   expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta });
