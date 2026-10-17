@@ -1,12 +1,10 @@
 {
-  "baseCommit": "f9c2a65f18c6f169ef769605df58182aeb669594",
+  "baseCommit": "dc98af7701e8b5861d9e72ceda5d4279b7c640ed",
   "summary": {
-    "sv": "Toppfältet ligger kvar vid scroll på mobilen, varje repository visar sin uppdateringstid och växeln Kort/Lista gäller hela tavlan.",
-    "en": "The top bar stays pinned on phones, each repository shows its update time, and one Cards/List switch covers the whole board."
+    "sv": "Tidsuppskattningen i kolumnrubrikerna visas nu även på datorn.",
+    "en": "Column time estimates now appear on desktop too."
   },
   "issues": [
-    145,
-    146,
-    147
+    148
   ]
 }

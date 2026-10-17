@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Tidsuppskattningen i kolumnrubrikerna visas även på datorn, eftersom bakgrundsstatistiken inte längre pausas av scrollning och sparad statistik används direkt.",
+          "en": "Column time estimates now appear on desktop too, since background statistics no longer pause while scrolling and cached statistics are used right away."
+        },
+        "issues": [148]
+      },
+      {
+        "text": {
           "sv": "På mobilen ligger toppfältet och verktygsraden kvar överst vid scroll, och innehållet syns inte bakom statusfältet i installerad app.",
           "en": "On phones the top bar and toolbar stay pinned while scrolling, and content no longer shows behind the status bar in the installed app."
         },
