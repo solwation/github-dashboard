@@ -22,6 +22,13 @@
       },
       {
         "text": {
+          "sv": "Den gemensamma boarden filtreras bara av huvudsökfältet; sökningar per repository gäller i uppdelad vy och behåller sina värden.",
+          "en": "The combined board filters only by the main search; per-repository searches apply in the split view and keep their values."
+        },
+        "issues": [132]
+      },
+      {
+        "text": {
           "sv": "En länk eller QR-kod för ett annat konto byter inte inloggning utan bekräftelse, och ogiltiga länkar visar ett översatt fel över din sparade tavla.",
           "en": "A link or QR code for another account never switches sign-in without confirmation, and invalid links show a translated error over your saved board."
         },
