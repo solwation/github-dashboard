@@ -2,8 +2,8 @@
 import IssueRelationsView from "./IssueRelations.vue";
 import type { IssueRelations } from "../lib/issue-relations";
 import IssueDetails from "./IssueDetails.vue";
-import { backlogAgeLabel, closedTimeLabel, RECENT_CLOSURE_MS } from "../lib/time";
-import { untilNext, useNow } from "../composables/useNow";
+import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
+import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
@@ -114,17 +114,8 @@ onBeforeUnmount(() => {
   observer?.disconnect();
 });
 const col = computed(() => column(props.issue, props.rules));
-// The card's own clock ticks per second only while its label shows seconds, otherwise at the next label change,
-// and only while the card is on screen.
-const now = useNow((at) => {
-  const { created_at, startedAt, closed_at } = props.issue;
-  const elapsed = at - Date.parse((col.value === "backlog" ? created_at : col.value === "progress" ? startedAt : closed_at) || "");
-  if (!Number.isFinite(elapsed)) return Infinity;
-  if (elapsed < 0) return -elapsed;
-  if (elapsed < 60000 || (col.value === "progress" && elapsed < 3600000)) return 1000;
-  if (col.value === "closed") return elapsed < RECENT_CLOSURE_MS ? untilNext(elapsed, 60000) : Infinity;
-  return untilNext(elapsed, col.value === "progress" || elapsed < 3600000 ? 60000 : 3600000);
-}, { board: true, active: () => visible.value });
+// The card's own clock: per second only while its label shows seconds, and only while on screen (#120).
+const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
 const rank = computed(() => priority(props.issue, props.rules));
 const visibleLabels = computed(() =>
   props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, 4),

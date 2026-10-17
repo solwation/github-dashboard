@@ -32,6 +32,10 @@ export interface HandoffPreferences {
   repoQuery?: string;
   hideCoordination?: boolean;
   splitByRepository?: boolean;
+  /** Split-view repositories shown as compact lists instead of cards (#127). */
+  listRepos?: string[];
+  /** The combined board's shared card/list choice (#127). */
+  combinedList?: boolean;
   timeoutMinutes?: number;
   currentView?: "overview" | "statistics";
   statistics?: HandoffStatisticsPreferences;
@@ -66,6 +70,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   query: text, repositoryQueries: value => repoMap(value, text), repoQuery: text,
   hideCoordination: value => typeof value === "boolean",
   splitByRepository: value => typeof value === "boolean",
+  listRepos: handoffRepositoryList, combinedList: value => typeof value === "boolean",
   timeoutMinutes: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 1 && value <= 10080,
   currentView: value => value === "overview" || value === "statistics",
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
@@ -104,7 +109,7 @@ export function mergeHandoffPreferences(
     selected: list(incoming.selected), rules: map(incoming.rules),
   };
   if (merged.projectOrder) merged.projectOrder = reconcileOrder(list(merged.projectOrder), accessibleNames);
-  for (const key of ["collapsedRepos", "notificationRepos"] as const) if (merged[key]) merged[key] = list(merged[key]);
+  for (const key of ["collapsedRepos", "notificationRepos", "listRepos"] as const) if (merged[key]) merged[key] = list(merged[key]);
   if (merged.repositoryColumnLimits) merged.repositoryColumnLimits = map(merged.repositoryColumnLimits);
   if (merged.repositoryQueries) merged.repositoryQueries = map(merged.repositoryQueries);
   if (merged.statistics) merged.statistics = map(merged.statistics);
