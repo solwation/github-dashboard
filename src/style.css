@@ -1768,10 +1768,27 @@ button.lane-sync:focus-visible::after {
 .row-repository span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-repository i { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
 .row-number { font-size: 10px; font-variant-numeric: tabular-nums; }
-.row-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; line-height: 1.5; }
-.row-title svg { margin: 0 0 -2px 4px; color: #a1aeaf; opacity: 0; }
-.row-title:hover svg, .row-title:focus-visible svg { opacity: 1; }
-.row-title:focus-visible { outline-offset: -1px; }
+.issue-row { cursor: pointer; }
+.row-number { display: inline-flex; align-items: center; gap: 2px; justify-self: start; color: inherit; text-decoration: underline; text-decoration-color: #c3cdd0; text-underline-offset: 2px; cursor: pointer; }
+.row-number svg { flex-shrink: 0; color: #a1aeaf; }
+.row-number:hover, .row-number:focus-visible { text-decoration-color: currentColor; }
+.row-number:focus-visible { outline: 2px solid #147d69; outline-offset: 1px; border-radius: 3px; }
+/* #154: the title is the row's disclosure button; it expands the full card in place. */
+.row-title { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 550; line-height: 1.5; text-align: left; cursor: pointer; }
+.row-title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-chevron { flex-shrink: 0; color: #a1aeaf; opacity: 0; transition: transform .15s; }
+.issue-row:hover .row-chevron, .row-title:focus-visible .row-chevron, .issue-row.expanded .row-chevron { opacity: 1; }
+.issue-row.expanded .row-chevron { transform: rotate(180deg); }
+.row-title:focus-visible { outline: 2px solid #147d69; outline-offset: 1px; border-radius: 3px; }
+.issue-row.expanded { border-color: #b4c9c1; }
+@media (min-width: 951px) {
+  .issue-row.expanded { grid-template-columns: 3.4rem minmax(0, 1fr); }
+  .issue-row.expanded.has-repository { grid-template-columns: minmax(7rem, .55fr) 3.4rem minmax(0, 1fr); }
+}
+.row-card { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; min-width: 0; cursor: auto; }
+.row-card > .issue-card { margin: 0; }
+.row-close { display: inline-flex; align-items: center; align-self: flex-end; gap: 4px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer; }
+.row-close:hover { border-color: #b4c9c1; }
 .row-meta { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
 .row-meta .label { flex-shrink: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
@@ -1794,7 +1811,7 @@ button.lane-sync:focus-visible::after {
   100% { border-color: #edf0f2; background: var(--surface); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .issue-row { transition: none; }
+  .issue-row, .row-chevron { transition: none; }
   .issue-row.just-closed { animation: none; border-color: #49ab86; background: #e9f8ef; }
 }
 /* Narrow content: number, title and time on the first line; status and labels below. */
@@ -1803,7 +1820,10 @@ button.lane-sync:focus-visible::after {
   .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title time" "meta meta meta"; }
   .row-repository { grid-area: repo; }
   .row-number { grid-area: number; }
-  .row-title { grid-area: title; display: -webkit-box; white-space: normal; overflow-wrap: anywhere; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .row-title { grid-area: title; }
+  .row-title-text { display: -webkit-box; white-space: normal; overflow-wrap: anywhere; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .issue-row.expanded, .issue-row.expanded.has-repository { grid-template-areas: "number title title"; }
+  .issue-row.expanded.has-repository { grid-template-areas: "repo repo repo" "number title title"; }
   .row-meta { grid-area: meta; }
   .row-time { grid-area: time; }
 }
@@ -1815,6 +1835,8 @@ button.lane-sync:focus-visible::after {
   /* Phones: the time label moves beside the status line so the title keeps the width. */
   .issue-row, .issue-row.has-repository { grid-template-areas: "number title title" "meta meta time"; }
   .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title title" "meta meta time"; }
+  .issue-row.expanded, .issue-row.expanded.has-repository { grid-template-areas: "number title title"; }
+  .issue-row.expanded.has-repository { grid-template-areas: "repo repo repo" "number title title"; }
 }
 
 /* Dark theme. theme.ts (and index.html before first paint) sets data-theme on <html>
@@ -2018,7 +2040,10 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .issue-row.progress { box-shadow: inset 2px 0 0 #b8954f; }
 :root[data-theme="dark"] .row-repository { border-color: color-mix(in srgb, var(--repository-color) 55%, var(--card)); background: color-mix(in srgb, var(--repository-color) 22%, var(--card)); color: var(--text); }
 :root[data-theme="dark"] .row-repository i { background-color: color-mix(in srgb, var(--repository-color) 75%, white); }
-:root[data-theme="dark"] .row-title svg { color: var(--muted); }
+:root[data-theme="dark"] .row-chevron, :root[data-theme="dark"] .row-number svg { color: var(--muted); }
+:root[data-theme="dark"] .row-number { text-decoration-color: #4f6d66; }
+:root[data-theme="dark"] .issue-row.expanded { border-color: #4f6d66; }
+:root[data-theme="dark"] .row-close { background: var(--card); border-color: #30424a; }
 :root[data-theme="dark"] .row-status { background: var(--hover); color: var(--muted); }
 :root[data-theme="dark"] .row-status.progress { background: var(--tint-amber); color: var(--accent-amber); }
 :root[data-theme="dark"] .row-status.closed { background: var(--tint-green); color: var(--accent-green); }

@@ -134,14 +134,16 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
   await toggle.getByRole("button", { name: "Lista", exact: true }).click();
   await expect(alpha.locator(".issue-row")).toHaveCount(3);
   await expect(beta.locator(".issue-row")).toHaveCount(3);
-  const slow = alpha.locator(".issue-row").filter({ has: page.getByRole("link", { name: "alpha slow work" }) });
+  const slow = alpha.locator(".issue-row").filter({ has: page.getByRole("button", { name: "alpha slow work" }) });
   await expect(slow).toHaveClass(/issue-timeout/);
   await expect(slow.locator(".row-timeout")).toHaveAttribute("title", /över gränsen 30 min/);
-  await expect(slow.getByRole("link", { name: "alpha slow work" })).toHaveAttribute("href", "https://github.com/sample/alpha/issues/2");
+  // #154: the title expands the row; the number is the separate GitHub link.
+  await expect(slow.getByRole("button", { name: "alpha slow work" })).toHaveAttribute("aria-expanded", "false");
+  await expect(slow.getByRole("link", { name: "Öppna #2 på GitHub", exact: true })).toHaveAttribute("href", "https://github.com/sample/alpha/issues/2");
 
   moved = true; updated = new Date().toISOString();
   await page.keyboard.press("Control+r");
-  const waiting = alpha.locator(".issue-row").filter({ has: page.getByRole("link", { name: "alpha waiting work" }) });
+  const waiting = alpha.locator(".issue-row").filter({ has: page.getByRole("button", { name: "alpha waiting work" }) });
   await expect(waiting).toHaveClass(/unread-move/);
   const marker = waiting.getByRole("button", { name: "Nyligen flyttad. Markera som läst", exact: true });
   await expect(marker).toContainText("Flyttad");

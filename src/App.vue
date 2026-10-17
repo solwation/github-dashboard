@@ -452,6 +452,18 @@ function scheduleActivity() {
   if (next !== null) activityTimer = setTimeout(() => { activityNow.value = Date.now(); scheduleActivity(); }, next - activityNow.value + 10);
 }
 watch(activityRevision, () => { activityNow.value = Date.now(); scheduleActivity(); });
+/** One set of card props for the card view and expanded list rows (#154). */
+function cardProps(lane: Lane, issue: Issue, showRepository = false) {
+  const repo = lane.repo.full_name, load = isDemo.value ? undefined : loaders(repo);
+  return {
+    issue, repository: repo, showRepository, assignedColor: workspaceRepositoryColors.value[repo],
+    loadRelations: load?.relations, relationsRevision: relationsRevisions.value[repo] ?? 0,
+    rules: rules.value[repo] || {}, timedOut: issueTimedOut(repo, issue), timeoutMinutes: timeoutMinutes.value,
+    loadCommit: load?.commit, demo: isDemo.value, loadComments: load?.comments, commentsSession: generation,
+    commitRetry: commitRetry.value, recentMove: activity.moved(repo, issue, activityNow.value),
+    celebrate: recentClosures.value.has(closureKey(repo, issue)),
+  };
+}
 function readIssue(repo: string, issue: Issue) {
   activity.read(repo, issue);
   activityRevision.value++;
@@ -1817,35 +1829,14 @@ onMounted(async () => {
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
                     @read="readIssue(lane.repo.full_name, issue)"
-                  />
+                  ><IssueCard v-bind="cardProps(lane, issue)" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
-                  v-for="issue in items(lane, col.key).slice(
-                    0,
-                    shownLimit(lane.repo.full_name, col.key),
-                  )"
-                  :key="
-                    boardEntryKey({ lane, issue }, col.key)
-                  "
-                  :issue="issue"
-                  :repository="lane.repo.full_name"
-                  :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
-                  :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
-                  :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
-                  :rules="rules[lane.repo.full_name] || {}"
-                  :timed-out="issueTimedOut(lane.repo.full_name, issue)"
-                  :timeout-minutes="timeoutMinutes"
-                  :load-commit="isDemo ? undefined : loaders(lane.repo.full_name)?.commit"
-                  :demo="isDemo"
-                  :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
-                  :comments-session="generation"
-                  :commit-retry="commitRetry"
-                  :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
+                  v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
+                  :key="boardEntryKey({ lane, issue }, col.key)"
+                  v-bind="cardProps(lane, issue)"
                   @read="readIssue(lane.repo.full_name, issue)"
-                  :celebrate="
-                    recentClosures.has(closureKey(lane.repo.full_name, issue))
-                  "
                 />
                 </template>
                 <div v-if="!items(lane, col.key).length" class="column-empty">
@@ -1944,31 +1935,14 @@ onMounted(async () => {
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
                     @read="readIssue(lane.repo.full_name, issue)"
-                  />
+                  ><IssueCard v-bind="cardProps(lane, issue, true)" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
                   v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
-                  :issue="issue"
-                  :repository="lane.repo.full_name"
-                  show-repository
-                  :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
-                  :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
-                  :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
-                  :rules="rules[lane.repo.full_name] || {}"
-                  :timed-out="issueTimedOut(lane.repo.full_name, issue)"
-                  :timeout-minutes="timeoutMinutes"
-                  :load-commit="isDemo ? undefined : loaders(lane.repo.full_name)?.commit"
-                  :demo="isDemo"
-                  :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
-                  :comments-session="generation"
-                  :commit-retry="commitRetry"
-                  :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
+                  v-bind="cardProps(lane, issue, true)"
                   @read="readIssue(lane.repo.full_name, issue)"
-                  :celebrate="
-                    recentClosures.has(closureKey(lane.repo.full_name, issue))
-                  "
                 />
                 </template>
                 <div v-if="!combinedColumns[col.key]!.length && !orderedLanes.some(lane => lane.loading || lane.error)" class="column-empty">

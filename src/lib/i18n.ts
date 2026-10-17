@@ -244,6 +244,7 @@ export const english: Record<string, string> = {
     "Could not check the update. Try again.",
   "Hämtar stängande commit…": "Loading closing commit…",
   "Mergad PR #{number}": "Merged PR #{number}",
+  "Öppna #{number} på GitHub": "Open #{number} on GitHub",
   "Stängande commit": "Closing commit",
   "Ändrade rader": "Changed lines",
   "Ingen stängande commit kopplad": "No closing commit linked",
