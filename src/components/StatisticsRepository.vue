@@ -4,7 +4,7 @@ import { BarChart3, RefreshCw } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { normalizeStatisticsPreference } from "../lib/statistics-preferences";
-import { statisticsDimensions, statisticsMetrics, summarizeStatistics, type StatisticsData, type StatisticsMetric, type StatisticsPreference } from "../lib/statistics";
+import { statisticsDimensions, statisticsMetrics, summarizeStatistics, type StatisticsData, type StatisticsFilter, type StatisticsMetric, type StatisticsPreference } from "../lib/statistics";
 import StatisticsChart from "./StatisticsChart.vue";
 const { t, locale } = useLanguage();
 const props = defineProps<{ repository: Repo; data: StatisticsData | null; loading: boolean; loadFailed: boolean; period: { from: string; to: string }; preference?: StatisticsPreference }>();
@@ -17,7 +17,14 @@ const metricNames: Record<StatisticsMetric, string> = {
 };
 const datasets = computed(() => props.data ? [props.data] : []);
 const dimensions = computed(() => statisticsDimensions(datasets.value));
-const summary = computed(() => summarizeStatistics(datasets.value, state.value));
+// summary and normalize() usually ask for the same data and filter; compute it once.
+let cachedSummary: { data: StatisticsData[]; key: string; result: ReturnType<typeof summarizeStatistics> } | null = null;
+function summarize(filter: StatisticsFilter) {
+  const data = datasets.value, key = JSON.stringify([filter.from, filter.to, filter.label, filter.contributor]);
+  if (cachedSummary?.data !== data || cachedSummary.key !== key) cachedSummary = { data, key, result: summarizeStatistics(data, filter) };
+  return cachedSummary.result;
+}
+const summary = computed(() => summarize(state.value));
 const availableMetrics = computed(() => statisticsMetrics.filter(key => summary.value.totals[key] !== undefined));
 const anyData = computed(() => availableMetrics.value.length > 0);
 const temporary = computed(() => props.loadFailed || !!props.data?.temporary.length);
@@ -33,7 +40,7 @@ function normalize(value: StatisticsPreference | undefined) {
   const choices = props.data ? dimensions.value : undefined;
   const normalized = normalizeStatisticsPreference(value, props.period, choices);
   if (props.data) {
-    const totals = summarizeStatistics(datasets.value, normalized).totals;
+    const totals = summarize(normalized).totals;
     const metrics = statisticsMetrics.filter(key => totals[key] !== undefined);
     return normalizeStatisticsPreference(normalized, props.period, { ...dimensions.value, metrics });
   }

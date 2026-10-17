@@ -51,7 +51,12 @@ export function statisticsWindow(now = Date.now()) {
 }
 export function commitDate(commit: StatisticsCommit) { return commit.commit.committer?.date || commit.commit.author?.date || ""; }
 export function commitContributor(commit: StatisticsCommit) { return commit.author?.login || commit.commit.author?.name || ""; }
-function dayOf(date: string) {
+// GitHub timestamps are normally UTC (`YYYY-MM-DDTHH:MM:SSZ`, optionally with
+// fractional seconds); their UTC day is the prefix. Offsets and other formats
+// still go through Date.parse so they map to the correct UTC calendar day.
+const utcTimestamp = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?Z$/;
+export function dayOf(date: string) {
+  if (utcTimestamp.test(date)) return date.slice(0, 10);
   const parsed = Date.parse(date);
   return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : "";
 }
@@ -92,8 +97,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     complete[metric] = (complete[metric] ?? true) && isComplete;
     for (const day of days) day.values[metric] ??= 0;
   }
-  function add(metric: StatisticsMetric, date: string, value = 1) {
-    const values = byDate.get(dayOf(date));
+  function add(metric: StatisticsMetric, values: StatisticsValues | undefined, value = 1) {
     if (values && values[metric] !== undefined) values[metric]! += value;
   }
   for (const snapshot of data) {
@@ -101,8 +105,9 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       enable("created", snapshot.issues.complete);
       for (const issue of snapshot.issues.data) {
         if (!labelMatches(issue) || !personMatches(issue.user?.login)) continue;
-        add("created", issue.created_at);
-        if (byDate.has(dayOf(issue.created_at))) for (const label of issue.labels) labels.set(label.name, (labels.get(label.name) || 0) + 1);
+        const values = byDate.get(dayOf(issue.created_at));
+        add("created", values);
+        if (values) for (const label of issue.labels) labels.set(label.name, (labels.get(label.name) || 0) + 1);
       }
     }
     if (snapshot.events) {
@@ -110,8 +115,9 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       for (const event of snapshot.events.data) {
         if (!event.issue || event.issue.pull_request || !labelMatches(event.issue) || !personMatches(event.actor?.login)) continue;
         if (event.event !== "closed" && event.event !== "reopened") continue;
-        add(event.event, event.created_at);
-        if (event.event === "closed" && byDate.has(dayOf(event.created_at))) {
+        const values = byDate.get(dayOf(event.created_at));
+        add(event.event, values);
+        if (event.event === "closed" && values) {
           const age = Date.parse(event.created_at) - Date.parse(event.issue.created_at);
           if (Number.isFinite(age) && age >= 0) closures.push(age / 86400000);
         }
@@ -123,8 +129,9 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       for (const commit of snapshot.commits.data) {
         const author = commitContributor(commit);
         if (!personMatches(author)) continue;
-        add("commits", commitDate(commit));
-        if (!byDate.has(dayOf(commitDate(commit)))) continue;
+        const values = byDate.get(dayOf(commitDate(commit)));
+        add("commits", values);
+        if (!values) continue;
         const existing = contributors.get(author) || { name: author, commits: 0, additions: snapshot.changes ? 0 : null, deletions: snapshot.changes ? 0 : null };
         existing.commits++;
         contributors.set(author, existing);
@@ -136,21 +143,21 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       enable("files", snapshot.changes.complete && snapshot.changes.data.every(change => change.filesComplete));
       for (const change of snapshot.changes.data) {
         if (!personMatches(change.contributor)) continue;
-        add("additions", change.date, change.additions); add("deletions", change.date, change.deletions);
-        add("netLines", change.date, change.additions - change.deletions); add("files", change.date, change.files);
-        if (byDate.has(dayOf(change.date))) {
-          const contributor = contributors.get(change.contributor);
-          if (contributor) { contributor.additions = (contributor.additions || 0) + change.additions; contributor.deletions = (contributor.deletions || 0) + change.deletions; }
-        }
+        const values = byDate.get(dayOf(change.date));
+        if (!values) continue;
+        add("additions", values, change.additions); add("deletions", values, change.deletions);
+        add("netLines", values, change.additions - change.deletions); add("files", values, change.files);
+        const contributor = contributors.get(change.contributor);
+        if (contributor) { contributor.additions = (contributor.additions || 0) + change.additions; contributor.deletions = (contributor.deletions || 0) + change.deletions; }
       }
     }
     if (snapshot.pulls) {
       for (const metric of ["prsOpened", "prsMerged", "prsClosed"] as const) enable(metric, snapshot.pulls.complete);
       for (const pull of snapshot.pulls.data) {
         if (!labelMatches(pull) || !personMatches(pull.user?.login)) continue;
-        add("prsOpened", pull.created_at);
-        if (pull.merged_at) add("prsMerged", pull.merged_at);
-        if (pull.closed_at && !pull.merged_at) add("prsClosed", pull.closed_at);
+        add("prsOpened", byDate.get(dayOf(pull.created_at)));
+        if (pull.merged_at) add("prsMerged", byDate.get(dayOf(pull.merged_at)));
+        else if (pull.closed_at) add("prsClosed", byDate.get(dayOf(pull.closed_at)));
       }
     }
   }
