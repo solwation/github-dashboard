@@ -1,10 +1,11 @@
 {
   "baseCommit": "dc98af7701e8b5861d9e72ceda5d4279b7c640ed",
   "summary": {
-    "sv": "Tidsuppskattningen i kolumnrubrikerna visas nu även på datorn.",
-    "en": "Column time estimates now appear on desktop too."
+    "sv": "Tidsuppskattningen syns även på datorn, och rubrikerna visar bara tid eller snurra – klicka för att uppdatera direkt.",
+    "en": "Time estimates now show on desktop, and headers show only the time or a spinner – click to update immediately."
   },
   "issues": [
-    148
+    148,
+    149
   ]
 }

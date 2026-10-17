@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Repository- och boardrubriker visar bara tid eller en snurra uppe till höger; klicka på tiden för att uppdatera direkt.",
+          "en": "Repository and board headers show only the time or a spinner at top right; click the time to update immediately."
+        },
+        "issues": [149]
+      },
+      {
+        "text": {
           "sv": "Tidsuppskattningen i kolumnrubrikerna visas även på datorn, eftersom bakgrundsstatistiken inte längre pausas av scrollning och sparad statistik används direkt.",
           "en": "Column time estimates now appear on desktop too, since background statistics no longer pause while scrolling and cached statistics are used right away."
         },
