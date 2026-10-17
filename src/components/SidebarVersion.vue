@@ -28,7 +28,11 @@ defineExpose({ focusBadge });
       </button>
     </div>
     <p class="sidebar-version-build"><BuildInfo /></p>
-    <p class="sidebar-version-status" role="status">{{ available ? t("Uppdatering tillgänglig") : checking ? t("Kontrollerar version…") : checked ? t("Senaste versionen") : t("Versionen är inte kontrollerad") }}</p>
+    <p class="sidebar-version-status" :class="available ? 'is-update' : checking ? 'is-checking' : checked ? 'is-current' : 'is-unchecked'" role="status">
+      <svg v-if="available" class="sidebar-version-icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="5" fill="currentColor" /></svg>
+      <svg v-else-if="!checking && checked" class="sidebar-version-icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <span>{{ available ? t("Uppdatering tillgänglig") : checking ? t("Kontrollerar version…") : checked ? t("Senaste versionen") : t("Versionen är inte kontrollerad") }}</span>
+    </p>
     <button type="button" class="sidebar-version-notes" @click="emit('release-notes')">{{ t("Versionsnyheter") }}</button>
   </section>
 </template>
@@ -45,7 +49,11 @@ defineExpose({ focusBadge });
 .sidebar-version-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
 .sidebar-version-caption { font-size: 10px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: #909b9f; }
 .sidebar-version-build { margin: 4px 0 8px; font-size: 11px; color: var(--muted); }
-.sidebar-version-status { margin: 0 0 6px; overflow-wrap: anywhere; }
+.sidebar-version-status { display: flex; align-items: center; gap: 5px; margin: 0 0 6px; overflow-wrap: anywhere; }
+.sidebar-version-icon { flex-shrink: 0; }
+.sidebar-version-status.is-current { color: var(--green); font-weight: 600; }
+.sidebar-version-status.is-update { color: #b91c1c; font-weight: 600; }
+:root[data-theme="dark"] .sidebar-version-status.is-update { color: var(--accent-red); }
 .sidebar-version-notes {
   border: 0; background: transparent; padding: 4px 0; min-height: 24px;
   color: var(--green); font: inherit; font-weight: 600; cursor: pointer; text-align: left;

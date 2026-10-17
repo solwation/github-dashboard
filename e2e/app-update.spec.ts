@@ -173,6 +173,37 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
   await expectBuild(page, commits[1]!);
 });
 
+function versionStatus(page: Page) {
+  return page.getByRole("region", { name: "Version", exact: true }).getByRole("status");
+}
+test("the sidebar confirms the latest version on first visit, hard reload and after updating", async ({ page }) => {
+  test.setTimeout(90_000);
+  version = 0;
+  failCleanup = false;
+  failInstall = false;
+  // First visit: checked before and after the installing worker claims this tab.
+  await page.goto(base);
+  await expect(versionStatus(page)).toHaveText("Senaste versionen");
+  await expect(versionStatus(page).locator("svg[aria-hidden=true]")).toHaveCount(1);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await expect(versionStatus(page)).toHaveText("Senaste versionen");
+  // A hard reload bypasses the worker, so this page never gets a controller.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Page.reload", { ignoreCache: true });
+  await expectBuild(page, commits[0]!);
+  expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(false);
+  await expect(versionStatus(page)).toHaveText("Senaste versionen");
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  version = 1;
+  await discover(page);
+  await expect(versionStatus(page)).toHaveText("Uppdatering tillgänglig");
+  await page.getByRole("button", { name: /^Uppdatera nu(?: \(\d+\))?$/ }).click();
+  await expectBuild(page, commits[1]!);
+  await expect(versionStatus(page)).toHaveText("Senaste versionen");
+});
+
 test("real worker takeover survives cleanup failure across existing tabs and retains saved settings", async ({ page, context }) => {
   test.setTimeout(90_000);
   version = 0;

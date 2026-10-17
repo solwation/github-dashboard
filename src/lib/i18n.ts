@@ -56,7 +56,7 @@ export const english: Record<string, string> = {
   "Uppdatera nu ({seconds})": "Update now ({seconds})",
   "Uppdatering tillgänglig": "Update available",
   "Kontrollerar version…": "Checking version…",
-  "Senaste versionen": "Latest version",
+  "Senaste versionen": "Up to date",
   "Versionen är inte kontrollerad": "Version not checked",
   "Hämtar issues för {name}…": "Fetching issues for {name}…",
   "Skanna QR-kod från annan enhet": "Scan QR code from another device",
