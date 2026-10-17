@@ -151,7 +151,7 @@ onUnmounted(() => {
       {{ t("Koden accepteras i {seconds} sekunder till.", { seconds }) }}
     </p>
     <p class="handoff-note">
-      {{ t("Notifikationsval följer med, men kamera, ljud och webbläsarens notifikationsbehörighet gäller lokalt. Läsmarkeringar och kvitterade timeoutvarningar stannar på mottagande enhet.") }}
+      {{ t("Notifikationsval följer med, men kamera, ljud och webbläsarens notifikationsbehörighet gäller lokalt. Läsmarkeringar stannar på mottagande enhet.") }}
     </p>
     <p class="handoff-note">
       {{

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TIMEOUT_MINUTES, parseTimeoutAcknowledgements, parseTimeoutMinutes, TimeoutTracker } from '../src/lib/timeouts';
+import { DEFAULT_TIMEOUT_MINUTES, parseTimeoutMinutes, TimeoutTracker } from '../src/lib/timeouts';
 import type { Issue, Lane } from '../src/lib/model';
 const start = '2026-10-16T10:00:00Z';
 const now = Date.parse(start) + 31 * 60000;
@@ -24,29 +24,29 @@ describe('timeouts follow actual continuous work periods', () => {
     expect(tracker.scan([custom], { 'sample/repo': { progress: 'working-now' } }, 60, now).active).toHaveLength(0);
     expect(tracker.scan([custom], { 'sample/repo': { progress: 'working-now' } }, 20, now).active.map(entry => entry.issue.id)).toEqual([1]);
   });
-  it('keeps acknowledgement through encrypted snapshot reload and ordinary sync, then resets for a new work period', () => {
+  it('keeps the card marked for the whole work period, notifies once and again only for a new work period', () => {
     const tracker = new TimeoutTracker();
     const work = issue();
-    tracker.scan([lane([work])], {}, 30, now);
-    expect(tracker.acknowledge('sample/repo', work)).toBe(true);
-    expect(tracker.scan([lane([work])], {}, 30, now).active).toHaveLength(0);
-    const reloaded = new TimeoutTracker();
-    reloaded.restore(JSON.parse(JSON.stringify(tracker.exportAcknowledgements())));
-    expect(reloaded.scan([lane([work])], {}, 1, now).active).toHaveLength(0);
-    reloaded.scan([lane([{ ...work, labels: [] }])], {}, 30, now);
-    expect(reloaded.exportAcknowledgements()).toEqual([]);
+    expect(tracker.scan([lane([work])], {}, 30, now).newlyTimedOut).toHaveLength(1);
+    const later = tracker.scan([lane([work])], {}, 30, now + 3600000);
+    expect(later.active).toHaveLength(1);
+    expect(later.newlyTimedOut).toHaveLength(0);
+    tracker.scan([lane([{ ...work, labels: [] }])], {}, 30, now);
+    expect(tracker.scan([lane([work])], {}, 30, now).newlyTimedOut).toHaveLength(1);
     const restarted = { ...work, startedAt: new Date(Date.parse(start) + 60000).toISOString() };
-    expect(reloaded.scan([lane([restarted])], {}, 1, now).newlyTimedOut).toHaveLength(1);
+    expect(tracker.scan([lane([restarted])], {}, 1, now).newlyTimedOut).toHaveLength(1);
   });
-  it('never discards acknowledgements because GitHub was unavailable or timeline became unknown', () => {
+  it('never repeats a notification because GitHub was unavailable or the timeline became unknown', () => {
     const tracker = new TimeoutTracker();
-    tracker.acknowledge('sample/repo', issue());
+    tracker.scan([lane()], {}, 30, now);
     tracker.scan([], {}, 30, now);
     tracker.scan([lane([])], {}, 30, now);
     tracker.scan([{ ...lane(), error: 'offline' }], {}, 30, now);
     tracker.scan([lane([issue(1, null)])], {}, 30, now);
     tracker.scan([lane([{ ...issue(), timerError: true }])], {}, 30, now);
-    expect(tracker.exportAcknowledgements()).toHaveLength(1);
+    const again = tracker.scan([lane()], {}, 30, now);
+    expect(again.active).toHaveLength(1);
+    expect(again.newlyTimedOut).toHaveLength(0);
   });
   it('suppresses initial cached OS notifications without hiding dashboard timeouts and batches new entries', () => {
     const tracker = new TimeoutTracker();
@@ -57,13 +57,10 @@ describe('timeouts follow actual continuous work periods', () => {
     tracker.clear();
     expect(tracker.scan([lane()], {}, 30, now).active).toHaveLength(1);
   });
-  it('validates bounds and malformed persisted acknowledgement data', () => {
+  it('validates timeout bounds', () => {
     expect(DEFAULT_TIMEOUT_MINUTES).toBe(30);
     for (const value of [0, -1, 0.5, 10081, Infinity, '', '1e2', true, {}, null]) expect(parseTimeoutMinutes(value)).toBeNull();
     expect(parseTimeoutMinutes('45')).toBe(45);
     expect(parseTimeoutMinutes(10080)).toBe(10080);
-    expect(parseTimeoutAcknowledgements([null, {}, { repo: {}, issueId: 1, startedAt: start }, { repo: 'sample/repo', issueId: 1, startedAt: 123 }])).toEqual([]);
-    const many = Array.from({ length: 2100 }, (_, index) => ({ repo: 'sample/repo', issueId: index + 1, startedAt: start }));
-    expect(parseTimeoutAcknowledgements(many)).toHaveLength(2000);
   });
 });

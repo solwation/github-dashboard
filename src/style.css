@@ -845,21 +845,6 @@ h1 {
   border-color: #f4d7ce;
   color: #a45743;
 }
-.timeout-notices {
-  display: grid;
-  min-width: 0;
-}
-.timeout-notices > div {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.timeout-notices span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
 .demo-notice {
   background: #eef6f2;
   border-color: #d7e9e1;
@@ -1874,8 +1859,6 @@ h1 {
 :root[data-theme="dark"] .unread-created .movement-marker { background: #1d4532; color: #a6e3bf; }
 :root[data-theme="dark"] .unread-created .movement-marker:focus-visible { outline-color: #a6e3bf; }
 :root[data-theme="dark"] .timeout-warning { color: var(--accent-red); }
-:root[data-theme="dark"] .timeout-acknowledge { background: var(--card); color: var(--accent-red); border-color: #e06b78; }
-:root[data-theme="dark"] .timeout-acknowledge:focus-visible { outline-color: #e06b78; }
 :root[data-theme="dark"] .notice { border-color: #3a4530; background: #1d241a; color: #c3cfaa; }
 :root[data-theme="dark"] .notice.error { background: var(--tint-red); border-color: #6a343a; color: var(--accent-red); }
 :root[data-theme="dark"] .demo-notice,
