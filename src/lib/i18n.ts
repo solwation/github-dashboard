@@ -602,6 +602,14 @@ export const english: Record<string, string> = {
     "The QR code has expired. Create a new code on the other device.",
   "QR-koden är ogiltig. Skanna en QR-kod från Issueflow på den andra enheten.":
     "The QR code is invalid. Scan a QR code from Issueflow on the other device.",
+  "{time} kvar": "{time} left",
+  "över uppskattning": "over estimate",
+  "Median {typical} för {count} stängda ärenden senaste {days} dagarna.":
+    "Median {typical} for {count} closed issues in the last {days} days.",
+  "Backlog delas med {parallel} samtidigt pågående i snitt.":
+    "Backlog is divided by {parallel} issues in progress at a time on average.",
+  "Median per repository från {count} stängda ärenden i {repositories} repositories senaste {days} dagarna. Långsammaste repository avgör.":
+    "Median per repository from {count} closed issues in {repositories} repositories in the last {days} days. The slowest repository decides.",
 };
 export function t(
   source: string,
