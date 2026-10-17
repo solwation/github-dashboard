@@ -57,6 +57,13 @@
       },
       {
         "text": {
+          "sv": "Bakgrundssynken gör färre än hälften så många anrop: oförändrade projekt kontrolleras utan att förbruka GitHubs gräns, och relationer hämtas bara vid ändring.",
+          "en": "Background sync makes less than half as many requests: unchanged projects are checked without using GitHub's rate limit, and relations reload only when they change."
+        },
+        "issues": [123]
+      },
+      {
+        "text": {
           "sv": "Timeoutlistan överst och knappen Ignorera timeout är borttagna; ärenden över gränsen rödmarkeras på kortet och notifieras en gång.",
           "en": "The timeout list and Ignore timeout button are gone; overdue issues stay red on their card and notify once."
         },
