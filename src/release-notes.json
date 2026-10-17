@@ -36,6 +36,13 @@
       },
       {
         "text": {
+          "sv": "Timeoutlistan överst och knappen Ignorera timeout är borttagna; ärenden över gränsen rödmarkeras på kortet och notifieras en gång.",
+          "en": "The timeout list and Ignore timeout button are gone; overdue issues stay red on their card and notify once."
+        },
+        "issues": [115]
+      },
+      {
+        "text": {
           "sv": "Tillfälliga tidslinjefel ger inga kvarstående timervarningar, nekad åtkomst skiljs från API-gränser och sparade ETags överlever omladdning.",
           "en": "Temporary timeline errors leave no lingering timer warnings, access denials are told apart from API limits, and saved ETags survive reloads."
         },
