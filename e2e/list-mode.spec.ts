@@ -11,6 +11,9 @@ test("one global list mode for every repository and the combined board keeps fil
   const toggle = page.locator(".board-toolbar").getByRole("group", { name: "Visningsläge för boarden", exact: true });
   await expect(page.getByRole("group", { name: /^Visningsläge/ })).toHaveCount(1);
   await expect(page.locator(".lane-actions .board-mode-toggle")).toHaveCount(0);
+  // No stray template text (e.g. a dangling ">") between the toolbar controls.
+  expect(await page.locator(".board-toolbar").first().evaluate(node =>
+    [...node.childNodes].filter(child => child.nodeType === Node.TEXT_NODE).map(child => child.textContent!.trim()).join(""))).toBe("");
   await expect(toggle.getByRole("button", { name: "Kort", exact: true })).toHaveAttribute("aria-pressed", "true");
   await toggle.getByRole("button", { name: "Lista", exact: true }).focus();
   await page.keyboard.press("Enter");

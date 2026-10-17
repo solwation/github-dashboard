@@ -22,6 +22,13 @@
       },
       {
         "text": {
+          "sv": "Växeln Kort/Lista finns en gång i verktygsraden och gäller alla repositories och den sammanslagna tavlan; tidigare val följer med.",
+          "en": "The Cards/List switch appears once in the toolbar and applies to every repository and the combined board; earlier choices carry over."
+        },
+        "issues": [147]
+      },
+      {
+        "text": {
           "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
           "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
         },

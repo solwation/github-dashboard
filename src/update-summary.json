@@ -1,11 +1,12 @@
 {
   "baseCommit": "f9c2a65f18c6f169ef769605df58182aeb669594",
   "summary": {
-    "sv": "Toppfältet ligger kvar vid scroll på mobilen, och varje repository visar sin egen uppdateringstid med en laddningssymbol.",
-    "en": "The top bar stays pinned on phones, and each repository shows its own update time with a loading indicator."
+    "sv": "Toppfältet ligger kvar vid scroll på mobilen, varje repository visar sin uppdateringstid och växeln Kort/Lista gäller hela tavlan.",
+    "en": "The top bar stays pinned on phones, each repository shows its update time, and one Cards/List switch covers the whole board."
   },
   "issues": [
     145,
-    146
+    146,
+    147
   ]
 }

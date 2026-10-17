@@ -1606,7 +1606,7 @@ onMounted(async () => {
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
           ><BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
-          />          ><span class="updated" :aria-busy="busy"
+          /><span class="updated" :aria-busy="busy"
             :title="loggedIn ? syncError || t('Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.') : undefined"
             ><i aria-hidden="true" /><span v-if="loggedIn" class="sync-mode">{{ t("Adaptiv synk") }}</span></span
           >
