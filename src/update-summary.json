@@ -5,6 +5,7 @@
     "en": "Cached statistics provide time estimates immediately on startup and right when leaving Statistics."
   },
   "issues": [
-    148
+    148,
+    149
   ]
 }
