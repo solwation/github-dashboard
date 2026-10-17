@@ -199,19 +199,24 @@ input[type="checkbox"] {
   margin-left: 226px;
 }
 .topbar {
-  height: 78px;
+  /* A single row keeps the original 78 px; controls that cannot fit wrap
+     inside the bar instead of widening the page (#113). */
+  min-height: 78px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 42px;
+  gap: 16px;
+  padding: 10px 42px;
 }
 .breadcrumb {
   font-size: 12px;
   color: #929b9f;
   display: flex;
   gap: 17px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .breadcrumb strong {
   color: #536267;
@@ -220,7 +225,10 @@ input[type="checkbox"] {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
 }
 .connection {
   font-size: 11px;
@@ -249,6 +257,10 @@ input[type="checkbox"] {
 .username {
   font-size: 12px;
   font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .icon-button {
   border: 0;
@@ -1141,7 +1153,13 @@ h1 {
     padding: 30px 25px;
   }
   .topbar {
-    padding: 0 25px;
+    padding: 10px 25px;
+  }
+  .username {
+    max-width: 100px;
+  }
+  .topbar-right {
+    column-gap: 10px;
   }
   .stat {
     padding: 19px 15px;
@@ -1599,6 +1617,44 @@ h1 {
   }
   .board-column {
     min-height: 190px;
+  }
+}
+/* Tablet widths (#113): the install and QR buttons become icon-only beside the
+   narrower sidebar, and next to the collapsed sidebar the account controls also
+   turn compact like the phone layout from #96, so everything fits next to the
+   breadcrumb. Text stays available to screen readers and as tooltips. */
+@media (min-width: 651px) and (max-width: 1150px) {
+  .handoff-button span {
+    display: none;
+  }
+  .install-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@media (min-width: 651px) and (max-width: 950px) {
+  .topbar-right {
+    gap: 8px;
+  }
+  .username {
+    display: none;
+  }
+  .avatar {
+    margin-left: 4px;
+  }
+  .connection.connected .connection-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 @media (display-mode: standalone) {
