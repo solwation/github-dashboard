@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Statistikgraferna kan visa flera mätvärden samtidigt i samma skala, med valbar upplösning och snabbval för tidsintervall där 3 dagar är förvalt.",
+          "en": "Statistics charts can plot multiple metrics at once on a shared scale, with selectable resolution and time range presets defaulting to 3 days."
+        },
+        "issues": [156]
+      },
+      {
+        "text": {
           "sv": "I listvy på datorn visar en expanderad rad all kortinformation direkt med öppen beskrivning, och på mobilen öppnas kortet som en popup.",
           "en": "In list view on desktop, an expanded row shows all card details in place with the description open, while on phones the card opens in a popup."
         },

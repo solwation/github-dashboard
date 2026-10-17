@@ -26,4 +26,23 @@ describe("repository statistics preferences", () => {
     const second = normalizeStatisticsPreference(other, window, { labels: ["feature"], contributors: ["bob"], metrics: ["commits"] });
     expect(first.label).toBe(""); expect(second).toEqual(other); expect(preference.label).toBe("bug");
   });
+  it("normalizes multiple chart metrics and clamps overly fine resolution for long ranges", () => {
+    const multi = normalizeStatisticsPreference(
+      { ...preference, metric: "created", metrics: ["created", "closed", "commits"], range: "30d", resolution: "1m" },
+      window,
+      { labels: ["bug"], contributors: ["alice"], metrics: ["created", "closed"] },
+    );
+    expect(multi).toEqual({
+      ...preference,
+      metric: "created",
+      metrics: ["created", "closed"],
+      range: "30d",
+      resolution: "1h",
+    });
+    const fine8h = normalizeStatisticsPreference(
+      { ...preference, range: "8h", resolution: "1m" },
+      window,
+    );
+    expect(fine8h.resolution).toBe("1m");
+  });
 });

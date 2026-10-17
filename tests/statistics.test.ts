@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { commitContributor, dayOf, statisticsDimensions, statisticsWindow, summarizeStatistics, type StatisticsData, type StatisticsIssue, type StatisticsSource } from "../src/lib/statistics";
+import {
+  allowedStatisticsResolutions, clampStatisticsResolution, commitContributor, dayOf, DEFAULT_STATISTICS_RANGE,
+  statisticsDimensions, statisticsDurationMs, statisticsWindow, summarizeStatistics,
+  type StatisticsData, type StatisticsIssue, type StatisticsSource,
+} from "../src/lib/statistics";
 
 const now = Date.parse("2026-10-16T15:00:00Z");
 const source = <T>(data: T[], complete = true): StatisticsSource<T> => ({ data, complete, fetchedAt: now });
@@ -97,5 +101,31 @@ describe("statistics calculations", () => {
     expect(day("2026-10-10").additions).toBe(5);
     expect(day("2026-10-13").prsOpened).toBe(1);
     expect(day("2026-10-12").prsClosed).toBe(1);
+  });
+  it("bounds resolutions by duration and buckets sub-day and preset windows accurately", () => {
+    expect(DEFAULT_STATISTICS_RANGE).toBe("3d");
+    const duration30d = statisticsDurationMs({ ...filter, range: "30d" });
+    expect(allowedStatisticsResolutions(duration30d)).toEqual(["1h", "6h", "12h", "1d"]);
+    expect(allowedStatisticsResolutions(duration30d)).not.toContain("1m");
+    expect(clampStatisticsResolution("1m", duration30d, "30d")).toBe("1h");
+
+    const duration8h = statisticsDurationMs({ ...filter, range: "8h" });
+    expect(allowedStatisticsResolutions(duration8h)).toContain("1m");
+    expect(allowedStatisticsResolutions(duration8h)).toContain("15m");
+    expect(allowedStatisticsResolutions(duration8h)).not.toContain("1d");
+
+    const duration3d = statisticsDurationMs({ ...filter, range: "3d" });
+    expect(allowedStatisticsResolutions(duration3d)).toEqual(["15m", "30m", "1h", "6h", "12h", "1d"]);
+
+    const threeDayResult = summarizeStatistics([snapshot()], { ...filter, range: "3d", resolution: "1d" });
+    expect(threeDayResult.days.map(d => d.date)).toEqual(["2026-10-14", "2026-10-15", "2026-10-16"]);
+
+    const data = snapshot();
+    data.issues!.data = [{ ...issue, created_at: "2026-10-16T14:17:00Z" }];
+    data.events!.data = [{ id: 10, event: "closed", created_at: "2026-10-16T14:22:00Z", actor: { login: "alice" }, issue: data.issues!.data[0]! }];
+    const eightHour15m = summarizeStatistics([data], { ...filter, range: "8h", resolution: "15m", now });
+    expect(eightHour15m.days).toHaveLength(32);
+    const bucket = eightHour15m.days.find(d => d.date === "2026-10-16 14:15")!;
+    expect(bucket.values).toMatchObject({ created: 1, closed: 1 });
   });
 });

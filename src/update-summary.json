@@ -1,10 +1,10 @@
 {
-  "baseCommit": "2907718e013761907409f64dc2b24e9fcf3d9c8a",
+  "baseCommit": "68139aae6aff9283403f945332e9d4bdf0771980",
   "summary": {
-    "sv": "I listvyn visar expanderade rader på datorn all kortinformation med öppen beskrivning, och på mobilen öppnas kortet i en popup.",
-    "en": "In list view, expanded rows on desktop show all card details with the description open, and on phones the card opens in a popup."
+    "sv": "Statistikgraferna kan visa flera mätvärden i samma skala, med valbar upplösning och snabbval för tidsintervall (3 dagar som standard).",
+    "en": "Statistics charts can plot multiple metrics on the same scale, with selectable resolution and time range presets (3 days by default)."
   },
   "issues": [
-    155
+    156
   ]
 }

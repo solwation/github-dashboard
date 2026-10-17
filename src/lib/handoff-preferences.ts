@@ -1,7 +1,10 @@
 import { reconcileRepositoryColors, validRepositoryColor } from "./repository-color";
 import { validColumnLimit } from "./column-limits";
 import { reconcileOrder } from "./project-layout";
-import { statisticsMetrics, type StatisticsMetric } from "./statistics";
+import {
+  statisticsMetrics, statisticsRanges, statisticsResolutions,
+  type StatisticsMetric, type StatisticsRangePreset, type StatisticsResolution,
+} from "./statistics";
 import type { Rules } from "./model";
 
 /**
@@ -17,6 +20,9 @@ export interface HandoffStatisticsFilter {
   label: string;
   contributor: string;
   metric: StatisticsMetric;
+  metrics?: StatisticsMetric[];
+  range?: StatisticsRangePreset;
+  resolution?: StatisticsResolution;
 }
 export type HandoffStatisticsPreferences = Record<string, HandoffStatisticsFilter>;
 export interface HandoffPreferences {
@@ -77,9 +83,13 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   timeoutMinutes: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 1 && value <= 10080,
   currentView: value => value === "overview" || value === "statistics",
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
-    Object.keys(filter).every(key => ["from", "to", "label", "contributor", "metric"].includes(key)) &&
+    ["from", "to", "label", "contributor", "metric"].every(key => Object.hasOwn(filter, key)) &&
+    Object.keys(filter).every(key => ["from", "to", "label", "contributor", "metric", "metrics", "range", "resolution"].includes(key)) &&
     validDate(filter.from) && validDate(filter.to) && filter.from <= filter.to &&
-    text(filter.label) && text(filter.contributor) && statisticsMetrics.includes(filter.metric as StatisticsMetric)),
+    text(filter.label) && text(filter.contributor) && statisticsMetrics.includes(filter.metric as StatisticsMetric) &&
+    (filter.metrics === undefined || (Array.isArray(filter.metrics) && filter.metrics.length >= 1 && filter.metrics.length <= statisticsMetrics.length && filter.metrics.every(m => statisticsMetrics.includes(m as StatisticsMetric)))) &&
+    (filter.range === undefined || statisticsRanges.includes(filter.range as StatisticsRangePreset)) &&
+    (filter.resolution === undefined || statisticsResolutions.includes(filter.resolution as StatisticsResolution))),
 };
 
 /** Validate every known field atomically, returning only supported preference keys. */

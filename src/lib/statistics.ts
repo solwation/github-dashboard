@@ -32,10 +32,30 @@ export interface StatisticsData {
   temporary: StatisticsSourceName[];
 }
 export type StatisticsSourceName = "issues" | "events" | "commits" | "changes" | "pulls";
-export interface StatisticsFilter { from: string; to: string; label: string; contributor: string }
+export const statisticsRanges = ["8h", "12h", "24h", "3d", "7d", "21d", "30d"] as const;
+export type StatisticsRangePreset = typeof statisticsRanges[number];
+export const DEFAULT_STATISTICS_RANGE: StatisticsRangePreset = "3d";
+export const statisticsResolutions = ["1m", "5m", "15m", "30m", "1h", "6h", "12h", "1d"] as const;
+export type StatisticsResolution = typeof statisticsResolutions[number];
+export const MAX_STATISTICS_BUCKETS = 720;
+export const statisticsResolutionMs: Record<StatisticsResolution, number> = {
+  "1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000,
+  "1h": 3_600_000, "6h": 21_600_000, "12h": 43_200_000, "1d": 86_400_000,
+};
+export const statisticsRangeMs: Record<StatisticsRangePreset, number> = {
+  "8h": 8 * 3_600_000, "12h": 12 * 3_600_000, "24h": 24 * 3_600_000,
+  "3d": 3 * 86_400_000, "7d": 7 * 86_400_000, "21d": 21 * 86_400_000, "30d": 30 * 86_400_000,
+};
+export interface StatisticsFilter {
+  from: string; to: string; label: string; contributor: string;
+  range?: StatisticsRangePreset; resolution?: StatisticsResolution; now?: number;
+}
 export const statisticsMetrics = ["closed", "created", "reopened", "netIssues", "commits", "additions", "deletions", "netLines", "files", "prsOpened", "prsMerged", "prsClosed"] as const;
 export type StatisticsMetric = typeof statisticsMetrics[number];
-export interface StatisticsPreference extends StatisticsFilter { metric: StatisticsMetric }
+export interface StatisticsPreference extends StatisticsFilter {
+  metric: StatisticsMetric;
+  metrics?: StatisticsMetric[];
+}
 export type StatisticsPreferences = Record<string, StatisticsPreference>;
 export type StatisticsValues = Partial<Record<StatisticsMetric, number>>;
 export interface StatisticsDay { date: string; values: StatisticsValues }
@@ -45,6 +65,40 @@ export interface StatisticsSummary {
   closureAgeDays: number | null;
   contributors: { name: string; commits: number; additions: number | null; deletions: number | null }[];
   labels: { name: string; count: number }[];
+}
+export function statisticsDurationMs(filter: Pick<StatisticsFilter, "from" | "to" | "range">): number {
+  if (filter.range && statisticsRangeMs[filter.range]) return statisticsRangeMs[filter.range];
+  const start = Date.parse(`${filter.from}T00:00:00Z`), end = Date.parse(`${filter.to}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return statisticsRangeMs["30d"];
+  return Math.min(30, Math.round((end - start) / 86_400_000) + 1) * 86_400_000;
+}
+export function allowedStatisticsResolutions(durationMs: number): StatisticsResolution[] {
+  const valid = statisticsResolutions.filter(res => {
+    const step = statisticsResolutionMs[res];
+    return step * 2 <= durationMs && durationMs / step <= MAX_STATISTICS_BUCKETS;
+  });
+  return valid.length ? valid : ["1d"];
+}
+export function defaultStatisticsResolution(range?: StatisticsRangePreset): StatisticsResolution {
+  if (range === "8h") return "15m";
+  if (range === "12h") return "30m";
+  if (range === "24h") return "1h";
+  return "1d";
+}
+export function clampStatisticsResolution(
+  resolution: StatisticsResolution | undefined,
+  durationMs: number,
+  range?: StatisticsRangePreset,
+): StatisticsResolution {
+  const allowed = allowedStatisticsResolutions(durationMs);
+  if (resolution && allowed.includes(resolution)) return resolution;
+  if (resolution) {
+    const requestedMs = statisticsResolutionMs[resolution];
+    if (requestedMs < statisticsResolutionMs[allowed[0]!]) return allowed[0]!;
+    if (requestedMs > statisticsResolutionMs[allowed[allowed.length - 1]!]) return allowed[allowed.length - 1]!;
+  }
+  const fallback = defaultStatisticsResolution(range);
+  return allowed.includes(fallback) ? fallback : allowed[allowed.length - 1]!;
 }
 export function statisticsWindow(now = Date.now()) {
   const day = new Date(now).toISOString().slice(0, 10);
@@ -84,11 +138,57 @@ export function statisticsDimensions(data: StatisticsData[]) {
 
 export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFilter): StatisticsSummary {
   const days: StatisticsDay[] = [];
-  const start = Date.parse(`${filter.from}T00:00:00Z`), end = Date.parse(`${filter.to}T00:00:00Z`);
-  if (Number.isFinite(start) && Number.isFinite(end)) {
-    for (let day = start; day <= end && days.length < 30; day += 86400000) days.push({ date: new Date(day).toISOString().slice(0, 10), values: {} });
+  const subDayRange = filter.range === "8h" || filter.range === "12h" || filter.range === "24h";
+  const durationMs = statisticsDurationMs(filter);
+  const resolution = filter.resolution || filter.range
+    ? clampStatisticsResolution(filter.resolution, durationMs, filter.range)
+    : "1d";
+  const presetDays = filter.range === "3d" ? 3 : filter.range === "7d" ? 7 : filter.range === "21d" ? 21 : filter.range === "30d" ? 30 : null;
+  let bucketFor: (date: string) => StatisticsValues | undefined;
+  if (resolution === "1d" && !subDayRange) {
+    const minStart = Date.parse(`${filter.from}T00:00:00Z`), end = Date.parse(`${filter.to}T00:00:00Z`);
+    const start = presetDays && Number.isFinite(end)
+      ? Math.max(Number.isFinite(minStart) ? minStart : -Infinity, end - (presetDays - 1) * 86400000)
+      : minStart;
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      for (let day = start; day <= end && days.length < 30; day += 86400000) days.push({ date: new Date(day).toISOString().slice(0, 10), values: {} });
+    }
+    const byDate = new Map(days.map(day => [day.date, day.values]));
+    bucketFor = (date: string) => byDate.get(dayOf(date));
+  } else {
+    const stepMs = statisticsResolutionMs[resolution];
+    let windowStartMs = NaN, windowEndMs = NaN;
+    if (subDayRange) {
+      const latestFetched = data.reduce((max, item) => Math.max(max, item.fetchedAt || 0), 0);
+      const refNow = filter.now !== undefined && Number.isFinite(filter.now)
+        ? filter.now
+        : latestFetched > 0 ? latestFetched : Date.parse(`${filter.to}T23:59:59.999Z`);
+      if (Number.isFinite(refNow)) {
+        const lastBucket = Math.floor(refNow / stepMs) * stepMs;
+        const count = Math.min(MAX_STATISTICS_BUCKETS, Math.max(2, Math.round(durationMs / stepMs)));
+        windowStartMs = lastBucket - (count - 1) * stepMs;
+        windowEndMs = lastBucket + stepMs;
+      }
+    } else {
+      const minStart = Date.parse(`${filter.from}T00:00:00Z`), end = Date.parse(`${filter.to}T00:00:00Z`);
+      windowStartMs = presetDays && Number.isFinite(end)
+        ? Math.max(Number.isFinite(minStart) ? minStart : -Infinity, end - (presetDays - 1) * 86400000)
+        : minStart;
+      windowEndMs = Number.isFinite(end) ? end + 86400000 : NaN;
+    }
+    if (Number.isFinite(windowStartMs) && Number.isFinite(windowEndMs)) {
+      for (let t = windowStartMs; t < windowEndMs && days.length < MAX_STATISTICS_BUCKETS; t += stepMs) {
+        const iso = new Date(t).toISOString();
+        days.push({ date: resolution === "1d" ? iso.slice(0, 10) : iso.slice(0, 16).replace("T", " "), values: {} });
+      }
+    }
+    bucketFor = (date: string) => {
+      if (!dayOf(date)) return undefined;
+      const parsed = Date.parse(date);
+      if (!Number.isFinite(parsed) || parsed < windowStartMs || parsed >= windowEndMs) return undefined;
+      return days[Math.floor((parsed - windowStartMs) / stepMs)]?.values;
+    };
   }
-  const byDate = new Map(days.map(day => [day.date, day.values]));
   const complete: StatisticsSummary["complete"] = {};
   const closures: number[] = [];
   const contributors = new Map<string, { name: string; commits: number; additions: number | null; deletions: number | null }>();
@@ -107,7 +207,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       enable("created", snapshot.issues.complete);
       for (const issue of snapshot.issues.data) {
         if (!labelMatches(issue) || !personMatches(issue.user?.login)) continue;
-        const values = byDate.get(dayOf(issue.created_at));
+        const values = bucketFor(issue.created_at);
         add("created", values);
         if (values) for (const label of issue.labels) labels.set(label.name, (labels.get(label.name) || 0) + 1);
       }
@@ -117,7 +217,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       for (const event of snapshot.events.data) {
         if (!event.issue || event.issue.pull_request || !labelMatches(event.issue) || !personMatches(event.actor?.login)) continue;
         if (event.event !== "closed" && event.event !== "reopened") continue;
-        const values = byDate.get(dayOf(event.created_at));
+        const values = bucketFor(event.created_at);
         add(event.event, values);
         if (event.event === "closed" && values) {
           const age = Date.parse(event.created_at) - Date.parse(event.issue.created_at);
@@ -131,7 +231,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       for (const commit of snapshot.commits.data) {
         const author = commitContributor(commit);
         if (!personMatches(author)) continue;
-        const values = byDate.get(dayOf(commitDate(commit)));
+        const values = bucketFor(commitDate(commit));
         add("commits", values);
         if (!values) continue;
         const existing = contributors.get(author) || { name: author, commits: 0, additions: snapshot.changes ? 0 : null, deletions: snapshot.changes ? 0 : null };
@@ -145,7 +245,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       enable("files", snapshot.changes.complete && snapshot.changes.data.every(change => change.filesComplete));
       for (const change of snapshot.changes.data) {
         if (!personMatches(change.contributor)) continue;
-        const values = byDate.get(dayOf(change.date));
+        const values = bucketFor(change.date);
         if (!values) continue;
         add("additions", values, change.additions); add("deletions", values, change.deletions);
         add("netLines", values, change.additions - change.deletions); add("files", values, change.files);
@@ -157,9 +257,9 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       for (const metric of ["prsOpened", "prsMerged", "prsClosed"] as const) enable(metric, snapshot.pulls.complete);
       for (const pull of snapshot.pulls.data) {
         if (!labelMatches(pull) || !personMatches(pull.user?.login)) continue;
-        add("prsOpened", byDate.get(dayOf(pull.created_at)));
-        if (pull.merged_at) add("prsMerged", byDate.get(dayOf(pull.merged_at)));
-        else if (pull.closed_at) add("prsClosed", byDate.get(dayOf(pull.closed_at)));
+        add("prsOpened", bucketFor(pull.created_at));
+        if (pull.merged_at) add("prsMerged", bucketFor(pull.merged_at));
+        else if (pull.closed_at) add("prsClosed", bucketFor(pull.closed_at));
       }
     }
   }
