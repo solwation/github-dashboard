@@ -106,13 +106,13 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
 <style scoped>
 .stat { transition: background-color .25s, border-color .25s; }
 .repository-active:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 3px; }
-.stat-content { min-width: 0; flex: 1 1 0; display: flex; flex-direction: column; }
-.stat strong { flex-wrap: wrap; row-gap: 6px; }
+.stat-content { min-width: 0; flex: 1 1 auto; align-self: stretch; display: flex; flex-direction: column; }
+.stat strong { flex-wrap: wrap; row-gap: 6px; margin-bottom: .55rem; }
 .stat strong small { white-space: normal; }
 .stat-cells {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: .55rem;
+  margin-top: auto;
   padding-top: .45rem;
   border-top: 1px solid var(--line);
   font-size: .72rem;
@@ -123,6 +123,10 @@ const announcement = computed(() => cards.value.filter(card => deltas[card.key])
 .stat-cell { min-width: 0; overflow-wrap: anywhere; }
 .stat-cell:first-child { padding-right: .45rem; border-right: 1px solid var(--line); }
 .stat-cell:last-child { padding-left: .45rem; }
+@media (max-width: 650px) {
+  .stat-cell:first-child,
+  .stat-cell:last-child { padding-inline: .25rem; }
+}
 .stat-positive { background-color: #eaf6ef; border-color: #65a781; }
 .stat-negative { background-color: #fff0ec; border-color: #c8826c; }
 .stat-delta { font-size: .75rem; font-weight: 600; color: #53636d; }

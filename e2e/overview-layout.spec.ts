@@ -27,20 +27,35 @@ async function connect(page: Page) {
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 }
 
-// Returns, per summary card, how far each content part's centre deviates from the card's centre.
+// Returns, per summary card, how far each content part's centre deviates from the card's centre,
+// and how far each bottom cell's text centre deviates from its own cell centre (#152).
 function offsets(page: Page) {
   return page.locator(".stats .stat").evaluateAll(cards => cards.map(card => {
     const box = card.getBoundingClientRect();
     const centre = box.left + box.width / 2;
-    const contentCentre = (element: Element) => {
+    const contentCentre = (element: Element, target = centre) => {
       const range = document.createRange();
       range.selectNodeContents(element);
       const rect = range.getBoundingClientRect();
-      return rect.left + rect.width / 2 - centre;
+      return rect.left + rect.width / 2 - target;
     };
-    const parts = [".stat-icon", ".stat-label", "strong", ".stat-today"]
+    const parts = [".stat-icon", ".stat-label", "strong"]
       .map(selector => card.querySelector(selector)).filter((element): element is Element => !!element);
-    return { parts: parts.length, offsets: parts.map(contentCentre), right: box.right };
+    const cellsBox = card.querySelector(".stat-cells")?.getBoundingClientRect();
+    const cellOffsets = [...card.querySelectorAll(".stat-cell")].map(cell => {
+      const cellBox = cell.getBoundingClientRect();
+      return contentCentre(cell, cellBox.left + cellBox.width / 2);
+    });
+    return {
+      parts: parts.length + (cellsBox ? 1 : 0),
+      cells: cellOffsets.length,
+      offsets: [
+        ...parts.map(part => contentCentre(part)),
+        ...(cellsBox ? [cellsBox.left + cellsBox.width / 2 - centre] : []),
+        ...cellOffsets,
+      ],
+      right: box.right,
+    };
   }));
 }
 
@@ -48,7 +63,8 @@ async function expectCentred(page: Page) {
   const cards = await offsets(page);
   expect(cards).toHaveLength(4);
   for (const card of cards) {
-    expect(card.parts).toBeGreaterThanOrEqual(3);
+    expect(card.parts).toBe(4);
+    expect(card.cells).toBe(2);
     for (const offset of card.offsets) expect(Math.abs(offset)).toBeLessThanOrEqual(2);
     expect(card.right).toBeLessThanOrEqual(375);
   }

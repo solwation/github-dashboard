@@ -1,14 +1,11 @@
 {
-  "baseCommit": "9e6f4f55d8424e02d55b8478d4acaa23ca3a0062",
+  "baseCommit": "7abe3185fa7e37f0487ef50e3180d1c241d2d118",
   "summary": {
-    "sv": "Översiktskorten visar sekundära mått i två celler längst ner, sidhuvudet stannar överst även på datorn och Kort/Lista ligger längst till höger.",
-    "en": "Overview cards show secondary metrics in two bottom cells, the header stays pinned on desktop too, and Cards/List sits at the far right."
+    "sv": "Översiktskorten centrerar sekundära mått på mobilen och placerar cellerna i kortets nederkant.",
+    "en": "Overview cards centre secondary metrics on phones and align the bottom cells at the base of each card."
   },
   "issues": [
-    148,
-    149,
     151,
-    152,
-    153
+    152
   ]
 }
