@@ -58,9 +58,11 @@ for (const width of [390, 1440]) {
     await overview.click();
     await expect(page).toHaveURL(/#overview$/);
     await expect(page.locator("main")).toBeFocused();
-    // On phones main lands just below the sticky header (#145); on desktop at the top.
+    // Main lands just below the sticky header on every width (#145, #153).
     expect(await page.locator("main").evaluate(element => Math.abs(element.getBoundingClientRect().top
-      - (innerWidth <= 650 ? document.querySelector(".topbar")!.getBoundingClientRect().bottom : 0)))).toBeLessThanOrEqual(1);
+      - document.querySelector(".topbar")!.getBoundingClientRect().bottom))).toBeLessThanOrEqual(1);
+    expect(Math.abs((await page.locator(".topbar").boundingBox())!.y
+      - (await page.evaluate(() => innerWidth <= 650 ? document.querySelector(".sidebar")!.getBoundingClientRect().bottom : 0)))).toBeLessThanOrEqual(1);
     await expect(search).toHaveValue("Keep");
     await expect(page.locator(".issue-title")).toHaveCount(6);
     await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeVisible();
@@ -74,9 +76,11 @@ for (const width of [390, 1440]) {
     await overview.focus();
     await page.keyboard.press("Enter");
     await expect(page.locator("main")).toBeFocused();
-    // On phones main lands just below the sticky header (#145); on desktop at the top.
+    // Main lands just below the sticky header on every width (#145, #153).
     expect(await page.locator("main").evaluate(element => Math.abs(element.getBoundingClientRect().top
-      - (innerWidth <= 650 ? document.querySelector(".topbar")!.getBoundingClientRect().bottom : 0)))).toBeLessThanOrEqual(1);
+      - document.querySelector(".topbar")!.getBoundingClientRect().bottom))).toBeLessThanOrEqual(1);
+    expect(Math.abs((await page.locator(".topbar").boundingBox())!.y
+      - (await page.evaluate(() => innerWidth <= 650 ? document.querySelector(".sidebar")!.getBoundingClientRect().bottom : 0)))).toBeLessThanOrEqual(1);
   });
 }
 

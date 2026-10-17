@@ -1288,7 +1288,7 @@ function handleRefreshShortcut(event: KeyboardEvent) {
 function resumeStatusAudio(event: Event) {
   if (event.isTrusted && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
 }
-// The phone header stays sticky (#145); its measured height keeps anchor jumps clear of it.
+// The header stays sticky (#145, #153); its measured height keeps anchor jumps clear of it.
 const topbar = ref<HTMLElement | null>(null);
 let topbarObserver: ResizeObserver | undefined;
 onMounted(() => {

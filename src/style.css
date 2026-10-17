@@ -2075,9 +2075,20 @@ body::before {
   }
 }
 
-/* Phone header (#145): the brand row and the breadcrumb/tools row stay at the top while
-   scrolling. Both rows are sticky on their own parents; the topbar's bottom border stays
-   their lower edge. Anchor jumps reserve their measured height via --topbar-height. */
+/* Sticky header (#145, #153): the breadcrumb/tools row stays at the top while scrolling on
+   every width. Beside the fixed sidebar it pins in the workspace column just below the
+   safe-area strip; its solid surface and bottom border hide the content scrolling beneath.
+   Content tooltips (z-index 5) pass under it; dialogs, the update notice and the safe-area
+   strip stay above. Anchor and sidebar jumps reserve its measured height via --topbar-height. */
+html {
+  scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, 78px));
+}
+.topbar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+}
+/* On phones the brand row is sticky as well and the topbar pins directly beneath it. */
 @media (max-width: 650px) {
   :root {
     --phone-brand-height: calc(64px + env(safe-area-inset-top, 0px));
@@ -2095,8 +2106,6 @@ body::before {
     padding-top: 0;
   }
   .topbar {
-    position: sticky;
     top: var(--phone-brand-height);
-    z-index: 10;
   }
 }

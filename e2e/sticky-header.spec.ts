@@ -69,9 +69,63 @@ test("phone header stays pinned in dark theme without sideways scrolling at 320 
   if (shots) await page.screenshot({ path: `${shots}/sticky-390-dark.png` });
 });
 
-test("desktop header keeps its normal flow", async ({ page }) => {
-  await openDemo(page, 1280);
-  await expect(page.locator(".topbar")).toHaveCSS("position", "static");
-  await page.evaluate(() => scrollTo(0, 800));
-  expect((await page.locator(".topbar").boundingBox())!.y).toBeLessThan(0);
-});
+/** Wider layouts (#153): the topbar pins at the top of the workspace column beside the fixed sidebar. */
+async function expectTopbarPinned(page: Page) {
+  const sidebar = (await page.locator(".sidebar").boundingBox())!;
+  const bar = (await page.locator(".topbar").boundingBox())!;
+  expect(Math.abs(bar.y)).toBeLessThanOrEqual(1);
+  // It sits beside the sidebar instead of covering it, and spans the rest of the viewport.
+  expect(bar.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width - 1);
+  expect(Math.abs(bar.x + bar.width - await page.evaluate(() => innerWidth))).toBeLessThanOrEqual(1);
+  await expect(page.locator(".topbar").getByRole("button", { name: "Inställningar", exact: true })).toBeInViewport();
+  await expect(page.locator(".topbar .breadcrumb")).toBeInViewport();
+  const style = await page.locator(".topbar").evaluate(el => {
+    const css = getComputedStyle(el);
+    return { background: css.backgroundColor, border: css.borderBottomStyle, borderWidth: css.borderBottomWidth };
+  });
+  expect(style.background).not.toMatch(/rgba\(.*, 0\)|transparent/);
+  expect(style).toMatchObject({ border: "solid", borderWidth: "1px" });
+  return bar.y + bar.height;
+}
+
+for (const [width, theme] of [[768, "light"], [1280, "dark"], [1440, "light"]] as const) {
+  test(`header stays pinned on ${width} px in ${theme} theme in overview and statistics`, async ({ page }) => {
+    await page.addInitScript(value => localStorage.setItem("issueflow-theme", value), theme);
+    await openDemo(page, width);
+    const start = await expectTopbarPinned(page);
+    expect((await page.locator("main").boundingBox())!.y).toBeGreaterThanOrEqual(start - 1);
+
+    await page.evaluate(() => scrollTo(0, 1500));
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(300);
+    const pinnedBottom = await expectTopbarPinned(page);
+    if (shots) await page.screenshot({ path: `${shots}/sticky-${width}-${theme}.png` });
+
+    // Anchor jumps land below the pinned header.
+    const lastId = await page.locator(".repo-lane").last().getAttribute("id");
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.evaluate(id => { location.hash = `#${id}`; }, lastId);
+    await expect.poll(async () => (await page.locator(`#${lastId}`).boundingBox())!.y).toBeGreaterThanOrEqual(pinnedBottom);
+    await expect(page.locator(`#${lastId} .lane-header`)).toBeInViewport();
+    await expectTopbarPinned(page);
+    expect(await noSideScroll(page)).toBe(true);
+
+    await page.getByRole("link", { name: "Statistik", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
+    await expect(page.locator(".topbar .breadcrumb strong")).toHaveText("Statistik");
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(300);
+    await expectTopbarPinned(page);
+    // A Statistics project anchor also keeps its heading clear of the header.
+    const statisticsId = await page.locator(".statistics-repository").last().getAttribute("id");
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.evaluate(id => { location.hash = `#${id}`; }, statisticsId);
+    await expect.poll(async () => (await page.locator(`#${statisticsId}`).boundingBox())!.y).toBeGreaterThanOrEqual(pinnedBottom);
+    await expect(page.locator(`#${statisticsId} h2`)).toBeInViewport();
+    await expectTopbarPinned(page);
+
+    // Dialogs still open above the header.
+    await page.locator(".topbar").getByRole("button", { name: "Inställningar", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading").first()).toBeInViewport();
+  });
+}
