@@ -39,7 +39,7 @@
           "sv": "Kolumnrubrikerna Pågående och Backlog visar en levande tidsuppskattning när det finns tillräcklig historik från nyligen stängda ärenden.",
           "en": "The In progress and Backlog column headers show a live time estimate when enough recently closed issues provide history."
         },
-        "issues": [139, 140]
+        "issues": [139, 140, 141]
       },
       {
         "text": {
