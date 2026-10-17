@@ -18,7 +18,7 @@ function reply(url: URL) {
   return { data: [], next: null };
 }
 
-function harness(options: { repositories?: string[]; cache?: StatisticsData[]; onRequest?: (url: URL) => void; rate?: RateLimitInfo | null; collected?: (data: StatisticsData) => void } = {}) {
+function harness(options: { repositories?: string[]; cache?: StatisticsData[]; onRequest?: (url: URL) => void; rate?: RateLimitInfo | null; collected?: (data: StatisticsData) => void; failedImports?: number } = {}) {
   let clock = now;
   const state = { hidden: false, online: true, saveData: false, reducedData: false, lowBattery: false, busy: false, allowed: true, retry: 0, rate: options.rate ?? null as RateLimitInfo | null };
   const timers: { at: number; run: () => void; idle: boolean }[] = [];
@@ -36,6 +36,7 @@ function harness(options: { repositories?: string[]; cache?: StatisticsData[]; o
     rateLimit: () => state.rate,
   };
   let cache = options.cache ?? [];
+  let importFailures = 0;
   const writes: StatisticsData[][] = [];
   const modules: BackgroundModules = {
     createCollector: source => new StatisticsCollector(source),
@@ -52,7 +53,7 @@ function harness(options: { repositories?: string[]; cache?: StatisticsData[]; o
   };
   const background = new StatisticsBackground({
     client, token: "token", repositories: () => options.repositories ?? ["sample/one"],
-    busy: () => state.busy, allowed: () => state.allowed, modules: async () => modules, environment,
+    busy: () => state.busy, allowed: () => state.allowed, modules: async () => { if ((options.failedImports ?? 0) > importFailures) { importFailures++; throw new TypeError("Failed to fetch dynamically imported module"); } return modules; }, environment,
     ...(options.collected ? { collected: options.collected } : {}),
   });
   /** Advance the fake clock to the next timer and run it, letting async work settle. */
@@ -83,6 +84,16 @@ describe("background statistics scheduling", () => {
     expect(h.cache()[0]!.commits!.data).toHaveLength(1);
     expect(h.peak()).toBe(1);
     expect(h.timers[0]).toEqual(expect.objectContaining({ at: now + BACKGROUND_START_DELAY_MS + BACKGROUND_PORTION_GAP_MS }));
+  });
+  it("retries a portion whose lazy module import failed instead of stopping (#143)", async () => {
+    const h = harness({ failedImports: 1 });
+    h.background.start(0);
+    await h.cycle();
+    expect(h.writes).toHaveLength(0);
+    expect(h.timers[0]).toEqual(expect.objectContaining({ idle: false }));
+    await h.cycle();
+    expect(h.writes).toHaveLength(1);
+    expect(h.cache().map(entry => entry.repository)).toEqual(["sample/one"]);
   });
   it("hands cached statistics once per run and each new collection to the board (#141)", async () => {
     const delivered: string[] = [];

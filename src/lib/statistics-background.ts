@@ -182,6 +182,9 @@ export class StatisticsBackground {
       const found = await this.portion();
       if (found === "none") next = BACKGROUND_IDLE_RECHECK_MS;
       else if (found === "paused") next = BACKGROUND_PAUSE_RETRY_MS;
+    } catch {
+      // A failed lazy import (e.g. the network dropped before the shell was cached) is retried later (#143).
+      next = BACKGROUND_PAUSE_RETRY_MS;
     } finally {
       this.working = false;
       this.arm(next);
