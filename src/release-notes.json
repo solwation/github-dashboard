@@ -15,6 +15,13 @@
       },
       {
         "text": {
+          "sv": "Växla mellan kort och en kompakt lista, per repository eller för hela den sammanslagna tavlan med repositorykolumn; valet sparas.",
+          "en": "Switch between cards and a compact list, per repository or for the whole combined board with a repository column; your choice is saved."
+        },
+        "issues": [127]
+      },
+      {
+        "text": {
           "sv": "En länk eller QR-kod för ett annat konto byter inte inloggning utan bekräftelse, och ogiltiga länkar visar ett översatt fel över din sparade tavla.",
           "en": "A link or QR code for another account never switches sign-in without confirmation, and invalid links show a translated error over your saved board."
         },
