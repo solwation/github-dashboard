@@ -63,6 +63,8 @@ import { measureRender } from "./lib/startup-timing";
 import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
+import IssueRow from "./components/IssueRow.vue";
+import BoardModeToggle from "./components/BoardModeToggle.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { GitHub } from "./lib/github";
@@ -269,6 +271,13 @@ const tokenPanel = ref(false);
 const tokenInput = ref("");
 const hideCoordination = ref(true);
 const splitByRepository = ref(true);
+// Card/list choice (#127): per repository in the split view, one shared choice for the combined board.
+const listRepos = ref<string[]>([]);
+const combinedList = ref(false);
+function setListMode(repo: string, list: boolean) {
+  if (list === listRepos.value.includes(repo)) return;
+  listRepos.value = list ? [...listRepos.value, repo] : listRepos.value.filter(name => name !== repo);
+}
 const combinedLimits = ref<Record<string, number>>({});
 const pendingSelected = ref<string[]>([]);
 watch(picker, (open) => {
@@ -633,7 +642,8 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
   notificationRepos: notificationRepos.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
-  hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value, timeoutMinutes: timeoutMinutes.value,
+  hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value,
+  listRepos: listRepos.value, combinedList: combinedList.value, timeoutMinutes: timeoutMinutes.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
@@ -649,6 +659,8 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   repoQuery.value = value.repoQuery ?? repoQuery.value;
   hideCoordination.value = value.hideCoordination ?? hideCoordination.value;
   splitByRepository.value = value.splitByRepository ?? splitByRepository.value;
+  listRepos.value = value.listRepos ?? listRepos.value;
+  combinedList.value = value.combinedList ?? combinedList.value;
   timeoutMinutes.value = value.timeoutMinutes ?? timeoutMinutes.value;
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
   if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+)$/.test(window.location.hash))) {
@@ -665,7 +677,7 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   applyChosenPreferences(state);
   return save();
 }
-watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, currentView, statisticsPreferences, preference], () => save(), { deep: true });
+watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listRepos, combinedList, currentView, statisticsPreferences, preference], () => save(), { deep: true });
 /** Login whose encrypted settings were read successfully; saves for other accounts, or after a
  * failed read, are skipped so a transient storage error never overwrites saved settings. */
 let settingsAccount: string | null = null;
@@ -713,6 +725,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     combinedLimits.value = {};
     query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
     hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
+    listRepos.value = []; combinedList.value = false;
     try {
       const saved = settings.value;
       if (saved) {
@@ -962,6 +975,8 @@ function showDemo() {
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   splitByRepository.value = true;
+  listRepos.value = [];
+  combinedList.value = false;
   combinedLimits.value = {};
   generation++;
   selectionRevision++;
@@ -1028,6 +1043,8 @@ function logout() {
   query.value = "";
   currentView.value = "overview";
   splitByRepository.value = true;
+  listRepos.value = [];
+  combinedList.value = false;
   combinedLimits.value = {};
   repositoryQueries.value = {};
   picker.value = false;
@@ -1579,6 +1596,8 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="lane-actions">
+              <BoardModeToggle :list="listRepos.includes(lane.repo.full_name)" @update:list="setListMode(lane.repo.full_name, $event)"
+                :label="t('Visningsläge för {name}', { name: lane.repo.full_name })" />
               <button
                 v-if="!isDemo"
                 class="notification-toggle"
@@ -1644,7 +1663,7 @@ onMounted(async () => {
             <RefreshCw class="spinning" :size="21" aria-hidden="true" />
             {{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}
           </div>
-          <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane">
+          <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane" :class="{ 'list-mode': listRepos.includes(lane.repo.full_name) }">
             <section
               v-for="col in columns"
               :key="col.key"
@@ -1661,6 +1680,23 @@ onMounted(async () => {
                 <span class="column-hint">{{ col.hint }}</span>
               </div>
               <div class="cards">
+                <ul v-if="listRepos.includes(lane.repo.full_name) && items(lane, col.key).length" class="issue-rows">
+                  <IssueRow
+                    v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
+                    :key="boardEntryKey({ lane, issue }, col.key)"
+                    :issue="issue"
+                    :repository="lane.repo.full_name"
+                    :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
+                    :rules="rules[lane.repo.full_name] || {}"
+                    :timed-out="issueTimedOut(lane.repo.full_name, issue)"
+                    :timeout-minutes="timeoutMinutes"
+                    :demo="isDemo"
+                    :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
+                    :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
+                    @read="readIssue(lane.repo.full_name, issue)"
+                  />
+                </ul>
+                <template v-else-if="!listRepos.includes(lane.repo.full_name)">
                 <IssueCard
                   v-for="issue in items(lane, col.key).slice(
                     0,
@@ -1688,6 +1724,7 @@ onMounted(async () => {
                     recentClosures.has(closureKey(lane.repo.full_name, issue))
                   "
                 />
+                </template>
                 <div v-if="!items(lane, col.key).length" class="column-empty">
                   <CircleCheck v-if="col.key === 'closed'" :size="20" /><Clock3
                     v-else-if="col.key === 'progress'"
@@ -1722,6 +1759,7 @@ onMounted(async () => {
         </section>
         </template>
         <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
+          <div class="combined-board-head">
           <details class="combined-repository-controls">
             <summary>{{ t("Repositoryfilter och inställningar") }}</summary>
             <p class="combined-limit-note">{{ t("Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.") }}</p>
@@ -1737,12 +1775,14 @@ onMounted(async () => {
               <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Anpassa labels för ') + lane.repo.name"><Settings2 :size="16" /></button>
             </div>
           </details>
+          <BoardModeToggle v-model:list="combinedList" :label="t('Visningsläge för den gemensamma boarden')" />
+          </div>
           <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
             <p v-if="lane.error" class="notice error" role="alert"><strong>{{ lane.repo.full_name }}</strong> {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}</p>
             <p v-if="lane.timerWarning" class="notice"><strong>{{ lane.repo.full_name }}</strong> {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</p>
           </template>
-          <div class="swimlane">
+          <div class="swimlane" :class="{ 'list-mode': combinedList }">
             <section
               v-for="col in columns"
               :key="col.key"
@@ -1759,6 +1799,24 @@ onMounted(async () => {
                 <span class="column-hint">{{ col.hint }}</span>
               </div>
               <div class="cards">
+                <ul v-if="combinedList && combinedColumns[col.key]!.length" class="issue-rows">
+                  <IssueRow
+                    v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
+                    :key="boardEntryKey({ lane, issue }, col.key)"
+                    :issue="issue"
+                    :repository="lane.repo.full_name"
+                    show-repository
+                    :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
+                    :rules="rules[lane.repo.full_name] || {}"
+                    :timed-out="issueTimedOut(lane.repo.full_name, issue)"
+                    :timeout-minutes="timeoutMinutes"
+                    :demo="isDemo"
+                    :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
+                    :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
+                    @read="readIssue(lane.repo.full_name, issue)"
+                  />
+                </ul>
+                <template v-else-if="!combinedList">
                 <IssueCard
                   v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
@@ -1782,6 +1840,7 @@ onMounted(async () => {
                     recentClosures.has(closureKey(lane.repo.full_name, issue))
                   "
                 />
+                </template>
                 <div v-if="!combinedColumns[col.key]!.length && !orderedLanes.some(lane => lane.loading || lane.error)" class="column-empty">
                   <CircleCheck v-if="col.key === 'closed'" :size="20" /><Clock3
                     v-else-if="col.key === 'progress'"
@@ -1974,7 +2033,9 @@ onMounted(async () => {
 .repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .repository-loading svg { flex-shrink: 0; }
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
-.combined-repository-controls { padding: 15px 18px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.combined-board-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; border-bottom: 1px solid var(--line); }
+.combined-board-head > .board-mode-toggle { margin: 10px 18px 10px auto; }
+.combined-repository-controls { flex: 1 1 260px; min-width: 0; padding: 15px 18px; font-size: 12px; }
 .combined-repository-controls summary { cursor: pointer; font-weight: 600; }
 .combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }
 .combined-repository-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
