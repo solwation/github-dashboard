@@ -106,10 +106,10 @@
       },
       {
         "text": {
-          "sv": "Statistiken hämtas i bakgrunden när det finns ledig kapacitet, så statistikvyn öppnas direkt från den krypterade cachen.",
-          "en": "Statistics are collected in the background when capacity is free, so the Statistics view opens instantly from the encrypted cache."
+          "sv": "Statistiken hämtas i bakgrunden vid ledig kapacitet och återanvänder tavlans data, så statistikvyn öppnas direkt och sparar API-gräns.",
+          "en": "Statistics are collected in the background at idle capacity and reuse board data, so the view opens instantly and saves rate limit."
         },
-        "issues": [135]
+        "issues": [135, 136]
       },
       {
         "text": {
