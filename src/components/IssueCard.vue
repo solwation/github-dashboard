@@ -33,6 +33,7 @@ const props = defineProps<{
   demo?: boolean;
   celebrate?: boolean;
   repository?: string;
+  showRepository?: boolean;
   assignedColor?: string;
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
@@ -130,7 +131,7 @@ const visibleLabels = computed(() =>
       {{ recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
       <span aria-hidden="true">✓</span>
     </button>
-    <span v-if="repository" class="card-repository" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
+    <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
     <div class="card-top">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
