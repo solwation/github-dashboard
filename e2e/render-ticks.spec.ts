@@ -9,12 +9,15 @@ const repos = Array.from({ length: 12 }, (_, index) => {
 function fixture(page: Page, base: number) {
   // Every in-progress issue started within the hour, so all of them show ticking seconds.
   const startedAt = (number: number) => new Date(base - (number - 20) * minute).toISOString();
+  const closedMs = (number: number) => base - (number === 46 ? 20000 : (number - 45) * 86400000);
   const issue = (repo: typeof repos[number], number: number) => {
     const closed = number > 45;
     const labels = number <= 25 ? [{ name: `priority: ${['high', 'medium', 'low'][number % 3]}`, color: '000000' }] : closed ? [] : [{ name: 'in-progress', color: '000000' }];
     return { id: repo.id * 1000 + number, number, title: `${repo.name} issue ${number}`, body: '', comments: 0, state: closed ? 'closed' : 'open', labels, assignees: [],
       created_at: '2020-01-01T00:00:00Z', updated_at: '2020-01-02T00:00:00Z', html_url: `${repo.html_url}/issues/${number}`,
-      closed_at: closed ? new Date(base - (number === 46 ? 20000 : (number - 45) * 86400000)).toISOString() : null };
+      closed_at: closed ? new Date(closedMs(number)).toISOString() : null,
+      // Closed issues carry a start, so the column estimates (#140) count down during the measurement too.
+      ...(closed ? { startedAt: new Date(closedMs(number) - 30 * minute).toISOString() } : {}) };
   };
   return page.route('https://api.github.com/**', async route => {
     const url = new URL(route.request().url());
@@ -62,6 +65,7 @@ test('per-second labels tick without re-rendering the App root, and pause when h
   const closed = page.locator('.issue-card').filter({ has: page.getByText('perf-01 issue 46', { exact: true }) }).locator('.closed-date');
   await expect(recent).toHaveText(/^\d+m \d+s$/);
   await expect(closed).toHaveText(/sekunder sedan/);
+  await expect(page.locator('.column-estimate')).toHaveCount(12 * 2);
   // Background sync would legitimately re-render on new data; keep the measured window idle,
   // with the lazily loaded Statistics module fetched beforehand.
   await page.evaluate(path => import(/* @vite-ignore */ path), '/src/components/StatisticsView.vue');

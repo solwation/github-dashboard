@@ -655,6 +655,20 @@ h1 {
   background: #e8f3ee;
   color: #6a9f8f;
 }
+/* Time estimate after the count (#140); wraps under the title in narrow columns. */
+.column-heading:has(.column-estimate) {
+  flex-wrap: wrap;
+  min-width: 0;
+  row-gap: 3px;
+}
+.column-estimate {
+  display: inline-flex;
+  gap: 7px;
+  color: var(--muted);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .column-hint {
   font-size: 8px;
   color: #9ca6ab;

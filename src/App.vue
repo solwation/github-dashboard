@@ -66,6 +66,7 @@ import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type 
 import IssueCard from "./components/IssueCard.vue";
 import IssueRow from "./components/IssueRow.vue";
 import BoardModeToggle from "./components/BoardModeToggle.vue";
+import ColumnEstimate from "./components/ColumnEstimate.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { GitHub } from "./lib/github";
@@ -598,6 +599,13 @@ const laneColumns = computed(() => new Map(lanes.value.map((lane) => {
 function laneIssues(lane: Lane) { return laneColumns.value.get(lane.repo.full_name)?.issues ?? []; }
 function items(lane: Lane, key: string) { return laneColumns.value.get(lane.repo.full_name)?.[key] ?? []; }
 const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value })])));
+// Column estimates (#140) read the filtered issues shown; stable arrays keep the header clocks quiet.
+const laneEstimateGroups = computed(() => new Map(lanes.value.map((lane) => [lane.repo.full_name,
+  [{ issues: laneColumns.value.get(lane.repo.full_name)?.issues ?? [], rules: rules.value[lane.repo.full_name] }]])));
+const combinedEstimateGroups = computed(() => orderedLanes.value.filter((lane) => !lane.loading).map((lane) => ({
+  issues: lane.issues.filter((issue) => (!hideCoordination.value || !isCoordination(issue)) && matchesIssueFilters(issue, query.value, "")),
+  rules: rules.value[lane.repo.full_name],
+})));
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
 watch(columnLimit, () => { combinedLimits.value = {}; });
 // One set of loaders per repository and session keeps card props stable between renders (#120).
@@ -1709,7 +1717,8 @@ onMounted(async () => {
                   <i :class="col.key" />{{ col.title
                   }}<span class="column-count">{{
                     items(lane, col.key).length
-                  }}</span>
+                  }}</span
+                  ><ColumnEstimate v-if="col.key !== 'closed'" :groups="laneEstimateGroups.get(lane.repo.full_name) ?? []" :column="col.key as 'progress' | 'backlog'" />
                 </div>
                 <span class="column-hint">{{ col.hint }}</span>
               </div>
@@ -1822,7 +1831,8 @@ onMounted(async () => {
                   <i :class="col.key" />{{ col.title
                   }}<span v-if="combinedColumns[col.key]!.length || !orderedLanes.some(lane => lane.loading || lane.error)" class="column-count">{{
                     combinedColumns[col.key]!.length
-                  }}</span>
+                  }}</span
+                  ><ColumnEstimate v-if="col.key !== 'closed'" :groups="combinedEstimateGroups" :column="col.key as 'progress' | 'backlog'" />
                 </div>
                 <span class="column-hint">{{ col.hint }}</span>
               </div>
