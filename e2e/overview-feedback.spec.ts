@@ -48,7 +48,11 @@ const card = (page: Page, key: string) => page.locator('.stats [data-stat="' + k
 test("summary colors progress completion green and return to backlog red while keeping search silent", async ({ page }) => {
   const api = await fixture(page);
   await expect(page.locator(".stat-delta")).toHaveCount(0);
-  await expect(card(page, "closed").locator(".stat-today")).toContainText("+0 idag");
+  await expect(page.locator(".stats .stat-cells")).toHaveCount(4);
+  await expect(card(page, "repositories").locator(".stat-cell")).toHaveText(["1 aktiva", "0 backlog"]);
+  await expect(card(page, "open").locator(".stat-cell")).toHaveText(["0 backlog", "0 hög prio"]);
+  await expect(card(page, "progress").locator(".stat-cell")).toHaveText(["1 repos", "0 hög prio"]);
+  await expect(card(page, "closed").locator(".stat-cell")).toHaveText(["+0 idag", "1 senaste 7 d"]);
   api.setStage(1);
   await api.refresh();
   await expect(card(page, "open").locator(".stat-delta")).toHaveText("−1");
@@ -57,7 +61,7 @@ test("summary colors progress completion green and return to backlog red while k
   await expect(card(page, "closed")).toHaveClass(/stat-positive/);
   await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
   await expect(card(page, "progress")).toHaveClass(/stat-positive/);
-  await expect(card(page, "closed").locator(".stat-today")).toContainText("+1 idag");
+  await expect(card(page, "closed").locator(".stat-cell")).toHaveText(["+1 idag", "2 senaste 7 d"]);
   await api.refresh();
   await expect(card(page, "closed").locator(".stat-delta")).toHaveText("+1");
   // Start a distinct pulse for a return to backlog: the sign stays negative but the color changes.
@@ -68,6 +72,8 @@ test("summary colors progress completion green and return to backlog red while k
   await expect(card(page, "closed").locator(".stat-delta")).toHaveCount(0);
   await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
   await expect(card(page, "progress")).toHaveClass(/stat-negative/);
+  await expect(card(page, "repositories").locator(".stat-cell")).toHaveText(["1 aktiva", "1 backlog"]);
+  await expect(card(page, "open").locator(".stat-cell")).toHaveText(["1 backlog", "0 hög prio"]);
   await expect(page.locator(".stat-delta")).toHaveCount(0, { timeout: 5000 });
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("no matching issues");
   await expect(card(page, "open").locator("strong")).toHaveText(/0/);
@@ -106,7 +112,8 @@ test("summary uses accessible English feedback and static reduced-motion colors 
   await expect(summary.getByRole("status")).toContainText("Closed: +1");
   await expect(card(page, "progress").locator(".stat-delta")).toHaveText("−1");
   await expect(card(page, "progress")).toHaveClass(/stat-positive/);
-  await expect(card(page, "closed").locator(".stat-today")).toContainText("+1 today");
+  await expect(card(page, "closed").locator(".stat-cell")).toHaveText(["+1 today", "2 last 7d"]);
+  await expect(card(page, "open").locator(".stat-cell")).toHaveText(["0 backlog", "0 high priority"]);
   expect(await card(page, "closed").evaluate(element => getComputedStyle(element).transitionDuration)).toBe("0s");
   expect(await summary.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.reload();

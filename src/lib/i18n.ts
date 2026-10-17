@@ -94,6 +94,10 @@ export const english: Record<string, string> = {
   "{count} aktiva": "{count} active",
   "{count} aktiva projekt. {definition}": "{count} active projects. {definition}",
   "Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet.": "Active projects have at least one issue in Backlog or In progress, or an issue closed in the last 30 days. Hidden coordination issues are excluded. Text filters do not affect this count.",
+  "{count} backlog": "{count} backlog",
+  "{count} hög prio": "{count} high priority",
+  "{count} repos": "{count} repos",
+  "{count} senaste 7 d": "{count} last 7d",
 
   "Ange ett heltal mellan 1 och 10080 minuter.": "Enter a whole number between 1 and 10080 minutes.",
   "Tidsgräns för pågående issues (minuter)": "In progress issue timeout (minutes)",

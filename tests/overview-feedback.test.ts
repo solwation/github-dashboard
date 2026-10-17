@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countActiveRepositories, countClosedToday, emptyCounts, OverviewFeedbackTracker } from "../src/lib/overview-feedback";
+import { countActiveRepositories, countClosedToday, emptyCounts, OverviewFeedbackTracker, summarizeOverviewSecondary } from "../src/lib/overview-feedback";
 import type { Issue, Lane, Rules } from "../src/lib/model";
 const issue = (id: number, labels: string[] = [], state = "open", closedAt: string | null = null): Issue => ({
   id, number: id, title: "Task", labels: labels.map(name => ({ name, color: "000000" })), state,
@@ -140,5 +140,49 @@ describe("active repositories", () => {
     expect(countActiveRepositories(lanes, {}, now + 1)).toBe(0);
     expect(countActiveRepositories([lane([issue(2, [], "closed", "invalid"), issue(3, [], "closed", new Date(now + 1).toISOString())])], {}, now)).toBe(0);
     expect(countActiveRepositories(lanes, {}, NaN)).toBe(0);
+  });
+});
+
+describe("secondary overview summary counts (#152)", () => {
+  const now = new Date(2026, 9, 16, 12).getTime();
+  const today = new Date(2026, 9, 16, 9).toISOString();
+  const fiveDaysAgo = new Date(now - 5 * 86400000).toISOString();
+  const tenDaysAgo = new Date(now - 10 * 86400000).toISOString();
+  it("computes secondary cell counts across repositories, open/backlog, in-progress and closed cards", () => {
+    const lanes = [
+      lane([
+        { ...issue(1, ["priority: high"]), title: "Match backlog" },
+        { ...issue(2, ["in-progress", "priority: high"]), title: "Match progress" },
+        issue(3, [], "closed", today),
+        issue(4, [], "closed", tenDaysAgo),
+      ], "a/one"),
+      lane([
+        { ...issue(5, ["priority: low"]), title: "Other backlog" },
+        { ...issue(6, ["in-progress"]), title: "Other progress" },
+        issue(7, [], "closed", fiveDaysAgo),
+        issue(8, ["orkester"]),
+      ], "a/two"),
+    ];
+    expect(summarizeOverviewSecondary(lanes, {}, now, true)).toEqual({
+      activeRepositories: 2,
+      backlogRepositories: 2,
+      backlogIssues: 2,
+      highPriorityOpen: 2,
+      progressRepositories: 2,
+      highPriorityProgress: 1,
+      closedToday: 1,
+      closedLast7Days: 2,
+    });
+    // Text filters narrow open and in-progress breakdowns while keeping repository and closed-window counts stable.
+    expect(summarizeOverviewSecondary(lanes, {}, now, true, { query: "Match" })).toEqual({
+      activeRepositories: 2,
+      backlogRepositories: 2,
+      backlogIssues: 1,
+      highPriorityOpen: 2,
+      progressRepositories: 1,
+      highPriorityProgress: 1,
+      closedToday: 1,
+      closedLast7Days: 2,
+    });
   });
 });

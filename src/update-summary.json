@@ -1,13 +1,14 @@
 {
   "baseCommit": "9e6f4f55d8424e02d55b8478d4acaa23ca3a0062",
   "summary": {
-    "sv": "Sidhuvudet stannar överst även på datorn, Kort/Lista ligger längst till höger och tidsuppskattningar syns direkt vid start.",
-    "en": "The header stays pinned on desktop too, Cards/List sits at the far right, and time estimates appear right at startup."
+    "sv": "Översiktskorten visar sekundära mått i två celler längst ner, sidhuvudet stannar överst även på datorn och Kort/Lista ligger längst till höger.",
+    "en": "Overview cards show secondary metrics in two bottom cells, the header stays pinned on desktop too, and Cards/List sits at the far right."
   },
   "issues": [
     148,
     149,
     151,
+    152,
     153
   ]
 }

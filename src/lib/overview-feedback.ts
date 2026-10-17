@@ -1,7 +1,17 @@
 import { matchesIssueFilters } from "./issue-filter";
-import { column, isCoordination, type Lane, type Rules } from "./model";
+import { column, isCoordination, priority, type Lane, type Rules } from "./model";
 
 export interface OverviewCounts { open: number; progress: number; closed: number }
+export interface OverviewSecondaryCounts {
+  activeRepositories: number;
+  backlogRepositories: number;
+  backlogIssues: number;
+  highPriorityOpen: number;
+  progressRepositories: number;
+  highPriorityProgress: number;
+  closedToday: number;
+  closedLast7Days: number;
+}
 export const emptyCounts = (): OverviewCounts => ({ open: 0, progress: 0, closed: 0 });
 export const overviewKeys = ["open", "progress", "closed"] as const;
 export const OVERVIEW_DELTA_MS = 3000;
@@ -92,6 +102,64 @@ export function countActiveRepositories(lanes: Lane[], rules: Record<string, Rul
     })) active.add(repo);
   }
   return active.size;
+}
+
+/** Secondary two-cell breakdown for the four overview summary cards (#152). */
+export function summarizeOverviewSecondary(
+  lanes: Lane[],
+  rules: Record<string, Rules>,
+  now: number,
+  hideCoordination = false,
+  filters: { query?: string; repositoryQueries?: Record<string, string> } = {},
+): OverviewSecondaryCounts {
+  const backlogRepos = new Set<string>();
+  const progressRepos = new Set<string>();
+  const seenFiltered = new Set<string>();
+  const seenClosed = new Set<string>();
+  const cutoff7d = Number.isFinite(now) ? now - 7 * 86400000 : NaN;
+  let backlogIssues = 0;
+  let highPriorityOpen = 0;
+  let highPriorityProgress = 0;
+  let closedLast7Days = 0;
+  for (const lane of lanes) {
+    const repo = lane.repo.full_name;
+    const repoRules = rules[repo] || {};
+    const repoQuery = filters.repositoryQueries?.[repo] || "";
+    for (const issue of lane.issues) {
+      if (issue.pull_request || (hideCoordination && isCoordination(issue))) continue;
+      const col = column(issue, repoRules);
+      if (col === "backlog") backlogRepos.add(repo);
+      const key = `${repo}:${issue.id}`;
+      if (issue.state === "closed" && issue.closed_at && !seenClosed.has(key) && Number.isFinite(cutoff7d)) {
+        const closed = Date.parse(issue.closed_at);
+        if (closed >= cutoff7d && closed <= now) {
+          seenClosed.add(key);
+          closedLast7Days++;
+        }
+      }
+      if (seenFiltered.has(key) || !matchesIssueFilters(issue, filters.query || "", repoQuery)) continue;
+      seenFiltered.add(key);
+      const high = priority(issue, repoRules) === 0;
+      if (issue.state === "open") {
+        if (col === "backlog") backlogIssues++;
+        if (high) highPriorityOpen++;
+      }
+      if (col === "progress") {
+        progressRepos.add(repo);
+        if (high) highPriorityProgress++;
+      }
+    }
+  }
+  return {
+    activeRepositories: countActiveRepositories(lanes, rules, now, hideCoordination),
+    backlogRepositories: backlogRepos.size,
+    backlogIssues,
+    highPriorityOpen,
+    progressRepositories: progressRepos.size,
+    highPriorityProgress,
+    closedToday: countClosedToday(lanes, now, hideCoordination),
+    closedLast7Days,
+  };
 }
 
 export const signedDelta = (delta: number) => delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`;
