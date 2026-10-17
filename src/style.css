@@ -2018,3 +2018,62 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="dark"] .issue-row.just-closed { animation: none; border-color: #4fae78; background: #173a2b; }
 }
+
+/* Safe areas (#145): with viewport-fit=cover an installed PWA draws edge to edge, so
+   the notch/status-bar strip is filled with the header surface and side/bottom insets
+   pad the page. All insets are 0 in ordinary browsers, leaving desktop unchanged. */
+body {
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.sidebar {
+  left: env(safe-area-inset-left, 0px);
+  padding-top: calc(32px + env(safe-area-inset-top, 0px));
+}
+.workspace {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--surface);
+  z-index: 50;
+  pointer-events: none;
+}
+@media (max-width: 1250px) {
+  .sidebar {
+    padding-top: calc(30px + env(safe-area-inset-top, 0px));
+  }
+}
+@media (max-width: 950px) {
+  .sidebar {
+    padding-top: calc(25px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* Phone header (#145): the brand row and the breadcrumb/tools row stay at the top while
+   scrolling. Both rows are sticky on their own parents; the topbar's bottom border stays
+   their lower edge. Anchor jumps reserve their measured height via --topbar-height. */
+@media (max-width: 650px) {
+  :root {
+    --phone-brand-height: calc(64px + env(safe-area-inset-top, 0px));
+  }
+  html {
+    scroll-padding-top: calc(var(--phone-brand-height) + var(--topbar-height, 58px));
+  }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: var(--phone-brand-height);
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  }
+  .workspace {
+    padding-top: 0;
+  }
+  .topbar {
+    position: sticky;
+    top: var(--phone-brand-height);
+    z-index: 10;
+  }
+}

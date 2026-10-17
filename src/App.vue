@@ -1240,6 +1240,18 @@ function handleRefreshShortcut(event: KeyboardEvent) {
 function resumeStatusAudio(event: Event) {
   if (event.isTrusted && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
 }
+// The phone header stays sticky (#145); its measured height keeps anchor jumps clear of it.
+const topbar = ref<HTMLElement | null>(null);
+let topbarObserver: ResizeObserver | undefined;
+onMounted(() => {
+  if (topbar.value && typeof ResizeObserver !== "undefined") {
+    topbarObserver = new ResizeObserver(() => {
+      if (topbar.value) document.documentElement.style.setProperty("--topbar-height", `${topbar.value.offsetHeight}px`);
+    });
+    topbarObserver.observe(topbar.value);
+  }
+});
+onUnmounted(() => topbarObserver?.disconnect());
 onMounted(() => {
   sync.start();
   window.addEventListener("hashchange", navigateWorkspace);
@@ -1360,7 +1372,7 @@ onMounted(async () => {
     </div>
   </aside>
   <div class="workspace">
-    <header class="topbar">
+    <header ref="topbar" class="topbar">
       <div class="breadcrumb">
         Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
