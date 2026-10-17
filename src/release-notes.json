@@ -36,6 +36,13 @@
       },
       {
         "text": {
+          "sv": "Kolumnrubrikerna Pågående och Backlog visar en levande tidsuppskattning när det finns tillräcklig historik från nyligen stängda ärenden.",
+          "en": "The In progress and Backlog column headers show a live time estimate when enough recently closed issues provide history."
+        },
+        "issues": [139, 140]
+      },
+      {
+        "text": {
           "sv": "En länk eller QR-kod för ett annat konto byter inte inloggning utan bekräftelse, och ogiltiga länkar visar ett översatt fel över din sparade tavla.",
           "en": "A link or QR code for another account never switches sign-in without confirmation, and invalid links show a translated error over your saved board."
         },
