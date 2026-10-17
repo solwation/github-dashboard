@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
 import { MessageCircle, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
-import { renderMarkdown } from "../lib/markdown";
+import { useMarkdown } from "../lib/lazy-markdown";
 import { commentTimeLabel } from "../lib/time";
 import type { Issue, IssueComment } from "../lib/model";
 
@@ -22,11 +22,14 @@ const now = ref(Date.now());
 let clock: ReturnType<typeof setInterval> | undefined;
 const state = ref<"loading" | "loaded" | "error">("loading");
 const comments = ref<IssueComment[]>([]);
+const markdown = useMarkdown();
+// Comments wait for the lazily loaded Markdown renderer unless that chunk could not be loaded.
+const renderPending = computed(() => !markdown.renderer.value && !markdown.failed.value);
 let revision = 0;
 const rendered = computed(() => [...comments.value].sort((a, b) => {
   const first = Date.parse(a.created_at), second = Date.parse(b.created_at);
   return (Number.isFinite(second) ? second : -Infinity) - (Number.isFinite(first) ? first : -Infinity) || 0;
-}).map(comment => ({ ...comment, markdown: renderMarkdown(comment.body) })));
+}).map(comment => ({ ...comment, markdown: markdown.renderer.value?.(comment.body) })));
 function safeUrl(value: string) {
   try { const url = new URL(value); return url.origin === "https://github.com" ? url.href : undefined; }
   catch { return undefined; }
@@ -58,6 +61,7 @@ async function show() {
   if (!open.value) return;
   dialog.value?.showModal();
   emit("read");
+  void markdown.load();
   void load();
 }
 function clear() {
@@ -84,8 +88,8 @@ onBeforeUnmount(clear);
       <p class="comments-issue-title">{{ issue.title }}</p>
       <div class="comments-body" role="region" :aria-labelledby="titleId" tabindex="0">
         <p v-if="demo" class="comments-status">{{ t('Kommentarer visas inte i demon. Anslut GitHub för att läsa dina issuediskussioner.') }}</p>
-        <div v-else aria-live="polite" :aria-busy="state === 'loading'">
-          <p v-if="state === 'loading'" class="comments-status">{{ t('Hämtar kommentarer…') }}</p>
+        <div v-else aria-live="polite" :aria-busy="state === 'loading' || renderPending">
+          <p v-if="state === 'loading' || (renderPending && comments.length)" class="comments-status">{{ t('Hämtar kommentarer…') }}</p>
           <div v-else-if="state === 'error'" class="comments-status">
             <p role="alert">{{ t('Kommentarerna kunde inte hämtas. Kontrollera anslutningen och din åtkomst till repot.') }}</p>
             <button type="button" class="retry-comments" @click="load">{{ t('Försök igen') }}</button>
@@ -99,7 +103,8 @@ onBeforeUnmount(clear);
                   :title="dateLabel(comment.created_at)" :aria-label="dateLabel(comment.created_at)" aria-live="off">{{ commentTimeLabel(comment.created_at, now, locale) }}</time>
                 <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
               </div>
-              <div v-if="comment.body?.trim()" class="comment-markdown" v-html="comment.markdown" />
+              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown" v-html="comment.markdown" />
+              <p v-else-if="comment.body?.trim()" class="comment-markdown plain-comment">{{ comment.body }}</p>
               <p v-else class="comments-status">{{ t('Kommentaren saknar text.') }}</p>
             </article>
           </template>
@@ -127,6 +132,7 @@ h2 { overflow-wrap: anywhere; min-width: 0; font-size: 1rem; line-height: 1.5; m
 .comment-meta time { color: var(--muted); }
 .comment-meta a, .comment-markdown :deep(a) { color: var(--green); text-decoration: underline; }
 .comment-markdown { font-size: .85rem; line-height: 1.65; overflow-wrap: anywhere; }
+.plain-comment { white-space: pre-wrap; }
 .comment-markdown :deep(h1), .comment-markdown :deep(h2), .comment-markdown :deep(h3) { font-size: 1rem; }
 .comment-markdown :deep(h4), .comment-markdown :deep(h5), .comment-markdown :deep(h6) { font-size: .9rem; }
 .comment-markdown :deep(pre) { box-sizing: border-box; max-width: 100%; overflow-x: auto; padding: .7rem; background: var(--code-bg); white-space: pre; overflow-wrap: normal; border-radius: .4rem; }

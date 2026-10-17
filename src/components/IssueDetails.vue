@@ -4,16 +4,22 @@ import { ChevronDown, ChevronUp } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
-import { renderMarkdown } from "../lib/markdown";
+import { useMarkdown } from "../lib/lazy-markdown";
 
 const props = defineProps<{ body?: string | null; comments?: number; issue: Issue; demo?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: [] }>();
-function toggle() { expanded.value = !expanded.value; if (expanded.value) emit("read"); }
+function toggle() {
+  expanded.value = !expanded.value;
+  if (!expanded.value) return;
+  emit("read");
+  if (props.body?.trim()) void markdown.load();
+}
+const markdown = useMarkdown();
 const { t } = useLanguage();
 const expanded = ref(false);
 const panelId = useId();
 const count = computed(() => Math.max(0, Math.floor(props.comments ?? 0)));
-const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : "");
+const rendered = computed(() => expanded.value && markdown.renderer.value ? markdown.renderer.value(props.body) : "");
 </script>
 <template>
   <div class="issue-details">
@@ -24,7 +30,12 @@ const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : ""
       <IssueComments :issue="issue" :count="count" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <section v-if="expanded" :id="panelId" class="details-panel" :aria-label="t('Beskrivning')">
-      <div v-if="body?.trim()" class="issue-markdown" v-html="rendered" />
+      <template v-if="body?.trim()">
+        <div v-if="markdown.renderer.value" class="issue-markdown" v-html="rendered" />
+        <!-- Without the Markdown chunk (offline before it was cached), show the source as safe plain text. -->
+        <p v-else-if="markdown.failed.value" class="issue-markdown plain-description">{{ body }}</p>
+        <p v-else class="empty-description" role="status" aria-busy="true">{{ t("Hämtar beskrivning…") }}</p>
+      </template>
       <p v-else class="empty-description">{{ t("Ingen beskrivning har lagts till.") }}</p>
     </section>
   </div>
@@ -37,6 +48,7 @@ const rendered = computed(() => expanded.value ? renderMarkdown(props.body) : ""
 .details-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); min-width: 0; max-width: 100%; }
 .issue-markdown, .empty-description { font-size: .78rem; line-height: 1.6; overflow-wrap: anywhere; }
 .empty-description { color: var(--muted); margin: 0; }
+.plain-description { margin: 0; white-space: pre-wrap; }
 .issue-markdown :deep(> :first-child) { margin-top: 0; }
 .issue-markdown :deep(> :last-child) { margin-bottom: 0; }
 .issue-markdown :deep(h1), .issue-markdown :deep(h2), .issue-markdown :deep(h3) { font-size: .95rem; line-height: 1.4; margin: .8rem 0 .4rem; }

@@ -539,6 +539,7 @@ export const english: Record<string, string> = {
   "Kommentarer visas inte i demon. Anslut GitHub för att läsa dina issuediskussioner.":
     "Comments are not shown in the demo. Connect GitHub to read your issue discussions.",
   "Hämtar kommentarer…": "Loading comments…",
+  "Hämtar beskrivning…": "Loading description…",
   "Kommentarerna kunde inte hämtas. Kontrollera anslutningen och din åtkomst till repot.":
     "Comments could not be loaded. Check your connection and access to the repository.",
   "Inga kommentarer ännu.": "No comments yet.",
