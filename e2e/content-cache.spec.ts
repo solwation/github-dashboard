@@ -222,7 +222,7 @@ test("encrypted startup avoids empty and welcome flashes and retains sidebar nod
   await page.getByRole('button', { name: 'Kollapsa test', exact: true }).click();
   await expect(page.locator('#repo-1')).toHaveClass(/is-collapsed/);
   state.release();
-  await expect(page.locator('.updated')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", 'false');
   await expect(page.getByRole('button', { name: 'Logga ut', exact: true })).toBeEnabled();
   expect(await original!.evaluate(element => element.isConnected && document.querySelector('.sidebar-repository-row[data-repository="sample/test"]') === element)).toBe(true);
   await expect(page.locator('#repo-1')).toHaveClass(/is-collapsed/);

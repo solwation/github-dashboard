@@ -146,7 +146,7 @@ test("an open discussion survives background synchronization of the same issue",
   const synced = page.waitForResponse(response => response.url().includes("/issues?") && response.url().includes("state=all"));
   await page.clock.fastForward(301000);
   await synced;
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("Keep reading this discussion")).toBeVisible();
   expect(await original!.evaluate(element => element.isConnected)).toBe(true);

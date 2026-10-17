@@ -30,7 +30,7 @@ async function connect(page: Page) {
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   await page.getByRole("checkbox", { name: /^sample\/alpha/ }).check();
   await page.getByRole("button", { name: "Visa översikt" }).click();
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   return () => requests;
 }
 
@@ -46,7 +46,7 @@ for (const width of [390, 1440]) {
     // skipped when that tick lands during the full load and sends one `since` list otherwise (#142).
     // Fire that tick now, wait for it, and keep time paused so only navigation can add requests.
     await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1500));
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     const beforeNavigation = requests();
     await page.evaluate(() => {
       Object.assign(window, { documentMarker: "same-document" });
@@ -67,7 +67,7 @@ for (const width of [390, 1440]) {
     expect(await page.evaluate(() => (window as unknown as { documentMarker: string }).documentMarker)).toBe("same-document");
     // Timers started by navigation still run; the scheduler's next reconcile is minutes away.
     await page.clock.runFor(5000);
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     expect(requests()).toBe(beforeNavigation);
     // Keyboard activation also moves focus and the viewport back to the overview.
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));

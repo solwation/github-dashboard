@@ -1624,7 +1624,8 @@ onMounted(async () => {
         <OverviewSummary :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
           :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn"
           @choose-repositories="picker = true" />
-        <div class="board-toolbar">
+        <!-- data-busy (#151): non-visual "sync finished" signal for tests; per-repository and combined headers show status. -->
+        <div class="board-toolbar" :data-busy="busy ? 'true' : 'false'">
           <label class="search"
             ><Search :size="17" /><input
               v-model="query"
@@ -1635,10 +1636,9 @@ onMounted(async () => {
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
           ><BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
-          /><span class="updated" :aria-busy="busy"
-            :title="loggedIn ? syncError || t('Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.') : undefined"
-            ><i aria-hidden="true" /><span v-if="loggedIn" class="sync-mode">{{ t("Adaptiv synk") }}</span></span
-          >
+        /></div>
+        <div v-if="loggedIn && syncError && !lanes.some(lane => lane.error === syncError)" class="notice error sync-error" role="alert">
+          {{ syncError }} {{ t("Tidigare data visas om de finns.") }}
         </div>
         <div v-if="busy && !lanes.length" class="empty-state">
           <RefreshCw class="spinning" :size="25" />

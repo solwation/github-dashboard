@@ -20,7 +20,7 @@ async function connect(page: Page) {
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   await page.getByRole("checkbox", { name: "sample/alpha" }).check();
   await page.getByRole("button", { name: "Visa översikt" }).click();
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   return {
     pause: () => { gate = new Promise(resolve => { release = resolve; }); },
     release: () => { gate = undefined; release(); },
@@ -48,12 +48,12 @@ for (const width of [1440, 320]) {
     api.pause();
     await page.getByRole("button", { name: "Visa översikt" }).click();
     // The picker stays reachable while the new selection loads (#98), like the sidebar picker.
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "true");
     await expect(action).toBeEnabled();
     await action.focus();
     await expect(action).toBeFocused();
     api.release();
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     await expect(action).toBeEnabled();
     await expect(card.locator("strong")).toHaveText("20 aktiva");
     await page.getByRole("button", { name: "Inställningar", exact: true }).click();

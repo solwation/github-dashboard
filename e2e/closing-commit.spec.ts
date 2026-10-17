@@ -53,7 +53,7 @@ test("closing commit details appear only for available associations and survive 
     }).observe(element, { childList: true, characterData: true, subtree: true });
   });
   await page.keyboard.press("Control+r");
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   await expect(linked.locator(".closing-commit a")).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { closingCommitRefresh: { loadingFlashes: number } }).closingCommitRefresh.loadingFlashes)).toBe(0);
   await expect(page.locator(".issue-card")).toHaveCount(4);

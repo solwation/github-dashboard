@@ -3,9 +3,9 @@ import { expect, test } from "@playwright/test";
 test("new Backlog issues are green, persist through sync and comments, and acknowledge separately from returns", async ({ page }) => {
   await page.clock.install();
   async function refresh() {
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     await page.keyboard.press("F5");
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   }
   let createdAt = "";
   let version = 0;

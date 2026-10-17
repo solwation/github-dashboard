@@ -237,8 +237,7 @@ input[type="checkbox"] {
   align-items: center;
   gap: 7px;
 }
-.connection i,
-.updated i {
+.connection i {
   height: 6px;
   width: 6px;
   border-radius: 50%;
@@ -465,22 +464,11 @@ h1 {
   gap: 5px;
   align-items: center;
 }
-.updated {
-  font-size: 10px;
-  color: #8e9a9e;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  flex-shrink: 0;
-  max-width: 100%;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.updated i {
-  background: #48a98f;
-  width: 5px;
-  height: 5px;
+/* #151: the view toggle takes the far-right slot of the toolbar on wider screens. */
+@media (min-width: 651px) {
+  .board-toolbar .board-mode-toggle {
+    margin-left: auto;
+  }
 }
 .repo-lane {
   border: 1px solid var(--line);
@@ -1237,9 +1225,6 @@ h1 {
   .issue-title {
     font-size: 11px;
   }
-  .updated {
-    margin-left: 0;
-  }
   .welcome {
     padding-top: 35px;
   }
@@ -1360,12 +1345,6 @@ h1 {
   }
   .coord-toggle {
     margin-left: 0;
-  }
-  .updated {
-    font-size: 9px;
-  }
-  .updated {
-    display: none;
   }
   .lane-header {
     padding: 16px 13px;
@@ -1901,7 +1880,6 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .search,
 :root[data-theme="dark"] .search input::placeholder,
 :root[data-theme="dark"] .coord-toggle,
-:root[data-theme="dark"] .updated,
 :root[data-theme="dark"] .lane-title a svg,
 :root[data-theme="dark"] .repo-owner,
 :root[data-theme="dark"] .private-badge,

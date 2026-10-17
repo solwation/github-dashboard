@@ -32,14 +32,14 @@ async function fixture(page: Page) {
   await page.getByLabel("GitHub personal access token").fill("fictional-summary-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   return {
     setStage: (value: number) => { stage = value; },
     refresh: async () => {
       const before = requests;
       await page.keyboard.press("F5");
       await expect.poll(() => requests).toBeGreaterThan(before);
-      await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+      await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     },
   };
 }

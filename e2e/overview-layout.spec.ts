@@ -24,7 +24,7 @@ async function connect(page: Page) {
   await page.getByLabel("GitHub personal access token").fill("fictional-layout-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 }
 
 // Returns, per summary card, how far each content part's centre deviates from the card's centre.

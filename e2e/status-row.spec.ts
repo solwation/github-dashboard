@@ -52,7 +52,7 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
   for (const repo of repos) await page.getByRole("checkbox", { name: repo.full_name }).check();
   await page.getByRole("button", { name: text.overview }).click();
   await expect(page.locator(".issue-title")).toHaveCount(2);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   return {
     pause: () => { gate = new Promise(resolve => { release = resolve; }); },
     release: () => { gate = undefined; release(); },
@@ -89,6 +89,9 @@ for (const [language, text] of Object.entries(copy)) {
       const betaSpinner = beta.getByRole("button", { name: text.fetching("sample/beta") });
       // The global row no longer repeats the time; it is visible beside each repository instead.
       await expect(page.locator(".board-toolbar")).not.toContainText(text.updated);
+      // #151: no global "Adaptive sync" label; the toolbar keeps only a non-visual data-busy signal.
+      await expect(page.locator(".board-toolbar .updated")).toHaveCount(0);
+      await expect(page.locator(".board-toolbar")).not.toContainText(language === "sv" ? "Adaptiv synk" : "Adaptive sync");
       await expect(alpha.locator(".lane-sync")).toHaveText(text.updated);
       await expect(beta.locator(".lane-sync")).toHaveText(text.updated);
       for (const width of [320, 375, 430, 768, 1280]) {
@@ -104,7 +107,7 @@ for (const [language, text] of Object.entries(copy)) {
         api.release();
         await expect(alphaSpinner).toHaveCount(0);
         await expect(alpha.locator(".lane-sync")).toHaveText(text.updated);
-        await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+        await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
         const after = await measure(page);
         for (const [state, sample] of Object.entries({ idle, busy, after })) {
           expect.soft(sample.board, `board at ${width}px (${state})`).toBe(idle.board);
@@ -178,7 +181,7 @@ test("the header status refreshes its repository on click and keyboard, ignoring
   const api = await connect(page, copy.sv);
   // Pause background sync (it only runs for a visible page), so every fetch below comes from the status button.
   await page.evaluate(() => Object.defineProperty(document, "hidden", { configurable: true, get: () => true }));
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   const alpha = page.locator(".repo-lane").filter({ has: page.getByText("Status for alpha") }).locator(".lane-header");
   const beta = page.locator(".repo-lane").filter({ has: page.getByText("Status for beta") }).locator(".lane-header");
   const alphaStatus = alpha.locator("button.lane-sync");
@@ -210,7 +213,7 @@ test("the header status refreshes its repository on click and keyboard, ignoring
   await page.waitForTimeout(500);
   expect(api.relations().beta).toBe(relationsBefore.beta);
   await expect(alphaStatus).toBeFocused();
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta });
 
   // Keyboard: Enter and Space on the beta status refresh beta.
@@ -220,7 +223,7 @@ test("the header status refreshes its repository on click and keyboard, ignoring
     await beta.locator("button.lane-sync").focus();
     await page.keyboard.press(key);
     await expect.poll(() => api.requests().beta).toBe(before.beta + 1);
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     expect(api.requests().alpha).toBe(before.alpha);
   }
 

@@ -40,7 +40,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   // Background ticks now carry live data (#123); a shortcut during an in-flight full refresh is
   // satisfied by it, so wait for idle before asking for a refresh of the changed fixture state.
   const refreshWhenIdle = async () => {
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     await page.keyboard.press("Control+r");
   };
   await page.goto("/");
@@ -68,7 +68,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   await page.getByRole("switch", { name: "Notiser för alpha", exact: true }).click();
   states.alpha = { state: "open", labels: [] };
   await refreshWhenIdle();
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   expect(await notes()).toHaveLength(8);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
@@ -109,7 +109,7 @@ for (const audioMode of ['unsupported', 'denied'] as const) {
     // Background ticks now carry live data (#123); a shortcut during an in-flight full refresh is
     // satisfied by it, so wait for idle before asking for a refresh of the changed fixture state.
     const refreshWhenIdle = async () => {
-      await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+      await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
       await page.keyboard.press("Control+r");
     };
     await page.goto('/');
@@ -128,7 +128,7 @@ for (const audioMode of ['unsupported', 'denied'] as const) {
       state = 'open'; labels = ['in-progress']; closedAt = null;
       await refreshWhenIdle();
       await expect(page.locator('.progress .issue-card')).toHaveCount(1);
-      await expect(page.locator('.updated')).toHaveAttribute('aria-busy', 'false');
+      await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", 'false');
       await expect(page.locator('.notification-notice')).toHaveCount(0);
       labels = ['in-progress', 'blocked'];
       await refreshWhenIdle();

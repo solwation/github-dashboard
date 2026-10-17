@@ -64,7 +64,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await expect(roadmap.locator(".sub-issue-progress-label")).toContainText("2 av 5");
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
   completed = 4; removed = true;
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   await page.keyboard.press("F5");
   await expect(roadmap.locator(".sub-issue-progress-label")).toContainText("4 av 5");
   await child.scrollIntoViewIfNeeded();

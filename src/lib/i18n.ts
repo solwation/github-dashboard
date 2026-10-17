@@ -227,10 +227,7 @@ export const english: Record<string, string> = {
   "Ej slutförd uppgift": "Incomplete task",
   "Kontrollera att tokenen har läsrättighet till Contents och Pull requests för commit-information.":
     "Check that your token has read access to Contents and Pull requests for commit information.",
-  "Adaptiv synk": "Adaptive sync",
   "Hämtar issues för den gemensamma boarden…": "Fetching issues for the combined board…",
-  "Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.":
-    "Active issues are checked every 15 seconds; projects are reconciled less frequently.",
   "En ny version av Issueflow finns tillgänglig.":
     "A new version of Issueflow is available.",
   "Uppdaterar automatiskt om {seconds} sekunder.":

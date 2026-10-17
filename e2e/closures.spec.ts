@@ -145,7 +145,7 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   );
   await expect.poll(() => count(page)).toBe(1);
   await page.keyboard.press("Control+r");
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   expect(await count(page)).toBe(1);
   // Poll even when hidden if a selected project has notifications enabled.
   await page.evaluate(() =>

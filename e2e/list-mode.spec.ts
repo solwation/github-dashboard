@@ -53,6 +53,18 @@ test("one global list mode for every repository and the combined board keeps fil
     expect(await noPageScroll(page)).toBe(true);
     await expect(toggle.getByRole("button", { name: "Lista", exact: true })).toBeInViewport();
   }
+  // #151: on desktop the toggle takes the toolbar's far-right slot, without horizontal scroll.
+  for (const width of [768, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await noPageScroll(page)).toBe(true);
+    const edges = await page.locator(".board-toolbar").evaluate(node => {
+      const box = node.getBoundingClientRect(), style = getComputedStyle(node);
+      const toggle = node.querySelector(".board-mode-toggle")!.getBoundingClientRect();
+      return { gap: box.right - parseFloat(style.paddingRight) - toggle.right, last: node.lastElementChild!.classList.contains("board-mode-toggle") };
+    });
+    expect(edges.last).toBe(true);
+    expect(Math.abs(edges.gap)).toBeLessThanOrEqual(1);
+  }
   await page.setViewportSize({ width: 1280, height: 900 });
 
   const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });

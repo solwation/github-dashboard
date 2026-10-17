@@ -34,7 +34,7 @@ async function connect(page: Page) {
   for (const repo of repos) await page.getByRole("checkbox", { name: repo.full_name }).check();
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await expect(page.locator(".issue-title")).toHaveCount(2);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   await page.evaluate(() => Object.assign(window, { documentMarker: "same-document" }));
   return {
     next: () => { version++; },
@@ -62,7 +62,7 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
   api.next();
   api.pause();
   await page.keyboard.press("Control+r");
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "true");
   // Each repository header, collapsed or not, shows its own spinner while it is fetched (#146).
   await expect(page.locator("#repo-1 .lane-header").getByRole("button", { name: "Hämtar issues för sample/alpha…" })).toBeVisible();
   await expect(page.locator("#repo-2 .lane-header").getByRole("button", { name: "Hämtar issues för sample/beta…" })).toBeVisible();
@@ -75,7 +75,7 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
   expect(api.requests()).toBe(requests + 2);
   await expectSameDocument(page);
   api.release();
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   await expect(page.locator("#repo-1 .issue-title")).toHaveText("Keep task version 2");
   expect(api.requests()).toBe(requests + 2);
   expect(api.incrementalRequests.slice(incremental)).toEqual([]);
@@ -88,7 +88,7 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
     await page.keyboard.press(shortcut);
     await expect(page.locator("#repo-1 .issue-title")).toHaveText(`Keep task version ${version}`);
     // A shortcut during an in-flight full refresh is absorbed, so let this one finish first.
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     await expectSameDocument(page);
   }
 });
@@ -156,14 +156,14 @@ test("a refresh shortcut pressed during a background sync runs a full refresh on
   await page.getByLabel("GitHub personal access token").fill("fictional-background-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   await expect(page.locator(".issue-title")).toHaveText("Active task version 1");
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 
   // Hold the 15-second active-issue sync open, then ask for a full refresh.
   gate = new Promise(resolve => { release = resolve; });
   const activeBefore = activeRequests;
   await page.clock.runFor(16_000);
   await expect.poll(() => activeRequests).toBeGreaterThan(activeBefore);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "true");
   const before = openRequests;
   version = 2;
   await page.keyboard.press("F5");
@@ -172,5 +172,5 @@ test("a refresh shortcut pressed during a background sync runs a full refresh on
   release();
   await expect.poll(() => openRequests).toBe(before + 1);
   await expect(page.locator(".issue-title")).toHaveText("Active task version 2");
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 });

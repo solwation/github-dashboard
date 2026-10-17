@@ -41,14 +41,14 @@ test("unchanged background syncs keep the encrypted cache and lanes, a real chan
   await expect(page.locator(".issue-title")).toContainText(title);
   const writes = () => page.evaluate(() => (window as unknown as { contentWrites: { content: number } }).contentWrites.content);
   await expect.poll(writes).toBeGreaterThan(0);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   const initial = await writes();
   // Ten minutes of 15-second active syncs, every one answered 304.
   for (let tick = 0; tick < 40; tick++) {
     const before = syncs;
     await page.clock.fastForward(15_000);
     await expect.poll(() => syncs).toBeGreaterThan(before);
-    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     if (tick === 15) expect(await writes()).toBe(initial);
   }
   // Only the low-frequency syncedAt refresh may write (at most once per five minutes).

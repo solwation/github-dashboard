@@ -44,7 +44,7 @@ async function connect(page: Page, names: string[]) {
   for (const name of names) await dialog.getByRole("checkbox", { name: `sample/${name}` }).check();
   await dialog.getByRole("button", { name: "Visa översikt", exact: true }).click();
   await expect(page.locator(".issue-card")).toHaveCount(names.length);
-  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 }
 async function order(page: Page, names: string[]) {
   await expect(page.locator(".repo-lane h2 a")).toHaveText(names);
