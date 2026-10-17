@@ -22,8 +22,17 @@ One view of what your agents plan, work on and complete across your repositories
 - **See changes:** Overview counts briefly highlight increases and decreases, with a daily count of loaded issues closed today in your local timezone.
 - **Spot stalled work:** Settings defaults to a 30-minute In progress timeout. Verified overdue work turns red on its card for the rest of that work period, with a notification once per period when enabled. Time labels update on their own: seconds only while shown on screen, and not at all in hidden tabs or while Statistics is open, so large boards stay light.
 - **Hear progress:** enable a repository’s notifications for distinct sounds when work starts, closes, becomes blocked or returns to Backlog. Audio resumes after interacting with the dashboard; browsers may delay background updates.
+- **Notifications while closed:** the installed app in Chrome or Edge can notify you about closed, started, returned, reopened and timed-out issues in repositories that are selected with notifications on, even when no window is open. See [limitations](#background-notifications).
 
 Issueflow reads GitHub. Make issue changes on GitHub; private content stays in your browser's encrypted storage.
+
+## Background notifications
+
+Background checks use Periodic Background Sync and work only in Chromium browsers (Chrome, Edge) with Issueflow installed as an app, signed in and with notification permission granted. Safari and iOS are not supported; other browsers notify only while the dashboard is open.
+
+- **The browser decides when to check.** Issueflow asks for about one check per hour, but the browser chooses the interval from its own engagement and battery heuristics, often several hours apart and never guaranteed. Checks may stop entirely while the device sleeps or the app is rarely used.
+- **The first check is silent.** It records a baseline; later checks notify only about changes since the previous check. Checks older than 24 hours start a new silent baseline, so stale changes are not announced. An open, visible app window announces changes itself and the background check only updates its baseline.
+- **Everything stays on the device.** There is no server, webhook or push service: the browser wakes the service worker, which reads the token and settings from the encrypted local stores, asks GitHub directly and keeps the last seen state as AES-GCM ciphertext in IndexedDB. Logout clears it with the rest of the content cache.
 
 ## Connect
 
