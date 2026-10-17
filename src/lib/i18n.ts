@@ -47,7 +47,7 @@ export const english: Record<string, string> = {
   Flyttad: "Moved",
   "Visningsläge för {name}": "View mode for {name}",
   "Visningsläge för den gemensamma boarden": "View mode for the combined board",
-  "Repositoryfilter och inställningar": "Repository filters and settings",
+  "Repositoryinställningar": "Repository settings",
   "Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.": "The combined board uses the global card limit per column. Show more adds another batch of the same size.",
   "Instruktioner (Markdown)": "Instructions (Markdown)",
   "Kopiera instruktioner": "Copy instructions",

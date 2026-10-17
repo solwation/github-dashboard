@@ -18,7 +18,7 @@ async function matchingColors(page: Page) {
   return colors;
 }
 
-test("split defaults on; combined columns retain local/global filtering, colors, keyboard controls and mobile layout", async ({ page }) => {
+test("split defaults on; combined columns use only the main search, keep colors, keyboard controls and mobile layout", async ({ page }) => {
   await page.goto("/"); await page.getByRole("button", { name: "Utforska en demo" }).click();
   const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
   await expect(split).toBeChecked(); await expect(page.locator(".repo-lane")).toHaveCount(3);
@@ -26,10 +26,16 @@ test("split defaults on; combined columns retain local/global filtering, colors,
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("5");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
+  const openStat = page.locator('[data-stat="open"] strong');
+  await page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true }).fill("missing");
+  await expect(openStat).not.toHaveText(/^9(?!\d)/);
   await split.focus(); await page.keyboard.press("Space");
   const board = page.locator(".combined-board");
   await expect(board.locator(".board-column")).toHaveCount(3);
   await expect(page.locator(".repo-lane")).toHaveCount(0);
+  // Saved per-repository searches neither show up nor filter the combined board or its overview (#132).
+  await expect(board.locator('[id^="combined-filter-"]')).toHaveCount(0);
+  await expect(openStat).toHaveText(/^9(?!\d)/);
   await expect(board.locator(".backlog .column-count")).toHaveText("6");
   await expect(board.locator(".progress .column-count")).toHaveText("3");
   await expect(board.locator(".closed .column-count")).toHaveText("8");
@@ -41,11 +47,11 @@ test("split defaults on; combined columns retain local/global filtering, colors,
   const sidebarProject = page.locator('.sidebar-repository-row[data-repository="demo/design-system"] .sidebar-repository');
   await sidebarProject.click();
   await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
-  await board.getByText("Repositoryfilter och inställningar", { exact: true }).click();
+  await expect(board.locator(".combined-limit-note")).toBeVisible();
+  await board.getByText("Repositoryinställningar", { exact: true }).click();
   await sidebarProject.click(); // The same hash must also reveal a manually closed panel.
   await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
-  await page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true }).fill("missing");
-  await expect(board.locator(".issue-card")).toHaveCount(9);
+  await expect(page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("startsidan");
   await expect(board.locator(".issue-card")).toHaveCount(2);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
