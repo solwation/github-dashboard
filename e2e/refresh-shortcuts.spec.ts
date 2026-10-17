@@ -137,7 +137,8 @@ test("a refresh shortcut pressed during a background sync runs a full refresh on
     let data: unknown = [];
     if (url.pathname === "/user") data = { login: "background-refresh", avatar_url: "" };
     else if (url.pathname === "/user/repos") data = [repo];
-    else if (url.pathname === "/repos/sample/alpha/issues/1") {
+    else if (url.pathname === "/repos/sample/alpha/issues" && url.searchParams.get("state") === "all") {
+      // The 15-second tick revalidates one list per repository with active issues (#123).
       activeRequests++;
       await gate;
       data = task();
@@ -157,8 +158,9 @@ test("a refresh shortcut pressed during a background sync runs a full refresh on
 
   // Hold the 15-second active-issue sync open, then ask for a full refresh.
   gate = new Promise(resolve => { release = resolve; });
+  const activeBefore = activeRequests;
   await page.clock.runFor(16_000);
-  await expect.poll(() => activeRequests).toBeGreaterThan(0);
+  await expect.poll(() => activeRequests).toBeGreaterThan(activeBefore);
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
   const before = openRequests;
   version = 2;
