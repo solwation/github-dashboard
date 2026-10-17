@@ -17,17 +17,22 @@ describe("Actions publication decision", () => {
     expect(decidePublication(fixture({ openIssues: [issue(1, ["needs-deploy"])] })).allowed).toBe(true);
     expect(decidePublication(fixture({ artifact })).allowed).toBe(true);
   });
+  it("ignores unclaimed backlog issues outside the prepared delta", () => {
+    expect(decidePublication(fixture({ openIssues: [issue(3), issue(4, ["priority: high", "enhancement"]), issue(1, ["needs-deploy"])] })).allowed).toBe(true);
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["in-progress"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["orkester: session"])] })).reason).toBe("queue-not-ready");
+  });
   it.each([
     issue(1), issue(1, ["priority: high"]), issue(1, ["needs-deploy", "in-progress"]),
     issue(1, ["needs-deploy", "orkester: session"]), issue(1, ["needs-deploy", "owner: worker"]),
     issue(1, ["needs-deploy", "blocked"]), issue(1, ["needs-deploy", "status: blocked"]),
-  ])("blocks unfinished, active or owner-claimed issues even with readiness present: %j", item => {
+  ])("blocks included unfinished, active or owner-claimed issues even with readiness present: %j", item => {
     expect(decidePublication(fixture({ openIssues: [item] }))).toMatchObject({ allowed: false, reason: "queue-not-ready" });
   });
   it("ignores PRs and the exact coordination label, but never treats session owner prefixes as coordination", () => {
     expect(decidePublication(fixture({ openIssues: [{ ...issue(4), pull_request: {} }, issue(5, ["orkester", "in-progress"])] })).allowed).toBe(true);
     expect(decidePublication(fixture({ openIssues: [issue(5, ["orkester: session"])] })).allowed).toBe(false);
-    expect(decidePublication(fixture({ openIssues: [issue(5, ["Orkester"])] })).allowed).toBe(false);
+    expect(decidePublication(fixture({ openIssues: [issue(1, ["Orkester"])] })).allowed).toBe(false);
   });
   it("blocks ready work absent from this prepared delta and delta issues absent from daily notes", () => {
     expect(decidePublication(fixture({ openIssues: [issue(3, ["needs-deploy"])] })).reason).toBe("ready-issue-missing-from-delta");
@@ -113,7 +118,7 @@ describe("fresh paginated GitHub and public metadata", () => {
     });
     const api = transport(fetcher);
     expect((await inspectPublication(api, fixture())).allowed).toBe(true);
-    queue = [issue(3)];
+    queue = [issue(3, ["in-progress"])];
     expect((await inspectPublication(api, fixture({ artifact }))).reason).toBe("queue-not-ready");
     queue = [];
     liveMain = newer;

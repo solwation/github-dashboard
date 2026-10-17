@@ -38,8 +38,12 @@ export function decidePublication(input: GateInput): GateDecision {
       const labels = issue.labels.map(label => label.name);
       if (Object.hasOwn(issue, "pull_request") || labels.includes("orkester")) continue;
       const claimed = labels.includes("in-progress") || labels.some(label => /^(orkester|owner):/i.test(label) || /^(?:status[\s:_-]+)?blocked$/i.test(label));
-      if (claimed || !labels.includes("needs-deploy")) return result("queue-not-ready");
-      if (!delta.issues.includes(issue.number)) return result("ready-issue-missing-from-delta");
+      if (claimed) return result("queue-not-ready");
+      const ready = labels.includes("needs-deploy"), included = delta.issues.includes(issue.number);
+      // Unclaimed backlog outside this batch never reaches main unfinished, so it does not hold back publication (#118).
+      if (!ready && !included) continue;
+      if (!ready) return result("queue-not-ready");
+      if (!included) return result("ready-issue-missing-from-delta");
     }
     if (input.artifact !== undefined) {
       const artifact = parsePublishedReleaseNotes(input.artifact);
