@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 
 async function fixture(page: Page) {
   let account = "layout-alpha";
@@ -93,7 +94,7 @@ test("drag and keyboard order stay in sync, survive refresh and reload, and rema
   await connect(page);
   await expectOrder(page, ["alpha", "bravo", "charlie"]);
   await expect(page.getByRole("button", { name: "Kollapsa bravo", exact: true })).toHaveAttribute("aria-expanded", "true");
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("issueflow:layout-alpha")!).projectOrder.slice(0, 3)))
+  await expect.poll(() => readSettings(page, "layout-alpha").then(saved => saved?.projectOrder?.slice(0, 3)))
     .toEqual(["sample/charlie", "sample/bravo", "sample/alpha"]);
 });
 

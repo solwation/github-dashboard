@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readSettings } from "./support/settings";
 async function setup(page: Page, isPublic = false) {
   let healthy = false, deniedPulls = false, login = 'permissions-test';
   const repos = ['first', 'second'].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: !isPublic,
@@ -116,7 +117,7 @@ test('viewed permission notices survive reload and logout/login while another ac
   await expect(page.locator('#settings-notices')).toHaveText('1');
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   await expect(page.locator('#settings-notices')).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('issueflow:permissions-test') || '{}').permissionAcknowledgements)).toEqual(['contents:sample/first', 'contents:sample/second']);
+  await expect.poll(() => readSettings(page, 'permissions-test').then(saved => saved?.permissionAcknowledgements)).toEqual(['contents:sample/first', 'contents:sample/second']);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await page.reload(); await expect(page.locator('.repo-lane')).toHaveCount(2);
   await openSettingsWithMissing(page);
@@ -146,7 +147,7 @@ test('new denials and a denial after confirmed recovery can notify without reviv
   await page.reload(); await expect(page.locator('.repo-lane')).toHaveCount(2);
   await openSettingsWithMissing(page);
   await expect(page.locator('#settings-notices')).toHaveText('1');
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('issueflow:permissions-test') || '{}').permissionAcknowledgements)).toEqual([]);
+  await expect.poll(() => readSettings(page, 'permissions-test').then(saved => saved?.permissionAcknowledgements)).toEqual([]);
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   await expect(page.locator('#settings-notices')).toHaveCount(0);
   await expect(page.locator('.permissions-content')).toHaveAttribute('aria-busy', 'false');

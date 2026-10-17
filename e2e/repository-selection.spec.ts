@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 function gate() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done; }); return { promise, resolve }; }
 async function fixture(page: Page) {
   const repos = ["alpha", "beta", "gamma"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, description: "Fictional selection fixture", private: true, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
@@ -74,7 +75,7 @@ test("selection updates every view immediately, keeps retained layout, publishes
   releaseAlpha();
   await expect.poll(() => api.finished.filter(name => name === "alpha").length).toBeGreaterThan(2);
   await order(page, []);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("issueflow:selection-fixture") || "{}").selected)).toEqual([]);
+  await expect.poll(() => readSettings(page, "selection-fixture").then(saved => saved?.selected)).toEqual([]);
 });
 
 test("a failed newly selected repository leaves existing content visible without a fabricated empty board", async ({ page }) => {
@@ -104,5 +105,5 @@ test("late responses after logout never populate another account's selection", a
   await expect.poll(() => api.finished.includes("beta")).toBe(true);
   await order(page, ["gamma"]);
   await expect(page.locator(".issue-card")).toContainText("other-selection-fixture gamma retained task");
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("issueflow:other-selection-fixture") || "{}").selected)).toEqual(["sample/gamma"]);
+  await expect.poll(() => readSettings(page, "other-selection-fixture").then(saved => saved?.selected)).toEqual(["sample/gamma"]);
 });

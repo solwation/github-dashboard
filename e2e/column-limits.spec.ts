@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 
 async function fixture(page: Page) {
   let account = "limits-alpha";
@@ -86,7 +87,7 @@ test("global batches, repository inheritance, validation, reload and account iso
   api.account("limits-beta");
   await connect(page);
   await expect(cards(page, 1)).toHaveCount(6);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("issueflow:limits-alpha")!).columnLimit)).toBe(1);
+  await expect.poll(() => readSettings(page, "limits-alpha").then(saved => saved?.columnLimit)).toBe(1);
 });
 
 test("phone settings work with keyboard and translate to English", async ({ page }) => {

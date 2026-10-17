@@ -55,6 +55,7 @@ const statisticsPreferences = ref<StatisticsPreferences>({});
 const StatisticsView = defineAsyncComponent(() => import("./components/StatisticsView.vue"));
 const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"));
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
+import { loadSettings, saveSettings } from "./lib/settings-store";
 import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
 import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
@@ -602,19 +603,27 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   selected.value = state.selected;
   rules.value = state.rules;
   applyChosenPreferences(state);
-  save();
+  return save();
 }
 watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, currentView, statisticsPreferences, preference], () => save(), { deep: true });
-function storageKey() {
-  return `issueflow:${user.value?.login}`;
+/** Login whose encrypted settings were read successfully; saves for other accounts, or after a
+ * failed read, are skipped so a transient storage error never overwrites saved settings. */
+let settingsAccount: string | null = null;
+type LoadedSettings = { login: string; value: Record<string, any> | null; readable: boolean };
+async function readSettings(login: string): Promise<LoadedSettings> {
+  try {
+    const value = await loadSettings(login);
+    return { login, value: value && typeof value === "object" ? value as Record<string, any> : null, readable: true };
+  } catch {
+    return { login, value: null, readable: false };
+  }
 }
-function save() {
-  if (!user.value) return;
+/** Resolves once the encrypted write settles; failures never reject. */
+function save(): Promise<void> {
+  if (!user.value || settingsAccount !== user.value.login) return Promise.resolve();
   repositoryColors.value = workspaceRepositoryColors.value;
   try {
-    localStorage.setItem(
-      storageKey(),
-      JSON.stringify({
+    return saveSettings(user.value.login, {
         preferences: transferablePreferences.value,
         selected: selected.value,
         projectOrder: projectOrder.value,
@@ -626,13 +635,13 @@ function save() {
         activityRead: activity.acknowledgements(),
         permissionAcknowledgements: permissionAcknowledgements.value,
         timeoutMinutes: timeoutMinutes.value,
-      }),
-    );
+      }).catch(() => { /* App remains usable without storage. */ });
   } catch {
-    /* App remains usable without storage. */
+    return Promise.resolve(); // Unserializable state must not break the board.
   }
 }
-function restorePreferences(available: Repo[]) {
+function restorePreferences(available: Repo[], settings: LoadedSettings) {
+    settingsAccount = settings.readable ? settings.login : null;
     permissionAcknowledgements.value = [];
     repositoryColors.value = {};
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
@@ -645,7 +654,7 @@ function restorePreferences(available: Repo[]) {
     query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
     hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
+      const saved = settings.value;
       if (saved) {
         timeoutMinutes.value = parseTimeoutMinutes(saved.timeoutMinutes) ?? DEFAULT_TIMEOUT_MINUTES;
         const limits = restoreColumnLimits(saved, available.map(repo => repo.full_name));
@@ -693,13 +702,16 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     if (imported && token === sessionToken.value && api && user.value && !isDemo.value) {
       const available = await api.repos();
       repos.value = available;
-      applyImportedPreferences(imported, available);
+      const saved = applyImportedPreferences(imported, available);
       reconcileSelection();
+      await saved;
       await refresh(false, true);
       return true;
     }
     const next = new GitHub(token);
-    if (cached) {
+    // Read before changing any state, so the cached board appears with its settings at once.
+    const cachedSettings = cached ? await readSettings(cached.user.login) : null;
+    if (cached && cachedSettings) {
       generation++;
       next.restoreResponses(cached.responses);
       clearClosureFeedback();
@@ -707,7 +719,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       user.value = cached.user;
       sessionToken.value = token;
       repos.value = cached.repos;
-      restorePreferences(cached.repos);
+      restorePreferences(cached.repos, cachedSettings);
       lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
       refreshed.value = cached.syncedAt;
       showingCache.value = true;
@@ -716,6 +728,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     }
     const identity = await next.user();
     const available = await next.repos();
+    const liveSettings = cached?.user.login === identity.login ? null : await readSettings(identity.login);
     connected = true;
     let storageWarning = "";
     try {
@@ -752,9 +765,11 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       notificationRepos.value = notificationRepos.value.filter(name => accessible.has(name));
       repositoryColumnLimits.value = Object.fromEntries(Object.entries(repositoryColumnLimits.value).filter(([name]) => accessible.has(name)));
       rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
-    } else restorePreferences(available);
-    if (imported) applyImportedPreferences(imported, available);
+    } else restorePreferences(available, liveSettings!);
+    const importedSaved = imported ? applyImportedPreferences(imported, available) : null;
     reconcileSelection();
+    // Commit imported settings before the board appears, so an immediate reload keeps them.
+    await importedSaved;
     if (selected.value.length) await refresh(false, true);
     else { picker.value = true; showingCache.value = false; await persistContent(); }
     if (storageWarning) error.value = storageWarning;
@@ -909,6 +924,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  settingsAccount = null; // Encrypted settings stay saved for this account's next sign-in.
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   showingCache.value = false;

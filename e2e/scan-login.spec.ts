@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 import QRCode from "qrcode";
 import { createHandoffUrl } from "../src/lib/handoff";
 
@@ -58,7 +59,7 @@ test("denied camera offers image fallback, imports settings and persists in the 
   await expect(page.getByRole("alert")).toContainText("Kameraåtkomst nekades");
   await image(page, createHandoffUrl("http://127.0.0.1:5173/", settings).url);
   await expect(page.locator(".repo-lane")).toHaveCount(1);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("issueflow:scanner-test")!).rules)).toEqual(settings.rules);
+  await expect.poll(() => readSettings(page, "scanner-test").then(saved => saved?.rules)).toEqual(settings.rules);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
   await page.reload();
