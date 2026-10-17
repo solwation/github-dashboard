@@ -50,6 +50,13 @@
       },
       {
         "text": {
+          "sv": "Tidsetiketter uppdateras bara där det behövs, så stora tavlor med många repositories håller webbläsaren lätt och svarar snabbt.",
+          "en": "Time labels update only where needed, so large boards with many repositories keep the browser light and responsive."
+        },
+        "issues": [120]
+      },
+      {
+        "text": {
           "sv": "Timeoutlistan överst och knappen Ignorera timeout är borttagna; ärenden över gränsen rödmarkeras på kortet och notifieras en gång.",
           "en": "The timeout list and Ignore timeout button are gone; overdue issues stay red on their card and notify once."
         },
