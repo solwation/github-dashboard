@@ -29,6 +29,13 @@
       },
       {
         "text": {
+          "sv": "Versionsrutan visar en grön bock och Senaste versionen även efter en hård omladdning, och en tydlig markering när en uppdatering finns.",
+          "en": "The version box shows a green check and Up to date even after a hard reload, plus a clear marker when an update is available."
+        },
+        "issues": [134]
+      },
+      {
+        "text": {
           "sv": "En länk eller QR-kod för ett annat konto byter inte inloggning utan bekräftelse, och ogiltiga länkar visar ett översatt fel över din sparade tavla.",
           "en": "A link or QR code for another account never switches sign-in without confirmation, and invalid links show a translated error over your saved board."
         },
