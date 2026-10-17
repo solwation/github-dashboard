@@ -68,7 +68,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await expect(backlog).toHaveText(/≈ 1 h 15 min/);
 
   // List mode keeps the header estimate.
-  await lane.getByRole('group', { name: 'Visningsläge för sample/estimate-fixture', exact: true }).getByRole('button', { name: 'Lista', exact: true }).click();
+  await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Lista', exact: true }).click();
   await expect(lane.locator('.issue-row').first()).toBeVisible();
   await expect(progress).toHaveText(/≈ 15 min kvar/);
 
@@ -78,7 +78,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await expect(board.locator('.progress .column-estimate')).toHaveText(/≈ 15 min kvar/);
   await expect(board.locator('.backlog .column-estimate')).toHaveText(/≈ 1 h 15 min/);
   await expect(board.locator('.progress .column-estimate')).toHaveAttribute('title', /Median per repository från 3 stängda ärenden i 1 repositories/);
-  await board.getByRole('group', { name: 'Visningsläge för den gemensamma boarden', exact: true }).getByRole('button', { name: 'Lista', exact: true }).click();
+  await expect(board.locator('.issue-row').first()).toBeVisible();
   await expect(board.locator('.backlog .column-estimate')).toHaveText(/≈ 1 h 15 min/);
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });

@@ -70,13 +70,13 @@ describe("mobile handoff", () => {
   });
 });
 
-const preferences: Required<HandoffPreferences> = {
+const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList">> = {
   repositoryColors: { "sample/repo": "#8b43b5" },
   projectOrder: ["sample/second", "sample/repo"],
   collapsedRepos: ["sample/second"], columnLimit: 8,
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"],
   language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
-  repoQuery: "sample", hideCoordination: false, splitByRepository: false, listRepos: ["sample/repo"], combinedList: true, timeoutMinutes: 45, currentView: "statistics",
+  repoQuery: "sample", hideCoordination: false, splitByRepository: false, listMode: true, timeoutMinutes: 45, currentView: "statistics",
   statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions" } },
 };
 describe("optical preference schema v2", () => {
@@ -98,6 +98,26 @@ describe("optical preference schema v2", () => {
     expect(partial.preferences).toEqual({ language: "en" });
     expect(mergeHandoffPreferences(current, partial, ["sample/repo", "sample/second"]).columnLimit).toBe(8);
   });
+  it("migrates #127 per-repository list choices to one global list mode without keeping legacy fields", () => {
+    const selected = ["sample/a", "sample/b", "sample/c"];
+    const merge = (preferences: HandoffPreferences, current: { listMode?: boolean; splitByRepository?: boolean } = {}) =>
+      mergeHandoffPreferences({ selected, rules: {}, ...current }, { selected, rules: {}, preferences }, selected);
+    // Split view: a strict majority of the selected repositories decides; ties and unselected names mean cards.
+    expect(merge({ splitByRepository: true, listRepos: ["SAMPLE/A", "sample/b"], combinedList: false }).listMode).toBe(true);
+    expect(merge({ splitByRepository: true, listRepos: ["sample/a", "other/x", "other/y"] }).listMode).toBe(false);
+    expect(merge({ listRepos: [] }, { listMode: true }).listMode).toBe(false);
+    // Combined board: its own choice wins, falling back to the majority when it was never saved.
+    expect(merge({ splitByRepository: false, listRepos: [], combinedList: true }).listMode).toBe(true);
+    expect(merge({ listRepos: selected, combinedList: false }, { splitByRepository: false }).listMode).toBe(false);
+    expect(merge({ splitByRepository: false, listRepos: selected }).listMode).toBe(true);
+    expect(merge({ splitByRepository: true, combinedList: true }).listMode).toBe(true);
+    // An explicit global choice wins and nothing legacy survives; missing fields keep the receiver's choice.
+    const migrated = merge({ listMode: false, listRepos: selected, combinedList: true });
+    expect(migrated.listMode).toBe(false);
+    expect(migrated).not.toHaveProperty("listRepos");
+    expect(migrated).not.toHaveProperty("combinedList");
+    expect(merge({ language: "en" }, { listMode: true }).listMode).toBe(true);
+  });
   it("applies explicit palette maps and repairs collisions only inside the readable selected workspace", () => {
     const selected = ["Sample/A", "sample/b"];
     const merged = mergeHandoffPreferences({ selected, rules: {}, repositoryColors: { "Sample/A": "#c65d16" } }, {
@@ -114,7 +134,6 @@ describe("optical preference schema v2", () => {
     expect(merged.selected).toEqual(["Sample/Repo"]);
     expect(merged.projectOrder).toEqual(["Sample/Repo"]);
     expect(merged.collapsedRepos).toEqual([]);
-    expect(merged.listRepos).toEqual(["Sample/Repo"]);
     expect(merged.notificationRepos).toEqual(["Sample/Repo"]);
     expect(merged.rules).toEqual({ "Sample/Repo": { progress: "Working" } });
     expect(merged.repositoryColumnLimits).toEqual({ "Sample/Repo": 3 });
@@ -130,7 +149,7 @@ describe("optical preference schema v2", () => {
     { repositoryColors: Object.fromEntries(Array.from({ length: 101 }, (_, n) => ["sample/repo" + n, "#245bc1"])) },
     { columnLimit: 0 }, { columnLimit: 101 }, { columnLimit: "6" },
     { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
-    { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" }, { splitByRepository: "false" }, { combinedList: "true" }, { listRepos: ["../private"] },
+    { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" }, { splitByRepository: "false" }, { listMode: "true" }, { combinedList: "true" }, { listRepos: ["../private"] },
     { projectOrder: ["sample/repo", "SAMPLE/REPO"] }, { collapsedRepos: ["../private"] },
     { notificationRepos: Array.from({ length: 101 }, (_, n) => "sample/repo" + n) },
     { repositoryColumnLimits: { "sample/repo": 2.5 } }, { repositoryQueries: { "sample/repo": "a".repeat(501) } },
