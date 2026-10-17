@@ -4,9 +4,15 @@ import RepositoryOrderControls from "./RepositoryOrderControls.vue";
 import { repositoryColor } from "../lib/repository-color";
 import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
-import { recentlyChanged, type SidebarRepository } from "../lib/sidebar";
+import { recentlyChanged, RECENT_CHANGE_MS, type SidebarRepository } from "../lib/sidebar";
+import { useNow } from "../composables/useNow";
 
-defineProps<{ repos: SidebarRepository[]; repositoryColors?: Record<string, string>; now: number; canSelect: boolean; restoring?: boolean; statistics?: boolean }>();
+const props = defineProps<{ repos: SidebarRepository[]; repositoryColors?: Record<string, string>; canSelect: boolean; restoring?: boolean; statistics?: boolean }>();
+// Re-check only when the newest unread marker expires.
+const now = useNow(at => Math.min(...props.repos.map(repo => {
+  const left = Date.parse((repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt) || "") + RECENT_CHANGE_MS - at;
+  return left >= 0 ? left : Infinity;
+})));
 const emit = defineEmits<{ select: []; move: [name: string, direction: -1 | 1]; reorder: [source: string, target: string] }>();
 function drop(event: DragEvent, target: string) {
   const source = event.dataTransfer?.getData(projectDragType);

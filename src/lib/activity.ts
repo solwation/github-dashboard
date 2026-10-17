@@ -66,6 +66,15 @@ export class ActivityTracker {
     const kind = this.activity(repo, issue, now)?.kind;
     return kind === "created" ? "created" : kind === "moved";
   }
+  /** When a marker next appears or expires, so callers can re-evaluate without a per-second clock. */
+  nextChange(now: number): number | null {
+    let next = Infinity;
+    for (const pending of this.unread.values()) for (const { at } of pending.values()) {
+      const change = at > now ? at : at + ACTIVITY_LIFETIME_MS;
+      if (change > now) next = Math.min(next, change);
+    }
+    return Number.isFinite(next) ? next : null;
+  }
   read(repo: string, issue: Issue) {
     this.unread.get(repo)?.delete(issue.id);
     const snapshot = this.snapshots.get(repo)?.issues.get(issue.id);

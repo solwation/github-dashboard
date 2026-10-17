@@ -15,6 +15,19 @@ function workPeriod(repo: string, issue: Pick<Issue, 'id' | 'startedAt'>): WorkP
     ? { repo, issueId: issue.id, startedAt: new Date(started).toISOString() } : null;
 }
 function key(value: WorkPeriod) { return JSON.stringify([value.repo, value.issueId, value.startedAt]); }
+/** The next moment an in-progress work period crosses the threshold, so callers scan then instead of every second. */
+export function nextTimeout(lanes: Lane[], rules: Record<string, Rules>, minutes: number, now: number): number | null {
+  const threshold = (parseTimeoutMinutes(minutes) ?? DEFAULT_TIMEOUT_MINUTES) * 60000;
+  let next = Infinity;
+  for (const lane of lanes) for (const issue of lane.issues) {
+    if (column(issue, rules[lane.repo.full_name]) !== 'progress' || issue.timerError) continue;
+    const item = workPeriod(lane.repo.full_name, issue);
+    // scan() marks a period only once it is strictly over the threshold.
+    const crossing = item ? Date.parse(item.startedAt) + threshold + 1 : NaN;
+    if (crossing > now) next = Math.min(next, crossing);
+  }
+  return Number.isFinite(next) ? next : null;
+}
 /**
  * Timed-out cards stay marked for the whole work period. Notifications are sent once per
  * period; after reload the caller's first scan with notify: false records cached timeouts

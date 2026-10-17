@@ -6,6 +6,15 @@ const repo = "sample/project";
 const issue = (id: number, col = "backlog", at = now): Issue => ({ id, number: id, title: "Fixture", html_url: `https://github.com/${repo}/issues/${id}`, state: col === "closed" ? "closed" : "open", closed_at: col === "closed" ? new Date(at).toISOString() : null, created_at: new Date(now - 86400000).toISOString(), updated_at: new Date(at).toISOString(), labels: col === "progress" ? [{ name: "in-progress", color: "fff" }] : [], assignees: [] });
 const lane = (issues: Issue[]): Lane => ({ repo: { id: 1, name: "project", full_name: repo, description: null, private: false, html_url: `https://github.com/${repo}`, owner: { login: "sample" } }, issues, labels: [] });
 describe("readable activity", () => {
+  it("reports when the next unread marker expires so the board needs no per-second clock", () => {
+    const tracker = new ActivityTracker();
+    tracker.update([lane([issue(1, "backlog", now - 2 * ACTIVITY_LIFETIME_MS)])], {}, now);
+    expect(tracker.nextChange(now)).toBeNull();
+    tracker.update([lane([issue(1, "progress", now + 1000)])], {}, now + 1000);
+    expect(tracker.moved(repo, issue(1, "progress", now + 1000), now + 1000)).toBe(true);
+    expect(tracker.nextChange(now + 1000)).toBe(now + 1000 + ACTIVITY_LIFETIME_MS);
+    expect(tracker.nextChange(now + 1000 + ACTIVITY_LIFETIME_MS)).toBeNull();
+  });
   it("uses the request start when a repository response completes after an issue was created", () => {
     const tracker = new ActivityTracker();
     tracker.update([lane([])], {}, now + 3000, { observedAt: { [repo]: now } });

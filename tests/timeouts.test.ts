@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TIMEOUT_MINUTES, parseTimeoutMinutes, TimeoutTracker } from '../src/lib/timeouts';
+import { DEFAULT_TIMEOUT_MINUTES, nextTimeout, parseTimeoutMinutes, TimeoutTracker } from '../src/lib/timeouts';
 import type { Issue, Lane } from '../src/lib/model';
 const start = '2026-10-16T10:00:00Z';
 const now = Date.parse(start) + 31 * 60000;
@@ -8,6 +8,15 @@ function issue(id = 1, startedAt: string | null = start, label = 'in-progress'):
 }
 function lane(issues = [issue()]): Lane { return { repo: { id: 1, full_name: 'sample/repo' } as Lane['repo'], issues, labels: [] }; }
 describe('timeouts follow actual continuous work periods', () => {
+  it('schedules the next scan at the first strict threshold crossing instead of ticking', () => {
+    const later = new Date(Date.parse(start) + 10 * 60000).toISOString();
+    const work = lane([issue(1, start), issue(2, later), issue(3, null), { ...issue(4), timerError: true }, { ...issue(5), state: 'closed' }]);
+    const first = nextTimeout([work], {}, 30, Date.parse(start) + 60000);
+    expect(first).toBe(Date.parse(start) + 30 * 60000 + 1);
+    expect(new TimeoutTracker().scan([work], {}, 30, first!).active.map(entry => entry.issue.id)).toEqual([1]);
+    expect(nextTimeout([work], {}, 30, first!)).toBe(Date.parse(later) + 30 * 60000 + 1);
+    expect(nextTimeout([work], {}, 30, Date.parse(later) + 31 * 60000)).toBeNull();
+  });
   it('requires a strict threshold crossing and known reliable start, never issue creation', () => {
     const tracker = new TimeoutTracker();
     expect(tracker.scan([lane()], {}, 30, Date.parse(start) + 30 * 60000).active).toHaveLength(0);

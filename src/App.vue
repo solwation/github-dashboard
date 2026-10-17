@@ -33,10 +33,11 @@ import SidebarVersion from "./components/SidebarVersion.vue";
 import ReleaseNotes from "./components/ReleaseNotes.vue";
 import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
+import { setBoardVisible } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
-import { TimeoutTracker, DEFAULT_TIMEOUT_MINUTES, parseTimeoutMinutes, type TimeoutEntry } from "./lib/timeouts";
+import { TimeoutTracker, DEFAULT_TIMEOUT_MINUTES, nextTimeout, parseTimeoutMinutes, type TimeoutEntry } from "./lib/timeouts";
 import { ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
@@ -169,6 +170,8 @@ const editing = ref<string | null>(null);
 const isDemo = ref(false);
 const isStatisticsHash = () => /^#statistics(?:-repo-\d+)?$/.test(window.location.hash);
 const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
+// Board time labels keep their own clocks and stop while Statistics is shown.
+watch(currentView, view => setBoardVisible(view === "overview"), { immediate: true });
 async function navigateWorkspace() {
   currentView.value = isStatisticsHash() ? "statistics" : "overview";
   await nextTick();
@@ -191,7 +194,6 @@ watch(busy, (running) => {
   void refresh();
 });
 const error = ref("");
-const now = ref(Date.now());
 const refreshed = ref<number | null>(null);
 const statusTime = (time: number) => new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit" });
 // Every text the refresh status can show, so it reserves the widest one and never rewraps the toolbar.
@@ -348,6 +350,15 @@ const audioUnavailableText = "Ljud kunde inte aktiveras. Klicka eller tryck på 
 const statusPlayer = new StatusSoundPlayer();
 const activity = new ActivityTracker();
 const activityRevision = ref(0);
+// Activity markers are re-evaluated when one appears or expires, never on a per-second clock (#120).
+const activityNow = ref(Date.now());
+let activityTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleActivity() {
+  clearTimeout(activityTimer);
+  const next = activity.nextChange(activityNow.value);
+  if (next !== null) activityTimer = setTimeout(() => { activityNow.value = Date.now(); scheduleActivity(); }, next - activityNow.value + 10);
+}
+watch(activityRevision, () => { activityNow.value = Date.now(); scheduleActivity(); });
 function readIssue(repo: string, issue: Issue) {
   activity.read(repo, issue);
   activityRevision.value++;
@@ -474,9 +485,16 @@ let generation = 0;
 let selectionRevision = 0;
 const repositoryRequests = new RepositoryRequestQueue();
 let repositoryRequestClient: GitHub | null = null;
-watch([lanes, rules, now, timeoutMinutes, showingCache, restoring, busy, hideCoordination], () => {
+// Scan on data changes and when the next work period crosses the threshold, not every second (#120).
+const timeoutCheck = ref(0);
+let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+watch([lanes, rules, timeoutCheck, timeoutMinutes, showingCache, restoring, busy, hideCoordination], () => {
+  clearTimeout(timeoutTimer);
   if (busy.value) return;
-  const result = timeoutTracker.scan(lanes.value, rules.value, timeoutMinutes.value, now.value,
+  const at = Date.now();
+  const next = nextTimeout(lanes.value, rules.value, timeoutMinutes.value, at);
+  if (next !== null) timeoutTimer = setTimeout(() => timeoutCheck.value++, next - at);
+  const result = timeoutTracker.scan(lanes.value, rules.value, timeoutMinutes.value, at,
     { notify: !showingCache.value && !restoring.value });
   timedOut.value = result.active.filter(entry => !hideCoordination.value || !isCoordination(entry.issue));
   for (const entry of result.newlyTimedOut) {
@@ -507,52 +525,46 @@ const columns = computed(() => [
     hint: t("Senaste 30 dagarna · nyast först"),
   },
 ]);
-function laneIssues(lane: Lane) {
-  return lane.issues.filter(
+// Filtered and sorted once per data or filter change instead of on every render (#120).
+const laneColumns = computed(() => new Map(lanes.value.map((lane) => {
+  const issues = lane.issues.filter(
     (i) =>
       (!hideCoordination.value || !isCoordination(i)) &&
       matchesIssueFilters(i, query.value, repositoryQueries.value[lane.repo.full_name] || ""),
   );
-}
-function items(lane: Lane, key: string) {
-  return sortedIssues(laneIssues(lane), key, rules.value[lane.repo.full_name]);
-}
+  const repoRules = rules.value[lane.repo.full_name];
+  return [lane.repo.full_name, { issues, ...Object.fromEntries(columns.value.map(col => [col.key, sortedIssues(issues, col.key, repoRules)])) } as Record<string, Issue[]>];
+})));
+function laneIssues(lane: Lane) { return laneColumns.value.get(lane.repo.full_name)?.issues ?? []; }
+function items(lane: Lane, key: string) { return laneColumns.value.get(lane.repo.full_name)?.[key] ?? []; }
 const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, repositoryQueries: repositoryQueries.value, hideCoordination: hideCoordination.value })])));
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
 watch(columnLimit, () => { combinedLimits.value = {}; });
-function commentsLoader(repo: string) {
+// One set of loaders per repository and session keeps card props stable between renders (#120).
+const loaderCache = new Map<string, { client: GitHub; run: number; comments: (issue: Issue) => ReturnType<GitHub["issueComments"]>;
+  relations: (issue: Issue) => ReturnType<GitHub["issueRelations"]>; commit: (issue: Issue) => ReturnType<GitHub["closingCommit"]> }>();
+function loaders(repo: string) {
   const client = api;
   const run = generation;
-  return client ? async (issue: Issue) => {
-    const result = await client.issueComments(repo, issue.number);
+  if (!client) return undefined;
+  const cached = loaderCache.get(repo);
+  if (cached?.client === client && cached.run === run) return cached;
+  const guard = <T,>(result: T) => {
     if (client !== api || run !== generation) throw new Error("Session changed");
     return result;
-  } : undefined;
+  };
+  const created = { client, run,
+    comments: async (issue: Issue) => guard(await client.issueComments(repo, issue.number)),
+    relations: async (issue: Issue) => guard(await client.issueRelations(repo, issue)),
+    commit: async (issue: Issue) => guard(await client.closingCommit(repo, issue)) };
+  loaderCache.set(repo, created);
+  return created;
 }
-function relationsLoader(repo: string) {
-  const client = api;
-  const run = generation;
-  return client ? async (issue: Issue) => {
-    const result = await client.issueRelations(repo, issue);
-    if (client !== api || run !== generation) throw new Error("Session changed");
-    return result;
-  } : undefined;
-}
-function commitLoader(repo: string) {
-  const client = api;
-  const run = generation;
-  return client
-    ? async (issue: Issue) => {
-        const result = await client.closingCommit(repo, issue);
-        if (run !== generation || client !== api) throw new Error("Session changed");
-        return result;
-      }
-    : undefined;
-}
+const statisticsRepositories = computed(() => orderedLanes.value.map(lane => lane.repo));
 const sidebarRepos = computed(() => {
   activityRevision.value;
   return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
-    (repo, issue) => activity.changedAt(repo, issue, now.value));
+    (repo, issue) => activity.changedAt(repo, issue, activityNow.value));
 });
 const stats = computed(() => {
   const all = lanes.value.flatMap((l) =>
@@ -1048,7 +1060,6 @@ function trapFocus(event: KeyboardEvent) {
 }
 onMounted(() => document.addEventListener("keydown", trapFocus));
 onUnmounted(() => document.removeEventListener("keydown", trapFocus));
-const tick = setInterval(() => (now.value = Date.now()), 1000);
 async function refreshActive() {
   if (!api || busy.value) return;
   const client = api,
@@ -1158,7 +1169,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  clearInterval(tick);
+  clearTimeout(activityTimer);
+  clearTimeout(timeoutTimer);
   sync.stop();
   window.removeEventListener("hashchange", navigateWorkspace);
   document.removeEventListener("keydown", handleRefreshShortcut);
@@ -1249,7 +1261,6 @@ onMounted(async () => {
       :statistics="currentView === 'statistics'"
       :repos="sidebarRepos"
       :repository-colors="workspaceRepositoryColors"
-      :now="now"
       :can-select="loggedIn"
       :restoring="restoring && !loggedIn && !isDemo"
       @select="picker = true"
@@ -1446,7 +1457,7 @@ onMounted(async () => {
         </div></template
       >
       <template v-else>
-        <StatisticsView v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="orderedLanes.map(lane => lane.repo)" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
+        <StatisticsView v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
         <div v-show="currentView === 'overview'">
         <section class="page-heading">
           <div>
@@ -1470,7 +1481,7 @@ onMounted(async () => {
           </button>
         </div>
         <OverviewSummary :query="query" :repository-queries="repositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
-          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :now="now" :logged-in="loggedIn"
+          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn"
           @choose-repositories="picker = true" />
         <div class="board-toolbar">
           <label class="search"
@@ -1663,20 +1674,17 @@ onMounted(async () => {
                   :issue="issue"
                   :repository="lane.repo.full_name"
                   :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
-                  :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
+                  :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
                   :relations-revision="relationsRevision"
                   :rules="rules[lane.repo.full_name] || {}"
-                  :now="now"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"
                   :timeout-minutes="timeoutMinutes"
-                  :load-commit="
-                    isDemo ? undefined : commitLoader(lane.repo.full_name)
-                  "
+                  :load-commit="isDemo ? undefined : loaders(lane.repo.full_name)?.commit"
                   :demo="isDemo"
-                  :load-comments="isDemo ? undefined : commentsLoader(lane.repo.full_name)"
+                  :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
                   :comments-session="generation"
                   :commit-retry="commitRetry"
-                  :recent-move="activity.moved(lane.repo.full_name, issue, now)"
+                  :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                   @read="readIssue(lane.repo.full_name, issue)"
                   :celebrate="
                     recentClosures.has(closureKey(lane.repo.full_name, issue))
@@ -1760,20 +1768,17 @@ onMounted(async () => {
                   :repository="lane.repo.full_name"
                   show-repository
                   :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
-                  :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
+                  :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
                   :relations-revision="relationsRevision"
                   :rules="rules[lane.repo.full_name] || {}"
-                  :now="now"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"
                   :timeout-minutes="timeoutMinutes"
-                  :load-commit="
-                    isDemo ? undefined : commitLoader(lane.repo.full_name)
-                  "
+                  :load-commit="isDemo ? undefined : loaders(lane.repo.full_name)?.commit"
                   :demo="isDemo"
-                  :load-comments="isDemo ? undefined : commentsLoader(lane.repo.full_name)"
+                  :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
                   :comments-session="generation"
                   :commit-retry="commitRetry"
-                  :recent-move="activity.moved(lane.repo.full_name, issue, now)"
+                  :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                   @read="readIssue(lane.repo.full_name, issue)"
                   :celebrate="
                     recentClosures.has(closureKey(lane.repo.full_name, issue))

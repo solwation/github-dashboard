@@ -49,8 +49,9 @@ export function summarizeLanes(
   });
 }
 
+export const RECENT_CHANGE_MS = 5 * 60 * 1000;
 export function recentlyChanged(changedAt: string | null, now: number): boolean {
   if (!changedAt) return false;
   const elapsed = now - Date.parse(changedAt);
-  return elapsed >= 0 && elapsed <= 5 * 60 * 1000;
+  return elapsed >= 0 && elapsed <= RECENT_CHANGE_MS;
 }

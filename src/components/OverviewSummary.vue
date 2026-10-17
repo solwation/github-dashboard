@@ -2,15 +2,19 @@
 import { computed, onBeforeUnmount, reactive, watch } from "vue";
 import { Activity, CircleCheck, Layers3, LayoutDashboard, Plus } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
+import { untilNext, useNow } from "../composables/useNow";
 import type { Lane, Rules } from "../lib/model";
 import { countActiveRepositories, countClosedToday, emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, type OverviewCounts, type OverviewOutcome } from "../lib/overview-feedback";
 const props = defineProps<{
   query?: string; repositoryQueries?: Record<string, string>;
   counts: OverviewCounts; lanes: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
-  live: boolean; session: number | string; now: number; loggedIn: boolean;
+  live: boolean; session: number | string; loggedIn: boolean;
 }>();
 const emit = defineEmits<{ chooseRepositories: [] }>();
 const { t } = useLanguage();
+// Active and closed-today counts only move with whole minutes; new data recomputes them with the current time.
+const clock = useNow(at => untilNext(at, 60000), { board: true });
+const current = () => Math.max(clock.value, Date.now());
 const tracker = new OverviewFeedbackTracker();
 const deltas = reactive(emptyCounts());
 const outcomes = reactive<Record<keyof OverviewCounts, OverviewOutcome>>({ open: null, progress: null, closed: null });
@@ -42,9 +46,9 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
 }, { immediate: true, deep: true });
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); });
 const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
-const activeRepositories = computed(() => countActiveRepositories(props.lanes, props.rules, props.now, props.hideCoordination));
+const activeRepositories = computed(() => countActiveRepositories(props.lanes, props.rules, current(), props.hideCoordination));
 const activeDefinition = computed(() => t("Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet."));
-const today = computed(() => countClosedToday(props.lanes, props.now, props.hideCoordination));
+const today = computed(() => countClosedToday(props.lanes, current(), props.hideCoordination));
 const cards = computed(() => [
   { key: "open" as const, label: t("Öppna issues"), hint: t("att ta vidare"), icon: LayoutDashboard, style: "backlog" },
   { key: "progress" as const, label: t("Pågående"), hint: t("just nu"), icon: Activity, style: "progress" },
