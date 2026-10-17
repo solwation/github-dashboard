@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLanguage } from "./lib/i18n";
 const { t, locale, preference, setLanguage } = useLanguage();
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
   Activity,
   Bell,
@@ -58,6 +58,7 @@ const ScanLogin = defineAsyncComponent(() => import("./components/ScanLogin.vue"
 import { saveToken, loadToken, clearToken, VaultError } from "./lib/vault";
 import { loadSettings, saveSettings } from "./lib/settings-store";
 import { readSnapshot, writeSnapshot, type ContentSnapshot } from "./lib/content-cache";
+import { measureRender } from "./lib/startup-timing";
 import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
 import IssueCard from "./components/IssueCard.vue";
@@ -128,7 +129,22 @@ function deferUpdate() {
   void nextTick(() => sidebarVersion.value?.focusBadge());
 }
 const user = ref<{ login: string; avatar_url: string } | null>(null);
-const lanes = ref<Lane[]>([]);
+// Lanes and their issues are always replaced, never mutated in place, so a shallow ref avoids
+// deep proxies over every cached issue at startup (#121).
+const lanes = shallowRef<Lane[]>([]);
+// A board restored from the cache mounts its repositories' cards a few per frame, so the
+// first cards draw without one long main-thread task (#121).
+const renderedLanes = ref(Number.POSITIVE_INFINITY);
+let laneFrame = 0;
+function renderLanesGradually() {
+  cancelAnimationFrame(laneFrame);
+  renderedLanes.value = 2;
+  const step = () => {
+    renderedLanes.value = renderedLanes.value + 1 >= lanes.value.length ? Number.POSITIVE_INFINITY : renderedLanes.value + 1;
+    if (Number.isFinite(renderedLanes.value)) laneFrame = requestAnimationFrame(step);
+  };
+  laneFrame = requestAnimationFrame(step);
+}
 const repos = ref<Repo[]>([]);
 const selected = ref<string[]>([]);
 const repositoryColors = ref<Record<string, string>>({});
@@ -731,6 +747,8 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       sessionToken.value = token;
       repos.value = cached.repos;
       restorePreferences(cached.repos, cachedSettings);
+      renderLanesGradually();
+      measureRender("cache-first-render", nextTick);
       lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
       refreshed.value = cached.syncedAt;
       showingCache.value = true;
@@ -1588,7 +1606,7 @@ onMounted(async () => {
             <RefreshCw class="spinning" :size="21" aria-hidden="true" />
             {{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}
           </div>
-          <div v-else-if="!lane.error || lane.issues.length" class="swimlane">
+          <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane">
             <section
               v-for="col in columns"
               :key="col.key"

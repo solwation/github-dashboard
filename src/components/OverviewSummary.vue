@@ -23,6 +23,7 @@ let previousDisplay: OverviewCounts | null = null;
 function clear(key: keyof OverviewCounts) {
   clearTimeout(timers.get(key)); timers.delete(key); deltas[key] = 0; outcomes[key] = null;
 }
+// Depth 3 reaches rule fields edited in place; lanes are replaced, so their issues need no traversal (#121).
 watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, props.live, props.session, props.query, props.repositoryQueries], () => {
   const changes = tracker.update(props.lanes, props.rules, props.hideCoordination, props.live, props.session, { query: props.query, repositoryQueries: props.repositoryQueries });
   for (const key of overviewKeys) {
@@ -43,7 +44,7 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
     } else if (visibleChange || !props.live) clear(key);
   }
   previousDisplay = { ...props.counts };
-}, { immediate: true, deep: true });
+}, { immediate: true, deep: 3 });
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); });
 const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
 const activeRepositories = computed(() => countActiveRepositories(props.lanes, props.rules, current(), props.hideCoordination));

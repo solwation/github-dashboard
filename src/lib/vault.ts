@@ -2,6 +2,7 @@
  * The non-exportable key protects stored bytes; same-origin scripts can still use it.
  */
 import { ContentCacheError, decodeContent, encodeContent, MAX_CONTENT_BYTES } from "./content-codec";
+import { measured } from "./startup-timing";
 export { ContentCacheError, MAX_CONTENT_BYTES, MAX_EXPANDED_CONTENT_BYTES } from "./content-codec";
 export type { ContentCacheErrorCode } from "./content-codec";
 
@@ -172,8 +173,8 @@ function loadEncryptedContent<T>(token: string, purpose: string): Promise<T | nu
     const record = await transact<Omit<Credential, "key"> | undefined>("readonly", store => store.get(purpose));
     if (!record || record.ciphertext.byteLength > MAX_CONTENT_BYTES + 16) return null;
     try {
-      const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv, additionalData: new TextEncoder().encode(purpose) }, credential.key, record.ciphertext);
-      return await decodeContent(new Uint8Array(plaintext)) as T;
+      const plaintext = await measured(`${purpose}-decrypt`, () => crypto.subtle.decrypt({ name: "AES-GCM", iv: record.iv, additionalData: new TextEncoder().encode(purpose) }, credential.key, record.ciphertext));
+      return await measured(`${purpose}-decode`, () => decodeContent(new Uint8Array(plaintext))) as T;
     } catch { return null; } // Damaged cache must never prevent sign-in.
   });
 }
