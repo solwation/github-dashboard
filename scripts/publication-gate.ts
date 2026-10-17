@@ -5,8 +5,10 @@ import { parsePublicationDelta, parsePublishedReleaseNotes, parseReleaseNotes } 
 export interface QueueIssue { number: number; state: "open"; labels: { name: string }[]; pull_request?: unknown }
 export interface GateInput {
   runCommit: string; mainCommit: string; published: unknown; openIssues: unknown;
-  sourceDelta: unknown; sourceNotes: unknown; artifact?: unknown;
+  sourceDelta: unknown; sourceNotes: unknown; artifact?: unknown; now?: number;
 }
+/** After this long without a publication, active work outside the prepared batch no longer holds it back (#144). */
+export const FALLBACK_AFTER_MS = 3 * 60 * 60 * 1000;
 export interface GateDecision { allowed: boolean; reason: string; commit: string }
 const sha = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{40,64}$/.test(value);
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -34,12 +36,17 @@ export function decidePublication(input: GateInput): GateDecision {
     if (delta.baseCommit !== published.build.commit) return result("published-baseline-changed");
     const traceable = new Set(notes.flatMap(day => day.sections.flatMap(section => section.issues)));
     if (!delta.issues.every(issue => traceable.has(issue))) return result("delta-untraceable");
+    const builtAt = published.build.builtAt ? Date.parse(published.build.builtAt) : NaN;
+    const fallback = Number.isFinite(builtAt) && (input.now ?? Date.now()) - builtAt >= FALLBACK_AFTER_MS;
+    let skipped = false;
     for (const issue of queue(input.openIssues)) {
       const labels = issue.labels.map(label => label.name);
       if (Object.hasOwn(issue, "pull_request") || labels.includes("orkester")) continue;
       const claimed = labels.includes("in-progress") || labels.some(label => /^(orkester|owner):/i.test(label) || /^(?:status[\s:_-]+)?blocked$/i.test(label));
-      if (claimed) return result("queue-not-ready");
       const ready = labels.includes("needs-deploy"), included = delta.issues.includes(issue.number);
+      // Unfinished work never reaches main, so after three quiet hours claims outside the batch stop holding it back (#144).
+      if (claimed && fallback && !ready && !included) { skipped = true; continue; }
+      if (claimed) return result("queue-not-ready");
       // Unclaimed backlog outside this batch never reaches main unfinished, so it does not hold back publication (#118).
       if (!ready && !included) continue;
       if (!ready) return result("queue-not-ready");
@@ -51,7 +58,7 @@ export function decidePublication(input: GateInput): GateDecision {
         JSON.stringify(artifact.delta) !== JSON.stringify(delta) || JSON.stringify(artifact.days) !== JSON.stringify(notes))
         return result("artifact-mismatch");
     }
-    return result("ready", true);
+    return result(skipped ? "ready-fallback" : "ready", true);
   } catch { return result("metadata-invalid"); }
 }
 

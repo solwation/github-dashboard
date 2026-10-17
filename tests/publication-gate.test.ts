@@ -1,17 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
-import { decidePublication, fetchOpenQueue, inspectPublication, type GateInput, type GateTransport } from "../scripts/publication-gate.ts";
+import { decidePublication, FALLBACK_AFTER_MS, fetchOpenQueue, inspectPublication, type GateInput, type GateTransport } from "../scripts/publication-gate.ts";
 
 const base = "a".repeat(40), commit = "b".repeat(40), newer = "c".repeat(40);
 const notes = [{ date: "2026-10-16", summary: { sv: "Kort.", en: "Short." }, sections: [{ text: { sv: "Bättre.", en: "Better." }, issues: [1, 2] }] }];
 const delta = { baseCommit: base, summary: { sv: "Kort sammanfattning.", en: "Short update." }, issues: [1, 2] };
 const issue = (number: number, labels: string[] = []) => ({ number, state: "open", labels: labels.map(name => ({ name })) });
 const published = { build: { builtAt: "2026-10-16T10:00:00Z", commit: base }, days: notes };
+const publishedAt = Date.parse(published.build.builtAt);
 const artifact = { build: { builtAt: "2026-10-16T11:00:00Z", commit }, days: notes, delta };
 const fixture = (overrides: Partial<GateInput> = {}): GateInput => ({
-  runCommit: commit, mainCommit: commit, published, openIssues: [], sourceDelta: delta, sourceNotes: notes, ...overrides,
+  runCommit: commit, mainCommit: commit, published, openIssues: [], sourceDelta: delta, sourceNotes: notes, now: publishedAt + 60 * 60 * 1000, ...overrides,
 });
 
 describe("Actions publication decision", () => {
+  it("publishes ready work after three hours even while other issues are claimed, but never unready batch work (#144)", () => {
+    const late = publishedAt + FALLBACK_AFTER_MS, early = late - 1;
+    const active = [issue(3, ["in-progress", "orkester: session"]), issue(4, ["blocked"]), issue(1, ["needs-deploy"])];
+    expect(decidePublication(fixture({ now: early, openIssues: active }))).toMatchObject({ allowed: false, reason: "queue-not-ready" });
+    expect(decidePublication(fixture({ now: late, openIssues: active }))).toMatchObject({ allowed: true, reason: "ready-fallback" });
+    expect(decidePublication(fixture({ now: late, openIssues: [issue(1, ["needs-deploy"])] }))).toMatchObject({ allowed: true, reason: "ready" });
+    // Batch issues and ready work outside the batch keep their usual checks.
+    expect(decidePublication(fixture({ now: late, openIssues: [issue(1, ["needs-deploy", "in-progress"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ now: late, openIssues: [issue(2, ["in-progress"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ now: late, openIssues: [issue(5, ["needs-deploy", "in-progress"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ now: late, openIssues: [issue(5, ["needs-deploy"])] })).reason).toBe("ready-issue-missing-from-delta");
+    // Without a readable build time there is no fallback, and already published code is still skipped.
+    const unknownTime = { ...published, build: { ...published.build, builtAt: null } };
+    expect(decidePublication(fixture({ now: late, published: unknownTime, openIssues: active })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ now: late, runCommit: base, mainCommit: base, openIssues: active })).reason).toBe("already-published");
+  });
   it("allows a verified prepared delta with an empty queue or only unclaimed included needs-deploy work", () => {
     expect(decidePublication(fixture()).allowed).toBe(true);
     expect(decidePublication(fixture({ openIssues: [issue(1, ["needs-deploy"])] })).allowed).toBe(true);
