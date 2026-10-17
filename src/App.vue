@@ -41,6 +41,7 @@ import { TimeoutTracker, DEFAULT_TIMEOUT_MINUTES, nextTimeout, parseTimeoutMinut
 import { ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
+import { createBackgroundCheckScheduler } from "./lib/background-sync";
 import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
@@ -678,6 +679,15 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   return save();
 }
 watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listRepos, combinedList, currentView, statisticsPreferences, preference], () => save(), { deep: true });
+// Periodic Background Sync (#129): keep the installed app's background check registered only
+// while a signed-in account has notifications on for a selected repository. Untouched elsewhere.
+const scheduleBackgroundCheck = createBackgroundCheckScheduler();
+// A string key so the browser is only called when the effective state actually changes.
+watch(() => restoring.value ? "" : JSON.stringify({
+  loggedIn: loggedIn.value,
+  demo: isDemo.value,
+  notificationRepos: permission.value === "granted" ? notificationRepos.value.filter(repo => selected.value.includes(repo)) : [],
+}), (key) => { if (key) void scheduleBackgroundCheck(JSON.parse(key)); }, { immediate: true });
 /** Login whose encrypted settings were read successfully; saves for other accounts, or after a
  * failed read, are skipped so a transient storage error never overwrites saved settings. */
 let settingsAccount: string | null = null;
