@@ -293,13 +293,8 @@ const tokenPanel = ref(false);
 const tokenInput = ref("");
 const hideCoordination = ref(true);
 const splitByRepository = ref(true);
-// Card/list choice (#127): per repository in the split view, one shared choice for the combined board.
-const listRepos = ref<string[]>([]);
-const combinedList = ref(false);
-function setListMode(repo: string, list: boolean) {
-  if (list === listRepos.value.includes(repo)) return;
-  listRepos.value = list ? [...listRepos.value, repo] : listRepos.value.filter(name => name !== repo);
-}
+// Card/list choice (#127): one global choice for every repository and the combined board (#147).
+const listMode = ref(false);
 const combinedLimits = ref<Record<string, number>>({});
 const pendingSelected = ref<string[]>([]);
 watch(picker, (open) => {
@@ -674,7 +669,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   notificationRepos: notificationRepos.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
   hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value,
-  listRepos: listRepos.value, combinedList: combinedList.value, timeoutMinutes: timeoutMinutes.value,
+  listMode: listMode.value, timeoutMinutes: timeoutMinutes.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
@@ -690,8 +685,7 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   repoQuery.value = value.repoQuery ?? repoQuery.value;
   hideCoordination.value = value.hideCoordination ?? hideCoordination.value;
   splitByRepository.value = value.splitByRepository ?? splitByRepository.value;
-  listRepos.value = value.listRepos ?? listRepos.value;
-  combinedList.value = value.combinedList ?? combinedList.value;
+  listMode.value = value.listMode ?? listMode.value;
   timeoutMinutes.value = value.timeoutMinutes ?? timeoutMinutes.value;
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
   if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+)$/.test(window.location.hash))) {
@@ -708,7 +702,7 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   applyChosenPreferences(state);
   return save();
 }
-watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listRepos, combinedList, currentView, statisticsPreferences, preference], () => save(), { deep: true });
+watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listMode, currentView, statisticsPreferences, preference], () => save(), { deep: true });
 // Periodic Background Sync (#129): keep the installed app's background check registered only
 // while a signed-in account has notifications on for a selected repository. Untouched elsewhere.
 const scheduleBackgroundCheck = createBackgroundCheckScheduler();
@@ -765,7 +759,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     combinedLimits.value = {};
     query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
     hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
-    listRepos.value = []; combinedList.value = false;
+    listMode.value = false;
     try {
       const saved = settings.value;
       if (saved) {
@@ -1022,8 +1016,7 @@ function showDemo() {
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   splitByRepository.value = true;
-  listRepos.value = [];
-  combinedList.value = false;
+  listMode.value = false;
   combinedLimits.value = {};
   generation++;
   selectionRevision++;
@@ -1092,8 +1085,7 @@ function logout() {
   query.value = "";
   currentView.value = "overview";
   splitByRepository.value = true;
-  listRepos.value = [];
-  combinedList.value = false;
+  listMode.value = false;
   combinedLimits.value = {};
   repositoryQueries.value = {};
   picker.value = false;
@@ -1613,7 +1605,8 @@ onMounted(async () => {
             ><input type="checkbox" v-model="hideCoordination" />
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
-          ><span class="updated" :aria-busy="busy"
+          ><BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
+          />          ><span class="updated" :aria-busy="busy"
             :title="loggedIn ? syncError || t('Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.') : undefined"
             ><i aria-hidden="true" /><span v-if="loggedIn" class="sync-mode">{{ t("Adaptiv synk") }}</span></span
           >
@@ -1692,8 +1685,6 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="lane-actions">
-              <BoardModeToggle :list="listRepos.includes(lane.repo.full_name)" @update:list="setListMode(lane.repo.full_name, $event)"
-                :label="t('Visningsläge för {name}', { name: lane.repo.full_name })" />
               <button
                 v-if="!isDemo"
                 class="notification-toggle"
@@ -1759,7 +1750,7 @@ onMounted(async () => {
             <RefreshCw class="spinning" :size="21" aria-hidden="true" />
             {{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}
           </div>
-          <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane" :class="{ 'list-mode': listRepos.includes(lane.repo.full_name) }">
+          <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane" :class="{ 'list-mode': listMode }">
             <section
               v-for="col in columns"
               :key="col.key"
@@ -1777,7 +1768,7 @@ onMounted(async () => {
                 <span class="column-hint">{{ col.hint }}</span>
               </div>
               <div class="cards">
-                <ul v-if="listRepos.includes(lane.repo.full_name) && items(lane, col.key).length" class="issue-rows">
+                <ul v-if="listMode && items(lane, col.key).length" class="issue-rows">
                   <IssueRow
                     v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
                     :key="boardEntryKey({ lane, issue }, col.key)"
@@ -1793,7 +1784,7 @@ onMounted(async () => {
                     @read="readIssue(lane.repo.full_name, issue)"
                   />
                 </ul>
-                <template v-else-if="!listRepos.includes(lane.repo.full_name)">
+                <template v-else-if="!listMode">
                 <IssueCard
                   v-for="issue in items(lane, col.key).slice(
                     0,
@@ -1872,14 +1863,13 @@ onMounted(async () => {
               ><RefreshCw class="spinning" :size="11" aria-hidden="true" /></span
             ><time v-else-if="refreshed" :datetime="new Date(refreshed).toISOString()">{{ t("Uppdaterad ") + statusTime(refreshed) }}</time>
           </span>
-          <BoardModeToggle v-model:list="combinedList" :label="t('Visningsläge för den gemensamma boarden')" />
           </div>
           <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
             <p v-if="lane.error" class="notice error" role="alert"><strong>{{ lane.repo.full_name }}</strong> {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}</p>
             <p v-if="lane.timerWarning" class="notice"><strong>{{ lane.repo.full_name }}</strong> {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</p>
           </template>
-          <div class="swimlane" :class="{ 'list-mode': combinedList }">
+          <div class="swimlane" :class="{ 'list-mode': listMode }">
             <section
               v-for="col in columns"
               :key="col.key"
@@ -1897,7 +1887,7 @@ onMounted(async () => {
                 <span class="column-hint">{{ col.hint }}</span>
               </div>
               <div class="cards">
-                <ul v-if="combinedList && combinedColumns[col.key]!.length" class="issue-rows">
+                <ul v-if="listMode && combinedColumns[col.key]!.length" class="issue-rows">
                   <IssueRow
                     v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                     :key="boardEntryKey({ lane, issue }, col.key)"
@@ -1914,7 +1904,7 @@ onMounted(async () => {
                     @read="readIssue(lane.repo.full_name, issue)"
                   />
                 </ul>
-                <template v-else-if="!combinedList">
+                <template v-else-if="!listMode">
                 <IssueCard
                   v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
@@ -2132,7 +2122,6 @@ onMounted(async () => {
 .repository-loading svg { flex-shrink: 0; }
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
 .combined-board-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; border-bottom: 1px solid var(--line); }
-.combined-board-head > .board-mode-toggle { margin: 10px 18px 10px 0; }
 .combined-board-head > .combined-sync { position: static; align-self: flex-start; margin: 17px 0 0 auto; }
 .combined-board-head > .combined-sync:last-child { margin-right: 18px; }
 .combined-repository-controls { flex: 1 1 260px; min-width: 0; padding: 15px 18px; font-size: 12px; }

@@ -32,9 +32,11 @@ export interface HandoffPreferences {
   repoQuery?: string;
   hideCoordination?: boolean;
   splitByRepository?: boolean;
-  /** Split-view repositories shown as compact lists instead of cards (#127). */
+  /** One global card/list choice for every repository and the combined board (#147). */
+  listMode?: boolean;
+  /** @deprecated Read only: per-repository list choice from #127, migrated to listMode. */
   listRepos?: string[];
-  /** The combined board's shared card/list choice (#127). */
+  /** @deprecated Read only: combined-board list choice from #127, migrated to listMode. */
   combinedList?: boolean;
   timeoutMinutes?: number;
   currentView?: "overview" | "statistics";
@@ -70,6 +72,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   query: text, repositoryQueries: value => repoMap(value, text), repoQuery: text,
   hideCoordination: value => typeof value === "boolean",
   splitByRepository: value => typeof value === "boolean",
+  listMode: value => typeof value === "boolean",
   listRepos: handoffRepositoryList, combinedList: value => typeof value === "boolean",
   timeoutMinutes: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 1 && value <= 10080,
   currentView: value => value === "overview" || value === "statistics",
@@ -92,6 +95,26 @@ export function parseHandoffPreferences(value: unknown): HandoffPreferences {
   return supported as HandoffPreferences;
 }
 
+/**
+ * Migrate #127's per-repository list choices to the single global listMode (#147).
+ * An explicit listMode wins. Otherwise, with splitByRepository off, the combined board's
+ * combinedList is kept; with it on, list mode applies when a strict majority of the selected
+ * repositories were in listRepos (ties and no selection mean cards). A missing preferred field
+ * falls back to the other legacy field, and without either the current choice is kept.
+ */
+export function migrateListMode(preferences: HandoffPreferences, selected: string[], current = false): boolean {
+  if (preferences.listMode !== undefined) return preferences.listMode;
+  const { listRepos, combinedList } = preferences;
+  const majority = () => {
+    const chosen = new Set(listRepos!.map(repo => repo.toLowerCase()));
+    return selected.filter(repo => chosen.has(repo.toLowerCase())).length * 2 > selected.length;
+  };
+  const split = preferences.splitByRepository ?? true;
+  if (!split && combinedList !== undefined) return combinedList;
+  if (listRepos !== undefined) return majority();
+  return combinedList ?? current;
+}
+
 /** Apply only readable repositories; canonicalize case to GitHub's actual repository names. */
 export function mergeHandoffPreferences(
   current: HandoffPreferenceState,
@@ -104,12 +127,15 @@ export function mergeHandoffPreferences(
     const name = accessible.get(repo.toLowerCase());
     return name ? [[name, value]] : [];
   }));
+  const preferences = parseHandoffPreferences(incoming.preferences || {});
   const merged: HandoffPreferenceState = {
-    ...current, ...parseHandoffPreferences(incoming.preferences || {}),
+    ...current, ...preferences,
     selected: list(incoming.selected), rules: map(incoming.rules),
   };
+  merged.listMode = migrateListMode({ ...preferences, splitByRepository: merged.splitByRepository }, merged.selected, current.listMode);
+  delete merged.listRepos; delete merged.combinedList;
   if (merged.projectOrder) merged.projectOrder = reconcileOrder(list(merged.projectOrder), accessibleNames);
-  for (const key of ["collapsedRepos", "notificationRepos", "listRepos"] as const) if (merged[key]) merged[key] = list(merged[key]);
+  for (const key of ["collapsedRepos", "notificationRepos"] as const) if (merged[key]) merged[key] = list(merged[key]);
   if (merged.repositoryColumnLimits) merged.repositoryColumnLimits = map(merged.repositoryColumnLimits);
   if (merged.repositoryQueries) merged.repositoryQueries = map(merged.repositoryQueries);
   if (merged.statistics) merged.statistics = map(merged.statistics);
