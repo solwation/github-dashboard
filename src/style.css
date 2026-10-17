@@ -1680,26 +1680,64 @@ h1 {
   white-space: nowrap;
 }
 
-/* Per-repository sync status (#146): pinned to the header's top-right corner, outside the action row,
-   so it never squeezes the header buttons and stays visible beside each repository. */
+/* Per-repository sync status (#146, #149): only the time or a round spinner, pinned to the header's
+   top-right corner inside its padding, so it never adds a row or squeezes the header buttons. It is a
+   button that refreshes now; its explanation appears as a tooltip on hover and keyboard focus. */
 .lane-sync {
   position: absolute;
-  top: 5px;
-  right: 22px;
+  top: 1px;
+  right: 16px;
   display: inline-flex;
   align-items: center;
-  height: 12px;
-  font-size: 9px;
-  line-height: 12px;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 10px;
+  line-height: 18px;
   color: var(--muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
 }
-.lane-sync-spinner { display: inline-flex; color: #48a98f; pointer-events: auto; }
-.lane-sync time { pointer-events: auto; }
+button.lane-sync:hover { background: var(--hover); color: var(--text); }
+button.lane-sync:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); color: var(--text); }
+button.lane-sync.syncing { cursor: progress; }
+/* A slightly larger hit area without making the header taller. */
+button.lane-sync::before { content: ""; position: absolute; inset: -3px -4px; }
+button.lane-sync:hover::after,
+button.lane-sync:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 40px));
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  box-shadow: 0 3px 8px #0002;
+}
+.lane-sync-spinner {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #48a98f;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
 @media (max-width: 650px) {
-  .lane-sync { top: 3px; right: 13px; }
+  .lane-sync { top: 0; right: 9px; height: 16px; line-height: 16px; }
 }
 
 /* Repository collapse controls and summaries adapt to narrow screens. */

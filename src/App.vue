@@ -209,12 +209,20 @@ const busy = ref(false);
 // being dropped. A full refresh already in flight satisfies it.
 let refreshRequested = false;
 let fullRefreshRunning = false;
+// Repositories whose header status was clicked during another run (#149) follow right after it.
+let requestedRepos = new Set<string>();
 watch(busy, (running) => {
   if (running) return;
   fullRefreshRunning = false;
-  if (!refreshRequested) return;
-  refreshRequested = false;
-  void refresh();
+  if (refreshRequested) {
+    refreshRequested = false;
+    requestedRepos = new Set();
+    void refresh();
+  } else if (requestedRepos.size) {
+    const only = [...requestedRepos];
+    requestedRepos = new Set();
+    void refresh(false, false, true, false, only);
+  }
 });
 const error = ref("");
 const refreshed = ref<number | null>(null);
@@ -285,6 +293,16 @@ function markSynced(names: readonly string[], time: number) {
   if (changed.length) repoSyncedAt.value = { ...repoSyncedAt.value, ...Object.fromEntries(changed.map(name => [name, time])) };
 }
 const combinedSyncing = computed(() => lanes.value.some(lane => syncingRepos.value.has(lane.repo.full_name)));
+/**
+ * The header status is also a button (#149): one repository in split view, every repository on the
+ * combined board, through the same manual refresh path as F5. A click while that status already
+ * shows the spinner is ignored, and refresh() itself never starts a second parallel run.
+ */
+function refreshFromStatus(name?: string) {
+  if (!loggedIn.value || isDemo.value || authBusy.value) return;
+  if (name ? syncingRepos.value.has(name) : combinedSyncing.value) return;
+  void refresh(false, false, true, false, name ? [name] : undefined);
+}
 const query = ref("");
 const repositoryQueries = ref<Record<string, string>>({});
 const repoQuery = ref("");
@@ -909,17 +927,23 @@ function reconcileSelection() {
   for (const name of lastSynced.keys()) if (!selected.value.includes(name)) lastSynced.delete(name);
   for (const name of lastFullSynced.keys()) if (!selected.value.includes(name)) lastFullSynced.delete(name);
 }
-/** `activeOnly` is the 15-second tick: one conditional list per repository with active issues (#123). */
-async function refresh(incremental = false, replacePending = false, manual = false, activeOnly = false) {
+/**
+ * `activeOnly` is the 15-second tick: one conditional list per repository with active issues (#123).
+ * `only` limits a manual run to the repositories whose header status was clicked (#149).
+ */
+async function refresh(incremental = false, replacePending = false, manual = false, activeOnly = false, only?: readonly string[]) {
   if (!api) {
     refreshRequested = false;
+    requestedRepos = new Set();
     return;
   }
   if (busy.value && !replacePending) {
-    if (manual && !fullRefreshRunning) refreshRequested = true;
+    if (manual && only) { if (!fullRefreshRunning) only.forEach(name => requestedRepos.add(name)); }
+    else if (manual && !fullRefreshRunning) refreshRequested = true;
     return;
   }
   refreshRequested = false;
+  if (!only && !incremental) requestedRepos = new Set();
   const client = api, run = generation, selection = selectionRevision;
   const current = () => run === generation && client === api && selection === selectionRevision;
   if (repositoryRequestClient !== client) {
@@ -935,9 +959,9 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     return;
   }
   busy.value = true;
-  fullRefreshRunning = !incremental;
+  fullRefreshRunning = !incremental && !only;
   if (!activeOnly) error.value = "";
-  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name) &&
+  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name) && (!only || only.includes(repo.full_name)) &&
     (!activeOnly || lanes.value.some(lane => lane.repo.full_name === repo.full_name && laneHasActiveIssues(lane)))).sort((a, b) =>
     Number(!!lanes.value.find(lane => lane.repo.full_name === b.full_name)?.loading) - Number(!!lanes.value.find(lane => lane.repo.full_name === a.full_name)?.loading));
   const result: Lane[] = [];
@@ -986,7 +1010,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
       }
     }));
     if (current()) {
-      if (result.every(lane => !lane.error)) {
+      if (!only && result.every(lane => !lane.error)) {
         refreshed.value = Date.now();
         showingCache.value = false;
       }
@@ -1638,14 +1662,20 @@ onMounted(async () => {
           :class="{ 'is-collapsed': collapsedRepos.includes(lane.repo.full_name) }"
         >
           <header class="lane-header">
-            <span class="lane-sync">
-              <span v-if="syncingRepos.has(lane.repo.full_name)" class="lane-sync-spinner" role="img"
-                :aria-label="t('Hämtar issues för {name}…', { name: lane.repo.full_name })"
-                :title="t('Hämtar issues för {name}…', { name: lane.repo.full_name })"
-                ><RefreshCw class="spinning" :size="11" aria-hidden="true" /></span
-              ><time v-else-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"
-                >{{ t("Uppdaterad ") + statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time>
+            <span v-if="isDemo" class="lane-sync">
+              <time v-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"
+                :title="t('Senast uppdaterad {time}', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
+                >{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time>
             </span>
+            <button v-else-if="syncingRepos.has(lane.repo.full_name) || repoSyncedAt[lane.repo.full_name]" type="button" class="lane-sync"
+              :class="{ syncing: syncingRepos.has(lane.repo.full_name) }" :aria-disabled="syncingRepos.has(lane.repo.full_name)"
+              :aria-label="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
+                : t('Senast uppdaterad {time} · Klicka för att uppdatera {name} nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!), name: lane.repo.full_name })"
+              :data-tooltip="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
+                : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
+              @click="refreshFromStatus(lane.repo.full_name)"
+              ><span v-if="syncingRepos.has(lane.repo.full_name)" class="lane-sync-spinner" aria-hidden="true"
+              /><time v-else :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()">{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time></button>
             <div class="lane-title">
               <button class="collapse-project icon-button" @click="toggleCollapsed(lane.repo.full_name)"
                 :aria-label="t(collapsedRepos.includes(lane.repo.full_name) ? 'Expandera {name}' : 'Kollapsa {name}', { name: lane.repo.name })"
@@ -1859,12 +1889,19 @@ onMounted(async () => {
               <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Anpassa labels för ') + lane.repo.name"><Settings2 :size="16" /></button>
             </div>
           </details>
-          <span class="lane-sync combined-sync">
-            <span v-if="combinedSyncing" class="lane-sync-spinner" role="img"
-              :aria-label="t('Hämtar issues för den gemensamma boarden…')" :title="t('Hämtar issues för den gemensamma boarden…')"
-              ><RefreshCw class="spinning" :size="11" aria-hidden="true" /></span
-            ><time v-else-if="refreshed" :datetime="new Date(refreshed).toISOString()">{{ t("Uppdaterad ") + statusTime(refreshed) }}</time>
+          <span v-if="isDemo" class="lane-sync combined-sync">
+            <time v-if="refreshed" :datetime="new Date(refreshed).toISOString()"
+              :title="t('Senast uppdaterad {time}', { time: statusTime(refreshed) })">{{ statusTime(refreshed) }}</time>
           </span>
+          <button v-else-if="combinedSyncing || refreshed" type="button" class="lane-sync combined-sync"
+            :class="{ syncing: combinedSyncing }" :aria-disabled="combinedSyncing"
+            :aria-label="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
+              : t('Senast uppdaterad {time} · Klicka för att uppdatera alla repositories nu', { time: statusTime(refreshed!) })"
+            :data-tooltip="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
+              : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(refreshed!) })"
+            @click="refreshFromStatus()"
+            ><span v-if="combinedSyncing" class="lane-sync-spinner" aria-hidden="true"
+            /><time v-else :datetime="new Date(refreshed!).toISOString()">{{ statusTime(refreshed!) }}</time></button>
           </div>
           <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
@@ -2123,10 +2160,10 @@ onMounted(async () => {
 .repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .repository-loading svg { flex-shrink: 0; }
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
-.combined-board-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; border-bottom: 1px solid var(--line); }
-.combined-board-head > .combined-sync { position: static; align-self: flex-start; margin: 17px 0 0 auto; }
-.combined-board-head > .combined-sync:last-child { margin-right: 18px; }
-.combined-repository-controls { flex: 1 1 260px; min-width: 0; padding: 15px 18px; font-size: 12px; }
+/* The sync status sits on the summary's line (#149), so it never wraps onto a row of its own. */
+.combined-board-head { display: flex; align-items: flex-start; gap: 0 8px; border-bottom: 1px solid var(--line); }
+.combined-board-head > .combined-sync { position: relative; flex: 0 0 auto; margin: 14px 12px 0 auto; height: 20px; line-height: 20px; }
+.combined-repository-controls { flex: 1 1 0; min-width: 0; padding: 15px 18px; font-size: 12px; }
 .combined-repository-controls summary { cursor: pointer; font-weight: 600; }
 .combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }
 .combined-repository-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }

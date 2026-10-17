@@ -1,16 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // Each repository header shows its own sync status (#146); the combined board shows the aggregate.
+// Only the time or a spinner is shown, as a button that refreshes now (#149).
 const copy = {
-  sv: { connect: "Anslut GitHub", account: "Anslut konto", overview: "Visa översikt", updated: /^Uppdaterad \d{2}[:.]\d{2}$/,
-    fetching: (name: string) => `Hämtar issues för ${name}…`, combined: "Hämtar issues för den gemensamma boarden…", split: "Dela upp per repository" },
-  en: { connect: "Connect GitHub", account: "Connect account", overview: "Show overview", updated: /^Updated \d{1,2}[:.]\d{2}( ?[AP]M)?$/,
-    fetching: (name: string) => `Fetching issues for ${name}…`, combined: "Fetching issues for the combined board…", split: "Split by repository" },
+  sv: { connect: "Anslut GitHub", account: "Anslut konto", overview: "Visa översikt", updated: /^\d{2}[:.]\d{2}$/,
+    fetching: (name: string) => `Hämtar issues för ${name}…`, combined: "Hämtar issues för den gemensamma boarden…", split: "Dela upp per repository",
+    refreshRepo: (name: string) => new RegExp(`^Senast uppdaterad \\d{2}[:.]\\d{2} · Klicka för att uppdatera ${name} nu$`),
+    refreshAll: /^Senast uppdaterad \d{2}[:.]\d{2} · Klicka för att uppdatera alla repositories nu$/,
+    tooltip: /^"Senast uppdaterad \d{2}[:.]\d{2} · Klicka för att uppdatera nu"$/, modes: ["Kort", "Lista"] },
+  en: { connect: "Connect GitHub", account: "Connect account", overview: "Show overview", updated: /^\d{1,2}[:.]\d{2}(\s?[AP]M)?$/,
+    fetching: (name: string) => `Fetching issues for ${name}…`, combined: "Fetching issues for the combined board…", split: "Split by repository",
+    refreshRepo: (name: string) => new RegExp(`^Last updated \\d{1,2}[:.]\\d{2}(\\s?[AP]M)? · Click to update ${name} now$`),
+    refreshAll: /^Last updated \d{1,2}[:.]\d{2}(\s?[AP]M)? · Click to update all repositories now$/,
+    tooltip: /^"Last updated \d{1,2}[:.]\d{2}(\s?[AP]M)? · Click to update now"$/, modes: ["Cards", "List"] },
 };
 
 async function connect(page: Page, text: (typeof copy)["sv"]) {
   let gate: Promise<void> | undefined;
   let release = () => {};
+  const requests: Record<string, number> = { alpha: 0, beta: 0 };
   const repos = ["alpha", "beta"].map((name, index) => ({
     id: index + 1, name, full_name: `sample/${name}`, private: false, description: "A repository with a fairly long description text",
     html_url: `https://github.com/sample/${name}`, owner: { login: "sample" },
@@ -22,6 +30,7 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
     if (url.pathname === "/user/repos") data = repos;
     const repo = repos.find(repo => url.pathname === `/repos/${repo.full_name}/issues`);
     if (repo && url.searchParams.get("state") === "open") {
+      requests[repo.name]!++;
       // Only alpha's requests wait, so beta finishes while alpha is still being fetched.
       if (repo.name === "alpha") await gate;
       const date = new Date().toISOString();
@@ -42,6 +51,7 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
   return {
     pause: () => { gate = new Promise(resolve => { release = resolve; }); },
     release: () => { gate = undefined; release(); },
+    requests: () => ({ ...requests }),
   };
 }
 
@@ -69,8 +79,8 @@ for (const [language, text] of Object.entries(copy)) {
       const api = await connect(page, text);
       const alpha = page.locator(".repo-lane").filter({ has: page.getByText("Status for alpha") }).locator(".lane-header");
       const beta = page.locator(".repo-lane").filter({ has: page.getByText("Status for beta") }).locator(".lane-header");
-      const alphaSpinner = alpha.getByRole("img", { name: text.fetching("sample/alpha") });
-      const betaSpinner = beta.getByRole("img", { name: text.fetching("sample/beta") });
+      const alphaSpinner = alpha.getByRole("button", { name: text.fetching("sample/alpha") });
+      const betaSpinner = beta.getByRole("button", { name: text.fetching("sample/beta") });
       // The global row no longer repeats the time; it is visible beside each repository instead.
       await expect(page.locator(".board-toolbar")).not.toContainText(text.updated);
       await expect(alpha.locator(".lane-sync")).toHaveText(text.updated);
@@ -107,7 +117,7 @@ for (const [language, text] of Object.entries(copy)) {
       await page.setViewportSize({ width: 375, height: 800 });
       await page.getByRole("checkbox", { name: text.split }).uncheck();
       const head = page.locator(".combined-board-head");
-      const combinedSpinner = head.getByRole("img", { name: text.combined });
+      const combinedSpinner = head.getByRole("button", { name: text.combined });
       await expect(head.locator(".lane-sync")).toHaveText(text.updated);
       api.pause();
       await page.keyboard.press("Control+r");
@@ -125,9 +135,105 @@ test("the sync spinner is static with reduced motion", async ({ page }) => {
   const api = await connect(page, copy.sv);
   api.pause();
   await page.keyboard.press("Control+r");
-  const spinner = page.getByRole("img", { name: copy.sv.fetching("sample/alpha") });
+  const spinner = page.getByRole("button", { name: copy.sv.fetching("sample/alpha") });
   await expect(spinner).toBeVisible();
-  expect(await spinner.locator("svg").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
+  expect(await spinner.locator(".lane-sync-spinner").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
   api.release();
   await expect(spinner).toHaveCount(0);
+});
+
+test("the combined board status stays on the summary line in both display modes", async ({ page }) => {
+  await connect(page, copy.sv);
+  await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
+  const head = page.locator(".combined-board-head");
+  await expect(head.locator(".lane-sync")).toHaveText(copy.sv.updated);
+  for (const mode of copy.sv.modes) {
+    await page.getByRole("button", { name: mode, exact: true }).click();
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const sample = await head.evaluate(element => {
+        const status = element.querySelector<HTMLElement>(".lane-sync")!;
+        const summary = element.querySelector("summary")!.getBoundingClientRect();
+        const box = status.getBoundingClientRect();
+        const height = element.getBoundingClientRect().height;
+        status.style.display = "none";
+        const without = element.getBoundingClientRect().height;
+        status.style.display = "";
+        return { height, without, sameLine: box.top < summary.bottom && box.bottom > summary.top, right: box.right <= element.getBoundingClientRect().right };
+      });
+      expect.soft(sample.height, `combined header height at ${width}px (${mode})`).toBe(sample.without);
+      expect.soft(sample.sameLine, `status on the summary line at ${width}px (${mode})`).toBe(true);
+      expect.soft(sample.right, `status inside the header at ${width}px (${mode})`).toBe(true);
+    }
+  }
+});
+
+test("the header status refreshes its repository on click and keyboard, ignoring repeats", async ({ page }) => {
+  const api = await connect(page, copy.sv);
+  // Pause background sync (it only runs for a visible page), so every fetch below comes from the status button.
+  await page.evaluate(() => Object.defineProperty(document, "hidden", { configurable: true, get: () => true }));
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  const alpha = page.locator(".repo-lane").filter({ has: page.getByText("Status for alpha") }).locator(".lane-header");
+  const beta = page.locator(".repo-lane").filter({ has: page.getByText("Status for beta") }).locator(".lane-header");
+  const alphaStatus = alpha.locator("button.lane-sync");
+  await expect(alphaStatus).toHaveAccessibleName(copy.sv.refreshRepo("sample/alpha"));
+  // The tooltip explains the time and the action on keyboard focus as well as hover.
+  await page.keyboard.press("Shift"); // Keyboard modality, so focus is visible.
+  await alphaStatus.focus();
+  expect(await alphaStatus.evaluate(element => getComputedStyle(element, "::after").content)).toMatch(copy.sv.tooltip);
+  expect(await alphaStatus.evaluate(element => getComputedStyle(element).boxShadow)).not.toBe("none");
+
+  let before = api.requests();
+  api.pause();
+  await alphaStatus.click();
+  const alphaSpinner = alpha.getByRole("button", { name: copy.sv.fetching("sample/alpha") });
+  await expect(alphaSpinner).toBeVisible();
+  await expect(alphaSpinner).toHaveAttribute("aria-disabled", "true");
+  await expect.poll(() => api.requests().alpha).toBe(before.alpha + 1);
+  // Repeated clicks while it runs start nothing, and only the clicked repository is fetched.
+  await alphaSpinner.click({ force: true });
+  await page.keyboard.press("Enter");
+  expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta });
+  await expect(beta.locator(".lane-sync")).toHaveText(copy.sv.updated);
+  api.release();
+  await expect(alphaSpinner).toHaveCount(0);
+  await expect(alphaStatus).toHaveText(copy.sv.updated);
+  await expect(alphaStatus).toBeFocused();
+  await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+  expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta });
+
+  // Keyboard: Enter and Space on the beta status refresh beta.
+  for (const key of ["Enter", " "]) {
+    await expect(beta.locator("button.lane-sync")).toHaveAccessibleName(copy.sv.refreshRepo("sample/beta"));
+    before = api.requests();
+    await beta.locator("button.lane-sync").focus();
+    await page.keyboard.press(key);
+    await expect.poll(() => api.requests().beta).toBe(before.beta + 1);
+    await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "false");
+    expect(api.requests().alpha).toBe(before.alpha);
+  }
+
+  // The combined board refreshes every repository at once, showing the spinner until all are done.
+  await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
+  const combined = page.locator(".combined-board-head button.lane-sync");
+  await expect(combined).toHaveAccessibleName(copy.sv.refreshAll);
+  before = api.requests();
+  api.pause();
+  await combined.click();
+  const combinedSpinner = page.locator(".combined-board-head").getByRole("button", { name: copy.sv.combined });
+  await expect(combinedSpinner).toBeVisible();
+  await expect.poll(api.requests).toEqual({ alpha: before.alpha + 1, beta: before.beta + 1 });
+  await combinedSpinner.click({ force: true });
+  expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta + 1 });
+  api.release();
+  await expect(combinedSpinner).toHaveCount(0);
+  await expect(combined).toHaveText(copy.sv.updated);
+  expect(api.requests()).toEqual({ alpha: before.alpha + 1, beta: before.beta + 1 });
+});
+
+test("the demo board shows the time without a refresh button", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Utforska en demo" }).click();
+  await expect(page.locator(".lane-header .lane-sync").first()).toHaveText(copy.sv.updated);
+  await expect(page.locator(".lane-header button.lane-sync")).toHaveCount(0);
 });

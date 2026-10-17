@@ -64,8 +64,8 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
   await page.keyboard.press("Control+r");
   await expect(page.locator(".updated")).toHaveAttribute("aria-busy", "true");
   // Each repository header, collapsed or not, shows its own spinner while it is fetched (#146).
-  await expect(page.locator("#repo-1 .lane-header").getByRole("img", { name: "Hämtar issues för sample/alpha…" })).toBeVisible();
-  await expect(page.locator("#repo-2 .lane-header").getByRole("img", { name: "Hämtar issues för sample/beta…" })).toBeVisible();
+  await expect(page.locator("#repo-1 .lane-header").getByRole("button", { name: "Hämtar issues för sample/alpha…" })).toBeVisible();
+  await expect(page.locator("#repo-2 .lane-header").getByRole("button", { name: "Hämtar issues för sample/beta…" })).toBeVisible();
   await expect(page.locator("#repo-1 .issue-title")).toHaveText("Keep task version 1");
   // Both selected repositories load concurrently while the gate holds them.
   await expect.poll(api.requests).toBe(requests + 2);
