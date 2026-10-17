@@ -1758,6 +1758,7 @@ onMounted(async () => {
                   :key="boardEntryKey({ lane, issue }, col.key)"
                   :issue="issue"
                   :repository="lane.repo.full_name"
+                  show-repository
                   :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                   :load-relations="isDemo ? undefined : relationsLoader(lane.repo.full_name)"
                   :relations-revision="relationsRevision"
