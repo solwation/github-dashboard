@@ -79,7 +79,7 @@ export const english: Record<string, string> = {
   "Alla som skannar koden får din tokens GitHub-behörigheter. Visa den bara för dina egna enheter. Koden innehåller din token.": "Anyone who scans this code receives your token's GitHub permissions. Show it only to your own devices. The code contains your token.",
   "QR-kod för konto och inställningar": "QR code for account and settings",
   "Inställningarna ryms inte i en QR-kod, eller koden kunde inte skapas. Inget har tagits bort eller överförts. Prova med färre valda projekt eller kortare filter och labelinställningar.": "The settings do not fit in a QR code, or the code could not be generated. Nothing has been removed or transferred. Try fewer selected projects or shorter filters and label settings.",
-  "Notifikationsval följer med, men kamera, ljud och webbläsarens notifikationsbehörighet gäller lokalt. Läsmarkeringar och kvitterade timeoutvarningar stannar på mottagande enhet.": "Notification preferences transfer, but camera, audio and browser notification permissions remain local. Read markers and acknowledged timeout warnings stay on the receiving device.",
+  "Notifikationsval följer med, men kamera, ljud och webbläsarens notifikationsbehörighet gäller lokalt. Läsmarkeringar stannar på mottagande enhet.": "Notification preferences transfer, but camera, audio and browser notification permissions remain local. Read markers stay on the receiving device.",
   "QR-koden är ogiltig eller har gått ut. Skapa en ny kod på den andra enheten.": "The QR code is invalid or expired. Generate a new code on the other device.",
   "Läs QR-kod": "Read QR code",
   "Visa en QR-kod i Issueflow på den andra enheten och skanna den här. Konto, inställningar och vy överförs utan att du behöver logga ut först.": "Show a QR code in Issueflow on the other device and scan it here. Your account, settings and view transfer without signing out first.",
@@ -94,9 +94,6 @@ export const english: Record<string, string> = {
   "Tidsgräns för pågående issues (minuter)": "In progress issue timeout (minutes)",
   "Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.": "Issues in progress are flagged after this limit. An unknown start time never triggers a warning. Default: 30 minutes.",
   "Timeout: pågående i {duration}, över gränsen {minutes} min.": "Timeout: in progress for {duration}, exceeding the {minutes} min limit.",
-  "Ignorera timeout för #{number}": "Ignore timeout for #{number}",
-  "Ignorera timeout": "Ignore timeout",
-  "Timeout för {repo} #{number}: {title}": "Timeout for {repo} #{number}: {title}",
   "Timeout för pågående issue": "In progress issue timeout",
 
   "Issues, etiketter, kommentarer, underärenden och tid i pågående arbete. Statistik över issueflödet.": "Issues, labels, comments, sub-issues and time in progress. Issue activity statistics.",

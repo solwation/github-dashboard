@@ -44,7 +44,7 @@ const props = defineProps<{
   timedOut?: boolean;
   timeoutMinutes?: number;
 }>();
-const emit = defineEmits<{ read: []; ignoreTimeout: [] }>();
+const emit = defineEmits<{ read: [] }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
 const commit = ref<ClosingCommit | null>(null);
@@ -170,7 +170,6 @@ const visibleLabels = computed(() =>
     <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
       <p>{{ t("Timeout: pågående i {duration}, över gränsen {minutes} min.", { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 }) }}</p>
-      <button type="button" class="timeout-acknowledge" :aria-label="t('Ignorera timeout för #{number}', { number: issue.number })" @click="emit('ignoreTimeout')">{{ t("Ignorera timeout") }}</button>
     </div>
     <div class="card-bottom">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
@@ -269,8 +268,6 @@ const visibleLabels = computed(() =>
 .issue-card.issue-timeout { border-color: #b42332; background: #fff1f2; box-shadow: 0 0 0 2px #b4233233; }
 .timeout-warning { color: #9f1c2a; font-size: .75rem; line-height: 1.5; }
 .timeout-warning p { margin: .7rem 0 .4rem; }
-.timeout-acknowledge { border: 1px solid #b42332; border-radius: .35rem; background: var(--surface); color: #9f1c2a; padding: .4rem .6rem; min-height: 44px; cursor: pointer; font-size: inherit; }
-.timeout-acknowledge:focus-visible { outline: 2px solid #b42332; outline-offset: 2px; }
 .movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
 .unread-created .movement-marker { background: #d8efde; color: #1c6239; }

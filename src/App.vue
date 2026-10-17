@@ -203,7 +203,7 @@ async function persistContent() {
   const run = generation;
   try {
     await writeSnapshot(sessionToken.value, { user: user.value, repos: repos.value, lanes: lanes.value.filter(lane => !lane.loading),
-      syncedAt: refreshed.value, responses: api.exportResponses(), timeoutAcknowledgements: timeoutTracker.exportAcknowledgements() });
+      syncedAt: refreshed.value, responses: api.exportResponses() });
     if (run === generation) cacheWarning.value = "";
   } catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
 }
@@ -228,17 +228,9 @@ const columnLimit = ref(defaultColumnLimit);
 const timeoutMinutes = ref(DEFAULT_TIMEOUT_MINUTES);
 const timeoutTracker = new TimeoutTracker();
 const timedOut = ref<TimeoutEntry[]>([]);
-const timeoutRevision = ref(0);
 function setTimeoutMinutes(minutes: number) {
   timeoutMinutes.value = parseTimeoutMinutes(minutes) ?? DEFAULT_TIMEOUT_MINUTES;
   save();
-}
-function ignoreTimeout(repo: string, issue: Issue) {
-  if (!timeoutTracker.acknowledge(repo, issue)) return;
-  // Local feedback must not wait for the timeout scan, which pauses during GitHub refresh.
-  timedOut.value = timedOut.value.filter(entry => entry.repo !== repo || entry.issue.id !== issue.id);
-  timeoutRevision.value++;
-  void persistContent();
 }
 function issueTimedOut(repo: string, issue: Issue) {
   return timedOut.value.some(entry => entry.repo === repo && entry.issue.id === issue.id);
@@ -481,7 +473,7 @@ let generation = 0;
 let selectionRevision = 0;
 const repositoryRequests = new RepositoryRequestQueue();
 let repositoryRequestClient: GitHub | null = null;
-watch([lanes, rules, now, timeoutMinutes, timeoutRevision, showingCache, restoring, busy, hideCoordination], () => {
+watch([lanes, rules, now, timeoutMinutes, showingCache, restoring, busy, hideCoordination], () => {
   if (busy.value) return;
   const result = timeoutTracker.scan(lanes.value, rules.value, timeoutMinutes.value, now.value,
     { notify: !showingCache.value && !restoring.value });
@@ -716,7 +708,6 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       sessionToken.value = token;
       repos.value = cached.repos;
       restorePreferences(cached.repos);
-      timeoutTracker.restore(cached.timeoutAcknowledgements);
       lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
       refreshed.value = cached.syncedAt;
       showingCache.value = true;
@@ -1302,12 +1293,6 @@ onMounted(async () => {
     </header>
     <main :id="currentView === 'statistics' && (loggedIn || isDemo) ? 'statistics' : 'overview'" tabindex="-1">
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
-      <div v-if="timedOut.length" class="notice timeout-notices" role="status">
-        <div v-for="entry in timedOut" :key="entry.key">
-          <span>{{ t("Timeout för {repo} #{number}: {title}", { repo: entry.repo, number: entry.issue.number, title: entry.issue.title }) }}</span>
-          <button class="button small" @click="ignoreTimeout(entry.repo, entry.issue)">{{ t("Ignorera timeout") }}</button>
-        </div>
-      </div>
       <div
         v-if="notificationNotice"
         class="notice notification-notice"
@@ -1670,7 +1655,6 @@ onMounted(async () => {
                   :now="now"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"
                   :timeout-minutes="timeoutMinutes"
-                  @ignore-timeout="ignoreTimeout(lane.repo.full_name, issue)"
                   :load-commit="
                     isDemo ? undefined : commitLoader(lane.repo.full_name)
                   "
@@ -1767,7 +1751,6 @@ onMounted(async () => {
                   :now="now"
                   :timed-out="issueTimedOut(lane.repo.full_name, issue)"
                   :timeout-minutes="timeoutMinutes"
-                  @ignore-timeout="ignoreTimeout(lane.repo.full_name, issue)"
                   :load-commit="
                     isDemo ? undefined : commitLoader(lane.repo.full_name)
                   "

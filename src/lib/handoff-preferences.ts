@@ -7,7 +7,7 @@ import type { Rules } from "./model";
 /**
  * Optical schema v2 transfers chosen preferences, never snapshots or local device state.
  * Missing fields preserve receiver choices; unknown fields are ignored for forward compatibility.
- * Read/activity versions and timeout acknowledgements stay receiver-local and account-bound.
+ * Read/activity versions stay receiver-local and account-bound.
  * Camera, notification/OS grants, audio unlock, caches, transient errors and expanded issue
  * details are device/session state. notificationRepos records desired subscriptions only.
  */
