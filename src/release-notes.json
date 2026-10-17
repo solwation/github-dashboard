@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "I listläget öppnar ett tryck på en rad hela kortet direkt i listan; issuenumret är en separat länk till GitHub.",
+          "en": "In list mode, tapping a row expands it into the full card in place; the issue number is a separate link to GitHub."
+        },
+        "issues": [154]
+      },
+      {
+        "text": {
           "sv": "Översiktskorten visar nu sekundära mått som två celler längst ner i varje kort, till exempel aktiva och backlog för repositories.",
           "en": "The overview cards now show secondary metrics as two cells at the bottom of each card, such as active and backlog for repositories."
         },

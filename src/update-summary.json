@@ -1,11 +1,12 @@
 {
   "baseCommit": "7abe3185fa7e37f0487ef50e3180d1c241d2d118",
   "summary": {
-    "sv": "Översiktskorten centrerar sekundära mått på mobilen och placerar cellerna i kortets nederkant.",
-    "en": "Overview cards centre secondary metrics on phones and align the bottom cells at the base of each card."
+    "sv": "Tryck på en rad i listläget för att se hela kortet, och översiktskorten visar fler nyckeltal längst ner.",
+    "en": "Tap a row in list mode to see the full card, and the overview cards show more key figures at the bottom."
   },
   "issues": [
     151,
-    152
+    152,
+    154
   ]
 }
