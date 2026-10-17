@@ -92,6 +92,13 @@
       },
       {
         "text": {
+          "sv": "Statistiken räknas ihop flera gånger snabbare, så diagram och filter svarar direkt när du byter period, etikett eller bidragsgivare.",
+          "en": "Statistics are computed several times faster, so charts and filters respond right away when you change period, label or contributor."
+        },
+        "issues": [125]
+      },
+      {
+        "text": {
           "sv": "Bakgrundssynken gör färre än hälften så många anrop: oförändrade projekt kontrolleras utan att förbruka GitHubs gräns, och relationer hämtas bara vid ändring.",
           "en": "Background sync makes less than half as many requests: unchanged projects are checked without using GitHub's rate limit, and relations reload only when they change."
         },
