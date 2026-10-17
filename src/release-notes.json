@@ -8,6 +8,20 @@
     "sections": [
       {
         "text": {
+          "sv": "På mobilen ligger toppfältet och verktygsraden kvar överst vid scroll, och innehållet syns inte bakom statusfältet i installerad app.",
+          "en": "On phones the top bar and toolbar stay pinned while scrolling, and content no longer shows behind the status bar in the installed app."
+        },
+        "issues": [145]
+      },
+      {
+        "text": {
+          "sv": "Varje repository visar sin egen uppdateringstid och en snurrande symbol medan just det projektet hämtas, även den gemensamma tavlan.",
+          "en": "Each repository shows its own last-updated time and a spinner while that project is fetching, including the combined board."
+        },
+        "issues": [146]
+      },
+      {
+        "text": {
           "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
           "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
         },

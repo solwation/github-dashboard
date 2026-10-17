@@ -1,39 +1,11 @@
 {
-  "baseCommit": "70420e916b0482e4516b25685cecab752829a8b0",
+  "baseCommit": "f9c2a65f18c6f169ef769605df58182aeb669594",
   "summary": {
-    "sv": "Nytt mörkt tema som följer enheten. Inloggningen byts inte utan bekräftelse, och toppfältet får plats på surfplattor.",
-    "en": "New dark theme that follows your device. Sign-in is never switched without confirmation, and the top bar fits on tablets."
+    "sv": "Toppfältet ligger kvar vid scroll på mobilen, och varje repository visar sin egen uppdateringstid med en laddningssymbol.",
+    "en": "The top bar stays pinned on phones, and each repository shows its own update time with a loading indicator."
   },
   "issues": [
-    102,
-    103,
-    104,
-    105,
-    106,
-    107,
-    108,
-    109,
-    111,
-    113,
-    114,
-    115,
-    117,
-    119,
-    120,
-    121,
-    122,
-    123,
-    124,
-    125,
-    127,
-    129,
-    130,
-    131,
-    132,
-    134,
-    135,
-    136,
-    140,
-    141
+    145,
+    146
   ]
 }
