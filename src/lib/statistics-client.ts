@@ -6,8 +6,14 @@ import {
 } from "./statistics";
 
 export interface StatisticsClient {
-  request<T>(path: string): Promise<{ data: T; next: string | null }>;
+  /** `store: false` marks one-shot URLs that must not occupy the shared ETag cache (#108). */
+  request<T>(path: string, options?: { store?: boolean }): Promise<{ data: T; next: string | null }>;
   retryAfterMs?(): number;
+  /**
+   * Issues updated since `since`, rebuilt from the board's recently confirmed list responses without
+   * a request (#136), or null when the board does not fully and freshly cover the window.
+   */
+  boardIssues?(repository: string, since: string, maxAgeMs?: number, now?: number): StatisticsIssue[] | null;
 }
 export const statisticsLimits = { issues: 3, events: 5, commits: 3, pulls: 3, changes: 60, files: 3, concurrency: 3 } as const;
 const cacheDuration = 5 * 60 * 1000;
@@ -34,13 +40,13 @@ export class StatisticsCollector {
     const data = [...this.cache.values()].filter(data => data.repository === repository && data.fetchedAt <= now && now - data.fetchedAt < STATISTICS_RETENTION_MS).sort((a, b) => b.fetchedAt - a.fetchedAt)[0];
     return data ? previewStatistics(data, now) : undefined;
   }
-  private async request<T>(path: string) {
+  private async request<T>(path: string, options?: { store?: boolean }) {
     if (this.active >= statisticsLimits.concurrency) await new Promise<void>(resolve => this.waiting.push(resolve));
     else this.active++;
     try {
       if (this.disposed) throw new Error("Statistics session ended");
       if (this.client.retryAfterMs?.()) throw new Error("Statistics temporarily rate limited");
-      return await this.client.request<T>(path);
+      return await (options ? this.client.request<T>(path, options) : this.client.request<T>(path));
     } finally {
       const next = this.waiting.shift();
       if (next) next(); else this.active--;
@@ -100,6 +106,9 @@ export class StatisticsCollector {
     };
     const [issues, events, commits, pulls] = await Promise.all([
       attempt("issues", async () => {
+        // Reuse the board's fresh lists when they cover the whole window; a forced refresh always asks GitHub.
+        const board = force ? null : this.client.boardIssues?.(repository, since, cacheDuration, now);
+        if (board) return { data: board, complete: true, fetchedAt: now };
         const source = await unique(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now));
         return { ...source, data: source.data.filter(issue => !issue.pull_request) };
       }),
@@ -115,7 +124,8 @@ export class StatisticsCollector {
             verified <= now && now - verified < STATISTICS_RETENTION_MS;
           // The previous final day was partial; always refetch it along with new days.
           const from = reuse ? `${previous!.to}T00:00:00Z` : since;
-          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&until=${until}&per_page=100`, statisticsLimits.commits, now);
+          // A day-stable URL (no `until`; filtered below) lets unchanged history revalidate as a free 304 (#136).
+          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now);
           const historical = reuse ? old!.data.filter(commit => commitDate(commit) >= since && commitDate(commit) < from) : [];
           const data = [...new Map([...historical, ...source.data].map(commit => [commit.sha, commit])).values()]
             .filter(commit => commitDate(commit) >= since && commitDate(commit) <= until)
@@ -146,7 +156,8 @@ export class StatisticsCollector {
           let additions: number | undefined, deletions: number | undefined;
           const files = new Set<string>();
           for (let page = 0; next && page < statisticsLimits.files; page++) {
-            const response: { data: { stats?: { additions: number; deletions: number }; files?: { filename: string }[] }; next: string | null } = await this.request(next);
+            // Commit details are immutable and kept in `changes`: never let them evict reusable ETags (#108).
+            const response: { data: { stats?: { additions: number; deletions: number }; files?: { filename: string }[] }; next: string | null } = await this.request(next, { store: false });
             additions ??= response.data.stats?.additions;
             deletions ??= response.data.stats?.deletions;
             for (const file of response.data.files || []) files.add(file.filename);

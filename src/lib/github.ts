@@ -62,6 +62,10 @@ export class GitHub {
     string,
     { etag: string; data: unknown; next: string | null }
   >();
+  /** When each in-memory entry was last confirmed by GitHub (200 or 304); restored entries have none (#136). */
+  private readonly validatedAt = new WeakMap<object, number>();
+  /** The latest full lane load per repository, so statistics can reuse its list responses (#136). */
+  private readonly laneRuns = new Map<string, { startedAt: number; done: boolean; open: string; closed: string; closedSince: string }>();
   private limitedUntil = 0;
   retryAfterMs() {
     return Math.max(0, this.limitedUntil - Date.now());
@@ -149,6 +153,7 @@ export class GitHub {
       // Keep revalidated entries most recent so exportResponses() retains them (#108).
       this.responses.delete(url.href);
       this.responses.set(url.href, cached);
+      this.validatedAt.set(cached, Date.now());
       return { data: cached.data as T, next: cached.next };
     }
     if (!response.ok) {
@@ -201,12 +206,60 @@ export class GitHub {
     };
     const etag = response.headers.get("etag");
     if (cacheable && etag) {
+      const entry = { etag, ...result };
       this.responses.delete(url.href);
-      this.responses.set(url.href, { etag, ...result });
+      this.responses.set(url.href, entry);
+      this.validatedAt.set(entry, Date.now());
       if (this.responses.size > 600)
         this.responses.delete(this.responses.keys().next().value!);
     }
     return result;
+  }
+
+  /**
+   * A fully cached page chain from one pass: all() fetches pages in order, so every page must be
+   * confirmed at or after `after` and no earlier than the page before it. Returns the first page's time.
+   */
+  private cachedChain(href: string, after: number) {
+    const data: unknown[] = [];
+    let next: string | null = href, previous = after, validated = NaN;
+    for (let page = 0; next; page++) {
+      const entry: { data: unknown; next: string | null } | undefined = page < 100 ? this.responses.get(new URL(next, "https://api.github.com").href) : undefined;
+      const at = entry ? this.validatedAt.get(entry) : undefined;
+      if (!entry || at === undefined || at < previous || !Array.isArray(entry.data)) return null;
+      if (!page) validated = at;
+      data.push(...entry.data);
+      previous = at;
+      next = entry.next;
+    }
+    return { data, validated };
+  }
+  /**
+   * Issues (without pull requests) updated at or after `since`, rebuilt from the board's own list
+   * responses without any request (#136): the last complete full lane load (all open issues plus
+   * closed issues updated since its day-stable window) merged with a later incremental `since` list
+   * anchored at or before that load. Returns null unless every page was confirmed by GitHub within
+   * `maxAgeMs` and the board window covers `since`, so callers fall back to their own request.
+   */
+  boardIssues(repoFullName: string, since: string, maxAgeMs = 300_000, now = Date.now()): Issue[] | null {
+    const run = this.laneRuns.get(repoFullName), from = Date.parse(since);
+    if (!run?.done || !Number.isFinite(from) || Date.parse(run.closedSince) > from) return null;
+    const open = this.cachedChain(run.open, run.startedAt), closed = this.cachedChain(run.closed, run.startedAt);
+    if (!open || !closed) return null;
+    let fresh = Math.min(open.validated, closed.validated);
+    const lists = [open.data, closed.data];
+    const incremental = this.sinceUrls.get(repoFullName);
+    const anchor = incremental ? Date.parse(new URL(incremental).searchParams.get("since") || "") : NaN;
+    const changes = incremental && anchor <= run.startedAt ? this.cachedChain(incremental, -Infinity) : null;
+    if (changes) { lists.push(changes.data); fresh = Math.max(fresh, changes.validated); }
+    if (now - fresh > maxAgeMs || fresh > now + 60_000) return null;
+    const issues = new Map<number, Issue>();
+    for (const item of lists.flat() as Issue[]) {
+      if (!item || typeof item !== "object" || !Number.isSafeInteger(item.id) || typeof item.updated_at !== "string") return null;
+      const known = issues.get(item.id);
+      if (!known || item.updated_at >= known.updated_at) issues.set(item.id, item);
+    }
+    return [...issues.values()].filter(issue => !issue.pull_request && Date.parse(issue.updated_at) >= from).map(issue => ({ ...issue }));
   }
 
   async all<T>(path: string, options: { store?: boolean } = {}): Promise<T[]> {
@@ -344,15 +397,18 @@ export class GitHub {
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
     // A day-stable request URL allows ETags to survive reloads. Filter by the exact window below.
     const requestSince = new Date(Math.floor(Date.now() / 86400000) * 86400000 - 30 * 86400000).toISOString();
+    const openPath = `${root}/issues?state=open&per_page=100&sort=created&direction=asc`;
+    const closedPath = `${root}/issues?state=closed&per_page=100&sort=updated&direction=desc&since=${requestSince}`;
+    const run = { startedAt: Date.now(), done: false, open: new URL(openPath, "https://api.github.com").href, closed: new URL(closedPath, "https://api.github.com").href, closedSince: requestSince };
+    this.laneRuns.delete(repo.full_name);
+    this.laneRuns.set(repo.full_name, run);
+    if (this.laneRuns.size > 200) this.laneRuns.delete(this.laneRuns.keys().next().value!);
     const [open, closed, labels] = await Promise.all([
-      this.all<Issue>(
-        `${root}/issues?state=open&per_page=100&sort=created&direction=asc`,
-      ),
-      this.all<Issue>(
-        `${root}/issues?state=closed&per_page=100&sort=updated&direction=desc&since=${requestSince}`,
-      ),
+      this.all<Issue>(openPath),
+      this.all<Issue>(closedPath),
       this.labels(repo.full_name),
     ]);
+    run.done = true;
     // Copy before enrichment: request() returns the objects held in the ETag cache.
     const issues = [
       ...open,

@@ -34,7 +34,8 @@ describe("statistics transport and coverage", () => {
     expect(calls.some(url => url.pathname.endsWith("/commits/merge"))).toBe(false);
     const request = calls.find(url => url.pathname.endsWith("/commits"))!;
     expect(request.searchParams.get("since")).toBe("2026-09-17T00:00:00Z");
-    expect(request.searchParams.get("until")).toBe("2026-10-16T15:00:00.000Z");
+    // Day-stable URL for free 304 revalidation; the window end is applied locally (#136).
+    expect(request.searchParams.has("until")).toBe(false);
     expect(request.searchParams.has("sha")).toBe(false);
   });
   it("deduplicates overlapping pages and marks capped event history incomplete", async () => {

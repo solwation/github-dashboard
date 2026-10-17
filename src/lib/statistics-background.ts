@@ -217,16 +217,18 @@ export class StatisticsBackground {
     let refused: PauseReason | null = null;
     const source = this.options.client;
     const client: StatisticsClient = {
-      request: <T>(path: string) => {
+      request: <T>(path: string, options?: { store?: boolean }) => {
         const run = tail.then(() => {
           const reason = refused || this.pauseReason();
           if (reason) { refused = reason; throw new BackgroundPaused(reason); }
-          return source.request<T>(path);
+          return options ? source.request<T>(path, options) : source.request<T>(path);
         });
         tail = run.catch(() => undefined);
         return run;
       },
       retryAfterMs: () => source.retryAfterMs?.() || 0,
+      // Reading the board's cached lists sends no request, so it needs no gate (#136).
+      ...(source.boardIssues ? { boardIssues: (repository: string, since: string, maxAgeMs?: number, now?: number) => source.boardIssues!(repository, since, maxAgeMs, now) } : {}),
     };
     return { client, paused: () => refused };
   }
