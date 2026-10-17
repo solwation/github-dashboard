@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 import { encodeHandoff } from "../src/lib/handoff";
 
 async function matchingColors(page: Page) {
@@ -107,7 +108,7 @@ test("combined cards with colliding IDs use their own comments, commits and pers
     await closed.scrollIntoViewIfNeeded();
     await expect(closed.locator(".closing-commit a")).toHaveAttribute("href", `https://github.com/sample/${name}/commit/abcdef123456789`);
   }
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("issueflow:combined-fixture") || "{}").preferences?.splitByRepository)).toBe(false);
+  await expect.poll(() => readSettings(page, "combined-fixture").then(saved => saved?.preferences?.splitByRepository)).toBe(false);
   await page.reload(); await expect(page.locator(".combined-board .issue-card")).toHaveCount(6);
   await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).not.toBeChecked();
   const transferred = encodeHandoff({ token: "fictional-combined-token", selected: ["sample/alpha", "sample/beta"], rules: {}, preferences: { splitByRepository: true } });
