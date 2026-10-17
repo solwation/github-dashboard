@@ -1178,6 +1178,27 @@ const sync = createIssueSync({
     syncError.value = "";
   },
 });
+// Background statistics (#135): fill the encrypted statistics cache in idle portions; the module
+// and collector load on demand, and board sync, restoration and the Statistics view take priority.
+let statisticsBackground: import("./lib/statistics-background").StatisticsBackground | null = null;
+let statisticsBackgroundRun = 0;
+function restartStatisticsBackground() {
+  const run = ++statisticsBackgroundRun;
+  statisticsBackground?.stop(); statisticsBackground = null;
+  const client = api, token = sessionToken.value;
+  if (!client || !token || !user.value || isDemo.value) return;
+  void import("./lib/statistics-background").then(({ StatisticsBackground }) => {
+    if (run !== statisticsBackgroundRun || client !== api || token !== sessionToken.value) return;
+    statisticsBackground = new StatisticsBackground({
+      client, token,
+      repositories: () => statisticsRepositories.value.map(repo => repo.full_name),
+      busy: () => busy.value || restoring.value || authBusy.value || logoutBusy.value || picker.value || editing.value !== null,
+      allowed: () => client === api && token === sessionToken.value && !isDemo.value && currentView.value !== "statistics",
+    });
+    statisticsBackground.start();
+  }, () => undefined);
+}
+watch([sessionToken, user, isDemo], restartStatisticsBackground);
 function handleRefreshShortcut(event: KeyboardEvent) {
   if (!loggedIn.value || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
   // Prevent document reload even while a fetch is already running.
@@ -1199,6 +1220,7 @@ onUnmounted(() => {
   clearTimeout(activityTimer);
   clearTimeout(timeoutTimer);
   sync.stop();
+  statisticsBackgroundRun++; statisticsBackground?.stop();
   window.removeEventListener("hashchange", navigateWorkspace);
   document.removeEventListener("keydown", handleRefreshShortcut);
   document.removeEventListener("pointerdown", resumeStatusAudio);

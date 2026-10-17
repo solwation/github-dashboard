@@ -66,6 +66,17 @@ export class GitHub {
   retryAfterMs() {
     return Math.max(0, this.limitedUntil - Date.now());
   }
+  private quota: { remaining: number; limit: number; resetAt: number } | null = null;
+  /** Latest REST core quota from response headers; null when unknown or already reset (#135). */
+  rateLimit() {
+    return this.quota && this.quota.resetAt > Date.now() ? { ...this.quota } : null;
+  }
+  private observeQuota(url: URL, headers: Headers) {
+    const resource = headers.get("x-ratelimit-resource");
+    if (url.pathname === "/graphql" || (resource && resource !== "core")) return;
+    const remaining = Number(headers.get("x-ratelimit-remaining") ?? NaN), limit = Number(headers.get("x-ratelimit-limit") ?? NaN), reset = Number(headers.get("x-ratelimit-reset") ?? NaN);
+    if (Number.isFinite(remaining) && Number.isFinite(limit) && Number.isFinite(reset) && limit > 0) this.quota = { remaining, limit, resetAt: reset * 1000 };
+  }
 
   private readonly commits = new ClosingCommitCache(async (repo, issue) => {
     const [owner, name] = repo.split("/");
@@ -132,6 +143,7 @@ export class GitHub {
         ...(init.body ? { "Content-Type": "application/json" } : {}),
       },
     });
+    this.observeQuota(url, response.headers);
     if (response.status === 304 && cached) {
       this.observePermission(url.pathname, true);
       // Keep revalidated entries most recent so exportResponses() retains them (#108).

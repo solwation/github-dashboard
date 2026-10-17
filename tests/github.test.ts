@@ -22,6 +22,22 @@ const issue = {
 };
 afterEach(() => { vi.unstubAllGlobals(); setLanguage("auto"); });
 describe("GitHub transport", () => {
+  it("exposes the latest REST core rate-limit reserve and ignores GraphQL quotas (#135)", async () => {
+    const reset = String(Math.floor(Date.now() / 1000) + 1800);
+    const headers = (remaining: string, resource = "core") => ({ "x-ratelimit-remaining": remaining, "x-ratelimit-limit": "5000", "x-ratelimit-reset": reset, "x-ratelimit-resource": resource });
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response("[]", { headers: headers("4321") }))
+      .mockResolvedValueOnce(new Response("{}", { headers: headers("10", "graphql") }))
+      .mockResolvedValueOnce(new Response("[]", { headers: { ...headers("7"), "x-ratelimit-reset": String(Math.floor(Date.now() / 1000) - 1) } })));
+    const client = new GitHub("token");
+    expect(client.rateLimit()).toBeNull();
+    await client.request("/user/repos");
+    expect(client.rateLimit()).toEqual({ remaining: 4321, limit: 5000, resetAt: Number(reset) * 1000 });
+    await client.request("/graphql", { method: "POST", body: "{}" });
+    expect(client.rateLimit()?.remaining).toBe(4321);
+    await client.request("/user");
+    expect(client.rateLimit()).toBeNull();
+  });
   it("explains a 403 permission denial without a retry time even when GitHub sends X-RateLimit-Reset", async () => {
     setLanguage("en");
     const reset = String(Math.floor(Date.now() / 1000) + 1800);
