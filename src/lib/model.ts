@@ -27,6 +27,13 @@ export interface Issue {
   sub_issues_summary?: { total: number; completed: number; percent_completed?: number };
   startedAt?: string | null;
   timerError?: boolean;
+  /**
+   * Local enrichment for closed issues only (#141): when the last in-progress period before closing
+   * started. Kept from the in-progress `startedAt` when sync sees the issue close, or derived from
+   * already fetched repository events. Separate from `startedAt` so timers, timeouts and closure
+   * feedback never treat a closed issue as running. Absent when unknown.
+   */
+  workStartedAt?: string;
 }
 export interface Repo {
   id: number;
@@ -154,6 +161,67 @@ export function progressStart(
     if (e.event === "unlabeled") active.delete(e.label.name);
   }
   return [...active.values()].sort()[0] || null;
+}
+/**
+ * Start of the last in-progress period before the issue closed at `closedAt` (#141), from its
+ * label events in any order. The period may have ended before closing (e.g. the label was removed
+ * on delivery). Events after `closedAt` and periods before a reopening are ignored. Null when the
+ * events show no in-progress period for this closing.
+ */
+export function closedWorkStart(events: Event[], closedAt: string, rules: Rules = {}): string | null {
+  const closed = Date.parse(closedAt);
+  if (!Number.isFinite(closed)) return null;
+  const active = new Set<string>();
+  let start: string | null = null;
+  for (const e of [...events].sort(
+    (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || a.id - b.id,
+  )) {
+    const at = Date.parse(e.created_at);
+    if (!Number.isFinite(at) || at > closed) break;
+    if (e.event === "reopened") { active.clear(); start = null; continue; }
+    if (!e.label || !isProgress(e.label.name, rules)) continue;
+    if (e.event === "labeled") { if (!active.size) start = e.created_at; active.add(e.label.name); }
+    if (e.event === "unlabeled") active.delete(e.label.name);
+  }
+  return start;
+}
+/** A repository issue event as the statistics collection keeps it (#135/#141). */
+export interface RepositoryIssueEvent extends Event { issue?: { id: number } }
+/**
+ * Fills `workStartedAt` for the lane's closed issues that lack it from already fetched repository
+ * issue events (#141), without any request. Returns the same lane when nothing changes, so the
+ * caller can keep the shown object (lanes are replaced, never mutated).
+ */
+export function deriveWorkStarts(lane: Lane, events: readonly RepositoryIssueEvent[], rules: Rules = {}): Lane {
+  const missing = new Map(lane.issues.filter((issue) => issue.state === "closed" && issue.closed_at && !issue.workStartedAt && !issue.pull_request).map((issue) => [issue.id, issue]));
+  if (!missing.size) return lane;
+  const byIssue = new Map<number, Event[]>();
+  for (const event of events) {
+    const id = event?.issue?.id;
+    if (id === undefined || !missing.has(id) || typeof event.created_at !== "string" || typeof event.event !== "string" ||
+      (event.label !== undefined && typeof event.label?.name !== "string")) continue;
+    (byIssue.get(id) ?? byIssue.set(id, []).get(id)!).push(event);
+  }
+  const starts = new Map<number, string>();
+  for (const [id, list] of byIssue) {
+    const start = closedWorkStart(list, missing.get(id)!.closed_at!, rules);
+    if (start) starts.set(id, start);
+  }
+  if (!starts.size) return lane;
+  return { ...lane, issues: lane.issues.map((issue) => starts.has(issue.id) ? { ...issue, workStartedAt: starts.get(issue.id)! } : issue) };
+}
+/**
+ * Closing work start for a freshly synced closed issue (#141): the previous board copy's own
+ * `workStartedAt` for the same closing, or its in-progress `startedAt` when it was in progress.
+ */
+export function carriedWorkStart(issue: Issue, old: Issue | undefined, rules: Rules = {}): string | undefined {
+  if (issue.state !== "closed" || !issue.closed_at || !old) return undefined;
+  const valid = (value: string | null | undefined) => {
+    const ms = value ? Date.parse(value) : NaN;
+    return Number.isFinite(ms) && ms <= Date.parse(issue.closed_at!) ? value! : undefined;
+  };
+  if (old.state === "closed") return old.closed_at === issue.closed_at ? valid(old.workStartedAt) : undefined;
+  return column(old, rules) === "progress" && !old.timerError ? valid(old.startedAt) : undefined;
 }
 export function duration(start: string, now: number) {
   const seconds = Math.max(0, Math.floor((now - Date.parse(start)) / 1000));

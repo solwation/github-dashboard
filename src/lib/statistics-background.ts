@@ -39,6 +39,11 @@ export interface BackgroundOptions {
   allowed(): boolean;
   modules?: () => Promise<BackgroundModules>;
   environment?: BackgroundEnvironment;
+  /**
+   * Receives cached statistics (once per run) and each newly collected repository, e.g. so the
+   * board can derive closed issues' work starts from the events without requests (#141).
+   */
+  collected?(data: StatisticsData): void;
 }
 export type PauseReason = "stopped" | "disallowed" | "hidden" | "offline" | "save-data" | "reduced-data" | "battery" | "rate-limit" | "busy" | "interaction";
 
@@ -124,6 +129,7 @@ export class StatisticsBackground {
   private working = false;
   private lastInteraction = -Infinity;
   private readonly failures = new Map<string, number>();
+  private deliveredCache = false;
   /** Exposed for tests and diagnostics. */
   lastPause: PauseReason | null = null;
   completed = 0;
@@ -186,6 +192,7 @@ export class StatisticsBackground {
     const { token } = this.options;
     const now = this.environment.now();
     const cached = await modules.read(token, now);
+    if (!this.deliveredCache && this.running) { this.deliveredCache = true; this.deliver(cached); }
     const repository = nextBackgroundRepository(this.options.repositories(), cached, modules.window(now), now, this.failures);
     if (!repository) return "none";
     const gate = this.gatedClient();
@@ -204,12 +211,16 @@ export class StatisticsBackground {
       const others = latest.filter(entry => entry.repository !== repository);
       await modules.write(token, [...others.filter(entry => !selected.has(entry.repository)), ...others.filter(entry => selected.has(entry.repository)), data]);
       this.completed++;
+      this.deliver([data]);
       return "done";
     } catch (error) {
       if (error instanceof BackgroundPaused || gate.paused()) { this.lastPause = gate.paused() || (error as BackgroundPaused).reason; return "paused"; }
       this.failures.set(repository, now);
       return "failed";
     } finally { collector.dispose(); }
+  }
+  private deliver(entries: StatisticsData[]) {
+    for (const entry of entries) { try { this.options.collected?.(entry); } catch { /* A consumer failure never stops collection. */ } }
   }
   /** One request at a time, and each request first rechecks every pause condition. */
   private gatedClient() {

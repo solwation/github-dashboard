@@ -81,12 +81,14 @@ import {
 } from "./lib/notifications";
 import {
   column,
+  deriveWorkStarts,
   isCoordination,
   sortedIssues,
   workflow,
   type Lane,
   type Issue,
   type Repo,
+  type RepositoryIssueEvent,
   type Rules,
 } from "./lib/model";
 // One update controller shared by the automatic prompt, the update dialog and the sidebar badge.
@@ -940,7 +942,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
             const previous = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
             const since = lastSynced.get(repo.full_name);
             const full = !incremental || !previous || previous.loading || previous.error || !since || (lastFullSynced.get(repo.full_name) || 0) <= started - 30 * 60000;
-            const lane = full ? await client.lane(repo, repoRules) : await client.syncLane(previous!, repoRules, lastFullSynced.get(repo.full_name)!, { labels: !activeOnly });
+            const lane = full ? await client.lane(repo, repoRules, previous && !previous.loading ? previous : undefined) : await client.syncLane(previous!, repoRules, lastFullSynced.get(repo.full_name)!, { labels: !activeOnly });
             return { lane, started, full };
           });
           if (!current() || !selected.value.includes(repo.full_name)) continue;
@@ -948,7 +950,8 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           if (loaded.full) lastFullSynced.set(repo.full_name, loaded.started);
           // An unchanged sync (e.g. all 304) keeps the shown lane object, so nothing re-renders or is rewritten (#122).
           const shown = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
-          const lane = sameLaneContent(shown, loaded.lane) ? shown : loaded.lane;
+          const synced = withWorkStarts(loaded.lane);
+          const lane = sameLaneContent(shown, synced) ? shown : synced;
           result.push(lane);
           closureFeedback([lane]);
           if (lane !== shown) lanes.value = lanes.value.map(entry => entry.repo.full_name === repo.full_name ? lane : entry);
@@ -1190,9 +1193,29 @@ const sync = createIssueSync({
 // and collector load on demand, and board sync, restoration and the Statistics view take priority.
 let statisticsBackground: import("./lib/statistics-background").StatisticsBackground | null = null;
 let statisticsBackgroundRun = 0;
+/** Repository issue events from the session's statistics, kept in memory only (#141). */
+const workEvents = new Map<string, readonly RepositoryIssueEvent[]>();
+/** Closed issues' work starts derived from already fetched statistics events, without requests (#141). */
+function withWorkStarts(lane: Lane): Lane {
+  const events = workEvents.get(lane.repo.full_name);
+  return events && !lane.loading ? deriveWorkStarts(lane, events, { ...rules.value[lane.repo.full_name] }) : lane;
+}
+function statisticsCollected(data: import("./lib/statistics").StatisticsData) {
+  if (!data.events?.data.length || !selected.value.includes(data.repository)) return;
+  workEvents.set(data.repository, data.events.data as RepositoryIssueEvent[]);
+  let changed = false;
+  const next = lanes.value.map(lane => {
+    if (lane.repo.full_name !== data.repository) return lane;
+    const derived = withWorkStarts(lane);
+    changed ||= derived !== lane;
+    return derived;
+  });
+  if (changed) { lanes.value = next; void persistContent(true); }
+}
 function restartStatisticsBackground() {
   const run = ++statisticsBackgroundRun;
   statisticsBackground?.stop(); statisticsBackground = null;
+  workEvents.clear();
   const client = api, token = sessionToken.value;
   if (!client || !token || !user.value || isDemo.value) return;
   void import("./lib/statistics-background").then(({ StatisticsBackground }) => {
@@ -1202,6 +1225,7 @@ function restartStatisticsBackground() {
       repositories: () => statisticsRepositories.value.map(repo => repo.full_name),
       busy: () => busy.value || restoring.value || authBusy.value || logoutBusy.value || picker.value || editing.value !== null,
       allowed: () => client === api && token === sessionToken.value && !isDemo.value && currentView.value !== "statistics",
+      collected: data => { if (run === statisticsBackgroundRun && client === api) statisticsCollected(data); },
     });
     statisticsBackground.start();
   }, () => undefined);

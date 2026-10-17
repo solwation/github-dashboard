@@ -6,6 +6,8 @@ export interface StatisticsIssue {
 export interface StatisticsEvent {
   id: number; event: string; created_at: string;
   actor?: { login: string } | null; issue?: StatisticsIssue;
+  /** Label of a labeled/unlabeled event; lets the board derive closed issues' work starts (#141). */
+  label?: { name: string };
 }
 export interface StatisticsCommit {
   sha: string; parents: { sha: string }[]; author?: { login: string } | null;

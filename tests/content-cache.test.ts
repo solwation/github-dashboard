@@ -119,7 +119,7 @@ describe("issue-list responses are stored once, in lanes (#122)", () => {
     const input = snapshot();
     const issue = rawIssue("sample/test", 1), pull = rawIssue("sample/test", 2, { pull_request: { url: "x" } }), outside = rawIssue("sample/test", 3, { state: "closed" });
     input.lanes = [{ repo: { id: 1, name: "test", full_name: "sample/test", description: null, private: true, html_url: "", owner: { login: "sample" } },
-      issues: [{ ...issue, startedAt: "2026-10-16T09:00:00Z", timerError: false }], labels: [] }];
+      issues: [{ ...issue, startedAt: "2026-10-16T09:00:00Z", timerError: false, workStartedAt: "2026-10-16T08:00:00Z" }], labels: [] }];
     input.responses = [etagged(listUrl("sample/test", "open"), [pull, issue], `${github}/next`), etagged(listUrl("sample/test", "closed"), [outside]),
       etagged(`${github}/repos/sample/test/issues/1/events?per_page=100`, [{ id: 9, event: "labeled" }])];
     await writeSnapshot("fixture", input);
@@ -129,6 +129,8 @@ describe("issue-list responses are stored once, in lanes (#122)", () => {
     load.mockResolvedValue(stored);
     const restored = await readSnapshot("fixture");
     expect(restored!.responses[0]).toEqual([listUrl("sample/test", "open"), { etag: input.responses[0]![1].etag, next: `${github}/next`, data: [issue] }]);
+    // The closing work start (#141) survives in the restored lanes but not in rebuilt raw responses.
+    expect(restored!.lanes[0]!.issues[0]!.workStartedAt).toBe("2026-10-16T08:00:00Z");
     expect(restored!.responses.slice(1)).toEqual(input.responses.slice(1));
   });
   it("drops stored lists whose issues are missing, so they are downloaded again instead of answered from 304", async () => {

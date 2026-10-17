@@ -6,8 +6,9 @@ import { column, type Issue, type Rules } from "./model";
  * issues they already show, after their own filters (hidden coordination, search), plus `now`.
  *
  * Model:
- * - History: closed issues of one repository closed within the last `windowDays` that carry a
- *   `startedAt`. Their duration is startedAt → closed_at. Issues closed without a known start
+ * - History: closed issues of one repository closed within the last `windowDays` with a known
+ *   work start: `workStartedAt` (#141, set by sync or derived from repository events), falling
+ *   back to `startedAt`. Their duration is start → closed_at. Issues closed without a known start
  *   (never in progress, or the timeline is unknown) are excluded.
  * - Typical time: the median duration, which resists outliers. Fewer than `MIN_SAMPLES` samples
  *   give no estimate.
@@ -95,7 +96,7 @@ export function historySamples(
   const samples: HistorySample[] = [];
   for (const issue of issuesOf(issues)) {
     if (column(issue, rules) !== "closed") continue;
-    const startedMs = time(issue.startedAt), closedMs = time(issue.closed_at);
+    const startedMs = time(issue.workStartedAt ?? issue.startedAt), closedMs = time(issue.closed_at);
     if (!Number.isFinite(startedMs) || !Number.isFinite(closedMs)) continue;
     if (closedMs < cutoff || closedMs > now || closedMs < startedMs) continue;
     samples.push({ issue, startedMs, closedMs, durationMs: closedMs - startedMs });

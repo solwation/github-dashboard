@@ -66,7 +66,7 @@ function compactStatistics(entry: StatisticsData): StatisticsData {
   return {
     repository: entry.repository, from: entry.from, to: entry.to, fetchedAt: entry.fetchedAt, temporary: entry.temporary,
     issues: source(entry.issues, issue),
-    events: source(entry.events, event => ({ id: event.id, event: event.event, created_at: event.created_at, actor: person(event.actor), ...(event.issue ? { issue: issue(event.issue) } : {}) })),
+    events: source(entry.events, event => ({ id: event.id, event: event.event, created_at: event.created_at, actor: person(event.actor), ...(event.issue ? { issue: issue(event.issue) } : {}), ...(typeof event.label?.name === 'string' ? { label: { name: event.label.name } } : {}) })),
     commits: source(entry.commits, commit => ({ sha: commit.sha, parents: commit.parents.map(parent => ({ sha: parent.sha })), author: person(commit.author), commit: { author: commit.commit.author ? { name: commit.commit.author.name, date: commit.commit.author.date } : undefined, committer: commit.commit.committer ? { date: commit.commit.committer.date } : undefined } })),
     changes: source(entry.changes, change => ({ sha: change.sha, date: change.date, contributor: change.contributor, additions: change.additions, deletions: change.deletions, files: change.files, filesComplete: change.filesComplete })),
     pulls: source(entry.pulls, pull => ({ id: pull.id, created_at: pull.created_at, updated_at: pull.updated_at, closed_at: pull.closed_at, merged_at: pull.merged_at, labels: pull.labels.map(label => ({ name: label.name })), user: person(pull.user) })),

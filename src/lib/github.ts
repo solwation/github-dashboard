@@ -8,6 +8,7 @@ import {
   type ClosingResponse,
 } from "./commits";
 import {
+  carriedWorkStart,
   column,
   progressStart,
   type Event,
@@ -295,7 +296,11 @@ export class GitHub {
     rules: Rules,
     old?: Issue,
   ): Promise<Issue> {
-    if (column(issue, rules) !== "progress") return issue;
+    if (column(issue, rules) !== "progress") {
+      // A closing seen by sync keeps the in-progress start for estimates, without extra requests (#141).
+      const workStartedAt = carriedWorkStart(issue, old, rules);
+      return workStartedAt ? { ...issue, workStartedAt } : issue;
+    }
     if (
       old?.updated_at === issue.updated_at &&
       old.startedAt &&
@@ -392,7 +397,11 @@ export class GitHub {
       ),
     };
   }
-  async lane(repo: Repo, rules: Rules): Promise<Lane> {
+  /**
+   * Full lane load. `previous` (the shown lane, if any) only carries local closing work starts
+   * (#141) for issues it held in progress or already closed with a known start; it adds no requests.
+   */
+  async lane(repo: Repo, rules: Rules, previous?: Pick<Lane, "issues">): Promise<Lane> {
     const root = `/repos/${repo.full_name}`;
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
     // A day-stable request URL allows ETags to survive reloads. Filter by the exact window below.
@@ -414,6 +423,11 @@ export class GitHub {
       ...open,
       ...closed.filter((i) => i.closed_at && i.closed_at >= since),
     ].filter((i) => !i.pull_request).map((i) => ({ ...i }));
+    const known = previous?.issues.length ? new Map(previous.issues.map((issue) => [issue.id, issue])) : undefined;
+    if (known) for (const issue of issues) {
+      const workStartedAt = carriedWorkStart(issue, known.get(issue.id), rules);
+      if (workStartedAt) issue.workStartedAt = workStartedAt;
+    }
     const active = issues.filter((i) => column(i, rules) === "progress");
     // Limit simultaneous timeline requests; each timeline is fully paginated.
     let cursor = 0;

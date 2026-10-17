@@ -57,7 +57,7 @@ function expandResponses(responses: unknown[], lanes: Lane[]): unknown[] {
       const issue = issues.get(id);
       if (!issue) return [];
       // Lane issues carry local timer enrichment that is not part of GitHub's response.
-      const { startedAt: _startedAt, timerError: _timerError, ...raw } = issue;
+      const { startedAt: _startedAt, timerError: _timerError, workStartedAt: _workStartedAt, ...raw } = issue;
       data.push(raw);
     }
     return [[url, { etag, next, data }]];

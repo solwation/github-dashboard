@@ -37,6 +37,15 @@ describe('bounded credential-bound statistics snapshots', () => {
     expect(JSON.stringify(save.mock.calls[1]![1])).not.toContain('unused large description');
     expect(JSON.stringify(save.mock.calls[1]![1])).not.toContain('credential-fixture');
   });
+  it('keeps only the label name of issue events so the board can derive closed work starts (#141)', async () => {
+    const data = entry();
+    const issue = { id: 7, number: 7, created_at: '2026-10-15', updated_at: '2026-10-15', labels: [] };
+    data.events = { data: [{ id: 1, event: 'labeled', created_at: '2026-10-15T10:00:00Z', issue, label: { name: 'in-progress', color: 'fff' } } as never, { id: 2, event: 'closed', created_at: '2026-10-15T11:00:00Z', issue }], complete: true, fetchedAt: now };
+    await writeStatisticsCache('credential-fixture', [data]);
+    const stored = save.mock.calls[0]![1];
+    expect(stored.repositories[0].events.data.map((event: { label?: unknown }) => event.label)).toEqual([{ name: 'in-progress' }, undefined]);
+    expect(parseStatisticsCache(stored, now)[0]!.events!.data[0]!.label).toEqual({ name: 'in-progress' });
+  });
   it('evicts older repositories to stay within the encrypted JSON byte budget instead of truncating complete source data', async () => {
     const large = (repository: string) => {
       const data = entry(repository);

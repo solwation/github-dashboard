@@ -18,7 +18,7 @@ function reply(url: URL) {
   return { data: [], next: null };
 }
 
-function harness(options: { repositories?: string[]; cache?: StatisticsData[]; onRequest?: (url: URL) => void; rate?: RateLimitInfo | null } = {}) {
+function harness(options: { repositories?: string[]; cache?: StatisticsData[]; onRequest?: (url: URL) => void; rate?: RateLimitInfo | null; collected?: (data: StatisticsData) => void } = {}) {
   let clock = now;
   const state = { hidden: false, online: true, saveData: false, reducedData: false, lowBattery: false, busy: false, allowed: true, retry: 0, rate: options.rate ?? null as RateLimitInfo | null };
   const timers: { at: number; run: () => void; idle: boolean }[] = [];
@@ -53,6 +53,7 @@ function harness(options: { repositories?: string[]; cache?: StatisticsData[]; o
   const background = new StatisticsBackground({
     client, token: "token", repositories: () => options.repositories ?? ["sample/one"],
     busy: () => state.busy, allowed: () => state.allowed, modules: async () => modules, environment,
+    ...(options.collected ? { collected: options.collected } : {}),
   });
   /** Advance the fake clock to the next timer and run it, letting async work settle. */
   async function step() {
@@ -82,6 +83,17 @@ describe("background statistics scheduling", () => {
     expect(h.cache()[0]!.commits!.data).toHaveLength(1);
     expect(h.peak()).toBe(1);
     expect(h.timers[0]).toEqual(expect.objectContaining({ at: now + BACKGROUND_START_DELAY_MS + BACKGROUND_PORTION_GAP_MS }));
+  });
+  it("hands cached statistics once per run and each new collection to the board (#141)", async () => {
+    const delivered: string[] = [];
+    const old = { repository: "sample/two", ...statisticsWindow(now - 1000), fetchedAt: now - 1000, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] } as StatisticsData;
+    const h = harness({ repositories: ["sample/one", "sample/two"], cache: [old], collected: data => { delivered.push(`${data.repository}@${data.fetchedAt === old.fetchedAt ? "cache" : "new"}`); throw new Error("ignored"); } });
+    h.background.start(0);
+    await h.cycle();
+    expect(delivered).toEqual(["sample/two@cache", "sample/one@new"]);
+    await h.cycle();
+    expect(delivered).toEqual(["sample/two@cache", "sample/one@new"]);
+    expect(h.writes).toHaveLength(1);
   });
   it("collects one repository per portion, missing first, and idles once everything is fresh", async () => {
     const h = harness({ repositories: ["sample/one", "sample/two"] });

@@ -5,6 +5,7 @@ const sameJson = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JS
 function sameIssue(a: Issue, b: Issue) {
   return a === b || (a.id === b.id && a.updated_at === b.updated_at && a.state === b.state &&
     (a.startedAt ?? null) === (b.startedAt ?? null) && !!a.timerError === !!b.timerError &&
+    (a.workStartedAt ?? null) === (b.workStartedAt ?? null) &&
     sameJson(a.sub_issues_summary ?? null, b.sub_issues_summary ?? null));
 }
 
