@@ -99,6 +99,13 @@
       },
       {
         "text": {
+          "sv": "Statistiken hämtas i bakgrunden när det finns ledig kapacitet, så statistikvyn öppnas direkt från den krypterade cachen.",
+          "en": "Statistics are collected in the background when capacity is free, so the Statistics view opens instantly from the encrypted cache."
+        },
+        "issues": [135]
+      },
+      {
+        "text": {
           "sv": "Bakgrundssynken gör färre än hälften så många anrop: oförändrade projekt kontrolleras utan att förbruka GitHubs gräns, och relationer hämtas bara vid ändring.",
           "en": "Background sync makes less than half as many requests: unchanged projects are checked without using GitHub's rate limit, and relations reload only when they change."
         },
