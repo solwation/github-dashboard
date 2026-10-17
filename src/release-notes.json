@@ -1,5 +1,49 @@
 [
   {
+    "date": "2026-10-17",
+    "summary": {
+      "sv": "Nytt mörkt tema med Auto, Ljust eller Mörkt. Inloggning byts inte utan bekräftelse, och toppfältet får plats på surfplattor.",
+      "en": "New dark theme with Auto, Light or Dark. Sign-in is never switched without confirmation, and the top bar fits on tablets."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
+          "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
+        },
+        "issues": [102]
+      },
+      {
+        "text": {
+          "sv": "En länk eller QR-kod för ett annat konto byter inte inloggning utan bekräftelse, och ogiltiga länkar visar ett översatt fel över din sparade tavla.",
+          "en": "A link or QR code for another account never switches sign-in without confirmation, and invalid links show a translated error over your saved board."
+        },
+        "issues": [103, 104, 114]
+      },
+      {
+        "text": {
+          "sv": "Toppfältet får plats på surfplattebredder utan sidledsscroll, och uppdateringsstatusen flyttar inte tavlorna på telefon.",
+          "en": "The top bar fits tablet widths without sideways scrolling, and the refresh status no longer shifts boards on phones."
+        },
+        "issues": [113, 111]
+      },
+      {
+        "text": {
+          "sv": "Repoväljaren och label-dialogen håller tangentbordsfokus inom dialogen, stängs alltid med Esc och återför fokus till knappen.",
+          "en": "The repository picker and label dialog keep keyboard focus inside, always close with Esc and return focus to the opening button."
+        },
+        "issues": [109]
+      },
+      {
+        "text": {
+          "sv": "Tillfälliga tidslinjefel ger inga kvarstående timervarningar, nekad åtkomst skiljs från API-gränser och sparade ETags överlever omladdning.",
+          "en": "Temporary timeline errors leave no lingering timer warnings, access denials are told apart from API limits, and saved ETags survive reloads."
+        },
+        "issues": [106, 107, 108]
+      }
+    ]
+  },
+  {
     "date": "2026-10-16",
     "summary": {
       "sv": "Visade behörighetsproblem förblir kvitterade efter omladdning och återinloggning. Ignorera timeout fungerar direkt även under pågående uppdatering.",
@@ -85,41 +129,6 @@
       },
       {
         "text": {
-          "sv": "En länk eller QR-kod för ett annat konto ersätter inte längre din sparade inloggning utan att du först bekräftar bytet.",
-          "en": "A link or QR code for another account no longer replaces your saved sign-in unless you first confirm the switch."
-        },
-        "issues": [103]
-      },
-      {
-        "text": {
-          "sv": "En utgången delningslänk eller avbruten GitHub-inloggning visar nu felet över din sparade tavla i stället för att logga ut dig.",
-          "en": "An expired handoff link or cancelled GitHub sign-in now shows the error over your saved board instead of appearing signed out."
-        },
-        "issues": [104]
-      },
-      {
-        "text": {
-          "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
-          "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
-        },
-        "issues": [102]
-      },
-      {
-        "text": {
-          "sv": "Ett tillfälligt tidslinjefel ger inte längre kvarstående tidtagarvarningar eller tystade timeout-notiser, nekad åtkomst skiljs från API-gränser och sparade ETags överlever omladdning.",
-          "en": "A temporary timeline error no longer leaves lingering timer warnings or muted timeout alerts, access denials are told apart from API limits, and saved ETags survive reloads."
-        },
-        "issues": [106, 107, 108]
-      },
-      {
-        "text": {
-          "sv": "Repoväljaren och label-dialogen håller tangentbordsfokus inom dialogen, stängs alltid med Esc och återför fokus till knappen.",
-          "en": "The repository picker and label dialog keep keyboard focus inside, always close with Esc and return focus to the opening button."
-        },
-        "issues": [109]
-      },
-      {
-        "text": {
           "sv": "Cachad vy återställs lugnare, uppdateringar aktiveras säkrare och otillgängliga commitdetaljer döljs; Inställningar, språkminne och filtrerade översiktssiffror har rättats.",
           "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
@@ -127,10 +136,10 @@
       },
       {
         "text": {
-          "sv": "F5 eller Ctrl+R under en bakgrundsuppdatering hämtar ändå färska data efteråt, uppdateringsstatusen flyttar inte tavlorna på telefon och Välj repositories nås med tangentbordet.",
-          "en": "F5 or Ctrl+R during a background update still fetches fresh data afterwards, the refresh status no longer shifts boards on phones, and Choose repositories stays keyboard-reachable."
+          "sv": "F5 eller Ctrl+R under en bakgrundsuppdatering hämtar ändå färska data efteråt, och Välj repositories går alltid att nå med tangentbordet.",
+          "en": "F5 or Ctrl+R during a background update still fetches fresh data afterwards, and Choose repositories stays reachable by keyboard."
         },
-        "issues": [98, 111]
+        "issues": [98]
       },
       {
         "text": {

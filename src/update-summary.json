@@ -1,10 +1,19 @@
 {
-  "baseCommit": "63b39fb7bbcd3364ba9f9414ae331803c91ceb02",
+  "baseCommit": "70420e916b0482e4516b25685cecab752829a8b0",
   "summary": {
-    "sv": "QR-koden för att överföra konto och inställningar är betydligt mindre, så även webbkameror och telefoner i svagt ljus kan läsa den.",
-    "en": "The QR code for transferring your account and settings is much smaller, so webcams and phones in dim light can read it too."
+    "sv": "Nytt mörkt tema som följer enheten. Inloggningen byts inte utan bekräftelse, och toppfältet får plats på surfplattor.",
+    "en": "New dark theme that follows your device. Sign-in is never switched without confirmation, and the top bar fits on tablets."
   },
   "issues": [
-    100
+    102,
+    103,
+    104,
+    106,
+    107,
+    108,
+    109,
+    111,
+    113,
+    114
   ]
 }
