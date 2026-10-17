@@ -1244,8 +1244,9 @@ function withWorkStarts(lane: Lane): Lane {
   return events && !lane.loading ? deriveWorkStarts(lane, events, { ...rules.value[lane.repo.full_name] }) : lane;
 }
 function statisticsCollected(data: import("./lib/statistics").StatisticsData) {
-  if (!data.events?.data.length || !selected.value.includes(data.repository)) return;
+  if (!data.events?.data.length) return;
   workEvents.set(data.repository, data.events.data as RepositoryIssueEvent[]);
+  if (!selected.value.includes(data.repository)) return;
   let changed = false;
   const next = lanes.value.map(lane => {
     if (lane.repo.full_name !== data.repository) return lane;
@@ -1273,7 +1274,7 @@ function restartStatisticsBackground() {
     statisticsBackground.start();
   }, () => undefined);
 }
-watch([sessionToken, user, isDemo], restartStatisticsBackground);
+watch([sessionToken, () => user.value?.login, isDemo], restartStatisticsBackground);
 // Statistics the view collected reach the board's work starts as soon as the board is back (#148).
 watch(currentView, (view, previous) => { if (previous === "statistics" && view !== "statistics") statisticsBackground?.wake(); });
 function handleRefreshShortcut(event: KeyboardEvent) {

@@ -1,11 +1,10 @@
 {
-  "baseCommit": "dc98af7701e8b5861d9e72ceda5d4279b7c640ed",
+  "baseCommit": "9e6f4f55d8424e02d55b8478d4acaa23ca3a0062",
   "summary": {
-    "sv": "Tidsuppskattningen syns även på datorn, och rubrikerna visar bara tid eller snurra – klicka för att uppdatera direkt.",
-    "en": "Time estimates now show on desktop, and headers show only the time or a spinner – click to update immediately."
+    "sv": "Sparad statistik ger tidsuppskattningar direkt vid start och direkt när man lämnar Statistikvyn.",
+    "en": "Cached statistics provide time estimates immediately on startup and right when leaving Statistics."
   },
   "issues": [
-    148,
-    149
+    148
   ]
 }

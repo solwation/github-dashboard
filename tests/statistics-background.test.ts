@@ -106,23 +106,26 @@ describe("background statistics scheduling", () => {
     expect(delivered).toEqual(["sample/two@cache", "sample/one@new"]);
     expect(h.writes).toHaveLength(1);
   });
-  it("hands cached statistics over while collection waits for quiet input, and again after another writer refreshed them (#148)", async () => {
+  it("hands cached statistics over immediately on start, while collection waits for quiet input, and again on wake after another writer refreshed them (#148)", async () => {
     const delivered: string[] = [];
     const entry = (fetchedAt: number) => ({ repository: "sample/one", ...statisticsWindow(fetchedAt), fetchedAt, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] }) as StatisticsData;
     const h = harness({ cache: [entry(now - 1000)], collected: data => { delivered.push(`${data.repository}@${now - data.fetchedAt}`); } });
-    h.background.start(0);
+    h.background.start();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(delivered).toEqual(["sample/one@1000"]);
+    expect(h.calls).toHaveLength(0);
+    h.advance(BACKGROUND_START_DELAY_MS - 1000);
     h.interactions.forEach(callback => callback());
     await h.cycle();
     expect(h.background.lastPause).toBe("interaction");
     expect(h.calls).toHaveLength(0);
     expect(delivered).toEqual(["sample/one@1000"]);
-    // The Statistics view rewrites the cache; the next portion finds nothing to collect but delivers the refresh.
-    h.advance(BACKGROUND_INTERACTION_QUIET_MS);
-    await h.background.tick();
-    expect(delivered).toEqual(["sample/one@1000"]);
+    // Leaving the Statistics view via a click (interaction) still delivers the refreshed cache immediately on wake().
     h.cache().splice(0, 1, entry(now - 10));
+    h.interactions.forEach(callback => callback());
     h.background.wake();
     await h.cycle();
+    expect(h.background.lastPause).toBe("interaction");
     expect(delivered).toEqual(["sample/one@1000", "sample/one@10"]);
     expect(h.calls).toHaveLength(0);
   });

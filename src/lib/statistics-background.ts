@@ -147,10 +147,12 @@ export class StatisticsBackground {
     if (this.running) return;
     this.running = true;
     this.unsubscribe = this.environment.onInteraction(() => { this.lastInteraction = this.environment.now(); });
+    if (delay > 0) void this.readCache();
     this.arm(delay);
   }
   /** Runs the next tick soon, e.g. after the Statistics view refreshed the cache (#148). */
   wake() {
+    this.deliveredCache = false;
     if (this.running && !this.working) this.arm(0);
   }
   stop() {
@@ -181,14 +183,20 @@ export class StatisticsBackground {
     }, ms);
     this.cancel = () => cancelDelay();
   }
+  private async readCache() {
+    if (this.deliveredCache || !this.running || !this.options.collected || !this.options.allowed()) return;
+    try {
+      const cached = await (await this.modules()).read(this.options.token, this.environment.now());
+      if (this.running && this.options.allowed()) this.deliverCached(cached);
+    } catch { /* Retried with the next portion. */ }
+  }
   /** One portion: at most one repository, then reschedule. */
   async tick() {
     if (!this.running || this.working) return;
     if (!this.deliveredCache && this.options.collected && this.options.allowed()) {
       // Reading the local cache sends no request, so it does not wait for quiet input (#148).
       this.working = true;
-      try { this.deliverCached(await (await this.modules()).read(this.options.token, this.environment.now())); }
-      catch { /* Retried with the next portion. */ }
+      try { await this.readCache(); }
       finally { this.working = false; }
       if (!this.running) return;
     }
