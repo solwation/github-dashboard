@@ -40,10 +40,24 @@ test("an expired handoff link shows its error over the restored saved session", 
   await expectSavedBoard(page);
 
   await start(page, link("fixture-foreign-token", Date.now() - 2 * HANDOFF_LIFETIME_MS));
-  await expect(page.locator(".notice.error")).toContainText("expired");
+  await expect(page.locator(".notice.error")).toHaveText(/Överföringslänken har gått ut\. Den gäller i fem minuter – skapa en ny QR-kod på den andra enheten\./);
   expect(page.url()).not.toContain("issueflow-handoff");
   await expectSavedBoard(page);
   await expect(page.getByRole("button", { name: "Anslut GitHub", exact: true })).toHaveCount(0);
+});
+
+test("rejected handoff links explain expired and invalid codes in English", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("issueflow-language", "en"));
+  await fixture(page, new Set());
+  await start(page, link("fixture-saved-token"));
+  await expectSavedBoard(page);
+
+  await start(page, link("fixture-foreign-token", Date.now() - 2 * HANDOFF_LIFETIME_MS));
+  await expect(page.locator(".notice.error")).toContainText("The transfer link has expired. Links are valid for five minutes – create a new QR code on the other device.");
+  await start(page, "http://127.0.0.1:5173/#issueflow-handoff=1234");
+  await expect(page.locator(".notice.error")).toContainText("The transfer link is invalid or incomplete. Create a new QR code on the other device.");
+  expect(page.url()).not.toContain("issueflow-handoff");
+  await expectSavedBoard(page);
 });
 
 test("a cancelled or unverifiable OAuth return keeps the saved session and scrubs the address", async ({ page }) => {

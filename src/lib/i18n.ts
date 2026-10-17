@@ -586,6 +586,15 @@ export const english: Record<string, string> = {
   "GitHubs API-gräns är nådd.": "GitHub API rate limit reached.",
   " Försök igen senare.": " Try again later.",
   "Åtkomst nekad.": "Access denied.",
+  // Rejected transfer links and QR codes (#114)
+  "Överföringslänken har gått ut. Den gäller i fem minuter – skapa en ny QR-kod på den andra enheten.":
+    "The transfer link has expired. Links are valid for five minutes – create a new QR code on the other device.",
+  "Överföringslänken är ogiltig eller ofullständig. Skapa en ny QR-kod på den andra enheten.":
+    "The transfer link is invalid or incomplete. Create a new QR code on the other device.",
+  "QR-koden har gått ut. Skapa en ny kod på den andra enheten.":
+    "The QR code has expired. Create a new code on the other device.",
+  "QR-koden är ogiltig. Skanna en QR-kod från Issueflow på den andra enheten.":
+    "The QR code is invalid. Scan a QR code from Issueflow on the other device.",
 };
 export function t(
   source: string,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, handoffQrSegments, parseHandoffUrl, mergeHandoffPreferences, type HandoffPreferences, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
+import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, handoffQrSegments, parseHandoffUrl, mergeHandoffPreferences, type HandoffPreferences, HANDOFF_LIFETIME_MS, HandoffError } from "../src/lib/handoff";
+import { setLanguage, t } from "../src/lib/i18n";
 import { decodeCompactHandoff, encodeCompactHandoff } from "../src/lib/handoff-codec";
 const now = 1_800_000_000_000;
 const settings = { token: "test_not_a_real_token", selected: ["sample/repo"], rules: { "sample/repo": { progress: "pågår 🚀", high: "prioritet:hög" } } };
@@ -26,10 +27,30 @@ describe("mobile handoff", () => {
   });
   it("rejects expired, future, unsupported, malformed, and oversized payloads", () => {
     const encoded = encodeHandoff(settings, now);
-    expect(() => decodeHandoff(encoded, now + HANDOFF_LIFETIME_MS)).toThrow();
-    expect(() => decodeHandoff(encoded, now - 30_001)).toThrow();
-    for (const value of ["", "%%%", "a", "a".repeat(16_001), raw({ ...settings, version: 2, issuedAt: now }), raw({ ...settings, version: 1, issuedAt: now, extra: true }), raw({ ...settings, version: 1, issuedAt: now, selected: ["../private"] }), raw({ ...settings, version: 1, issuedAt: now, rules: { "sample/repo": { invalid: "label" } } })]) {
-      expect(() => decodeHandoff(value, now)).toThrow();
+    const reason = (run: () => unknown) => {
+      try { run(); } catch (e) { return e instanceof HandoffError ? e.reason : e; }
+      return "accepted";
+    };
+    expect(reason(() => decodeHandoff(encoded, now + HANDOFF_LIFETIME_MS))).toBe("expired");
+    expect(reason(() => decodeHandoff(raw({ ...settings, version: 1, issuedAt: now }), now + HANDOFF_LIFETIME_MS))).toBe("expired");
+    expect(reason(() => decodeHandoff(encoded, now - 30_001))).toBe("invalid");
+    for (const value of ["", "%%%", "a", "a".repeat(16_001), "1234", encoded.slice(0, -3), raw({ ...settings, version: 2, issuedAt: now }), raw({ ...settings, version: 1, issuedAt: now, extra: true }), raw({ ...settings, version: 1, issuedAt: now, selected: ["../private"] }), raw({ ...settings, version: 1, issuedAt: now, rules: { "sample/repo": { invalid: "label" } } })]) {
+      expect(reason(() => decodeHandoff(value, now))).toBe("invalid");
+    }
+    // An old but malformed code is reported as invalid, not as merely expired.
+    expect(reason(() => decodeHandoff(raw({ ...settings, version: 1, issuedAt: now, extra: true }), now + HANDOFF_LIFETIME_MS))).toBe("invalid");
+    expect(reason(() => parseHandoffUrl("not a url", "https://example.test/app/", now))).toBe("invalid");
+  });
+  it("gives rejected links translated, distinguishable messages", () => {
+    try {
+      setLanguage("sv");
+      expect(t(new HandoffError("expired").message)).toBe("Överföringslänken har gått ut. Den gäller i fem minuter – skapa en ny QR-kod på den andra enheten.");
+      expect(t(new HandoffError("invalid").message)).toBe("Överföringslänken är ogiltig eller ofullständig. Skapa en ny QR-kod på den andra enheten.");
+      setLanguage("en");
+      expect(t(new HandoffError("expired").message)).toBe("The transfer link has expired. Links are valid for five minutes – create a new QR code on the other device.");
+      expect(t(new HandoffError("invalid").message)).toBe("The transfer link is invalid or incomplete. Create a new QR code on the other device.");
+    } finally {
+      setLanguage("auto");
     }
   });
   it("removes recognized credentials before decoding even when invalid, preserving history state", () => {

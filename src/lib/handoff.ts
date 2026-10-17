@@ -20,6 +20,16 @@ export interface HandoffPayload extends HandoffSettings {
   version: 1 | 2;
   issuedAt: number;
 }
+/** User-visible Swedish source texts; translate them with t() where they are shown. */
+export const HANDOFF_EXPIRED_MESSAGE = "Överföringslänken har gått ut. Den gäller i fem minuter – skapa en ny QR-kod på den andra enheten.";
+export const HANDOFF_INVALID_MESSAGE = "Överföringslänken är ogiltig eller ofullständig. Skapa en ny QR-kod på den andra enheten.";
+/** A rejected transfer link or QR code; `reason` separates an expired code from a malformed one. */
+export class HandoffError extends Error {
+  constructor(readonly reason: "expired" | "invalid", options?: { cause?: unknown }) {
+    super(reason === "expired" ? HANDOFF_EXPIRED_MESSAGE : HANDOFF_INVALID_MESSAGE, options);
+    this.name = "HandoffError";
+  }
+}
 const record = handoffRecord;
 function exactKeys(value: Record<string, unknown>, allowed: string[]) {
   return Object.keys(value).every((key) => allowed.includes(key));
@@ -34,7 +44,6 @@ function validate(
     (value.version !== 1 && value.version !== 2) ||
     !Number.isSafeInteger(value.issuedAt) ||
     (value.issuedAt as number) > now + 30_000 ||
-    now >= (value.issuedAt as number) + HANDOFF_LIFETIME_MS ||
     (value.issuedAt as number) < 0 ||
     typeof value.token !== "string" ||
     value.token.length < 1 ||
@@ -44,7 +53,7 @@ function validate(
     !record(value.rules) ||
     Object.keys(value.rules).length > 100
   )
-    throw new Error("Invalid or expired handoff");
+    throw new HandoffError("invalid");
   if (value.version === 2) value.preferences = parseHandoffPreferences(value.preferences);
   for (const [repo, rules] of Object.entries(value.rules)) {
     if (
@@ -55,9 +64,11 @@ function validate(
         (label) => typeof label === "string" && label.length <= 100,
       )
     ) {
-      throw new Error("Invalid handoff rules");
+      throw new HandoffError("invalid");
     }
   }
+  // Only a well-formed payload is reported as expired, so a corrupt code never suggests mere age.
+  if (now >= (value.issuedAt as number) + HANDOFF_LIFETIME_MS) throw new HandoffError("expired");
 }
 export function encodeHandoff(
   settings: HandoffSettings,
@@ -70,10 +81,18 @@ export function encodeHandoff(
     throw new Error("Handoff is too large");
   return encoded;
 }
+/** Decode a transfer; every rejection is a HandoffError with a translatable message. */
 export function decodeHandoff(
   encoded: string,
   now = Date.now(),
 ): HandoffPayload {
+  try {
+    return decodeHandoffPayload(encoded, now);
+  } catch (cause) {
+    throw cause instanceof HandoffError ? cause : new HandoffError("invalid", { cause });
+  }
+}
+function decodeHandoffPayload(encoded: string, now: number): HandoffPayload {
   if (!encoded || encoded.length > MAX_ENCODED_LENGTH)
     throw new Error("Invalid handoff encoding");
   // Digits are the compact format; base64 JSON (v1/v2) always contains letters.
@@ -120,14 +139,15 @@ export function parseHandoffUrl(
   appUrl: string,
   now = Date.now(),
 ): HandoffPayload {
-  const url = new URL(value);
+  let url: URL;
+  try { url = new URL(value); } catch (cause) { throw new HandoffError("invalid", { cause }); }
   const app = new URL(appUrl);
   if (
     url.origin !== app.origin ||
     url.pathname.replace(/\/$/, "") !== app.pathname.replace(/\/$/, "") ||
     url.username || url.password || url.search ||
     !url.hash.startsWith(PREFIX)
-  ) throw new Error("Invalid handoff URL");
+  ) throw new HandoffError("invalid");
   return decodeHandoff(url.hash.slice(PREFIX.length), now);
 }
 /** Scrub credentials before decoding, authentication, or any network operation. */
