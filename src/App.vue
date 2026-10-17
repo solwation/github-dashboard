@@ -219,9 +219,6 @@ watch(busy, (running) => {
 const error = ref("");
 const refreshed = ref<number | null>(null);
 const statusTime = (time: number) => new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit" });
-// Every text the refresh status can show, so it reserves the widest one and never rewraps the toolbar.
-const statusReserve = computed(() => [t("Hämtar…"), t("Väntar på data"),
-  ...[new Date(2000, 0, 1, 8, 58), new Date(2000, 0, 1, 20, 58)].map(time => t("Uppdaterad ") + statusTime(time.getTime()))].join("\n"));
 const showingCache = ref(false);
 const cacheWarning = ref("");
 /** What the last successful encrypted write contained, by identity: lanes are replaced, never mutated. */
@@ -267,6 +264,27 @@ async function writeContent(changedOnly: boolean) {
 const syncError = ref("");
 const lastSynced = new Map<string, number>();
 const lastFullSynced = new Map<string, number>();
+/**
+ * Per-repository sync status for the repository headers (#146). Kept outside the cached lanes, so a
+ * new timestamp never rewrites the content cache or the lane objects; both refs are replaced, never
+ * mutated, and the time only changes when its displayed minute does (#120).
+ */
+const syncingRepos = shallowRef<ReadonlySet<string>>(new Set());
+const repoSyncedAt = shallowRef<Readonly<Record<string, number>>>({});
+// Balanced per request, so a cancelled older run never stops a newer run's indicator.
+const syncingCounts = new Map<string, number>();
+function markSyncing(name: string, delta: 1 | -1) {
+  const count = Math.max(0, (syncingCounts.get(name) || 0) + delta);
+  if (count) syncingCounts.set(name, count); else syncingCounts.delete(name);
+  if (syncingRepos.value.has(name) === count > 0) return;
+  syncingRepos.value = new Set(syncingCounts.keys());
+}
+function markSynced(names: readonly string[], time: number) {
+  const minute = (value: number) => Math.floor(value / 60000);
+  const changed = names.filter(name => repoSyncedAt.value[name] === undefined || minute(repoSyncedAt.value[name]!) !== minute(time));
+  if (changed.length) repoSyncedAt.value = { ...repoSyncedAt.value, ...Object.fromEntries(changed.map(name => [name, time])) };
+}
+const combinedSyncing = computed(() => lanes.value.some(lane => syncingRepos.value.has(lane.repo.full_name)));
 const query = ref("");
 const repositoryQueries = ref<Record<string, string>>({});
 const repoQuery = ref("");
@@ -818,6 +836,8 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       measureRender("cache-first-render", nextTick);
       lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
       refreshed.value = cached.syncedAt;
+      repoSyncedAt.value = {};
+      if (cached.syncedAt) markSynced(lanes.value.map(lane => lane.repo.full_name), cached.syncedAt);
       showingCache.value = true;
       activity.update(lanes.value, rules.value);
       for (const lane of lanes.value) closureTracker.update(lane);
@@ -933,6 +953,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
       while (cursor < targets.length && current()) {
         const repo = targets[cursor++]!;
+        markSyncing(repo.full_name, 1);
         try {
           const repoRules = { ...rules.value[repo.full_name] };
           const key = JSON.stringify([repo.full_name, Object.entries(repoRules).sort(([a], [b]) => a.localeCompare(b))]);
@@ -947,6 +968,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           });
           if (!current() || !selected.value.includes(repo.full_name)) continue;
           lastSynced.set(repo.full_name, loaded.started);
+          markSynced([repo.full_name], Date.now());
           if (loaded.full) lastFullSynced.set(repo.full_name, loaded.started);
           // An unchanged sync (e.g. all 304) keeps the shown lane object, so nothing re-renders or is rewritten (#122).
           const shown = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
@@ -964,6 +986,8 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           const failed = !old.loading && old.error === reason ? old : { ...old, loading: false, error: reason };
           result.push(failed);
           if (failed !== old) lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? failed : lane);
+        } finally {
+          markSyncing(repo.full_name, -1);
         }
       }
     }));
@@ -1013,6 +1037,8 @@ function showDemo() {
   collapsedRepos.value = [];
   lanes.value = demo();
   refreshed.value = Date.now();
+  repoSyncedAt.value = {};
+  markSynced(lanes.value.map(lane => lane.repo.full_name), refreshed.value);
   error.value = "";
 }
 async function confirmLogout() {
@@ -1073,6 +1099,7 @@ function logout() {
   picker.value = false;
   editing.value = null;
   refreshed.value = null;
+  repoSyncedAt.value = {};
 }
 async function oauth() {
   try {
@@ -1586,26 +1613,9 @@ onMounted(async () => {
             ><input type="checkbox" v-model="hideCoordination" />
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
-          ><span class="updated" role="status" aria-live="polite" :aria-busy="busy"
-            ><i /><span class="updated-text" :data-reserve="statusReserve"
-              ><span>{{
-                busy
-                  ? t("Hämtar…")
-                  : refreshed
-                  ? t("Uppdaterad ") + statusTime(refreshed)
-                  : t("Väntar på data")
-              }}</span></span
-            ><span
-              v-if="loggedIn"
-              class="sync-mode"
-              :title="
-                syncError ||
-                t(
-                  'Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.',
-                )
-              "
-              >{{ t(" · adaptiv synk") }}</span
-            ></span
+          ><span class="updated" :aria-busy="busy"
+            :title="loggedIn ? syncError || t('Pågående ärenden kontrolleras var 15:e sekund; projekt synkas mer sällan.') : undefined"
+            ><i aria-hidden="true" /><span v-if="loggedIn" class="sync-mode">{{ t("Adaptiv synk") }}</span></span
           >
         </div>
         <div v-if="busy && !lanes.length" class="empty-state">
@@ -1633,6 +1643,14 @@ onMounted(async () => {
           :class="{ 'is-collapsed': collapsedRepos.includes(lane.repo.full_name) }"
         >
           <header class="lane-header">
+            <span class="lane-sync">
+              <span v-if="syncingRepos.has(lane.repo.full_name)" class="lane-sync-spinner" role="img"
+                :aria-label="t('Hämtar issues för {name}…', { name: lane.repo.full_name })"
+                :title="t('Hämtar issues för {name}…', { name: lane.repo.full_name })"
+                ><RefreshCw class="spinning" :size="11" aria-hidden="true" /></span
+              ><time v-else-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"
+                >{{ t("Uppdaterad ") + statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time>
+            </span>
             <div class="lane-title">
               <button class="collapse-project icon-button" @click="toggleCollapsed(lane.repo.full_name)"
                 :aria-label="t(collapsedRepos.includes(lane.repo.full_name) ? 'Expandera {name}' : 'Kollapsa {name}', { name: lane.repo.name })"
@@ -1848,6 +1866,12 @@ onMounted(async () => {
               <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Anpassa labels för ') + lane.repo.name"><Settings2 :size="16" /></button>
             </div>
           </details>
+          <span class="lane-sync combined-sync">
+            <span v-if="combinedSyncing" class="lane-sync-spinner" role="img"
+              :aria-label="t('Hämtar issues för den gemensamma boarden…')" :title="t('Hämtar issues för den gemensamma boarden…')"
+              ><RefreshCw class="spinning" :size="11" aria-hidden="true" /></span
+            ><time v-else-if="refreshed" :datetime="new Date(refreshed).toISOString()">{{ t("Uppdaterad ") + statusTime(refreshed) }}</time>
+          </span>
           <BoardModeToggle v-model:list="combinedList" :label="t('Visningsläge för den gemensamma boarden')" />
           </div>
           <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
@@ -2108,7 +2132,9 @@ onMounted(async () => {
 .repository-loading svg { flex-shrink: 0; }
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
 .combined-board-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; border-bottom: 1px solid var(--line); }
-.combined-board-head > .board-mode-toggle { margin: 10px 18px 10px auto; }
+.combined-board-head > .board-mode-toggle { margin: 10px 18px 10px 0; }
+.combined-board-head > .combined-sync { position: static; align-self: flex-start; margin: 17px 0 0 auto; }
+.combined-board-head > .combined-sync:last-child { margin-right: 18px; }
 .combined-repository-controls { flex: 1 1 260px; min-width: 0; padding: 15px 18px; font-size: 12px; }
 .combined-repository-controls summary { cursor: pointer; font-weight: 600; }
 .combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }

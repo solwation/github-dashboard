@@ -477,22 +477,6 @@ h1 {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.updated-text {
-  display: inline-flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.updated-text::before {
-  content: attr(data-reserve);
-  white-space: pre;
-  height: 0;
-  overflow: hidden;
-  visibility: hidden;
-}
-.updated-text > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .updated i {
   background: #48a98f;
   width: 5px;
@@ -508,6 +492,7 @@ h1 {
   box-shadow: 0 3px 4px #24364e03;
 }
 .lane-header {
+  position: relative;
   padding: 20px 22px;
   display: flex;
   justify-content: space-between;
@@ -1379,7 +1364,7 @@ h1 {
   .updated {
     font-size: 9px;
   }
-  .updated > .sync-mode {
+  .updated {
     display: none;
   }
   .lane-header {
@@ -1693,6 +1678,28 @@ h1 {
     sans-serif;
   letter-spacing: 0.1px;
   white-space: nowrap;
+}
+
+/* Per-repository sync status (#146): pinned to the header's top-right corner, outside the action row,
+   so it never squeezes the header buttons and stays visible beside each repository. */
+.lane-sync {
+  position: absolute;
+  top: 5px;
+  right: 22px;
+  display: inline-flex;
+  align-items: center;
+  height: 12px;
+  font-size: 9px;
+  line-height: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.lane-sync-spinner { display: inline-flex; color: #48a98f; pointer-events: auto; }
+.lane-sync time { pointer-events: auto; }
+@media (max-width: 650px) {
+  .lane-sync { top: 3px; right: 13px; }
 }
 
 /* Repository collapse controls and summaries adapt to narrow screens. */
