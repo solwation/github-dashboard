@@ -78,10 +78,10 @@
       },
       {
         "text": {
-          "sv": "Installerad app i Chrome kan visa notiser om stängda, påbörjade och tidsöverskridna issues i bevakade repositories även när appen är stängd.",
-          "en": "The installed app in Chrome can notify you about closed, started and timed-out issues in watched repositories even while it is closed."
+          "sv": "Installerad app i Chrome/Edge kan visa notiser om stängda, påbörjade och tidsöverskridna issues även när appen är stängd; webbläsaren styr hur ofta.",
+          "en": "The installed app in Chrome/Edge can notify you about closed, started and timed-out issues even while closed; the browser decides how often."
         },
-        "issues": [129, 130]
+        "issues": [117, 129, 130, 131]
       },
       {
         "text": {
