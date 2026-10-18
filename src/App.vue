@@ -2150,7 +2150,7 @@ onMounted(async () => {
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
 /* The sync status sits on the summary's line (#149), so it never wraps onto a row of its own. */
 .combined-board-head { display: flex; align-items: flex-start; gap: 0 8px; border-bottom: 1px solid var(--line); }
-.combined-board-head > .combined-sync { position: relative; flex: 0 0 auto; margin: 14px 12px 0 auto; height: 20px; line-height: 20px; }
+.combined-board-head > .combined-sync { position: relative; flex: 0 0 auto; top: 0; right: 0; margin: 15px 15px 0 auto; height: 16px; line-height: 16px; }
 .combined-repository-controls { flex: 1 1 0; min-width: 0; padding: 15px 18px; font-size: 12px; }
 .combined-repository-controls summary { cursor: pointer; font-weight: 600; }
 .combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }

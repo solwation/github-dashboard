@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d0f84cf1d4344042b2ddc336a1585209b72753e7",
+  "baseCommit": "effb878b0e5eee348dbabca8ca6503bc329e5962",
   "summary": {
-    "sv": "Ladd-cirkeln i repo-rubriken har nu lika stor marginal till höger som uppåt i både dator- och mobilvy.",
-    "en": "The repo sync spinner now has equal margins to the top and right on both desktop and mobile views."
+    "sv": "Ladd-cirkeln och synkstatusen på den sammanslagna boarden har nu lika stor marginal till höger som uppåt.",
+    "en": "The sync spinner and status on the combined board now have equal margins to the right as to the top."
   },
   "issues": [
-    161
+    162
   ]
 }

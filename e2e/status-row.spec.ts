@@ -141,6 +141,21 @@ for (const [language, text] of Object.entries(copy)) {
       api.pause();
       await page.keyboard.press("Control+r");
       await expect(combinedSpinner).toBeVisible();
+      const spinnerSample = await head.evaluate(element => {
+        const headBox = element.getBoundingClientRect();
+        const status = element.querySelector<HTMLElement>(".combined-sync")!.getBoundingClientRect();
+        const spinner = element.querySelector<HTMLElement>(".lane-sync-spinner")!.getBoundingClientRect();
+        const marginTop = Math.round(status.top - headBox.top);
+        const marginRight = Math.round(headBox.right - status.right);
+        const spinnerMarginTop = Math.round(spinner.top - headBox.top);
+        const spinnerMarginRight = Math.round(headBox.right - spinner.right);
+        return {
+          statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
+          spinnerMarginsEqual: Math.abs(spinnerMarginTop - spinnerMarginRight) <= 1,
+        };
+      });
+      expect.soft(spinnerSample.statusMarginsEqual, "combined spinner status margins equal").toBe(true);
+      expect.soft(spinnerSample.spinnerMarginsEqual, "combined spinner icon margins equal").toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       api.release();
       await expect(combinedSpinner).toHaveCount(0);
@@ -173,16 +188,26 @@ test("the combined board status stays on the summary line in both display modes"
       const sample = await head.evaluate(element => {
         const status = element.querySelector<HTMLElement>(".lane-sync")!;
         const summary = element.querySelector("summary")!.getBoundingClientRect();
+        const headBox = element.getBoundingClientRect();
         const box = status.getBoundingClientRect();
-        const height = element.getBoundingClientRect().height;
+        const height = headBox.height;
         status.style.display = "none";
         const without = element.getBoundingClientRect().height;
         status.style.display = "";
-        return { height, without, sameLine: box.top < summary.bottom && box.bottom > summary.top, right: box.right <= element.getBoundingClientRect().right };
+        const marginTop = Math.round(box.top - headBox.top);
+        const marginRight = Math.round(headBox.right - box.right);
+        return {
+          height,
+          without,
+          sameLine: box.top < summary.bottom && box.bottom > summary.top,
+          right: box.right <= headBox.right,
+          statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
+        };
       });
       expect.soft(sample.height, `combined header height at ${width}px (${mode})`).toBe(sample.without);
       expect.soft(sample.sameLine, `status on the summary line at ${width}px (${mode})`).toBe(true);
       expect.soft(sample.right, `status inside the header at ${width}px (${mode})`).toBe(true);
+      expect.soft(sample.statusMarginsEqual, `combined status margins equal at ${width}px (${mode})`).toBe(true);
     }
   }
 });
