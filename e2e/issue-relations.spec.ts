@@ -45,8 +45,10 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await expect(roadmap.getByRole("progressbar", { name: "2 av 5 underärenden stängda" })).toHaveAttribute("value", "2");
   await expect(roadmap.locator("progress")).toHaveAttribute("max", "5");
   await expect(roadmap.locator(".sub-issue-progress-label")).toContainText("40%");
+  await expect(roadmap.locator(".parent-task-badge")).toContainText("2/5 klara");
   const child = card("Implementation child");
   await child.scrollIntoViewIfNeeded();
+  await expect(child.locator(".subtask-badge")).toContainText("Subtask");
   await expect(child.locator(".issue-parent a")).toHaveText("#1 · Roadmap parent");
   await expect(child.locator(".issue-parent a")).toHaveAttribute("href", parent.url);
   const nested = card("Nested work");
@@ -75,6 +77,13 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await nested.scrollIntoViewIfNeeded();
   await expect(nested.locator(".issue-parent > span")).toHaveText("Parent issue");
   await expect(nested.getByRole("progressbar", { name: "0 of 2 sub-issues closed" })).toBeVisible();
+  await page.locator(".board-toolbar").getByRole("button", { name: "List", exact: true }).click();
+  const parentRow = page.locator(".issue-row").filter({ hasText: parent.title });
+  await expect(parentRow.locator(".row-parent-badge")).toContainText("4/5");
+  const nestedRow = page.locator(".issue-row").filter({ hasText: "Nested work" });
+  await expect(nestedRow.locator(".row-subtask-badge")).toContainText("Subtask");
+  await expect(nestedRow.locator(".row-parent-badge")).toContainText("0/2");
+  await page.locator(".board-toolbar").getByRole("button", { name: "Cards", exact: true }).click();
   for (const width of [320, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-18",
     "summary": {
-      "sv": "Nya kommentarer på ärenden uppmärksammas med animerad pratbubbla och en badge som visar antalet nya kommentarer.",
-      "en": "New comments on issues stand out with an animated chat bubble and a badge showing the number of new comments."
+      "sv": "Nya kommentarer animeras med pratbubbla och +N-badge. Tydligare indikering i listläge och på kort för subtasks och parent tasks med antal klara underärenden.",
+      "en": "New comments animate with a chat bubble and +N badge. Clearer indication in list mode and on cards for subtasks and parent tasks with completed sub-issue counts."
     },
     "sections": [
       {
@@ -12,6 +12,13 @@
           "en": "When an issue receives new comments, the chat bubble animates and a badge shows the number of new comments in card and list view until read."
         },
         "issues": [157]
+      },
+      {
+        "text": {
+          "sv": "Tydligare indikering i listläge och på kort för subtasks och parent tasks med antal klara underärenden.",
+          "en": "Clearer indication in list mode and on cards for subtasks and parent tasks with number of completed sub-issues."
+        },
+        "issues": [158]
       }
     ]
   },

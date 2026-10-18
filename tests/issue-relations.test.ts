@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 import { GitHub } from "../src/lib/github";
 import { IssueRelationsCache, parseIssueRelations, RELATIONS_TTL_MS, subIssueProgress } from "../src/lib/issue-relations";
 import type { Issue } from "../src/lib/model";
@@ -87,5 +88,65 @@ describe("native issue relations", () => {
     expect(JSON.parse(options.body).variables).toEqual({ owner: "owner", name: "repo", number: 1 });
     expect(JSON.parse(options.body).query).toMatch(/^query IssueRelations/);
     expect(await client.issueRelations("owner/repo", issue(2) as Issue)).toBeNull();
+  });
+  it("computes progress immediately from REST sub_issues_summary and resolves parent from loader (#158)", async () => {
+    const { useIssueRelations } = await import("../src/composables/useIssueRelations");
+    const testIssue = ref<Issue>({
+      id: 10, number: 10, title: "Parent task", state: "open", created_at: "2026-10-18T10:00:00Z",
+      updated_at: "2026-10-18T10:00:00Z", closed_at: null, labels: [], assignees: [], comments: 0,
+      html_url: "https://github.com/owner/repo/issues/10",
+      sub_issues_summary: { total: 4, completed: 2 },
+    });
+    const isVisible = ref(true);
+    const mockLoader = vi.fn(async () => ({
+      parent: { id: "p1", number: 5, title: "Epic roadmap", state: "OPEN" as const, url: "https://github.com/owner/repo/issues/5", repository: "owner/repo" },
+      progress: { total: 4, completed: 2 },
+    }));
+
+    const relations = useIssueRelations(
+      () => testIssue.value,
+      () => isVisible.value,
+      () => mockLoader,
+    );
+
+    // REST progress is synchronous:
+    expect(relations.progress.value).toEqual({ total: 4, completed: 2 });
+    expect(relations.isSubtask.value).toBe(false);
+
+    // Wait for loader to resolve:
+    await vi.waitFor(() => expect(relations.isSubtask.value).toBe(true));
+    expect(relations.parent.value?.title).toBe("Epic roadmap");
+    expect(relations.parent.value?.number).toBe(5);
+
+    // When sub_issues_summary is 0, progress is null:
+    testIssue.value = { ...testIssue.value, sub_issues_summary: { total: 0, completed: 0 } };
+    expect(relations.progress.value).toBeNull();
+  });
+  it("does not invoke loader in demo mode or when not visible (#158)", async () => {
+    const { useIssueRelations } = await import("../src/composables/useIssueRelations");
+    const testIssue = ref<Issue>({
+      id: 11, number: 11, title: "Demo task", state: "open", created_at: "2026-10-18T10:00:00Z",
+      updated_at: "2026-10-18T10:00:00Z", closed_at: null, labels: [], assignees: [], comments: 0,
+      html_url: "https://github.com/owner/repo/issues/11",
+    });
+    const isVisible = ref(false);
+    const isDemo = ref(true);
+    const mockLoader = vi.fn(async () => null);
+
+    useIssueRelations(
+      () => testIssue.value,
+      () => isVisible.value,
+      () => mockLoader,
+      undefined,
+      undefined,
+      () => isDemo.value,
+    );
+
+    expect(mockLoader).not.toHaveBeenCalled();
+    isVisible.value = true;
+    expect(mockLoader).not.toHaveBeenCalled();
+    isDemo.value = false;
+    // Now visible and not demo, should be called
+    await vi.waitFor(() => expect(mockLoader).toHaveBeenCalled());
   });
 });

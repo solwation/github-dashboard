@@ -18,7 +18,10 @@ import {
   ArrowUp,
   Minus,
   ArrowDown,
+  CornerDownRight,
+  ListTree,
 } from "@lucide/vue";
+import { useIssueRelations } from "../composables/useIssueRelations";
 import {
   column,
   duration,
@@ -51,6 +54,14 @@ const props = defineProps<{
 const emit = defineEmits<{ read: [] }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
+const { progress, isSubtask, parent } = useIssueRelations(
+  () => props.issue,
+  () => visible.value,
+  () => props.loadRelations,
+  () => props.commentsSession,
+  () => props.relationsRevision,
+  () => props.demo,
+);
 const commit = ref<ClosingCommit | null>(null);
 const commitState = ref<"idle" | "loading" | "loaded" | "error">("idle");
 let observer: IntersectionObserver | undefined;
@@ -144,14 +155,28 @@ const visibleLabels = computed(() =>
           :size="13"
         />
         #{{ issue.number }}</span
-      ><span
-        class="priority"
-        :class="['high', 'medium', 'low'][rank]"
-        :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
-        ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" />{{
-          [t("Hög"), "Medium", t("Låg")][rank]
-        }}</span
       >
+      <div class="card-top-meta">
+        <span v-if="isSubtask && parent" class="subtask-badge"
+          :title="t('Underärende till {parent} · {title}', { parent: (parent.repository.toLowerCase() === (repository || '').toLowerCase() ? '' : parent.repository) + '#' + parent.number, title: parent.title })"
+        >
+          <CornerDownRight :size="10" aria-hidden="true" />{{ t("Subtask") }}
+        </span>
+        <span v-if="progress" class="parent-task-badge"
+          :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
+          :aria-label="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
+        >
+          <ListTree :size="11" aria-hidden="true" />{{ progress.completed }}/{{ progress.total }} {{ t("klara") }}
+        </span>
+        <span
+          class="priority"
+          :class="['high', 'medium', 'low'][rank]"
+          :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
+          ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" />{{
+            [t("Hög"), "Medium", t("Låg")][rank]
+          }}</span
+        >
+      </div>
     </div>
     <a
       v-if="!rowDetails"
@@ -262,6 +287,29 @@ const visibleLabels = computed(() =>
 </template>
 
 <style scoped>
+.card-top-meta { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.subtask-badge, .parent-task-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .15rem .45rem;
+  border-radius: .3rem;
+  font-size: .68rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.subtask-badge {
+  background: var(--hover, #edf0f2);
+  color: var(--muted, #627179);
+}
+.parent-task-badge {
+  color: var(--green, #147d69);
+  background: color-mix(in srgb, var(--green) 12%, var(--surface));
+}
+:root[data-theme="dark"] .parent-task-badge {
+  color: var(--accent-green, #3fbc9c);
+  background: var(--tint-green, #173a2b);
+}
 .issue-card.has-repository { position: relative; }
 .issue-card.has-repository::after { content: ""; position: absolute; top: 6px; bottom: 6px; right: 0; width: 3px; border-radius: 3px; background: var(--repository-color); pointer-events: none; }
 .card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }

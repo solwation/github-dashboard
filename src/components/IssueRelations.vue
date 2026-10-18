@@ -1,35 +1,23 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
-import { subIssueProgress, type IssueRelations } from "../lib/issue-relations";
+import { useIssueRelations } from "../composables/useIssueRelations";
+import type { IssueRelations } from "../lib/issue-relations";
 import type { Issue } from "../lib/model";
 const props = defineProps<{
   issue: Issue; repository: string; visible: boolean; session?: number; revision?: number;
   load?: (issue: Issue) => Promise<IssueRelations | null>;
 }>();
 const { t } = useLanguage();
-const relations = ref<IssueRelations | null>(null);
-let run = 0;
-const restProgress = computed(() => subIssueProgress(props.issue.sub_issues_summary));
-// REST provides a current summary even when GraphQL access is unavailable.
-const progress = computed(() => props.issue.sub_issues_summary?.total === 0 ? null : restProgress.value ?? relations.value?.progress ?? null);
+const { relations, progress } = useIssueRelations(
+  () => props.issue,
+  () => props.visible,
+  () => props.load,
+  () => props.session,
+  () => props.revision,
+);
 const percent = computed(() => progress.value ? Math.round(progress.value.completed / progress.value.total * 100) : 0);
 const label = computed(() => progress.value ? t("{completed} av {total} underärenden stängda", { completed: progress.value.completed, total: progress.value.total }) : "");
-async function load() {
-  const current = ++run;
-  if (!props.visible || !props.load) return;
-  try {
-    const result = await props.load(props.issue);
-    if (current === run) relations.value = result;
-  } catch { if (current === run) relations.value = null; }
-}
-watch([() => props.issue.id, () => props.issue.html_url, () => props.session], () => {
-  run++; relations.value = null;
-}, { flush: "sync" });
-watch([() => props.visible, () => props.issue.id, () => props.issue.html_url, () => props.issue.updated_at,
-  () => props.issue.sub_issues_summary?.total, () => props.issue.sub_issues_summary?.completed,
-  () => props.session, () => props.revision], () => { void load(); }, { immediate: true });
-onBeforeUnmount(() => { run++; });
 </script>
 <template>
   <div v-if="relations?.parent || progress" class="issue-relations">

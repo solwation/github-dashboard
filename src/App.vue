@@ -1830,6 +1830,9 @@ onMounted(async () => {
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
+                    :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
+                    :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
+                    :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
                   ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
@@ -1938,6 +1941,9 @@ onMounted(async () => {
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
+                    :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
+                    :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
+                    :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
                   ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>

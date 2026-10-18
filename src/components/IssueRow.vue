@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, Clock3, MessageCircle, Minus, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, Clock3, CornerDownRight, ListTree, MessageCircle, Minus, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
+import { useIssueRelations } from "../composables/useIssueRelations";
 import { repositoryColor } from "../lib/repository-color";
 import { column, duration, priority, type Issue, type Rules } from "../lib/model";
+import type { IssueRelations } from "../lib/issue-relations";
 import type { ActivityMarker } from "../lib/activity";
 const { t, locale } = useLanguage();
 
@@ -27,6 +29,9 @@ const props = defineProps<{
   newComments?: number;
   timedOut?: boolean;
   timeoutMinutes?: number;
+  loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
+  relationsRevision?: number;
+  commentsSession?: number;
 }>();
 const emit = defineEmits<{ read: [] }>();
 const row = ref<HTMLElement>();
@@ -80,6 +85,14 @@ const rank = computed(() => priority(props.issue, props.rules));
 const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, expanded.value && !isPhone.value ? 4 : 3));
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
+const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
+  () => props.issue,
+  () => visible.value,
+  () => props.loadRelations,
+  () => props.commentsSession,
+  () => props.relationsRevision,
+  () => props.demo,
+);
 </script>
 <template>
   <li
@@ -112,6 +125,20 @@ const timeout = computed(() => props.timedOut && col.value === "progress");
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     <span class="row-meta">
+      <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
+        :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
+      >
+        <CornerDownRight :size="10" aria-hidden="true" />
+        <span class="row-subtask-text">{{ t("Subtask") }}</span>
+      </span>
+      <span v-if="progress" class="row-marker row-parent-badge"
+        :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
+        :aria-label="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
+      >
+        <ListTree :size="11" aria-hidden="true" />
+        <span>{{ progress.completed }}/{{ progress.total }}</span>
+        <span class="row-parent-label">{{ t("klara") }}</span>
+      </span>
       <button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"

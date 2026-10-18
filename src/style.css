@@ -1809,6 +1809,9 @@ button.lane-sync:focus-visible::after {
 .row-comment-marker { display: inline-flex; align-items: center; gap: 3px; background: #d8efde; color: #1c6239; border: 0; cursor: pointer; }
 .row-comment-marker:focus-visible { outline: 2px solid #1c6239; outline-offset: -2px; }
 .row-comment-marker .comment-icon-animated { animation: comment-bounce 1.6s ease-in-out infinite; }
+.row-subtask-badge, .row-parent-badge { display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
+.row-subtask-badge { background: #edf0f4; color: #5b6b75; }
+.row-parent-badge { color: #1c6239; background: #d8efde; font-weight: 700; }
 .row-time { justify-self: end; font-size: 10px; text-align: right; white-space: nowrap; }
 .issue-row.unread-move { border-color: #2875ba; background: #f1f8ff; }
 .issue-row.unread-created { border-color: #39885b; background: #edf8f0; }
@@ -1842,6 +1845,9 @@ button.lane-sync:focus-visible::after {
   /* Phones: the time label moves beside the status line so the title keeps the width. */
   .issue-row, .issue-row.has-repository { grid-template-areas: "number title title" "meta meta time"; }
   .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title title" "meta meta time"; }
+}
+@media (max-width: 480px) {
+  .row-parent-label { display: none; }
 }
 
 /* Dark theme. theme.ts (and index.html before first paint) sets data-theme on <html>
@@ -2061,6 +2067,8 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .unread-created .row-marker:focus-visible { outline-color: #a6e3bf; }
 :root[data-theme="dark"] .row-comment-marker { background: #1d4532; color: #a6e3bf; }
 :root[data-theme="dark"] .row-comment-marker:focus-visible { outline-color: #a6e3bf; }
+:root[data-theme="dark"] .row-subtask-badge { background: var(--hover); color: var(--muted); }
+:root[data-theme="dark"] .row-parent-badge { background: #1d4532; color: #a6e3bf; }
 :root[data-theme="dark"] .issue-row.unread-move { border-color: #5b9be0; background: #18293a; }
 :root[data-theme="dark"] .issue-row.unread-created { border-color: #4fae78; background: #172d24; }
 :root[data-theme="dark"] .issue-row.issue-timeout { border-color: #e06b78; background: #33191d; }

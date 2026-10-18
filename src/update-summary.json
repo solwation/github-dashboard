@@ -1,10 +1,10 @@
 {
-  "baseCommit": "e13f45272ada35ba552df006cbeb2640cf583f27",
+  "baseCommit": "450c6cac4f287bc9e6d1f79cb081970b1bc41658",
   "summary": {
-    "sv": "När ärenden får nya kommentarer animeras pratbubblan och en badge visar antalet nya kommentarer i kort- och listvy tills de läses.",
-    "en": "When issues receive new comments, the chat bubble animates and a badge shows the number of new comments in card and list view until read."
+    "sv": "Tydligare indikering i listläge och på kort för subtasks och parent tasks med antal klara underärenden.",
+    "en": "Clearer indication in list mode and on cards for subtasks and parent tasks with number of completed sub-issues."
   },
   "issues": [
-    157
+    158
   ]
 }
