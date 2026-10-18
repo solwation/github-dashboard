@@ -199,7 +199,7 @@ const visibleLabels = computed(() =>
     </div>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" />
-    <IssueDetails :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
+    <IssueDetails :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
       <p>{{ t("Timeout: pågående i {duration}, över gränsen {minutes} min.", { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 }) }}</p>
     </div>

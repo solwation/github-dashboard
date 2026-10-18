@@ -4,7 +4,12 @@ import { RefreshCw, BarChart3 } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { StatisticsCollector, type StatisticsClient } from "../lib/statistics-client";
-import { statisticsWindow, type StatisticsData, type StatisticsPreference, type StatisticsPreferences } from "../lib/statistics";
+import {
+  allowedStatisticsResolutions, clampStatisticsResolution, DEFAULT_STATISTICS_RANGE,
+  rangeNames, resolutionNames, statisticsDurationMs, statisticsRanges, statisticsResolutions,
+  statisticsWindow, type StatisticsData, type StatisticsPreference, type StatisticsPreferences,
+  type StatisticsRangePreset, type StatisticsResolution,
+} from "../lib/statistics";
 import { readStatisticsCache, writeStatisticsCache } from "../lib/statistics-cache";
 import { demoStatistics } from "../lib/statistics-demo";
 import StatisticsRepository from "./StatisticsRepository.vue";
@@ -13,6 +18,114 @@ const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
+
+const globalFrom = ref(period.value.from);
+const globalTo = ref(period.value.to);
+const globalRange = ref<StatisticsRangePreset | undefined>(DEFAULT_STATISTICS_RANGE);
+const globalResolution = ref<StatisticsResolution | undefined>(undefined);
+
+function syncFromPreferences(prefs?: StatisticsPreferences) {
+  if (!prefs) return;
+  for (const repo of props.repositories) {
+    const pref = prefs[repo.full_name];
+    if (pref) {
+      if (pref.from && pref.to && (pref.from !== period.value.from || pref.to !== period.value.to)) {
+        globalFrom.value = pref.from;
+        globalTo.value = pref.to;
+        globalRange.value = undefined;
+        globalResolution.value = pref.resolution;
+        return;
+      }
+      if (pref.range) {
+        globalFrom.value = period.value.from;
+        globalTo.value = period.value.to;
+        globalRange.value = pref.range;
+        globalResolution.value = pref.resolution;
+        return;
+      }
+    }
+  }
+}
+syncFromPreferences(props.preferences);
+
+const customDateRange = computed(() => globalFrom.value !== period.value.from || globalTo.value !== period.value.to);
+const activeRange = computed<StatisticsRangePreset | undefined>(() =>
+  customDateRange.value ? undefined : (globalRange.value || DEFAULT_STATISTICS_RANGE),
+);
+const chartDurationMs = computed(() =>
+  statisticsDurationMs({ from: globalFrom.value, to: globalTo.value, range: activeRange.value }),
+);
+const allowedResolutions = computed(() => new Set(allowedStatisticsResolutions(chartDurationMs.value)));
+const activeResolution = computed<StatisticsResolution>(() =>
+  clampStatisticsResolution(globalResolution.value, chartDurationMs.value, activeRange.value),
+);
+const invalidRange = computed(() => !globalFrom.value || !globalTo.value || globalFrom.value > globalTo.value);
+
+const timeSpan = computed(() => ({
+  from: globalFrom.value,
+  to: globalTo.value,
+  range: activeRange.value,
+  resolution: activeResolution.value,
+}));
+
+function applyGlobalTimeSpan() {
+  const updated: StatisticsPreferences = {};
+  for (const repo of props.repositories) {
+    const current = preferencesState.value[repo.full_name] || {
+      from: globalFrom.value,
+      to: globalTo.value,
+      label: "",
+      contributor: "",
+      metric: "closed",
+    };
+    updated[repo.full_name] = {
+      ...current,
+      from: globalFrom.value,
+      to: globalTo.value,
+      range: activeRange.value,
+      resolution: activeResolution.value,
+    };
+  }
+  preferencesState.value = { ...preferencesState.value, ...updated };
+  emit("update:preferences", { ...preferencesState.value });
+}
+
+function selectRange(preset: StatisticsRangePreset) {
+  globalFrom.value = period.value.from;
+  globalTo.value = period.value.to;
+  globalRange.value = preset;
+  if (globalResolution.value) {
+    const duration = statisticsDurationMs({ from: period.value.from, to: period.value.to, range: preset });
+    globalResolution.value = clampStatisticsResolution(globalResolution.value, duration, preset);
+  }
+  applyGlobalTimeSpan();
+}
+
+function selectResolution(resolution: StatisticsResolution) {
+  if (!allowedResolutions.value.has(resolution)) return;
+  globalResolution.value = resolution;
+  applyGlobalTimeSpan();
+}
+
+function setDates(from: string, to: string) {
+  globalFrom.value = from;
+  globalTo.value = to;
+  globalRange.value = undefined;
+  if (globalResolution.value) {
+    const duration = statisticsDurationMs({ from, to });
+    globalResolution.value = clampStatisticsResolution(globalResolution.value, duration);
+  }
+  applyGlobalTimeSpan();
+}
+
+function resetTimeSpan() {
+  globalFrom.value = period.value.from;
+  globalTo.value = period.value.to;
+  globalRange.value = DEFAULT_STATISTICS_RANGE;
+  globalResolution.value = undefined;
+  applyGlobalTimeSpan();
+}
+
 const snapshots = shallowRef<Record<string, StatisticsData>>({});
 const preparedRepositories = ref(new Set<string>());
 const renderedRepositories = computed(() => props.repositories.filter(repo => preparedRepositories.value.has(repo.full_name)));
@@ -50,12 +163,22 @@ let generation = 0;
 let sessionEpoch = 0;
 let restoration: Promise<void> = Promise.resolve();
 function updatePreference(repository: string, value: StatisticsPreference) {
-  if (JSON.stringify(preferencesState.value[repository]) === JSON.stringify(value)) return;
-  preferencesState.value = { ...preferencesState.value, [repository]: value };
+  const merged: StatisticsPreference = {
+    ...value,
+    from: globalFrom.value,
+    to: globalTo.value,
+    range: activeRange.value,
+    resolution: activeResolution.value,
+  };
+  if (JSON.stringify(preferencesState.value[repository]) === JSON.stringify(merged)) return;
+  preferencesState.value = { ...preferencesState.value, [repository]: merged };
   emit("update:preferences", { ...preferencesState.value });
 }
 watch(() => props.preferences, value => {
-  if (value && JSON.stringify(value) !== JSON.stringify(preferencesState.value)) preferencesState.value = { ...value };
+  if (value && JSON.stringify(value) !== JSON.stringify(preferencesState.value)) {
+    preferencesState.value = { ...value };
+    syncFromPreferences(value);
+  }
 }, { deep: true });
 async function load(force = false) {
   const run = ++generation;
@@ -65,6 +188,10 @@ async function load(force = false) {
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
   if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
   period.value = statisticsWindow();
+  if (!customDateRange.value) {
+    globalFrom.value = period.value.from;
+    globalTo.value = period.value.to;
+  }
   for (const name of names) {
     const saved = activeCollector?.export().find(data => data.repository === name);
     const data = activeCollector?.cached(name);
@@ -120,18 +247,40 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
     <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1><p>{{ t("De senaste 30 dagarna, repository för repository.") }}</p></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
+    <div v-if="repositories.length && !initialLoading" class="statistics-time-controls" role="region" :aria-label="t('Tidsintervall')">
+      <div class="statistics-time-presets">
+        <div class="statistics-range-presets" role="group" :aria-label="t('Tidsintervall')">
+          <button v-for="preset in statisticsRanges" :key="preset" type="button" class="button small statistics-range-preset"
+            :class="{ active: activeRange === preset }" :aria-pressed="activeRange === preset"
+            @click="selectRange(preset)">{{ t(rangeNames[preset]) }}</button>
+        </div>
+        <div class="statistics-resolution-select">
+          <label>{{ t("Upplösning") }}
+            <select :value="activeResolution" @change="selectResolution(($event.target as HTMLSelectElement).value as StatisticsResolution)">
+              <option v-for="res in statisticsResolutions" :key="res" :value="res" :disabled="!allowedResolutions.has(res)">{{ t(resolutionNames[res]) }}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="statistics-time-dates">
+        <label>{{ t("Från datum (UTC)") }}<input :value="globalFrom" type="date" :min="period.from" :max="globalTo || period.to" @change="setDates(($event.target as HTMLInputElement).value, globalTo)" /></label>
+        <label>{{ t("Till datum (UTC)") }}<input :value="globalTo" type="date" :min="globalFrom || period.from" :max="period.to" @change="setDates(globalFrom, ($event.target as HTMLInputElement).value)" /></label>
+        <button v-if="customDateRange" class="button small" @click="resetTimeSpan">{{ t("Återställ filter") }}</button>
+      </div>
+    </div>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
+    <p v-if="invalidRange" role="status" class="statistics-message">{{ t("Välj ett giltigt datumintervall inom de senaste 30 dagarna.") }}</p>
     <div v-if="initialLoading" class="statistics-loading-splash" role="status" aria-live="polite">
       <RefreshCw class="statistics-loading-spinner" :size="34" aria-hidden="true" />
       <h2>{{ t("Hämtar och sammanställer statistik") }}</h2>
       <p>{{ t("Vi hämtar underlaget från GitHub. Statistiken visas så snart den är klar.") }}</p>
       <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: repositories.length }) }}</small>
     </div>
-    <div v-show="!initialLoading" class="statistics-repositories">
+    <div v-show="!initialLoading && !invalidRange" class="statistics-repositories">
       <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-failed="!!failures[repository.full_name]"
-        :period="period" :preference="preferencesState[repository.full_name]" @update:preference="updatePreference(repository.full_name, $event)" />
+        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">
@@ -154,6 +303,17 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 25px; }
 .statistics-heading h1 { margin: 6px 0; font-size: 32px; }
 .statistics-heading p { margin: 0; color: var(--muted); font-size: 14px; }
+.statistics-time-controls { margin-bottom: 24px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 14px; }
+.statistics-time-presets { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; }
+.statistics-range-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.statistics-range-preset.active { background: var(--green); color: white; border-color: var(--green); }
+.statistics-resolution-select label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.statistics-resolution-select select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+.statistics-time-dates { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.statistics-time-dates label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.statistics-time-dates input[type="date"] { max-width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+.statistics-message { margin: 0 0 20px; padding: 12px 14px; border-radius: 8px; background: #fff0f0; color: #b91c1c; font-size: 13px; }
+:root[data-theme="dark"] .statistics-message { background: #3b1414; color: #fca5a5; }
 .statistics-footnotes { border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .statistics-footnotes p { margin: 0 0 12px; }
 .statistics-definitions summary { cursor: pointer; font-weight: 600; }
@@ -169,5 +329,10 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-loading-spinner { color: var(--green); animation: statistics-spin 1s linear infinite; }
 @keyframes statistics-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }
-@media (max-width: 650px) { .statistics-heading { flex-direction: column; align-items: stretch; } .statistics-heading h1 { font-size: 26px; } }
+@media (max-width: 650px) {
+  .statistics-heading { flex-direction: column; align-items: stretch; }
+  .statistics-heading h1 { font-size: 26px; }
+  .statistics-time-presets { flex-direction: column; align-items: stretch; }
+  .statistics-time-dates { flex-direction: column; align-items: stretch; }
+}
 </style>

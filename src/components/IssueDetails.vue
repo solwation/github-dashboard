@@ -6,7 +6,7 @@ import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const props = defineProps<{ body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: [] }>();
 function toggle() {
   expanded.value = !expanded.value;
@@ -25,7 +25,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
 <template>
   <div class="issue-details">
     <div class="details-toolbar">
-      <button type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
+      <button v-if="!hideToggle" type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>
       <IssueComments :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
@@ -44,6 +44,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
 <style scoped>
 .issue-details { min-width: 0; margin-top: .7rem; }
 .details-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.details-toolbar > :last-child { margin-left: auto; }
 .details-toggle { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem 0; border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: .72rem; font-weight: 600; }
 .details-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 .details-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); min-width: 0; max-width: 100%; }

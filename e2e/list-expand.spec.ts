@@ -57,10 +57,11 @@ test("desktop expands row details in place with open description while phone ope
   const detailsCard = panel.locator(".issue-card.row-details-card");
   await expect(detailsCard).toBeVisible();
   await expect(detailsCard.locator(".card-top")).toHaveCount(0);
-  await expect(detailsCard.locator(".issue-title")).toHaveCount(0);
   await expect(detailsCard.getByRole("link", { name: /Parent plan/ })).toBeVisible();
   await expect(detailsCard.getByText("Description of alpha task 2")).toBeVisible();
-  await expect(detailsCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
+  // #163: on desktop, expanded list rows hide the redundant "Visa mindre" toggle button while keeping comments visible
+  await expect(detailsCard.locator(".details-toggle")).toHaveCount(0);
+  await expect(detailsCard.locator(".comment-count")).toBeVisible();
 
   // Several rows may be open on desktop; tapping a row's empty area toggles it too.
   const first = alpha.getByRole("button", { name: "alpha task 1", exact: true });

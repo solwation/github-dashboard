@@ -46,6 +46,14 @@ export const statisticsRangeMs: Record<StatisticsRangePreset, number> = {
   "8h": 8 * 3_600_000, "12h": 12 * 3_600_000, "24h": 24 * 3_600_000,
   "3d": 3 * 86_400_000, "7d": 7 * 86_400_000, "21d": 21 * 86_400_000, "30d": 30 * 86_400_000,
 };
+export const rangeNames: Record<StatisticsRangePreset, string> = {
+  "8h": "8h", "12h": "12h", "24h": "24h",
+  "3d": "3 dagar", "7d": "7 dagar", "21d": "3 veckor", "30d": "30 dagar",
+};
+export const resolutionNames: Record<StatisticsResolution, string> = {
+  "1m": "1 min", "5m": "5 min", "15m": "15 min", "30m": "30 min",
+  "1h": "1 h", "6h": "6 h", "12h": "12 h", "1d": "1 dag",
+};
 export interface StatisticsFilter {
   from: string; to: string; label: string; contributor: string;
   range?: StatisticsRangePreset; resolution?: StatisticsResolution; now?: number;

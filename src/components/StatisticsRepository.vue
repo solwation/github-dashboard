@@ -11,21 +11,20 @@ import {
 } from "../lib/statistics";
 import StatisticsChart from "./StatisticsChart.vue";
 const { t, locale } = useLanguage();
-const props = defineProps<{ repository: Repo; data: StatisticsData | null; loading: boolean; loadFailed: boolean; period: { from: string; to: string }; preference?: StatisticsPreference }>();
+const props = defineProps<{
+  repository: Repo;
+  data: StatisticsData | null;
+  loading: boolean;
+  loadFailed: boolean;
+  period: { from: string; to: string };
+  timeSpan: { from: string; to: string; range?: StatisticsRangePreset; resolution: StatisticsResolution };
+  preference?: StatisticsPreference;
+}>();
 const emit = defineEmits<{ "update:preference": [value: StatisticsPreference] }>();
-const state = ref<StatisticsPreference>(normalizeStatisticsPreference(props.preference, props.period));
 const metricNames: Record<StatisticsMetric, string> = {
   closed: "Stängda issues", created: "Skapade issues", reopened: "Återöppnade issues", netIssues: "Nettoförändring av issues",
   commits: "Commits", additions: "Tillagda rader", deletions: "Borttagna rader", netLines: "Nettoförändring av kod", files: "Filändringar",
   prsOpened: "Öppnade pull requests", prsMerged: "Mergade pull requests", prsClosed: "Stängda pull requests utan merge",
-};
-const rangeNames: Record<StatisticsRangePreset, string> = {
-  "8h": "8h", "12h": "12h", "24h": "24h",
-  "3d": "3 dagar", "7d": "7 dagar", "21d": "3 veckor", "30d": "30 dagar",
-};
-const resolutionNames: Record<StatisticsResolution, string> = {
-  "1m": "1 min", "5m": "5 min", "15m": "15 min", "30m": "30 min",
-  "1h": "1 h", "6h": "6 h", "12h": "12 h", "1d": "1 dag",
 };
 const datasets = computed(() => props.data ? [props.data] : []);
 const dimensions = computed(() => statisticsDimensions(datasets.value));
@@ -42,21 +41,28 @@ function summarize(filter: StatisticsFilter) {
   }
   return cached;
 }
-const summary = computed(() => summarize({ from: state.value.from, to: state.value.to, label: state.value.label, contributor: state.value.contributor }));
+function normalize(value: StatisticsPreference | undefined) {
+  const choices = props.data ? dimensions.value : undefined;
+  const base = {
+    ...value,
+    from: props.timeSpan.from,
+    to: props.timeSpan.to,
+    range: props.timeSpan.range,
+    resolution: props.timeSpan.resolution,
+  };
+  const normalized = normalizeStatisticsPreference(base, props.period, choices);
+  if (props.data) {
+    const totals = summarize({ from: normalized.from, to: normalized.to, label: normalized.label, contributor: normalized.contributor }).totals;
+    const metrics = statisticsMetrics.filter(key => totals[key] !== undefined);
+    return normalizeStatisticsPreference(normalized, props.period, { ...dimensions.value, metrics });
+  }
+  return normalized;
+}
+const state = ref<StatisticsPreference>(normalize(props.preference));
+const summary = computed(() => summarize({ from: props.timeSpan.from, to: props.timeSpan.to, label: state.value.label, contributor: state.value.contributor }));
 const availableMetrics = computed(() => statisticsMetrics.filter(key => summary.value.totals[key] !== undefined));
 const anyData = computed(() => availableMetrics.value.length > 0);
 const temporary = computed(() => props.loadFailed || !!props.data?.temporary.length);
-const customDateRange = computed(() => state.value.from !== props.period.from || state.value.to !== props.period.to);
-const activeRange = computed<StatisticsRangePreset | undefined>(() =>
-  customDateRange.value ? undefined : (state.value.range || DEFAULT_STATISTICS_RANGE),
-);
-const chartDurationMs = computed(() =>
-  statisticsDurationMs({ from: state.value.from, to: state.value.to, range: activeRange.value }),
-);
-const allowedResolutions = computed(() => new Set(allowedStatisticsResolutions(chartDurationMs.value)));
-const activeResolution = computed<StatisticsResolution>(() =>
-  clampStatisticsResolution(state.value.resolution, chartDurationMs.value, activeRange.value),
-);
 const selectedMetrics = computed<StatisticsMetric[]>(() => {
   const raw = state.value.metrics?.length ? state.value.metrics : [state.value.metric];
   const valid = raw.filter(key => availableMetrics.value.includes(key));
@@ -64,12 +70,12 @@ const selectedMetrics = computed<StatisticsMetric[]>(() => {
 });
 const chartSummary = computed(() =>
   summarize({
-    from: state.value.from,
-    to: state.value.to,
+    from: props.timeSpan.from,
+    to: props.timeSpan.to,
     label: state.value.label,
     contributor: state.value.contributor,
-    range: activeRange.value,
-    resolution: activeResolution.value,
+    range: props.timeSpan.range,
+    resolution: props.timeSpan.resolution,
   }),
 );
 const chartSeries = computed(() => {
@@ -91,14 +97,9 @@ const chartSeries = computed(() => {
 const chartTitle = computed(() =>
   selectedMetrics.value.map(metric => t(metricNames[metric])).join(", ") || t(metricNames[state.value.metric]),
 );
-const invalidRange = computed(() => !state.value.from || !state.value.to || state.value.from > state.value.to);
 const filtersActive = computed(() =>
-  state.value.from !== props.period.from ||
-  state.value.to !== props.period.to ||
   !!state.value.label ||
   !!state.value.contributor ||
-  (!!state.value.range && state.value.range !== DEFAULT_STATISTICS_RANGE) ||
-  !!state.value.resolution ||
   (state.value.metrics?.length ?? 0) > 1,
 );
 const lastFetched = computed(() => {
@@ -106,20 +107,10 @@ const lastFetched = computed(() => {
   return values.length ? Math.min(...values) : 0;
 });
 function number(value: number) { return value.toLocaleString(locale.value); }
-function normalize(value: StatisticsPreference | undefined) {
-  const choices = props.data ? dimensions.value : undefined;
-  const normalized = normalizeStatisticsPreference(value, props.period, choices);
-  if (props.data) {
-    const totals = summarize({ from: normalized.from, to: normalized.to, label: normalized.label, contributor: normalized.contributor }).totals;
-    const metrics = statisticsMetrics.filter(key => totals[key] !== undefined);
-    return normalizeStatisticsPreference(normalized, props.period, { ...dimensions.value, metrics });
-  }
-  return normalized;
-}
 function publish(value: StatisticsPreference) {
   if (JSON.stringify(value) !== JSON.stringify(props.preference)) emit("update:preference", { ...value });
 }
-watch([() => props.preference, () => props.data, () => props.period], () => {
+watch([() => props.preference, () => props.data, () => props.period, () => props.timeSpan], () => {
   const normalized = normalize(props.preference);
   if (JSON.stringify(state.value) !== JSON.stringify(normalized)) state.value = normalized;
   publish(normalized);
@@ -129,27 +120,6 @@ watch(state, value => {
   if (JSON.stringify(value) !== JSON.stringify(normalized)) state.value = normalized;
   publish(normalized);
 }, { deep: true });
-function selectRange(preset: StatisticsRangePreset) {
-  const duration = statisticsDurationMs({ from: props.period.from, to: props.period.to, range: preset });
-  const nextResolution = state.value.resolution
-    ? clampStatisticsResolution(state.value.resolution, duration, preset)
-    : undefined;
-  state.value = normalize({
-    ...state.value,
-    from: props.period.from,
-    to: props.period.to,
-    range: preset,
-    resolution: nextResolution,
-  });
-}
-function selectResolution(resolution: StatisticsResolution) {
-  if (!allowedResolutions.value.has(resolution)) return;
-  state.value = normalize({
-    ...state.value,
-    range: activeRange.value,
-    resolution,
-  });
-}
 function selectPrimaryMetric(metric: StatisticsMetric) {
   const current = selectedMetrics.value;
   const next = current.length > 1
@@ -179,8 +149,10 @@ function toggleMetric(metric: StatisticsMetric) {
 function reset() {
   state.value = normalize({
     metric: state.value.metric,
-    from: props.period.from,
-    to: props.period.to,
+    from: props.timeSpan.from,
+    to: props.timeSpan.to,
+    range: props.timeSpan.range,
+    resolution: props.timeSpan.resolution,
     label: "",
     contributor: "",
   });
@@ -195,31 +167,24 @@ function reset() {
     </div>
     <p v-else-if="loading" class="statistics-refreshing" role="status" aria-live="polite"><RefreshCw class="statistics-loading-spinner" :size="15" aria-hidden="true" />{{ t("Uppdaterar statistik. Tidigare värden visas under tiden.") }}</p>
     <div class="statistics-repository-content" :aria-busy="loading">
-    <div v-if="anyData" class="statistics-filters">
+    <div v-if="anyData && (dimensions.labels.length || dimensions.contributors.length)" class="statistics-filters">
       <div class="statistics-filter-grid">
-        <label>{{ t("Från datum (UTC)") }}<input v-model="state.from" type="date" :min="period.from" :max="state.to || period.to" /></label>
-        <label>{{ t("Till datum (UTC)") }}<input v-model="state.to" type="date" :min="state.from || period.from" :max="period.to" /></label>
         <label v-if="dimensions.labels.length">{{ t("Nuvarande label") }}<select v-model="state.label"><option value="">{{ t("Alla labels") }}</option><option v-for="name in dimensions.labels" :key="name" :value="name">{{ name }}</option></select></label>
         <label v-if="dimensions.contributors.length">{{ t("Bidragsgivare") }}<select v-model="state.contributor"><option value="">{{ t("Alla bidragsgivare") }}</option><option v-for="name in dimensions.contributors" :key="name" :value="name">{{ name }}</option></select></label>
       </div>
       <div class="statistics-filter-actions"><button class="button small" :disabled="!filtersActive" @click="reset">{{ t("Återställ filter") }}</button></div>
     </div>
     <p v-if="temporary && !loading" role="status" class="notice">{{ anyData ? t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") : t("Statistiken kunde inte hämtas just nu. Försök igen senare.") }}</p>
-    <p v-if="invalidRange" role="status" class="statistics-message">{{ t("Välj ett giltigt datumintervall inom de senaste 30 dagarna.") }}</p>
-    <template v-else-if="anyData">
+    <template v-if="anyData">
       <div class="statistics-totals"><div v-for="key in availableMetrics" :key="key" class="statistics-total"><span>{{ t(metricNames[key]) }}</span><strong>{{ number(summary.totals[key]!) }}</strong><small v-if="summary.complete[key] === false">{{ t("Delvis data") }}</small></div><div v-if="summary.closureAgeDays !== null" class="statistics-total"><span>{{ t("Medianålder vid stängning") }}</span><strong>{{ summary.closureAgeDays.toLocaleString(locale, { maximumFractionDigits: 1 }) }} <small>{{ t("dagar") }}</small></strong><small v-if="summary.complete.closed === false">{{ t("Delvis data") }}</small></div></div>
       <section class="statistics-panel">
         <div class="statistics-panel-heading">
           <h3>{{ t("Daglig aktivitet") }}</h3>
           <div class="statistics-chart-selects">
-            <label>{{ t("Upplösning") }}<select :value="activeResolution" @change="selectResolution(($event.target as HTMLSelectElement).value as StatisticsResolution)"><option v-for="res in statisticsResolutions" :key="res" :value="res" :disabled="!allowedResolutions.has(res)">{{ t(resolutionNames[res]) }}</option></select></label>
             <label>{{ t("Mätvärde") }}<select :value="state.metric" @change="selectPrimaryMetric(($event.target as HTMLSelectElement).value as StatisticsMetric)"><option v-for="key in availableMetrics" :key="key" :value="key">{{ t(metricNames[key]) }}</option></select></label>
           </div>
         </div>
         <div class="statistics-chart-controls">
-          <div class="statistics-range-presets" role="group" :aria-label="t('Tidsintervall')">
-            <button v-for="preset in statisticsRanges" :key="preset" type="button" class="button small statistics-range-preset" :class="{ active: activeRange === preset }" :aria-pressed="activeRange === preset" @click="selectRange(preset)">{{ t(rangeNames[preset]) }}</button>
-          </div>
           <div class="statistics-metric-chips" role="group" :aria-label="t('Mätvärden i diagrammet')">
             <button v-for="key in availableMetrics" :key="key" type="button" class="button small statistics-metric-chip" :class="{ active: selectedMetrics.includes(key) }" :aria-pressed="selectedMetrics.includes(key)" @click="toggleMetric(key)">{{ t(metricNames[key]) }}</button>
           </div>

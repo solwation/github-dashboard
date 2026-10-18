@@ -18,9 +18,13 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   const weekend = sections.filter({ has: page.getByRole("heading", { name: "demo/weekend-project", exact: true }) });
   await expect(card(design, "Stängda issues").locator("strong")).toHaveText("4");
   await expect(card(weekend, "Stängda issues").locator("strong")).toHaveText("2");
-  const rangeGroup = design.getByRole("group", { name: "Tidsintervall" });
+  const timeControls = page.locator(".statistics-time-controls");
+  const rangeGroup = timeControls.getByRole("group", { name: "Tidsintervall" });
   await expect(rangeGroup.locator("button")).toHaveText(["8h", "12h", "24h", "3 dagar", "7 dagar", "3 veckor", "30 dagar"]);
   await expect(rangeGroup.getByRole("button", { name: "3 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // Per-graph time controls and resolution selects are removed in favor of the global controls (#164)
+  await expect(design.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
+  await expect(weekend.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
   const day = design.getByRole("slider", { name: "Dag i diagrammet" });
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("2");
@@ -29,7 +33,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(design.locator(".daily-values tbody tr")).toHaveCount(3);
   await rangeGroup.getByRole("button", { name: "30 dagar", exact: true }).click();
   await expect(rangeGroup.getByRole("button", { name: "30 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
-  const resolutionSelect = design.getByRole("combobox", { name: "Upplösning", exact: true });
+  const resolutionSelect = timeControls.getByRole("combobox", { name: "Upplösning", exact: true });
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", true);
   await expect(resolutionSelect.locator('option[value="1h"]')).toHaveJSProperty("disabled", false);
   await day.focus(); await page.keyboard.press("End");
@@ -50,7 +54,6 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true }).selectOption("demo-alex");
   await design.getByRole("button", { name: "Återställ filter" }).click();
   await expect(design.getByRole("combobox", { name: "Nuvarande label", exact: true })).toHaveValue("");
-  await expect(rangeGroup.getByRole("button", { name: "3 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(design.locator(".statistics-chart svg polyline")).toHaveCount(1);
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
   const reorder = page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna weekend-project med/ });
@@ -60,12 +63,12 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   for (const width of [320, 390, 650]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    // #160: date fields stay inside the filter box on narrow portrait viewports.
-    const filters = await design.locator(".statistics-filters").boundingBox();
-    for (const input of await design.locator(".statistics-filters input[type=date]").all()) {
+    // #160 & #164: date fields stay inside the global time controls on narrow portrait viewports.
+    const controlsBox = await timeControls.boundingBox();
+    for (const input of await timeControls.locator("input[type=date]").all()) {
       const box = await input.boundingBox();
-      expect(box!.x).toBeGreaterThanOrEqual(filters!.x);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(filters!.x + filters!.width);
+      expect(box!.x).toBeGreaterThanOrEqual(controlsBox!.x);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(controlsBox!.x + controlsBox!.width);
     }
   }
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();

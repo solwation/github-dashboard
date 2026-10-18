@@ -2,8 +2,8 @@
   {
     "date": "2026-10-18",
     "summary": {
-      "sv": "Animerade kommentarer, subtask-indikering, kryss i mobilpopup, datumfält i Statistik samt centrerad ladd-cirkel.",
-      "en": "Animated comments, subtask indicators, mobile popup cross, date fields in Statistics, and centered sync spinner."
+      "sv": "Animerade kommentarer, subtask-indikering, mobilkortkryss, balanserade ladd-cirklar, samlad tidsväljare i Statistik och renare listvy.",
+      "en": "Animated comments, subtask indicators, mobile popup cross, balanced sync spinners, unified Statistics time controls, and cleaner list view."
     },
     "sections": [
       {
@@ -29,10 +29,10 @@
       },
       {
         "text": {
-          "sv": "Datumfälten i Statistik ryms nu inom filterboxen på mobil i porträttläge.",
-          "en": "Date fields in Statistics now fit inside the filter box on mobile in portrait mode."
+          "sv": "Statistiksidan har en samlad tidsintervall- och upplösningsväljare högst upp på sidan som styr alla grafer.",
+          "en": "The Statistics page has a unified time range and resolution picker at the top of the page controlling all charts."
         },
-        "issues": [160]
+        "issues": [160, 164]
       },
       {
         "text": {
@@ -40,6 +40,13 @@
           "en": "The sync spinner and status in repository headers and the combined board have equal margins to the right as to the top."
         },
         "issues": [161, 162]
+      },
+      {
+        "text": {
+          "sv": "I listvyn döljs den överflödiga \"Visa mindre\"-knappen när en rad expanderas, medan kommentarer och beskrivning förblir synliga.",
+          "en": "In list view, the redundant \"Show less\" toggle button is hidden when a row expands, keeping comments and description visible."
+        },
+        "issues": [163]
       }
     ]
   },
