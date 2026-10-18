@@ -2,8 +2,8 @@
   {
     "date": "2026-10-18",
     "summary": {
-      "sv": "Animerade nya kommentarer, tydligare subtasks och parent tasks, kryss i kortpopupen på mobil samt datumfält som ryms i Statistik.",
-      "en": "Animated new comments, clearer subtasks and parent tasks, a close cross in the mobile card popup and date fields that fit in Statistics."
+      "sv": "Animerade kommentarer, subtask-indikering, kryss i mobilpopup, mobilanpassade datumfält i Statistik och centrerad ladd-cirkel.",
+      "en": "Animated comments, subtask indicators, mobile popup cross, mobile date fields in Statistics, and centered repo sync spinner."
     },
     "sections": [
       {
@@ -33,6 +33,13 @@
           "en": "Date fields in Statistics now fit inside the filter box on mobile in portrait mode."
         },
         "issues": [160]
+      },
+      {
+        "text": {
+          "sv": "Ladd-cirkeln i repo-rubriken har nu lika stor marginal till höger som uppåt i både dator- och mobilvy.",
+          "en": "The repo sync spinner now has equal margins to the top and right on both desktop and mobile views."
+        },
+        "issues": [161]
       }
     ]
   },

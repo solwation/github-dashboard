@@ -1,10 +1,10 @@
 {
-  "baseCommit": "c14ed2a97f38781b3e86a711f58155449af740d4",
+  "baseCommit": "d0f84cf1d4344042b2ddc336a1585209b72753e7",
   "summary": {
-    "sv": "Datumfälten i Statistik ryms nu inom filterboxen på mobil i porträttläge.",
-    "en": "Date fields in Statistics now fit inside the filter box on mobile in portrait mode."
+    "sv": "Ladd-cirkeln i repo-rubriken har nu lika stor marginal till höger som uppåt i både dator- och mobilvy.",
+    "en": "The repo sync spinner now has equal margins to the top and right on both desktop and mobile views."
   },
   "issues": [
-    160
+    161
   ]
 }

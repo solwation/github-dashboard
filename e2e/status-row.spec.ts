@@ -66,11 +66,18 @@ const measure = (page: Page) => page.evaluate(() => {
   const status = document.querySelector(".lane-header .lane-sync")!.getBoundingClientRect();
   const title = document.querySelector(".lane-header .lane-title")!.getBoundingClientRect();
   const actions = document.querySelector(".lane-header .lane-actions")!.getBoundingClientRect();
+  const spinner = document.querySelector(".lane-header .lane-sync-spinner")?.getBoundingClientRect();
+  const marginTop = Math.round(status.top - header.top);
+  const marginRight = Math.round(header.right - status.right);
+  const spinnerMarginTop = spinner ? Math.round(spinner.top - header.top) : null;
+  const spinnerMarginRight = spinner ? Math.round(header.right - spinner.right) : null;
   return {
     board: Math.round(document.querySelector(".repo-lane")!.getBoundingClientRect().top + scrollY),
     headerHeight: Math.round(header.height),
     statusInside: status.right <= header.right + 0.5 && status.top >= header.top - 0.5,
     statusAboveContent: status.bottom <= Math.min(title.top, actions.top) + 0.5,
+    statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
+    spinnerMarginsEqual: spinner ? Math.abs(spinnerMarginTop! - spinnerMarginRight!) <= 1 : true,
     actionsWidth: Math.round(actions.width),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     headerOverflow: [...document.querySelectorAll(".lane-header")].some(element => element.scrollWidth > element.clientWidth),
@@ -115,6 +122,9 @@ for (const [language, text] of Object.entries(copy)) {
           expect.soft(sample.actionsWidth, `header buttons at ${width}px (${state})`).toBe(idle.actionsWidth);
           expect.soft(sample.statusInside, `status inside header at ${width}px (${state})`).toBe(true);
           expect.soft(sample.statusAboveContent, `status clear of header content at ${width}px (${state})`).toBe(true);
+          // #161: status and spinner have equal top and right margins
+          expect.soft(sample.statusMarginsEqual, `status top/right margins equal at ${width}px (${state})`).toBe(true);
+          expect.soft(sample.spinnerMarginsEqual, `spinner top/right margins equal at ${width}px (${state})`).toBe(true);
           expect.soft(sample.headerOverflow, `header overflow at ${width}px (${state})`).toBe(false);
           if (width <= 650) expect.soft(sample.overflow, `horizontal scroll at ${width}px (${state})`).toBeLessThanOrEqual(0);
         }
