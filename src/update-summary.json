@@ -1,10 +1,10 @@
 {
-  "baseCommit": "450c6cac4f287bc9e6d1f79cb081970b1bc41658",
+  "baseCommit": "352364a51d4177ab05ed5fc86f6a0b9a11e47e99",
   "summary": {
-    "sv": "Tydligare indikering i listläge och på kort för subtasks och parent tasks med antal klara underärenden.",
-    "en": "Clearer indication in list mode and on cards for subtasks and parent tasks with number of completed sub-issues."
+    "sv": "Stängning av kortpopup i listläge på mobil sker via ett smidigt kryss uppe i högra hörnet inuti kortet.",
+    "en": "Closing the card popup in list mode on mobile now uses a sleek cross icon in the top-right corner inside the card."
   },
   "issues": [
-    158
+    159
   ]
 }

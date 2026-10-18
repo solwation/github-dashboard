@@ -177,8 +177,17 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     <Teleport to="body">
       <div v-if="expanded && isPhone" class="modal-backdrop row-popup-backdrop" @click.self="setExpanded(false, true)">
         <div :id="panelId" class="row-popup" role="dialog" aria-modal="true" :aria-label="issue.title">
+          <button
+            ref="popupClose"
+            type="button"
+            class="row-popup-close"
+            :aria-label="t('Stäng')"
+            :title="t('Stäng')"
+            @click="setExpanded(false, true)"
+          >
+            <X :size="20" aria-hidden="true" />
+          </button>
           <slot :in-popup="true" />
-          <button ref="popupClose" type="button" class="row-close" @click="setExpanded(false, true)"><X :size="13" aria-hidden="true" />{{ t("Stäng") }}</button>
         </div>
       </div>
     </Teleport>

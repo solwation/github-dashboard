@@ -2,8 +2,8 @@
   {
     "date": "2026-10-18",
     "summary": {
-      "sv": "Nya kommentarer animeras med pratbubbla och +N-badge. Tydligare indikering i listläge och på kort för subtasks och parent tasks med antal klara underärenden.",
-      "en": "New comments animate with a chat bubble and +N badge. Clearer indication in list mode and on cards for subtasks and parent tasks with completed sub-issue counts."
+      "sv": "Animerade nya kommentarer, tydligare indikering för subtasks och parent tasks, samt ett smidigt kryss i kortpopupen på mobilen.",
+      "en": "Animated new comments, clearer subtask and parent task indications, and a sleek close cross in the mobile card popup."
     },
     "sections": [
       {
@@ -19,6 +19,13 @@
           "en": "Clearer indication in list mode and on cards for subtasks and parent tasks with number of completed sub-issues."
         },
         "issues": [158]
+      },
+      {
+        "text": {
+          "sv": "Stängning av kortpopup i listläge på mobil sker via ett smidigt kryss uppe i högra hörnet inuti kortet.",
+          "en": "Closing the card popup in list mode on mobile now uses a sleek cross icon in the top-right corner inside the card."
+        },
+        "issues": [159]
       }
     ]
   },

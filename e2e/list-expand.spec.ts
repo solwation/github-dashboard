@@ -132,6 +132,23 @@ test("desktop expands row details in place with open description while phone ope
       await expect(popupCard.getByRole("link", { name: /beta task 1/ })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
       await expect(popupCard.locator(".label")).toHaveText(["enhancement"]);
       expect(await noPageScroll(page)).toBe(true);
+
+      // #159: on mobile, close is an X button in the top-right corner inside the card, no separate button below.
+      await expect(dialog.locator(".row-close")).toHaveCount(0);
+      const closeBtn = dialog.locator(".row-popup-close");
+      await expect(closeBtn).toBeVisible();
+      await expect(closeBtn).toHaveAttribute("aria-label", "Stäng");
+      const [closeBox, cardBox, repoBox] = await Promise.all([
+        closeBtn.boundingBox(),
+        popupCard.boundingBox(),
+        popupCard.locator(".card-repository").boundingBox(),
+      ]);
+      expect(closeBox!.width).toBeGreaterThanOrEqual(44);
+      expect(closeBox!.height).toBeGreaterThanOrEqual(44);
+      expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
+      expect(closeBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
+      expect(repoBox!.x + repoBox!.width).toBeLessThanOrEqual(closeBox!.x + 1);
+
       if (width === 320) {
         await page.keyboard.press("Escape");
       } else if (width === 390) {
