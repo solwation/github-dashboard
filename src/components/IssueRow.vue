@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, Clock3, Minus, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, Clock3, MessageCircle, Minus, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
@@ -24,6 +24,7 @@ const props = defineProps<{
   demo?: boolean;
   celebrate?: boolean;
   recentMove?: ActivityMarker;
+  newComments?: number;
   timedOut?: boolean;
   timeoutMinutes?: number;
 }>();
@@ -111,7 +112,11 @@ const timeout = computed(() => props.timedOut && col.value === "progress");
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     <span class="row-meta">
-      <button v-if="recentMove" type="button" class="row-marker" @click="emit('read')"
+      <button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
+        :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
+        :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
+        ><MessageCircle :size="11" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button
+      ><button v-if="recentMove" type="button" class="row-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
         >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button

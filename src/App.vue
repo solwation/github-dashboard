@@ -461,6 +461,7 @@ function cardProps(lane: Lane, issue: Issue, showRepository = false) {
     rules: rules.value[repo] || {}, timedOut: issueTimedOut(repo, issue), timeoutMinutes: timeoutMinutes.value,
     loadCommit: load?.commit, demo: isDemo.value, loadComments: load?.comments, commentsSession: generation,
     commitRetry: commitRetry.value, recentMove: activity.moved(repo, issue, activityNow.value),
+    newComments: activity.newComments(repo, issue, activityNow.value),
     celebrate: recentClosures.value.has(closureKey(repo, issue)),
   };
 }
@@ -1827,6 +1828,7 @@ onMounted(async () => {
                     :timeout-minutes="timeoutMinutes"
                     :demo="isDemo"
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
+                    :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
@@ -1934,6 +1936,7 @@ onMounted(async () => {
                     :timeout-minutes="timeoutMinutes"
                     :demo="isDemo"
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
+                    :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
                     :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"

@@ -1,10 +1,10 @@
 {
-  "baseCommit": "68139aae6aff9283403f945332e9d4bdf0771980",
+  "baseCommit": "e13f45272ada35ba552df006cbeb2640cf583f27",
   "summary": {
-    "sv": "Statistikgraferna kan visa flera mätvärden i samma skala, med valbar upplösning och snabbval för tidsintervall (3 dagar som standard).",
-    "en": "Statistics charts can plot multiple metrics on the same scale, with selectable resolution and time range presets (3 days by default)."
+    "sv": "När ärenden får nya kommentarer animeras pratbubblan och en badge visar antalet nya kommentarer i kort- och listvy tills de läses.",
+    "en": "When issues receive new comments, the chat bubble animates and a badge shows the number of new comments in card and list view until read."
   },
   "issues": [
-    156
+    157
   ]
 }

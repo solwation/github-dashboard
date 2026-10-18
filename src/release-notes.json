@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-18",
+    "summary": {
+      "sv": "Nya kommentarer på ärenden uppmärksammas med animerad pratbubbla och en badge som visar antalet nya kommentarer.",
+      "en": "New comments on issues stand out with an animated chat bubble and a badge showing the number of new comments."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "När ett ärende får nya kommentarer animeras pratbubblan och en badge visar antalet nya kommentarer i kort- och listvy tills de läses.",
+          "en": "When an issue receives new comments, the chat bubble animates and a badge shows the number of new comments in card and list view until read."
+        },
+        "issues": [157]
+      }
+    ]
+  },
+  {
     "date": "2026-10-17",
     "summary": {
       "sv": "Nytt mörkt tema med Auto, Ljust eller Mörkt. Inloggning byts inte utan bekräftelse, och toppfältet får plats på surfplattor.",

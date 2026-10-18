@@ -168,4 +168,38 @@ describe("readable activity", () => {
     tracker.update([lane([i])], {}, now); tracker.retain([]);
     expect(tracker.changedAt(repo, i, now)).toBeNull();
   });
+  it("tracks new comments, accumulates across syncs, and clears on read() or expiration", () => {
+    const tracker = new ActivityTracker();
+    const initial = { ...issue(1), comments: 2 };
+    tracker.update([lane([initial])], {}, now);
+    expect(tracker.newComments(repo, initial, now)).toBe(0);
+
+    // One new comment added
+    const oneMore = { ...initial, comments: 3, updated_at: new Date(now + 1000).toISOString() };
+    tracker.update([lane([oneMore])], {}, now + 1000);
+    expect(tracker.newComments(repo, oneMore, now + 1000)).toBe(1);
+    expect(tracker.nextChange(now + 1000)).toBe(now + 1000 + ACTIVITY_LIFETIME_MS);
+
+    // Another comment added before reading
+    const twoMore = { ...initial, comments: 4, updated_at: new Date(now + 2000).toISOString() };
+    tracker.update([lane([twoMore])], {}, now + 2000);
+    expect(tracker.newComments(repo, twoMore, now + 2000)).toBe(2);
+
+    // Marking as read clears newComments
+    tracker.read(repo, twoMore);
+    expect(tracker.newComments(repo, twoMore, now + 2000)).toBe(0);
+
+    // Expiration after ACTIVITY_LIFETIME_MS when unread
+    const anotherIssue = { ...issue(2), comments: 0 };
+    tracker.update([lane([twoMore, anotherIssue])], {}, now + 3000);
+    const commented = { ...anotherIssue, comments: 1, updated_at: new Date(now + 4000).toISOString() };
+    tracker.update([lane([twoMore, commented])], {}, now + 4000);
+    expect(tracker.newComments(repo, commented, now + 4000)).toBe(1);
+    expect(tracker.newComments(repo, commented, now + 4000 + ACTIVITY_LIFETIME_MS)).toBe(0);
+
+    // Comment count decrease does not create new comments
+    const deletedComment = { ...commented, comments: 0, updated_at: new Date(now + 5000).toISOString() };
+    tracker.update([lane([twoMore, deletedComment])], {}, now + 5000);
+    expect(tracker.newComments(repo, deletedComment, now + 5000)).toBe(0);
+  });
 });

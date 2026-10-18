@@ -9,12 +9,20 @@ import type { Issue, IssueComment } from "../lib/model";
 const props = defineProps<{
   issue: Issue;
   count: number;
+  newComments?: number;
   demo?: boolean;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   session?: number;
 }>();
 const emit = defineEmits<{ read: [] }>();
 const { t, locale } = useLanguage();
+const hasNew = computed(() => Boolean(props.newComments && props.newComments > 0));
+const buttonLabel = computed(() => {
+  if (!hasNew.value) return t("{count} kommentarer", { count: props.count });
+  return props.newComments === 1
+    ? t("{count} kommentarer, 1 ny", { count: props.count })
+    : t("{count} kommentarer, {unread} nya", { count: props.count, unread: props.newComments! });
+});
 const dialog = ref<HTMLDialogElement>();
 const titleId = useId();
 const open = ref(false);
@@ -76,8 +84,17 @@ watch([() => props.issue.id, () => props.issue.html_url, () => props.demo, () =>
 onBeforeUnmount(clear);
 </script>
 <template>
-  <button type="button" class="comment-count" :aria-label="t('{count} kommentarer', { count })" aria-haspopup="dialog" @click="show">
-    <MessageCircle :size="13" aria-hidden="true" />{{ count }}
+  <button
+    type="button"
+    class="comment-count"
+    :class="{ 'has-new-comments': hasNew }"
+    :aria-label="buttonLabel"
+    aria-haspopup="dialog"
+    @click="show"
+  >
+    <MessageCircle :size="13" aria-hidden="true" :class="['comment-icon', { 'comment-icon-animated': hasNew }]" />
+    <span class="comment-count-value">{{ count }}</span>
+    <span v-if="hasNew" class="new-comments-badge" aria-hidden="true">+{{ newComments }}</span>
   </button>
   <dialog ref="dialog" class="comments-dialog" :aria-labelledby="titleId" @cancel="clear" @close="clear">
     <template v-if="open">
@@ -114,7 +131,40 @@ onBeforeUnmount(clear);
   </dialog>
 </template>
 <style scoped>
-.comment-count { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem; border: 0; background: transparent; color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 32px; }
+.comment-count { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem; border: 0; background: transparent; color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 32px; border-radius: .4rem; }
+.comment-count.has-new-comments { color: var(--green); font-weight: 600; }
+.comment-icon { flex-shrink: 0; transition: transform .2s ease; }
+.comment-icon-animated {
+  animation: comment-bounce 1.6s ease-in-out infinite;
+  color: var(--green);
+}
+.new-comments-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .65rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: .12rem .35rem;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  letter-spacing: -.02em;
+}
+:root[data-theme="dark"] .new-comments-badge {
+  color: #102b2a;
+}
+@keyframes comment-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(-2.5px) scale(1.18); }
+  40% { transform: translateY(0) scale(1); }
+  60% { transform: translateY(-1px) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comment-icon-animated {
+    animation: none;
+  }
+}
 button:focus-visible, a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 .comments-dialog { box-sizing: border-box; width: min(44rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); overflow: hidden; border: 1px solid var(--line); border-radius: .8rem; padding: 1.2rem; color: var(--text); background: var(--surface); }
 .comments-dialog[open] { display: flex; flex-direction: column; }

@@ -6,7 +6,7 @@ import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ body?: string | null; comments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const props = defineProps<{ body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: [] }>();
 function toggle() {
   expanded.value = !expanded.value;
@@ -28,7 +28,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
       <button type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>
-      <IssueComments :issue="issue" :count="count" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
+      <IssueComments :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <section v-if="expanded" :id="panelId" class="details-panel" :aria-label="t('Beskrivning')">
       <template v-if="body?.trim()">
