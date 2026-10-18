@@ -2,8 +2,8 @@
   {
     "date": "2026-10-18",
     "summary": {
-      "sv": "Animerade kommentarer, subtask-indikering, mobilkortkryss, balanserade ladd-cirklar, samlad tidsväljare i Statistik och renare listvy.",
-      "en": "Animated comments, subtask indicators, mobile popup cross, balanced sync spinners, unified Statistics time controls, and cleaner list view."
+      "sv": "Animerade kommentarer, subtask-indikering, mobilkortkryss, balanserade ladd-cirklar, samlad statistik-tidsväljare och klickbar versionsruta.",
+      "en": "Animated comments, subtask indicators, mobile popup cross, balanced sync spinners, unified Statistics time controls, and clickable version box."
     },
     "sections": [
       {
@@ -47,6 +47,13 @@
           "en": "In list view, the redundant \"Show less\" toggle button is hidden when a row expands, keeping comments and description visible."
         },
         "issues": [163]
+      },
+      {
+        "text": {
+          "sv": "Hela versionsrutan i sidomenyn är nu klickbar för att visa versionsnyheter och har tydlig hover-markering; den separata länken har tagits bort.",
+          "en": "The entire sidebar version box is now clickable to open release notes with clear hover feedback; the separate link has been removed."
+        },
+        "issues": [165]
       }
     ]
   },

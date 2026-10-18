@@ -607,6 +607,7 @@ export const english: Record<string, string> = {
   // Update flow (#70)
   "Version": "Version",
   "Versionsnyheter": "Release notes",
+  "Klicka för att visa versionsnyheter": "Click to show release notes",
   "Ny uppdatering tillgänglig": "New update available",
   "Ny version:": "New version:",
   "Installerad version:": "Installed version:",

@@ -55,7 +55,9 @@ test("the sidebar identifies the running build above the footer, in both languag
   await expect(time).toHaveText(await expectedDate(page, "sv-SE", timestamp!));
   await expect(version.locator("code")).toHaveText(commit.slice(0, 7));
   await expect(version.locator("code")).toHaveAttribute("title", commit);
-  await expect(version.getByRole("button", { name: "Versionsnyheter", exact: true })).toBeVisible();
+  await expect(version).toHaveAttribute("tabindex", "0");
+  await expect(version).toHaveCSS("cursor", "pointer");
+  await expect(version.getByRole("button", { name: "Versionsnyheter", exact: true })).toHaveCount(0);
   await expect(version.getByRole("button", { name: "Ny uppdatering tillgänglig" })).toHaveCount(0);
 
   // Directly above the author/license footer at the bottom of the sidebar.
@@ -84,7 +86,9 @@ test("the sidebar identifies the running build above the footer, in both languag
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   const english = page.getByRole("region", { name: "Version", exact: true });
-  await expect(english.getByRole("button", { name: "Release notes", exact: true })).toBeVisible();
+  await expect(english).toHaveAttribute("tabindex", "0");
+  await expect(english).toHaveCSS("cursor", "pointer");
+  await expect(english.getByRole("button", { name: "Release notes", exact: true })).toHaveCount(0);
   await expect(english.locator("time")).toHaveText(await expectedDate(page, "en-GB", timestamp!));
 
   // A cached shell keeps its own build identity rather than fetching metadata.
@@ -108,7 +112,7 @@ test("collapsed and phone sidebars hide the version text without horizontal scro
 
 test("release notes open from the sidebar with the bundled days and return focus", async ({ page }) => {
   await page.goto(base);
-  const opener = page.getByRole("region", { name: "Version", exact: true }).getByRole("button", { name: "Versionsnyheter", exact: true });
+  const opener = page.getByRole("region", { name: "Version", exact: true });
   await opener.click();
   const notes = page.getByRole("dialog", { name: "Versionsnyheter", exact: true });
   await expect(notes).toBeVisible();
@@ -121,6 +125,14 @@ test("release notes open from the sidebar with the bundled days and return focus
   await page.keyboard.press("Escape");
   await expect(notes).toBeHidden();
   await expect(opener).toBeFocused();
+
+  // #165: also opens via keyboard Enter on the focused version region
+  await page.keyboard.press("Enter");
+  await expect(notes).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(notes).toBeHidden();
+  await expect(opener).toBeFocused();
+
   // The published copy carries this build's identity for older installed versions.
   const published = await page.evaluate(async () => (await fetch("release-notes.json", { cache: "no-store" })).json());
   expect(published.build.commit).toBe(commit);

@@ -1,11 +1,10 @@
 {
-  "baseCommit": "d1ac97db904614cbe525a6379695cd9792a46107",
+  "baseCommit": "2e1c5fc7eeac01c86b191f7d0aac6c345433ab91",
   "summary": {
-    "sv": "Statistiksidan har nu samlade tidskontroller högst upp, och expanderade rader i listvyn döljer överflödig \"Visa mindre\"-knapp.",
-    "en": "Statistics now has unified time controls at the top, and expanded list rows hide the redundant \"Show less\" toggle button."
+    "sv": "Hela versionsrutan i sidomenyn är nu klickbar för att visa versionsnyheter och har tydlig hover-indikering.",
+    "en": "The entire sidebar version box is now clickable to open release notes with clear hover indication."
   },
   "issues": [
-    164,
-    163
+    165
   ]
 }
