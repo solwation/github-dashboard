@@ -1,10 +1,11 @@
 {
   "baseCommit": "352364a51d4177ab05ed5fc86f6a0b9a11e47e99",
   "summary": {
-    "sv": "Stängning av kortpopup i listläge på mobil sker via ett smidigt kryss uppe i högra hörnet inuti kortet.",
-    "en": "Closing the card popup in list mode on mobile now uses a sleek cross icon in the top-right corner inside the card."
+    "sv": "Kortpopupen på mobil stängs med ett kryss i hörnet, och datumfälten i Statistik ryms nu inom filterboxen i porträttläge.",
+    "en": "On mobile, the card popup closes with a corner cross, and Statistics date fields now fit inside the filter box in portrait."
   },
   "issues": [
-    159
+    159,
+    160
   ]
 }

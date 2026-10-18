@@ -242,6 +242,8 @@ function reset() {
 .statistics-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; }
 .statistics-filter-grid label, .statistics-panel-heading label { display: grid; gap: 6px; font-size: 12px; min-width: 0; }
 .statistics-filter-grid input, select { width: 100%; min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: inherit; }
+.statistics-filter-grid input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-height: 38px; font: inherit; text-align: left; }
+.statistics-filter-grid input[type="date"]::-webkit-date-and-time-value { text-align: left; min-width: 0; }
 .statistics-filter-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .statistics-message, .statistics-source-time { font-size: 12px; color: var(--muted); }
 .statistics-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(155px, 100%), 1fr)); gap: 12px; margin: 20px 0; }

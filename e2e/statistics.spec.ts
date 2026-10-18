@@ -60,6 +60,13 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   for (const width of [320, 390, 650]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // #160: date fields stay inside the filter box on narrow portrait viewports.
+    const filters = await design.locator(".statistics-filters").boundingBox();
+    for (const input of await design.locator(".statistics-filters input[type=date]").all()) {
+      const box = await input.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(filters!.x);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(filters!.x + filters!.width);
+    }
   }
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-18",
     "summary": {
-      "sv": "Animerade nya kommentarer, tydligare indikering för subtasks och parent tasks, samt ett smidigt kryss i kortpopupen på mobilen.",
-      "en": "Animated new comments, clearer subtask and parent task indications, and a sleek close cross in the mobile card popup."
+      "sv": "Animerade nya kommentarer, tydligare subtasks och parent tasks, kryss i kortpopupen på mobil samt datumfält som ryms i Statistik.",
+      "en": "Animated new comments, clearer subtasks and parent tasks, a close cross in the mobile card popup and date fields that fit in Statistics."
     },
     "sections": [
       {
@@ -26,6 +26,13 @@
           "en": "Closing the card popup in list mode on mobile now uses a sleek cross icon in the top-right corner inside the card."
         },
         "issues": [159]
+      },
+      {
+        "text": {
+          "sv": "Datumfälten i Statistik ryms nu inom filterboxen på mobil i porträttläge.",
+          "en": "Date fields in Statistics now fit inside the filter box on mobile in portrait mode."
+        },
+        "issues": [160]
       }
     ]
   },
