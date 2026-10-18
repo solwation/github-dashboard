@@ -1,11 +1,10 @@
 {
-  "baseCommit": "352364a51d4177ab05ed5fc86f6a0b9a11e47e99",
+  "baseCommit": "c14ed2a97f38781b3e86a711f58155449af740d4",
   "summary": {
-    "sv": "Kortpopupen på mobil stängs med ett kryss i hörnet, och datumfälten i Statistik ryms nu inom filterboxen i porträttläge.",
-    "en": "On mobile, the card popup closes with a corner cross, and Statistics date fields now fit inside the filter box in portrait."
+    "sv": "Datumfälten i Statistik ryms nu inom filterboxen på mobil i porträttläge.",
+    "en": "Date fields in Statistics now fit inside the filter box on mobile in portrait mode."
   },
   "issues": [
-    159,
     160
   ]
 }
