@@ -5,10 +5,10 @@ import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { StatisticsCollector, type StatisticsClient } from "../lib/statistics-client";
 import {
-  allowedStatisticsResolutions, clampStatisticsResolution, DEFAULT_STATISTICS_RANGE,
-  rangeNames, resolutionNames, statisticsDurationMs, statisticsRanges, statisticsResolutions,
-  statisticsWindow, type StatisticsData, type StatisticsPreference, type StatisticsPreferences,
-  type StatisticsRangePreset, type StatisticsResolution,
+  allowedStatisticsResolutions, clampStatisticsResolution, DEFAULT_STATISTICS_RANGE, formatStatisticsBound, hasStatisticsTime,
+  parseStatisticsBound, rangeNames, resolutionNames, statisticsDurationMs, statisticsPresetWindow, statisticsRangeMs, statisticsRanges,
+  statisticsResolutions, statisticsWindow, statisticsWindowMs, validStatisticsBound, type StatisticsData, type StatisticsPreference,
+  type StatisticsPreferences, type StatisticsRangePreset, type StatisticsResolution,
 } from "../lib/statistics";
 import { readStatisticsCache, writeStatisticsCache } from "../lib/statistics-cache";
 import { demoStatistics } from "../lib/statistics-demo";
@@ -19,39 +19,79 @@ const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] 
 const period = ref(statisticsWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
 
-const globalFrom = ref(period.value.from);
-const globalTo = ref(period.value.to);
+// #169: the global window is always concrete UTC "YYYY-MM-DDTHH:mm" bounds shown in
+// the pickers. A preset recomputes its window from now; undefined range = custom.
+const periodBounds = computed(() => ({
+  start: parseStatisticsBound(period.value.from, "start"),
+  end: parseStatisticsBound(period.value.to, "end"),
+}));
+const pickerMin = computed(() => formatStatisticsBound(periodBounds.value.start));
+const pickerMax = computed(() => formatStatisticsBound(periodBounds.value.end));
+function presetWindow(preset: StatisticsRangePreset, resolution?: StatisticsResolution) {
+  return statisticsPresetWindow(preset, Date.now(), period.value, resolution);
+}
+const initialWindow = presetWindow(DEFAULT_STATISTICS_RANGE);
+const globalFrom = ref(initialWindow.from);
+const globalTo = ref(initialWindow.to);
 const globalRange = ref<StatisticsRangePreset | undefined>(DEFAULT_STATISTICS_RANGE);
 const globalResolution = ref<StatisticsResolution | undefined>(undefined);
+
+function applyPreset(preset: StatisticsRangePreset, resolution?: StatisticsResolution) {
+  const clamped = resolution ? clampStatisticsResolution(resolution, statisticsRangeMs[preset], preset) : undefined;
+  const window = presetWindow(preset, clamped);
+  globalFrom.value = window.from;
+  globalTo.value = window.to;
+  globalRange.value = preset;
+  globalResolution.value = clamped;
+}
+/** Converts a saved bound (legacy date-only or datetime) to a datetime picker value. */
+function pickerValue(value: string, edge: "start" | "end") {
+  if (hasStatisticsTime(value)) return value;
+  const ms = parseStatisticsBound(value, edge);
+  return Number.isFinite(ms) ? formatStatisticsBound(ms) : "";
+}
+/** Keeps a custom window inside the fetched period; false when nothing valid remains. */
+function clampCustomWindow() {
+  const { start, end } = statisticsWindowMs({ from: globalFrom.value, to: globalTo.value });
+  if (!Number.isFinite(start)) return false;
+  const from = Math.max(start, periodBounds.value.start), to = Math.min(end, periodBounds.value.end);
+  if (from >= to) return false;
+  globalFrom.value = formatStatisticsBound(from);
+  globalTo.value = formatStatisticsBound(to);
+  return true;
+}
 
 function syncFromPreferences(prefs?: StatisticsPreferences) {
   if (!prefs) return;
   for (const repo of props.repositories) {
     const pref = prefs[repo.full_name];
-    if (pref) {
-      if (pref.from && pref.to && (pref.from !== period.value.from || pref.to !== period.value.to)) {
-        globalFrom.value = pref.from;
-        globalTo.value = pref.to;
-        globalRange.value = undefined;
-        globalResolution.value = pref.resolution;
-        return;
-      }
-      if (pref.range) {
-        globalFrom.value = period.value.from;
-        globalTo.value = period.value.to;
-        globalRange.value = pref.range;
-        globalResolution.value = pref.resolution;
-        return;
-      }
+    if (!pref) continue;
+    if (pref.range) {
+      // A preset always restores as a fresh window ending now, also for legacy date-only saves.
+      applyPreset(pref.range, pref.resolution);
+      return;
+    }
+    if (pref.from && pref.to && (hasStatisticsTime(pref.from) || hasStatisticsTime(pref.to) || pref.from !== period.value.from || pref.to !== period.value.to)) {
+      globalFrom.value = pickerValue(pref.from, "start");
+      globalTo.value = pickerValue(pref.to, "end");
+      globalRange.value = undefined;
+      if (!clampCustomWindow()) { applyPreset(DEFAULT_STATISTICS_RANGE, pref.resolution); return; }
+      globalResolution.value = pref.resolution
+        ? clampStatisticsResolution(pref.resolution, statisticsDurationMs({ from: globalFrom.value, to: globalTo.value }))
+        : undefined;
+      return;
     }
   }
 }
 syncFromPreferences(props.preferences);
 
-const customDateRange = computed(() => globalFrom.value !== period.value.from || globalTo.value !== period.value.to);
-const activeRange = computed<StatisticsRangePreset | undefined>(() =>
-  customDateRange.value ? undefined : (globalRange.value || DEFAULT_STATISTICS_RANGE),
-);
+const activeRange = computed<StatisticsRangePreset | undefined>(() => globalRange.value);
+const invalidRange = computed(() => {
+  if (!hasStatisticsTime(globalFrom.value) || !hasStatisticsTime(globalTo.value)) return true;
+  if (!validStatisticsBound(globalFrom.value) || !validStatisticsBound(globalTo.value)) return true;
+  const { start, end } = statisticsWindowMs({ from: globalFrom.value, to: globalTo.value });
+  return !Number.isFinite(start) || start < periodBounds.value.start || end > periodBounds.value.end;
+});
 const chartDurationMs = computed(() =>
   statisticsDurationMs({ from: globalFrom.value, to: globalTo.value, range: activeRange.value }),
 );
@@ -59,7 +99,6 @@ const allowedResolutions = computed(() => new Set(allowedStatisticsResolutions(c
 const activeResolution = computed<StatisticsResolution>(() =>
   clampStatisticsResolution(globalResolution.value, chartDurationMs.value, activeRange.value),
 );
-const invalidRange = computed(() => !globalFrom.value || !globalTo.value || globalFrom.value > globalTo.value);
 
 const timeSpan = computed(() => ({
   from: globalFrom.value,
@@ -67,8 +106,24 @@ const timeSpan = computed(() => ({
   range: activeRange.value,
   resolution: activeResolution.value,
 }));
+const boundFormat = computed(() => new Intl.DateTimeFormat(locale.value, {
+  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC",
+}));
+const periodText = computed(() => {
+  if (invalidRange.value) return "";
+  const { start, end } = statisticsWindowMs({ from: globalFrom.value, to: globalTo.value });
+  return `${boundFormat.value.format(start)} – ${boundFormat.value.format(end)}`;
+});
+const periodLabel = computed(() => periodText.value
+  ? t("Visar {period} UTC · upplösning {resolution}", { period: periodText.value, resolution: t(resolutionNames[activeResolution.value]) })
+  : "");
+const subtitle = computed(() => periodText.value
+  ? t("{period} UTC, repository för repository.", { period: periodText.value })
+  : t("Repository för repository."));
+const resettable = computed(() => activeRange.value !== DEFAULT_STATISTICS_RANGE || !!globalResolution.value);
 
 function applyGlobalTimeSpan() {
+  if (invalidRange.value) return;
   const updated: StatisticsPreferences = {};
   for (const repo of props.repositories) {
     const current = preferencesState.value[repo.full_name] || {
@@ -91,38 +146,39 @@ function applyGlobalTimeSpan() {
 }
 
 function selectRange(preset: StatisticsRangePreset) {
-  globalFrom.value = period.value.from;
-  globalTo.value = period.value.to;
-  globalRange.value = preset;
-  if (globalResolution.value) {
-    const duration = statisticsDurationMs({ from: period.value.from, to: period.value.to, range: preset });
-    globalResolution.value = clampStatisticsResolution(globalResolution.value, duration, preset);
-  }
+  applyPreset(preset, globalResolution.value);
   applyGlobalTimeSpan();
+}
+
+const fromInput = ref<HTMLInputElement | null>(null);
+function selectCustom() {
+  // Keeps the shown window but detaches it from the preset, then moves focus to the pickers.
+  if (globalRange.value) {
+    globalRange.value = undefined;
+    applyGlobalTimeSpan();
+  }
+  fromInput.value?.focus();
 }
 
 function selectResolution(resolution: StatisticsResolution) {
   if (!allowedResolutions.value.has(resolution)) return;
-  globalResolution.value = resolution;
+  if (globalRange.value) applyPreset(globalRange.value, resolution);
+  else globalResolution.value = resolution;
   applyGlobalTimeSpan();
 }
 
-function setDates(from: string, to: string) {
+function setBounds(from: string, to: string) {
   globalFrom.value = from;
   globalTo.value = to;
   globalRange.value = undefined;
-  if (globalResolution.value) {
-    const duration = statisticsDurationMs({ from, to });
-    globalResolution.value = clampStatisticsResolution(globalResolution.value, duration);
+  if (globalResolution.value && !invalidRange.value) {
+    globalResolution.value = clampStatisticsResolution(globalResolution.value, statisticsDurationMs({ from, to }));
   }
   applyGlobalTimeSpan();
 }
 
 function resetTimeSpan() {
-  globalFrom.value = period.value.from;
-  globalTo.value = period.value.to;
-  globalRange.value = DEFAULT_STATISTICS_RANGE;
-  globalResolution.value = undefined;
+  applyPreset(DEFAULT_STATISTICS_RANGE);
   applyGlobalTimeSpan();
 }
 
@@ -188,18 +244,14 @@ async function load(force = false) {
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
   if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
   period.value = statisticsWindow();
-  if (!customDateRange.value) {
-    globalFrom.value = period.value.from;
-    globalTo.value = period.value.to;
-  }
+  // #169: a preset follows the clock on every reload; a custom window is kept (clamped to the period).
+  const previous = `${globalFrom.value}|${globalTo.value}|${globalRange.value}`;
+  if (globalRange.value) applyPreset(globalRange.value, globalResolution.value);
+  else if (!invalidRange.value && !clampCustomWindow()) applyPreset(DEFAULT_STATISTICS_RANGE, globalResolution.value);
+  if (previous !== `${globalFrom.value}|${globalTo.value}|${globalRange.value}`) applyGlobalTimeSpan();
   for (const name of names) {
-    const saved = activeCollector?.export().find(data => data.repository === name);
     const data = activeCollector?.cached(name);
     if (!snapshots.value[name] && data) snapshots.value = { ...snapshots.value, [name]: data };
-    const preference = preferencesState.value[name];
-    if (saved && preference?.from === saved.from && preference.to === saved.to && (saved.from !== period.value.from || saved.to !== period.value.to)) {
-      updatePreference(name, { ...preference, ...period.value });
-    }
   }
   preparedRepositories.value = new Set(names);
   loading.value = Object.fromEntries(names.map(name => [name, true]));
@@ -246,13 +298,15 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
-    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1><p>{{ t("De senaste 30 dagarna, repository för repository.") }}</p></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
+    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1><p class="statistics-subtitle">{{ subtitle }}</p></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
     <div v-if="repositories.length && !initialLoading" class="statistics-time-controls" role="region" :aria-label="t('Tidsintervall')">
       <div class="statistics-time-presets">
         <div class="statistics-range-presets" role="group" :aria-label="t('Tidsintervall')">
           <button v-for="preset in statisticsRanges" :key="preset" type="button" class="button small statistics-range-preset"
             :class="{ active: activeRange === preset }" :aria-pressed="activeRange === preset"
             @click="selectRange(preset)">{{ t(rangeNames[preset]) }}</button>
+          <button type="button" class="button small statistics-range-preset statistics-range-custom"
+            :class="{ active: !activeRange }" :aria-pressed="!activeRange" @click="selectCustom">{{ t("Anpassat") }}</button>
         </div>
         <div class="statistics-resolution-select">
           <label>{{ t("Upplösning") }}
@@ -263,10 +317,11 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
         </div>
       </div>
       <div class="statistics-time-dates">
-        <label>{{ t("Från datum (UTC)") }}<input :value="globalFrom" type="date" :min="period.from" :max="globalTo || period.to" @change="setDates(($event.target as HTMLInputElement).value, globalTo)" /></label>
-        <label>{{ t("Till datum (UTC)") }}<input :value="globalTo" type="date" :min="globalFrom || period.from" :max="period.to" @change="setDates(globalFrom, ($event.target as HTMLInputElement).value)" /></label>
-        <button v-if="customDateRange" class="button small" @click="resetTimeSpan">{{ t("Återställ filter") }}</button>
+        <label>{{ t("Från (UTC)") }}<input ref="fromInput" :value="globalFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @change="setBounds(($event.target as HTMLInputElement).value, globalTo)" /></label>
+        <label>{{ t("Till (UTC)") }}<input :value="globalTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @change="setBounds(globalFrom, ($event.target as HTMLInputElement).value)" /></label>
+        <button v-if="resettable" type="button" class="button small" @click="resetTimeSpan">{{ t("Återställ period") }}</button>
       </div>
+      <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
     </div>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
@@ -310,8 +365,11 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-resolution-select label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .statistics-resolution-select select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
 .statistics-time-dates { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; border-top: 1px solid var(--line); padding-top: 14px; }
-.statistics-time-dates label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.statistics-time-dates input[type="date"] { max-width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+.statistics-time-dates label { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 0 1 210px; font-size: 12px; font-weight: 600; color: var(--muted); }
+/* #160/#169: iOS gives native date/time inputs an intrinsic width; reset it so they never overflow. */
+.statistics-time-dates input[type="datetime-local"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 36px; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; font-weight: 400; background: var(--bg); color: var(--text); }
+.statistics-time-dates input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
+.statistics-period-label { margin: -2px 0 0; color: var(--text); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .statistics-message { margin: 0 0 20px; padding: 12px 14px; border-radius: 8px; background: #fff0f0; color: #b91c1c; font-size: 13px; }
 :root[data-theme="dark"] .statistics-message { background: #3b1414; color: #fca5a5; }
 .statistics-footnotes { border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
@@ -334,5 +392,6 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
   .statistics-heading h1 { font-size: 26px; }
   .statistics-time-presets { flex-direction: column; align-items: stretch; }
   .statistics-time-dates { flex-direction: column; align-items: stretch; }
+  .statistics-time-dates label { flex: 0 0 auto; }
 }
 </style>

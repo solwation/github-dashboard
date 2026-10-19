@@ -64,6 +64,10 @@ describe("statistics window bounds with UTC clock time (#168)", () => {
     expect(statisticsPresetWindow("24h", Date.parse("2026-10-16T15:00:00Z"), period)).toEqual({ from: "2026-10-15T16:00", to: "2026-10-16T16:00" });
     // The start never precedes the fetched period.
     expect(statisticsPresetWindow("30d", now, { from: "2026-10-01", to: "2026-10-16" })).toEqual({ from: "2026-10-01T00:00", to: "2026-10-17T00:00" });
+    // #169: a coarser selected resolution aligns the window to its own step; a finer one keeps the default.
+    expect(statisticsPresetWindow("8h", now, period, "30m")).toEqual({ from: "2026-10-16T07:30", to: "2026-10-16T15:30" });
+    expect(statisticsPresetWindow("8h", now, period, "1m")).toEqual(statisticsPresetWindow("8h", now, period));
+    expect(statisticsPresetWindow("3d", now, period, "1h")).toEqual(statisticsPresetWindow("3d", now, period));
   });
 
   it("summarizes a preset's concrete window exactly like the legacy range filter", () => {

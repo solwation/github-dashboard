@@ -168,14 +168,18 @@ export function statisticsWindow(now = Date.now()) {
  * `now`), and `from` = `to` − duration, clamped to 00:00 UTC of period.from.
  * Example: now 10:20, 24h at 1h → [yesterday 11:00, today 11:00). Day presets
  * end at the next UTC midnight, matching the legacy date-only window.
+ * A selected resolution coarser than the default step aligns the window to that
+ * step instead, so the chart never gets a partial first bucket (#169).
  */
 export function statisticsPresetWindow(
   preset: StatisticsRangePreset,
   now: number,
   period: { from: string; to: string },
+  resolution?: StatisticsResolution,
 ): { from: string; to: string } {
   const duration = statisticsRangeMs[preset];
-  const stepMs = statisticsResolutionMs[clampStatisticsResolution(undefined, duration, preset)];
+  const defaultStep = statisticsResolutionMs[clampStatisticsResolution(undefined, duration, preset)];
+  const stepMs = resolution ? Math.max(defaultStep, statisticsResolutionMs[clampStatisticsResolution(resolution, duration, preset)]) : defaultStep;
   const end = Math.floor(now / stepMs) * stepMs + stepMs;
   const periodStart = parseStatisticsBound(period.from, "start");
   const start = Number.isFinite(periodStart) ? Math.max(periodStart, end - duration) : end - duration;
