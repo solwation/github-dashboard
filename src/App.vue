@@ -1425,14 +1425,14 @@ onMounted(async () => {
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
-    <div class="sidebar-footer">
+    <a class="sidebar-footer" href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
       <Github :size="19" aria-hidden="true" />
-      <div>
-        <a href="https://github.com/solwation" target="_blank" rel="noopener noreferrer">Olof Wingren</a>
-        <small><a href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a></small>
-      </div>
-      <ExternalLink :size="13" aria-hidden="true" />
-    </div>
+      <span class="sidebar-credits">
+        <span>Olof Wingren</span>
+        <small class="sidebar-license-label">MIT License</small>
+      </span>
+      <ExternalLink class="sidebar-footer-open" :size="13" aria-hidden="true" />
+    </a>
   </aside>
   <div class="workspace">
     <header ref="topbar" class="topbar">

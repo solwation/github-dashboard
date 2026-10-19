@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, useId } from "vue";
+import { ExternalLink } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import BuildInfo from "./BuildInfo.vue";
 
@@ -16,18 +17,24 @@ function focusBadge() {
   return document.activeElement === element;
 }
 defineExpose({ focusBadge });
+function openNotesFromKeyboard(event: KeyboardEvent) {
+  if (event.target !== event.currentTarget) return;
+  event.preventDefault();
+  emit("release-notes");
+}
 </script>
 
 <template>
   <section class="sidebar-version" :class="{ 'has-update': available }" :aria-labelledby="titleId"
     role="region" tabindex="0" :title="t('Klicka för att visa versionsnyheter')"
-    @click="emit('release-notes')" @keydown.enter.prevent="emit('release-notes')" @keydown.space.prevent="emit('release-notes')">
+    @click="emit('release-notes')" @keydown.enter="openNotesFromKeyboard" @keydown.space="openNotesFromKeyboard">
     <div class="sidebar-version-heading">
       <span :id="titleId" class="sidebar-version-caption">{{ t("Version") }}</span>
       <button v-if="available" ref="badge" type="button" class="sidebar-version-badge" aria-haspopup="dialog"
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click.stop="emit('open-update')">
         <span aria-hidden="true">!</span>
       </button>
+      <ExternalLink class="sidebar-version-open" :size="13" aria-hidden="true" />
     </div>
     <p class="sidebar-version-build"><BuildInfo /></p>
     <p class="sidebar-version-status" :class="available ? 'is-update' : checking ? 'is-checking' : checked ? 'is-current' : 'is-unchecked'" role="status">
@@ -67,7 +74,8 @@ defineExpose({ focusBadge });
   outline-offset: -2px;
 }
 .sidebar-version-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
-.sidebar-version-caption { font-size: 10px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: #909b9f; transition: color .15s ease; }
+.sidebar-version-open { flex-shrink: 0; }
+.sidebar-version-caption { margin-right: auto; font-size: 10px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: #909b9f; transition: color .15s ease; }
 .sidebar-version-build { margin: 4px 0 8px; font-size: 11px; color: var(--muted); transition: color .15s ease; }
 .sidebar-version-status { display: flex; align-items: center; gap: 5px; margin: 0; overflow-wrap: anywhere; }
 .sidebar-version-icon { flex-shrink: 0; }
@@ -85,7 +93,7 @@ defineExpose({ focusBadge });
   .sidebar-version { display: none; padding: 12px 0 0; border-top: 0; cursor: default; border-radius: 0; }
   .sidebar-version:hover { background: transparent; }
   .sidebar-version.has-update { display: block; }
-  .sidebar-version-caption, .sidebar-version-build, .sidebar-version-status { display: none; }
+  .sidebar-version-caption, .sidebar-version-build, .sidebar-version-status, .sidebar-version-open { display: none; }
   .sidebar-version-heading { justify-content: center; }
   .sidebar-version-badge { width: 28px; height: 28px; cursor: pointer; }
 }
