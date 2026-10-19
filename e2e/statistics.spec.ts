@@ -7,8 +7,8 @@ function metricButton(scope: Locator, name: string) { return scope.getByRole("gr
 function card(scope: Page | Locator, name: string) { return scope.locator(".statistics-total").filter({ hasText: name }); }
 async function cardValue(scope: Locator, name: string) { return Number((await card(scope, name).locator("strong").innerText()).replace(/\D/g, "")); }
 async function dailySum(scope: Locator) {
-  const cells = await scope.locator(".daily-values tbody td").allInnerTexts();
-  return cells.reduce((sum, text) => sum + Number(text.replace(/[^\d-]/g, "") || 0), 0);
+  const points = await scope.locator(".statistics-chart > svg > g").filter({ has: scope.page().locator("polyline") }).first().locator("circle title").allTextContents();
+  return points.reduce((sum, text) => sum + Number(text.split(": ").at(-1)!.replace(/[^\d-]/g, "") || 0), 0);
 }
 
 test("Statistics stacks sidebar repositories in order with independent filters and accessible mobile graphs", async ({ page }) => {
@@ -43,7 +43,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   // Per-graph time controls and resolution selects are removed in favor of the global controls (#164)
   await expect(design.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
   await expect(weekend.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
-  // #171: heading follows the resolution, legend names the metric and the selected point is shown in a box.
+  // #171 / #173: heading follows resolution, legend names the metric and point values are available in a popover.
   await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per dag");
   await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues"]);
   await expect(design.locator(".chart-legend .chart-swatch line")).toHaveCount(1);
@@ -67,10 +67,9 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("2");
   await expect(day).toHaveAttribute("aria-valuetext", /Stängda issues: \d/);
-  await expect(design.locator(".chart-selection")).toContainText("Stängda issues:");
-  await design.getByText("Visa värden", { exact: true }).click();
-  await expect(design.locator(".daily-values thead th").first()).toHaveText("Tid (UTC)");
-  await expect(design.locator(".daily-values tbody tr")).toHaveCount(3);
+  await expect(design.getByRole("tooltip")).toContainText("Stängda issues");
+  await expect(design.getByText("Visa värden", { exact: true })).toHaveCount(0);
+  await expect(day).toHaveAttribute("max", "2");
   // #167: cards summarize the same three-day window as the chart, not the full 30 days.
   expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
   await expect(card(design, "Commits").locator("strong")).toHaveText("6");
@@ -82,7 +81,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(resolutionSelect.locator('option[value="1h"]')).toHaveJSProperty("disabled", false);
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("29");
-  await expect(design.locator(".daily-values tbody tr")).toHaveCount(30);
+  await expect(day).toHaveAttribute("max", "29");
   await expect(card(design, "Commits").locator("strong")).toHaveText("42");
   expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
   const xLabels = design.locator(".statistics-chart .chart-x-label");
@@ -92,10 +91,13 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per timme");
   // #169: the 24h preset fills both pickers; the chart's first point is Från and its last bucket ends at Till.
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(86_400_000);
-  const rowTimes = design.locator(".daily-values tbody th");
-  await expect(rowTimes).toHaveCount(24);
-  expect(Date.parse(`${(await rowTimes.first().innerText()).replace(" ", "T")}:00Z`)).toBe(await pickerMs(fromPicker));
-  expect(Date.parse(`${(await rowTimes.last().innerText()).replace(" ", "T")}:00Z`) + 3_600_000).toBe(await pickerMs(toPicker));
+  const points = design.locator(".statistics-chart > svg > g").filter({ has: page.locator("polyline") }).first().locator("circle");
+  await expect(points).toHaveCount(24);
+  await day.focus(); await day.press("Home");
+  const expectedTime = (ms: number) => new Date(ms).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) + ` ${new Date(ms).toISOString().slice(11, 16)} UTC`;
+  await expect(design.locator(".chart-selection-time")).toHaveText(expectedTime(await pickerMs(fromPicker)));
+  await day.press("End");
+  await expect(design.locator(".chart-selection-time")).toHaveText(expectedTime(await pickerMs(toPicker) - 3_600_000));
   await expect(periodLabel).toContainText("upplösning 1 h");
   await rangeGroup.getByRole("button", { name: "7 dagar", exact: true }).click();
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(7 * 86_400_000);
@@ -114,13 +116,14 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(3 * 86_400_000);
   await rangeGroup.getByRole("button", { name: "24h", exact: true }).click();
   await expect(xLabels.first()).toContainText(/\d{2}:\d{2}/);
+  await day.focus();
   await expect(design.locator(".chart-selection-time")).toContainText(/\d{2}:\d{2} UTC/);
   await design.locator(".statistics-chart circle").first().click();
   await expect(day).toHaveValue("0");
   await rangeGroup.getByRole("button", { name: "8h", exact: true }).click();
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", false);
   await resolutionSelect.selectOption("30m");
-  await expect(design.locator(".daily-values tbody tr")).toHaveCount(16);
+  await expect(day).toHaveAttribute("max", "15");
   await metricButton(design, "Skapade issues").click();
   await expect(design.locator(".statistics-chart svg polyline")).toHaveCount(2);
   await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues", "Skapade issues"]);

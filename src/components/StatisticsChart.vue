@@ -13,6 +13,9 @@ const props = defineProps<{
 const selected = ref(0);
 const chart = ref<SVGSVGElement | null>(null);
 const chartWidth = ref(790);
+const interaction = ref<"none" | "pointer" | "touch" | "keyboard">("none");
+const showPopover = computed(() => interaction.value !== "none" && dates.value.length > 0);
+const popoverLeft = computed(() => Math.max(8, Math.min(x(selected.value) + 12, chartWidth.value - 288)));
 const plotStart = 48;
 const plotTop = 30;
 const plotBottom = 215;
@@ -80,8 +83,12 @@ const selectedDate = computed(() => dates.value[selected.value] || "");
 const selectedValues = computed(() => props.series.map((series, index) => ({ name: series.name, color: color(index), dash: dash(index), value: valueOf(series, series.days[selected.value]) })));
 const selectedText = computed(() => `${fullTime(selectedDate.value)}: ${selectedValues.value.map(item => `${item.name}: ${number(item.value)}`).join(", ")}`);
 function select(index: number) { selected.value = Math.max(0, Math.min(dates.value.length - 1, index)); }
+function hidePointer() {
+  if (interaction.value === "pointer") interaction.value = "none";
+}
 function selectFromPointer(event: PointerEvent | MouseEvent) {
-  if (!chart.value || dates.value.length < 2) return;
+  if (!chart.value || !dates.value.length) return;
+  interaction.value = "pointerType" in event && event.pointerType === "touch" ? "touch" : "pointer";
   const rect = chart.value.getBoundingClientRect();
   if (!rect.width) return;
   const position = (event.clientX - rect.left) * chartWidth.value / rect.width;
@@ -90,7 +97,7 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
 </script>
 <template>
   <div class="statistics-chart">
-    <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title" @pointermove="selectFromPointer" @click="selectFromPointer">
+    <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title" @pointermove="selectFromPointer" @pointerdown="selectFromPointer" @pointerleave="hidePointer" @click="selectFromPointer">
       <title>{{ title }}</title>
       <g v-for="tick in yTicks" :key="tick">
         <line :class="tick === 0 ? 'chart-axis' : 'chart-grid'" :x1="plotStart" :y1="y(tick)" :x2="plotEnd" :y2="y(tick)" />
@@ -100,25 +107,24 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
         <tspan :x="x(tick.index)">{{ tick.label }}</tspan>
         <tspan v-if="tick.dateLine" :x="x(tick.index)" dy="14">{{ tick.dateLine }}</tspan>
       </text>
-      <line v-if="dates.length" :x1="x(selected)" :y1="plotTop" :x2="x(selected)" :y2="plotBottom" class="chart-axis" stroke-dasharray="3 4" />
+      <line v-if="showPopover" class="chart-cursor chart-axis" :x1="x(selected)" :y1="plotTop" :x2="x(selected)" :y2="plotBottom" stroke-dasharray="3 4" />
       <g v-for="(series, index) in series" :key="series.name">
         <polyline :points="points(series)" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
-        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(valueOf(series, day))" :r="selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }" @mouseenter="select(dayIndex)" @click.stop="select(dayIndex)"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ number(valueOf(series, day)) }}</title></circle>
+        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(valueOf(series, day))" :r="showPopover && selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ number(valueOf(series, day)) }}</title></circle>
       </g>
     </svg>
-    <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: color(index) }" stroke-width="2.5" :stroke-dasharray="dash(index)" /><circle cx="11" cy="5" r="2.5" :style="{ fill: color(index) }" /></svg>{{ series.name }}</span></div>
-    <output class="chart-selection" aria-live="polite">
+    <div v-if="showPopover" class="chart-popover" role="tooltip" :style="{ left: `${popoverLeft}px` }">
       <strong class="chart-selection-time">{{ fullTime(selectedDate) }}</strong>
-      <span v-for="item in selectedValues" :key="item.name" class="chart-selection-value"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: item.color }" stroke-width="2.5" :stroke-dasharray="item.dash" /></svg>{{ item.name }}: <b>{{ number(item.value) }}</b></span>
-    </output>
+      <span v-for="item in selectedValues" :key="item.name" class="chart-selection-value"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: item.color }" stroke-width="2.5" :stroke-dasharray="item.dash" /></svg><span>{{ item.name }}</span><b>{{ number(item.value) }}</b></span>
+    </div>
+    <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: color(index) }" stroke-width="2.5" :stroke-dasharray="dash(index)" /><circle cx="11" cy="5" r="2.5" :style="{ fill: color(index) }" /></svg>{{ series.name }}</span></div>
     <label class="chart-day">{{ t("Tidpunkt i diagrammet") }}
-      <input v-model.number="selected" type="range" min="0" :max="Math.max(0, dates.length - 1)" :aria-valuetext="selectedText" />
+      <input v-model.number="selected" type="range" min="0" :max="Math.max(0, dates.length - 1)" :aria-valuetext="selectedText" @focus="interaction = 'keyboard'" @input="interaction = 'keyboard'" @blur="interaction = 'none'" @keydown.esc="interaction = 'none'" />
     </label>
-    <details class="daily-values"><summary>{{ t("Visa värden") }}</summary><div class="statistics-table-scroll"><table><caption>{{ title }}</caption><thead><tr><th scope="col">{{ t("Tid (UTC)") }}</th><th v-for="series in series" :key="series.name" scope="col">{{ series.name }}</th></tr></thead><tbody><tr v-for="(date, index) in dates" :key="date"><th scope="row">{{ date }}</th><td v-for="series in series" :key="series.name">{{ number(valueOf(series, series.days[index])) }}</td></tr></tbody></table></div></details>
   </div>
 </template>
 <style scoped>
-.statistics-chart { min-width: 0; }
+.statistics-chart { min-width: 0; position: relative; }
 svg { width: 100%; height: 255px; display: block; overflow: hidden; touch-action: pan-y; }
 svg line { vector-effect: non-scaling-stroke; }
 svg text { fill: var(--chart-text); font: 11px system-ui; }
@@ -129,12 +135,8 @@ svg text { fill: var(--chart-text); font: 11px system-ui; }
 .chart-swatch { width: 22px; height: 10px; flex-shrink: 0; overflow: visible; }
 .chart-day { display: grid; gap: 6px; font-size: 12px; margin-bottom: 14px; }
 .chart-day input { width: 100%; accent-color: var(--green); }
-.chart-selection { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12px; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--green) 6%, var(--surface)); overflow-wrap: anywhere; min-width: 0; }
-.chart-selection-time { flex-basis: 100%; font-size: 13px; }
-.chart-selection-value { display: inline-flex; align-items: center; gap: 6px; }
-.daily-values summary { cursor: pointer; font-size: 13px; }
-.statistics-table-scroll { overflow: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
-caption { text-align: left; margin: 8px 0; }
-th, td { padding: 9px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.chart-popover { position: absolute; top: 12px; z-index: 2; width: min(280px, calc(100% - 16px)); box-sizing: border-box; display: grid; gap: 5px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 3px 12px #0002; font-size: 12px; overflow-wrap: anywhere; pointer-events: none; }
+.chart-selection-time { font-size: 12px; margin-bottom: 2px; }
+.chart-selection-value { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 6px; }
+.chart-selection-value b { text-align: right; font-variant-numeric: tabular-nums; }
 </style>
