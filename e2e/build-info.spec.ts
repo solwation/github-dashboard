@@ -37,10 +37,12 @@ test.afterAll(async () => {
   if (server) await new Promise<void>((done) => server.close(() => done()));
   if (directory) await rm(directory, { recursive: true, force: true });
 });
-test.use({ locale: "sv-SE" });
+test.use({ locale: "sv-SE", timezoneId: "America/Los_Angeles" });
 
 const expectedDate = (page: Page, language: string, timestamp: string) => page.evaluate(({ language, timestamp }) =>
   new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(timestamp)), { language, timestamp });
+const expectedTooltip = (page: Page, language: string, timestamp: string) => page.evaluate(({ language, timestamp }) =>
+  new Intl.DateTimeFormat(language, { dateStyle: "full", timeStyle: "long" }).format(new Date(timestamp)), { language, timestamp });
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
 test("the sidebar identifies the running build above the footer, in both languages and offline", async ({ page, context }) => {
@@ -51,7 +53,8 @@ test("the sidebar identifies the running build above the footer, in both languag
   const timestamp = await time.getAttribute("datetime");
   expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
   expect(Date.parse(timestamp!)).toBeLessThanOrEqual(Date.now());
-  await expect(time).toHaveAttribute("title", timestamp!);
+  expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("America/Los_Angeles");
+  await expect(time).toHaveAttribute("title", await expectedTooltip(page, "sv-SE", timestamp!));
   await expect(time).toHaveText(await expectedDate(page, "sv-SE", timestamp!));
   await expect(version.locator("code")).toHaveText(commit.slice(0, 7));
   await expect(version.locator("code")).toHaveAttribute("title", commit);
@@ -90,6 +93,7 @@ test("the sidebar identifies the running build above the footer, in both languag
   await expect(english).toHaveCSS("cursor", "pointer");
   await expect(english.getByRole("button", { name: "Release notes", exact: true })).toHaveCount(0);
   await expect(english.locator("time")).toHaveText(await expectedDate(page, "en-GB", timestamp!));
+  await expect(english.locator("time")).toHaveAttribute("title", await expectedTooltip(page, "en-GB", timestamp!));
 
   // A cached shell keeps its own build identity rather than fetching metadata.
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -97,6 +101,7 @@ test("the sidebar identifies the running build above the footer, in both languag
   await context.setOffline(true);
   await page.reload();
   await expect(english.locator("time")).toHaveAttribute("datetime", timestamp!);
+  await expect(english.locator("time")).toHaveAttribute("title", await expectedTooltip(page, "en-GB", timestamp!));
   await expect(english.locator("code")).toHaveAttribute("title", commit);
 });
 
