@@ -131,7 +131,9 @@ test("desktop expands row details in place with open description while phone ope
       await expect(popupCard).toBeVisible();
       await expect(popupCard.locator(".card-repository")).toHaveText("sample/beta");
       await expect(popupCard.getByRole("link", { name: /beta task 1/ })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
-      await expect(popupCard.locator(".label")).toHaveText(["enhancement"]);
+      // #197: the enhancement label is shown by the type icon instead of a chip.
+      await expect(popupCard.locator(".type-circle.type-feature")).toBeVisible();
+      await expect(popupCard.locator(".label")).toHaveCount(0);
       expect(await noPageScroll(page)).toBe(true);
 
       // #159: on mobile, close is an X button in the top-right corner inside the card, no separate button below.
