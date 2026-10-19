@@ -1,10 +1,10 @@
 {
-  "baseCommit": "e3ac05256671e74ae7bb7bfa39aeb38927aede2a",
+  "baseCommit": "45b24793353fb148ad61270067142c97ce4600b8",
   "summary": {
-    "sv": "Vanliga labels på korten är nu lika stora som repo-labeln.",
-    "en": "Regular labels on cards are now the same size as the repository label."
+    "sv": "Cirkeln på korten visar nu issue-typ (bugg, funktion, dokumentation med mera) med egen ikon och färg, härledd från labels.",
+    "en": "The card circle now shows the issue type (bug, feature, docs and more) with its own icon and tint, derived from labels."
   },
   "issues": [
-    194
+    195
   ]
 }

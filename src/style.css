@@ -2302,3 +2302,37 @@ a.sidebar-repository:focus-visible {
   line-height: 1.4;
 }
 .card-top .label i { width: 9px; height: 9px; }
+
+/* Issue-type circle (#195): monochrome icon on a per-type tint. Colours are tokens for light and dark. */
+:root {
+  --type-bug-bg: #fde8ea; --type-bug-fg: #a4262c;
+  --type-security-bg: #fde8d8; --type-security-fg: #9a4010;
+  --type-feature-bg: #e0f3ec; --type-feature-fg: #0f6b5a;
+  --type-docs-bg: #e5ebfa; --type-docs-fg: #35479a;
+  --type-question-bg: #f1e6f6; --type-question-fg: #7a3a8a;
+  --type-help-bg: #fdf0d8; --type-help-fg: #7d5200;
+  --type-chore-bg: #e9edf0; --type-chore-fg: #46565c;
+}
+:root[data-theme="dark"] {
+  --type-bug-bg: #3d1d21; --type-bug-fg: #ff9aa2;
+  --type-security-bg: #3a2415; --type-security-fg: #f5a574;
+  --type-feature-bg: #163a31; --type-feature-fg: #7fe0c0;
+  --type-docs-bg: #182c45; --type-docs-fg: #9fbcf0;
+  --type-question-bg: #2a2643; --type-question-fg: #c4b5f0;
+  --type-help-bg: #3a2f17; --type-help-fg: #f0c872;
+  --type-chore-bg: #26343a; --type-chore-fg: #b4c4c8;
+}
+.type-circle { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; }
+.issue-number .type-circle svg, .type-circle svg { color: inherit; }
+.type-circle svg:not(.type-closed) { stroke-width: 2.25; }
+.type-circle .type-closed { position: absolute; right: -3px; bottom: -3px; padding: 0; border-radius: 50%; background: var(--surface); color: var(--green); stroke-width: 3; }
+.closed .type-circle { opacity: .72; }
+.closed .type-circle .type-closed { opacity: 1; }
+:root[data-theme="dark"] .closed .type-circle .type-closed { color: var(--accent-green); }
+.type-circle.type-bug { background: var(--type-bug-bg); color: var(--type-bug-fg); }
+.type-circle.type-security { background: var(--type-security-bg); color: var(--type-security-fg); }
+.type-circle.type-feature { background: var(--type-feature-bg); color: var(--type-feature-fg); }
+.type-circle.type-docs { background: var(--type-docs-bg); color: var(--type-docs-fg); }
+.type-circle.type-question { background: var(--type-question-bg); color: var(--type-question-fg); }
+.type-circle.type-help { background: var(--type-help-bg); color: var(--type-help-fg); }
+.type-circle.type-chore { background: var(--type-chore-bg); color: var(--type-chore-fg); }

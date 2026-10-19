@@ -35,6 +35,14 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Typ: {type}": "Type: {type}",
+  "Bugg": "Bug",
+  "Säkerhet": "Security",
+  "Funktion": "Feature",
+  "Dokumentation": "Documentation",
+  "Fråga": "Question",
+  "Hjälp sökes": "Help wanted",
+  "Underhåll": "Chore",
   "Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.": "Statistics could not be saved on this device. The collected charts remain available.",
   "Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.": "At most 300 updated issues, 500 issue events, 300 commits and 300 pull requests are fetched per repository. Code metrics cover at most 60 non-merge commits and 300 files per commit. Bounded sources are marked as partial data. Collected data is reused for five minutes; Refresh revalidates the whole period.",
   "Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från den senast hämtade delen, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.": "Statistics are encrypted for up to ten repositories for seven days, up to 8 MiB. Issues, events and pull requests are always revalidated. Commit history is reused with an overlap from the most recently collected portion, and fully revalidated at least every seven days or on Refresh. SHA-bound code metrics are reused. Reused source data can include up to 600 commits; incomplete coverage is marked as partial data.",

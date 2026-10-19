@@ -5,6 +5,7 @@ import IssueDetails from "./IssueDetails.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
+import { issueType, type IssueType } from "../lib/issue-type";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { repositoryColor } from "../lib/repository-color";
@@ -20,6 +21,13 @@ import {
   ArrowDown,
   CornerDownRight,
   ListTree,
+  Bug,
+  Star,
+  FileText,
+  CircleQuestionMark,
+  HandHelping,
+  Wrench,
+  ShieldAlert,
 } from "@lucide/vue";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import {
@@ -130,6 +138,16 @@ onBeforeUnmount(() => {
 const col = computed(() => column(props.issue, props.rules));
 // The card's own clock: per second only while its label shows seconds, and only while on screen (#120).
 const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
+const typeIcons = { bug: Bug, security: ShieldAlert, feature: Star, docs: FileText, question: CircleQuestionMark, help: HandHelping, chore: Wrench };
+const type = computed<IssueType | null>(() => issueType(props.issue.labels));
+const typeTitle = computed(() => {
+  if (!type.value) return undefined;
+  const name = {
+    bug: t("Bugg"), security: t("Säkerhet"), feature: t("Funktion"), docs: t("Dokumentation"),
+    question: t("Fråga"), help: t("Hjälp sökes"), chore: t("Underhåll"),
+  }[type.value];
+  return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
+});
 const rank = computed(() => priority(props.issue, props.rules));
 const visibleLabels = computed(() =>
   props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, 4),
@@ -150,10 +168,13 @@ const visibleLabels = computed(() =>
     <div v-if="!rowDetails" class="card-top">
       <div class="card-top-main">
       <span class="issue-number"
-        ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
+        ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
+          ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"
+        /></span
+        ><template v-else><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
           v-else
           :size="13"
-        />
+        /></template>
         #{{ issue.number }}</span
       >
       <span class="labels">

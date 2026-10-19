@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Cirkeln på korten visar issue-typ (bugg, funktion, dokumentation, fråga med mera) med egen ikon och färg, härledd från labels; stängda markeras med bock.",
+          "en": "The card circle shows the issue type (bug, feature, docs, question and more) with its own icon and tint, derived from labels; closed issues keep a check mark."
+        },
+        "issues": [195]
+      },
+      {
+        "text": {
           "sv": "Vanliga labels på korten är lika stora som repo-labeln.",
           "en": "Regular labels on cards are the same size as the repository label."
         },
