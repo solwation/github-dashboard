@@ -172,12 +172,37 @@ function applyGlobalTimeSpan() {
   emit("update:preferences", { ...preferencesState.value });
 }
 
+/** Lazily roll local calendar bounds forward without clearing the rendered snapshots. */
+function refreshCalendarPeriod() {
+  const next = statisticsCalendarWindow();
+  if (next.from === period.value.from && next.to === period.value.to) return false;
+  period.value = next;
+  return true;
+}
+let rolloverReloadPending = false;
+function flushRolloverReload() {
+  if (rolloverReloadPending && !busy.value) void load(true);
+}
+function refreshPeriodForInteraction() {
+  if (!refreshCalendarPeriod()) return;
+  if (globalRange.value) applyPreset(globalRange.value, globalResolution.value);
+  else if (Number.isFinite(statisticsWindowMs({ from: globalFrom.value, to: globalTo.value }).start) && !clampCustomWindow()) {
+    applyPreset(DEFAULT_STATISTICS_RANGE, globalResolution.value);
+  }
+  applyGlobalTimeSpan();
+  // A current request finishes first; several same-day interactions share one revalidation.
+  rolloverReloadPending = true;
+  void nextTick(flushRolloverReload);
+}
+
 function selectRange(preset: StatisticsRangePreset) {
+  refreshPeriodForInteraction();
   applyPreset(preset, globalResolution.value);
   applyGlobalTimeSpan();
 }
 
 async function selectCustom() {
+  refreshPeriodForInteraction();
   // Keeps the shown window but detaches it from the preset, then moves focus to the pickers.
   if (globalRange.value) {
     globalRange.value = undefined;
@@ -188,6 +213,7 @@ async function selectCustom() {
 }
 
 function selectResolution(resolution: StatisticsResolution) {
+  refreshPeriodForInteraction();
   if (!allowedResolutions.value.has(resolution)) return;
   if (globalRange.value) applyPreset(globalRange.value, resolution);
   else globalResolution.value = resolution;
@@ -196,6 +222,7 @@ function selectResolution(resolution: StatisticsResolution) {
 
 // Preserve an untouched ambiguous autumn value exactly; parse only the edited field.
 function setLocalBound(event: Event, edge: "start" | "end") {
+  refreshPeriodForInteraction();
   const input = event.target as HTMLInputElement;
   const current = edge === "start" ? localFrom.value : localTo.value;
   if (input.value === current) return;
@@ -221,6 +248,7 @@ function setBounds(from: string, to: string) {
 }
 
 function resetTimeSpan() {
+  refreshPeriodForInteraction();
   applyPreset(DEFAULT_STATISTICS_RANGE);
   applyGlobalTimeSpan();
 }
@@ -232,6 +260,7 @@ const loading = ref<Record<string, boolean>>({});
 const cacheFailed = ref(false);
 const failures = ref<Record<string, boolean>>({});
 const busy = computed(() => props.repositories.some(repo => loading.value[repo.full_name]));
+watch(busy, value => { if (!value) flushRolloverReload(); });
 const initialLoading = computed(() => busy.value && !props.repositories.some(repo => {
   const data = snapshots.value[repo.full_name];
   return data && [data.issues, data.events, data.commits, data.changes, data.pulls].some(source => source !== null);
@@ -286,11 +315,16 @@ async function load(force = false) {
   const selected = new Set(names);
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
   if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
-  period.value = statisticsCalendarWindow();
+  const periodChanged = refreshCalendarPeriod();
+  // Consume a queued rollover refresh even when another caller starts this load first.
+  force ||= rolloverReloadPending;
+  rolloverReloadPending = false;
   // #169: a preset follows the clock on every reload; a custom window is kept (clamped to the period).
   const previous = `${globalFrom.value}|${globalTo.value}|${globalRange.value}`;
   if (globalRange.value) applyPreset(globalRange.value, globalResolution.value);
-  else if (!invalidRange.value && !clampCustomWindow()) applyPreset(DEFAULT_STATISTICS_RANGE, globalResolution.value);
+  else if ((periodChanged || !invalidRange.value)
+    && Number.isFinite(statisticsWindowMs({ from: globalFrom.value, to: globalTo.value }).start)
+    && !clampCustomWindow()) applyPreset(DEFAULT_STATISTICS_RANGE, globalResolution.value);
   if (previous !== `${globalFrom.value}|${globalTo.value}|${globalRange.value}`) applyGlobalTimeSpan();
   for (const name of names) {
     const data = activeCollector?.cached(name);
@@ -337,7 +371,7 @@ watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
   preparedRepositories.value = new Set([...preparedRepositories.value].filter(name => selected.has(name)));
   void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
 });
-onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followRepositoryAnchor); });
+onUnmounted(() => { rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followRepositoryAnchor); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
