@@ -69,7 +69,7 @@ async function defaultModules(): Promise<BackgroundModules> {
   const [client, cache, statistics] = await Promise.all([import("./statistics-client"), import("./statistics-cache"), import("./statistics")]);
   return {
     createCollector: source => new client.StatisticsCollector(source),
-    read: cache.readStatisticsCache, write: cache.writeStatisticsCache, window: statistics.statisticsWindow,
+    read: cache.readStatisticsCache, write: cache.writeStatisticsCache, window: statistics.statisticsCollectionWindow,
   };
 }
 

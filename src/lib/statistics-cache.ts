@@ -1,5 +1,5 @@
 import { loadStatistics, saveStatistics } from './vault';
-import { statisticsWindow, type StatisticsData, type StatisticsSourceName } from './statistics';
+import { statisticsCollectionWindow, statisticsWindow, type StatisticsData, type StatisticsSourceName } from './statistics';
 export const STATISTICS_RETENTION_MS = 7 * 86400000;
 export const STATISTICS_CACHE_BYTES = 8 * 1024 * 1024;
 export const STATISTICS_CACHE_REPOSITORIES = 10;
@@ -16,8 +16,10 @@ export function parseStatisticsCache(value: unknown, now = Date.now()): Statisti
   const parsed = new Map<string, StatisticsData>();
   for (const entry of saved.repositories.slice(-STATISTICS_CACHE_REPOSITORIES)) {
     if (!entry || !validStatisticsRepository(entry.repository) || !date(entry.from) || !date(entry.to) || entry.from > entry.to || !finite(entry.fetchedAt) || entry.fetchedAt > now || now - entry.fetchedAt >= STATISTICS_RETENTION_MS) continue;
-    const expected = statisticsWindow(entry.fetchedAt);
-    if (entry.from !== expected.from || entry.to !== expected.to) continue;
+    const expected = statisticsCollectionWindow(entry.fetchedAt);
+    const legacy = statisticsWindow(entry.fetchedAt);
+    const legacyCoverage = entry.from === legacy.from && entry.to === legacy.to;
+    if ((entry.from !== expected.from || entry.to !== expected.to) && !legacyCoverage) continue;
     const copy: StatisticsData = { ...entry, temporary: Array.isArray(entry.temporary) ? entry.temporary.filter(name => statisticsSourceNames.includes(name)) : [] };
     for (const name of statisticsSourceNames) {
       const source = entry[name];
@@ -39,7 +41,7 @@ export function parseStatisticsCache(value: unknown, now = Date.now()): Statisti
       }
       // Missing historical metadata forces a full listing rather than trusting legacy coverage.
       const history = finite(source.historyVerifiedAt) && source.historyVerifiedAt > 0 && source.historyVerifiedAt <= source.fetchedAt ? source.historyVerifiedAt : 0;
-      (copy[name] as typeof source | null) = valid ? { ...source, ...(name === 'commits' ? { historyVerifiedAt: history, complete: source.complete && history > 0 } : {}) } : null;
+      (copy[name] as typeof source | null) = valid ? { ...source, complete: source.complete && !legacyCoverage, ...(name === 'commits' ? { historyVerifiedAt: history, complete: source.complete && !legacyCoverage && history > 0 } : {}) } : null;
     }
     if (!copy.commits) copy.changes = null;
     else if (copy.changes) {
@@ -52,7 +54,7 @@ export function parseStatisticsCache(value: unknown, now = Date.now()): Statisti
   return [...parsed.values()];
 }
 export function previewStatistics(data: StatisticsData, now: number): StatisticsData {
-  const window = statisticsWindow(now);
+  const window = statisticsCollectionWindow(now);
   const covers = data.from <= window.from && data.to >= window.to;
   return { ...data, ...window, ...Object.fromEntries(statisticsSourceNames.map(name => [name, data[name] ? { ...data[name], complete: covers && data[name]!.complete } : null])) };
 }

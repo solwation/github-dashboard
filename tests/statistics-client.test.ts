@@ -33,7 +33,7 @@ describe("statistics transport and coverage", () => {
     expect(result.changes!.data).toEqual([{ sha: "first", date: "2026-10-12T02:00:00Z", contributor: "alice", additions: 10, deletions: 4, files: 2, filesComplete: true }]);
     expect(calls.some(url => url.pathname.endsWith("/commits/merge"))).toBe(false);
     const request = calls.find(url => url.pathname.endsWith("/commits"))!;
-    expect(request.searchParams.get("since")).toBe("2026-09-17T00:00:00Z");
+    expect(request.searchParams.get("since")).toBe("2026-09-16T00:00:00Z");
     // Day-stable URL for free 304 revalidation; the window end is applied locally (#136).
     expect(request.searchParams.has("until")).toBe(false);
     expect(request.searchParams.has("sha")).toBe(false);
@@ -165,7 +165,7 @@ describe('persistent statistics history reuse', () => {
     expect(result.commits!.data.map(commit => commit.sha).sort()).toEqual(['historical', 'new', 'overlap']);
     expect(result.commits!.complete).toBe(true);
     expect(calls.filter(url => url.pathname.includes('/commits/')).map(url => url.pathname)).toEqual(['/repos/sample/repo/commits/new']);
-    expect(calls.find(url => url.pathname.endsWith('/issues'))!.searchParams.get('since')).toBe('2026-09-19T00:00:00Z');
+    expect(calls.find(url => url.pathname.endsWith('/issues'))!.searchParams.get('since')).toBe('2026-09-18T00:00:00Z');
   });
   it('full revalidation removes rewritten branch history, and partial cached history never enables incremental coverage', async () => {
     let current: StatisticsCommit[] = [commit];
@@ -176,11 +176,11 @@ describe('persistent statistics history reuse', () => {
     const forced = await collector.load('sample/repo', now + 86400000, true);
     expect(forced.commits!.data).toEqual([]);
     expect(forced.changes!.data).toEqual([]);
-    expect(calls.filter(url => url.pathname.endsWith('/commits')).at(-1)!.searchParams.get('since')).toBe('2026-09-18T00:00:00Z');
+    expect(calls.filter(url => url.pathname.endsWith('/commits')).at(-1)!.searchParams.get('since')).toBe('2026-09-17T00:00:00Z');
     const partial = { ...forced, commits: { ...forced.commits!, complete: false } };
     const next = new StatisticsCollector(client); next.restore([partial]); calls.length = 0;
     await next.load('sample/repo', now + 2 * 86400000);
-    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-19T00:00:00Z');
+    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-18T00:00:00Z');
   });
   it('does not promote missing interval data or denied sources to complete after reload', async () => {
     let failure = false;
@@ -202,6 +202,6 @@ describe('persistent statistics history reuse', () => {
     expect(calls.length).toBeGreaterThan(0);
     calls.length = 0;
     await restored.load('sample/repo', now + 7 * 86400000);
-    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-24T00:00:00Z');
+    expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-23T00:00:00Z');
   });
 });

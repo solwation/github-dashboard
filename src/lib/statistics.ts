@@ -57,6 +57,8 @@ export const resolutionNames: Record<StatisticsResolution, string> = {
 export interface StatisticsFilter {
   from: string; to: string; label: string; contributor: string;
   range?: StatisticsRangePreset; resolution?: StatisticsResolution; now?: number;
+  /** Runtime grouping only; saved bounds and optical transfers remain UTC. */
+  calendar?: "local";
 }
 export const statisticsMetrics = ["closed", "created", "reopened", "netIssues", "commits", "additions", "deletions", "netLines", "files", "prsOpened", "prsMerged", "prsClosed"] as const;
 export type StatisticsMetric = typeof statisticsMetrics[number];
@@ -66,7 +68,7 @@ export interface StatisticsPreference extends StatisticsFilter {
 }
 export type StatisticsPreferences = Record<string, StatisticsPreference>;
 export type StatisticsValues = Partial<Record<StatisticsMetric, number>>;
-export interface StatisticsDay { date: string; values: StatisticsValues }
+export interface StatisticsDay { date: string; values: StatisticsValues; /** Absolute bucket start, including repeated local hours. */ start?: number }
 export interface StatisticsSummary {
   days: StatisticsDay[]; totals: StatisticsValues;
   complete: Partial<Record<StatisticsMetric, boolean>>;
@@ -160,6 +162,49 @@ export function statisticsWindow(now = Date.now()) {
   const start = new Date(`${day}T00:00:00.000Z`).getTime() - 29 * 86400000;
   return { from: new Date(start).toISOString().slice(0, 10), to: day };
 }
+/** Raw source envelope: covers every local 30-day period using stable UTC cache/request keys. */
+export function statisticsCollectionWindow(now = Date.now()) {
+  const window = statisticsWindow(now);
+  return { from: new Date(Date.parse(`${window.from}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10), to: window.to };
+}
+/** Thirty local calendar days, represented in the existing absolute UTC-minute format. */
+export function statisticsCalendarWindow(now = Date.now()) {
+  const today = new Date(now);
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 30);
+  return { from: formatStatisticsBound(start.getTime()), to: formatStatisticsBound(end.getTime()) };
+}
+/** Local wall-clock grid, including both occurrences of a repeated fall-back hour. */
+function localBucketStarts(start: number, end: number, resolution: StatisticsResolution): number[] {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) return [];
+  const day = new Date(start);
+  day.setHours(0, 0, 0, 0);
+  const result: number[] = [];
+  const minutes = statisticsResolutionMs[resolution] / 60_000;
+  // Windows are bounded by the Statistics period; the guard also protects malformed callers.
+  for (let count = 0; day.getTime() < end && count < 33; count++) {
+    const next = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+    if (resolution === "1d") result.push(day.getTime());
+    else {
+      const repeatedMinutes = Math.max(0, next.getTimezoneOffset() - day.getTimezoneOffset());
+      for (let minute = 0; minute < 1440; minute += minutes) {
+        const candidate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minute);
+        const matches = (date: Date) => date.getFullYear() === day.getFullYear() && date.getMonth() === day.getMonth() && date.getDate() === day.getDate() && date.getHours() * 60 + date.getMinutes() === minute;
+        if (!matches(candidate)) continue; // Nonexistent spring-forward wall time.
+        result.push(candidate.getTime());
+        if (repeatedMinutes) {
+          const repeated = new Date(candidate.getTime() + repeatedMinutes * 60_000);
+          if (matches(repeated)) result.push(repeated.getTime());
+        }
+      }
+    }
+    day.setTime(next.getTime());
+  }
+  const sorted = [...new Set(result)].sort((a, b) => a - b);
+  let first = 0;
+  while (first + 1 < sorted.length && sorted[first + 1]! <= start) first++;
+  return sorted.slice(first).filter(time => time < end);
+}
 /**
  * Concrete UTC window for a preset (#168), as "YYYY-MM-DDTHH:mm" bounds.
  * The step is the preset's default resolution,
@@ -176,10 +221,30 @@ export function statisticsPresetWindow(
   now: number,
   period: { from: string; to: string },
   resolution?: StatisticsResolution,
+  options?: { calendar?: "local" },
 ): { from: string; to: string } {
   const duration = statisticsRangeMs[preset];
   const defaultStep = statisticsResolutionMs[clampStatisticsResolution(undefined, duration, preset)];
   const stepMs = resolution ? Math.max(defaultStep, statisticsResolutionMs[clampStatisticsResolution(resolution, duration, preset)]) : defaultStep;
+  if (options?.calendar === "local") {
+    const dayPreset = preset === "3d" || preset === "7d" || preset === "21d" || preset === "30d";
+    let end: number, start: number;
+    if (dayPreset) {
+      const today = new Date(now);
+      const nextDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      const firstDay = new Date(nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate() - Number.parseInt(preset));
+      end = nextDay.getTime(); start = firstDay.getTime();
+    } else {
+      const day = new Date(now);
+      day.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+      const step = statisticsResolutions.find(value => statisticsResolutionMs[value] === stepMs)!;
+      end = localBucketStarts(day.getTime(), tomorrow.getTime(), step).find(time => time > now) ?? tomorrow.getTime();
+      start = end - duration;
+    }
+    const periodStart = parseStatisticsBound(period.from, "start");
+    return { from: formatStatisticsBound(Number.isFinite(periodStart) ? Math.max(periodStart, start) : start), to: formatStatisticsBound(end) };
+  }
   const end = Math.floor(now / stepMs) * stepMs + stepMs;
   const periodStart = parseStatisticsBound(period.from, "start");
   const start = Number.isFinite(periodStart) ? Math.max(periodStart, end - duration) : end - duration;
@@ -235,7 +300,29 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     : "1d";
   const presetDays = filter.range === "3d" ? 3 : filter.range === "7d" ? 7 : filter.range === "21d" ? 21 : filter.range === "30d" ? 30 : null;
   let bucketFor: (date: string) => StatisticsValues | undefined;
-  if (concrete) {
+  if (filter.calendar === "local") {
+    let window = statisticsWindowMs(filter);
+    if (!concrete) {
+      // Date-only values retain their legacy UTC interpretation; callers use concrete
+      // absolute windows for local presets rather than reinterpreting saved preferences.
+      if (filter.range) window = statisticsWindowMs(statisticsPresetWindow(filter.range, filter.now ?? Date.now(), filter, resolution, { calendar: "local" }));
+    }
+    const starts = localBucketStarts(window.start, window.end, resolution);
+    for (const start of starts) {
+      // Keys remain absolute and unique, even when wall-clock labels repeat.
+      days.push({ date: new Date(start).toISOString().slice(0, 16).replace("T", " "), start, values: {} });
+    }
+    bucketFor = (date: string) => {
+      const time = Date.parse(date);
+      if (!Number.isFinite(time) || time < window.start || time >= window.end || !starts.length) return undefined;
+      let low = 0, high = starts.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (starts[middle]! <= time) low = middle + 1; else high = middle;
+      }
+      return days[low - 1]?.values;
+    };
+  } else if (concrete) {
     // Exact [from, to) window (#168): presets and custom datetime windows behave
     // identically. Buckets sit on the resolution's UTC grid; only records inside
     // the window count, so a partial first/last bucket holds only in-window data.

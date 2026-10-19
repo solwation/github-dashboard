@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { load, save } = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock('../src/lib/vault', () => ({ loadStatistics: load, saveStatistics: save }));
 import { parseStatisticsCache, previewStatistics, readStatisticsCache, writeStatisticsCache, STATISTICS_RETENTION_MS } from '../src/lib/statistics-cache';
-import { statisticsWindow, type StatisticsData } from '../src/lib/statistics';
+import { statisticsCollectionWindow, statisticsWindow, type StatisticsData } from '../src/lib/statistics';
 const now = Date.parse('2026-10-16T15:00:00Z');
 function entry(repository = 'sample/repo'): StatisticsData {
-  return { repository, ...statisticsWindow(now), fetchedAt: now, issues: { data: [], complete: true, fetchedAt: now }, events: null, commits: { data: [], complete: true, fetchedAt: now, historyVerifiedAt: now }, changes: null, pulls: null, temporary: [] };
+  return { repository, ...statisticsCollectionWindow(now), fetchedAt: now, issues: { data: [], complete: true, fetchedAt: now }, events: null, commits: { data: [], complete: true, fetchedAt: now, historyVerifiedAt: now }, changes: null, pulls: null, temporary: [] };
 }
 beforeEach(() => { load.mockReset(); save.mockReset().mockResolvedValue(undefined); });
 describe('bounded credential-bound statistics snapshots', () => {
@@ -23,9 +23,22 @@ describe('bounded credential-bound statistics snapshots', () => {
   });
   it('never labels missing new days as complete during immediate cached preview', () => {
     const preview = previewStatistics(entry(), now + 2 * 86400000);
-    expect(preview.from).toBe('2026-09-19'); expect(preview.to).toBe('2026-10-18');
+    expect(preview.from).toBe('2026-09-18'); expect(preview.to).toBe('2026-10-18');
     expect(preview.issues!.complete).toBe(false); expect(preview.commits!.complete).toBe(false);
     expect(preview.fetchedAt).toBe(now);
+  });
+  it('preserves old thirty-day snapshots as partial until the missing source day is fetched', () => {
+    const legacy = { ...entry(), ...statisticsWindow(now) };
+    const parsed = parseStatisticsCache({ version: 1, repositories: [legacy] }, now)[0]!;
+    expect(parsed.from).toBe(legacy.from);
+    expect(parsed.issues!.complete).toBe(false);
+    expect(parsed.commits!.complete).toBe(false);
+    expect(previewStatistics(parsed, now).issues!.complete).toBe(false);
+    const full = parseStatisticsCache({ version: 1, repositories: [entry()] }, now)[0]!;
+    expect(full.issues!.complete).toBe(true);
+    expect(full.commits!.complete).toBe(true);
+    // Parsing never mutates the authenticated snapshot supplied by the caller.
+    expect(legacy.issues!.complete).toBe(true);
   });
   it('keeps filters out of the raw repository cache, compacts unused private fields and bounds repository count', async () => {
     const data = entry();

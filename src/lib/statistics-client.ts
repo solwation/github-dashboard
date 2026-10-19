@@ -1,6 +1,6 @@
 import { previewStatistics, validStatisticsRepository, STATISTICS_RETENTION_MS } from "./statistics-cache";
 import {
-  commitContributor, commitDate, statisticsWindow,
+  commitContributor, commitDate, statisticsCollectionWindow,
   type StatisticsChange, type StatisticsCommit, type StatisticsData, type StatisticsEvent,
   type StatisticsIssue, type StatisticsPull, type StatisticsSource, type StatisticsSourceName,
 } from "./statistics";
@@ -69,7 +69,7 @@ export class StatisticsCollector {
   }
   async load(repository: string, now = Date.now(), force = false): Promise<StatisticsData> {
     if (!validStatisticsRepository(repository)) throw new Error("Invalid repository");
-    const window = statisticsWindow(now), key = `${repository}:${window.from}`;
+    const window = statisticsCollectionWindow(now), key = `${repository}:${window.from}`;
     if (this.disposed) throw new Error("Statistics session ended");
     const existing = this.cache.get(key) || [...this.cache.values()].filter(data => data.repository === repository && data.fetchedAt <= now && now - data.fetchedAt < STATISTICS_RETENTION_MS).sort((a, b) => b.fetchedAt - a.fetchedAt)[0];
     if (!force && existing && existing.from === window.from && existing.fetchedAt <= now && !this.restored.has(key) && now - existing.fetchedAt < cacheDuration) return existing;
@@ -87,7 +87,7 @@ export class StatisticsCollector {
     return work;
   }
   private async collect(repository: string, now: number, previous?: StatisticsData, force = false): Promise<StatisticsData> {
-    const window = statisticsWindow(now), root = `/repos/${repository}`;
+    const window = statisticsCollectionWindow(now), root = `/repos/${repository}`;
     const since = `${window.from}T00:00:00Z`, until = new Date(now).toISOString();
     const temporary: StatisticsSourceName[] = [];
     async function unique<T extends { id: number }>(source: StatisticsSource<T>) {

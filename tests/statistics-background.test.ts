@@ -5,7 +5,7 @@ import {
   type BackgroundEnvironment, type BackgroundModules, type BackgroundStatisticsClient, type RateLimitInfo,
 } from "../src/lib/statistics-background";
 import { StatisticsCollector } from "../src/lib/statistics-client";
-import { statisticsWindow, type StatisticsData } from "../src/lib/statistics";
+import { statisticsCollectionWindow, type StatisticsData } from "../src/lib/statistics";
 
 const now = Date.parse("2026-10-16T15:00:00Z");
 const issue = { id: 1, number: 1, created_at: "2026-10-10T00:00:00Z", updated_at: "2026-10-13T00:00:00Z", labels: [], user: { login: "alice" } };
@@ -42,7 +42,7 @@ function harness(options: { repositories?: string[]; cache?: StatisticsData[]; o
     createCollector: source => new StatisticsCollector(source),
     read: async () => cache,
     write: async (_token, entries) => { writes.push(entries); cache = entries; },
-    window: statisticsWindow,
+    window: statisticsCollectionWindow,
   };
   const environment: BackgroundEnvironment = {
     now: () => clock,
@@ -97,7 +97,7 @@ describe("background statistics scheduling", () => {
   });
   it("hands cached statistics once per run and each new collection to the board (#141)", async () => {
     const delivered: string[] = [];
-    const old = { repository: "sample/two", ...statisticsWindow(now - 1000), fetchedAt: now - 1000, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] } as StatisticsData;
+    const old = { repository: "sample/two", ...statisticsCollectionWindow(now - 1000), fetchedAt: now - 1000, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] } as StatisticsData;
     const h = harness({ repositories: ["sample/one", "sample/two"], cache: [old], collected: data => { delivered.push(`${data.repository}@${data.fetchedAt === old.fetchedAt ? "cache" : "new"}`); throw new Error("ignored"); } });
     h.background.start(0);
     await h.cycle();
@@ -108,7 +108,7 @@ describe("background statistics scheduling", () => {
   });
   it("hands cached statistics over immediately on start, while collection waits for quiet input, and again on wake after another writer refreshed them (#148)", async () => {
     const delivered: string[] = [];
-    const entry = (fetchedAt: number) => ({ repository: "sample/one", ...statisticsWindow(fetchedAt), fetchedAt, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] }) as StatisticsData;
+    const entry = (fetchedAt: number) => ({ repository: "sample/one", ...statisticsCollectionWindow(fetchedAt), fetchedAt, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] }) as StatisticsData;
     const h = harness({ cache: [entry(now - 1000)], collected: data => { delivered.push(`${data.repository}@${now - data.fetchedAt}`); } });
     h.background.start();
     for (let i = 0; i < 10; i++) await Promise.resolve();
@@ -143,8 +143,8 @@ describe("background statistics scheduling", () => {
     expect(h.timers[0]!.at - (now + 2 * BACKGROUND_PORTION_GAP_MS)).toBe(BACKGROUND_IDLE_RECHECK_MS);
   });
   it("selects missing, stale or outdated repositories within the ten repository limit", () => {
-    const window = statisticsWindow(now);
-    const entry = (repository: string, fetchedAt: number, extra: Partial<StatisticsData> = {}) => ({ repository, ...statisticsWindow(fetchedAt), fetchedAt, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [], ...extra }) as StatisticsData;
+    const window = statisticsCollectionWindow(now);
+    const entry = (repository: string, fetchedAt: number, extra: Partial<StatisticsData> = {}) => ({ repository, ...statisticsCollectionWindow(fetchedAt), fetchedAt, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [], ...extra }) as StatisticsData;
     const failures = new Map<string, number>();
     expect(nextBackgroundRepository(["a/a", "b/b"], [entry("a/a", now - 1000)], window, now, failures)).toBe("b/b");
     expect(nextBackgroundRepository(["a/a", "b/b"], [entry("a/a", now - BACKGROUND_STALE_MS - 1), entry("b/b", now - BACKGROUND_STALE_MS - 5)], window, now, failures)).toBe("b/b");
@@ -155,7 +155,7 @@ describe("background statistics scheduling", () => {
     expect(nextBackgroundRepository(["b/b"], [], window, now, failures)).toBeNull();
   });
   it("orders writes so unselected repositories are evicted before selected ones", async () => {
-    const old = { repository: "other/repo", ...statisticsWindow(now), fetchedAt: now - 1000, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] } as StatisticsData;
+    const old = { repository: "other/repo", ...statisticsCollectionWindow(now), fetchedAt: now - 1000, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [] } as StatisticsData;
     const h = harness({ cache: [old] });
     h.background.start(0);
     await h.cycle();
