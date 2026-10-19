@@ -5,7 +5,7 @@ import IssueDetails from "./IssueDetails.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
-import { issueType, type IssueType } from "../lib/issue-type";
+import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { repositoryColor } from "../lib/repository-color";
@@ -140,6 +140,8 @@ const col = computed(() => column(props.issue, props.rules));
 const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
 const typeIcons = { bug: Bug, security: ShieldAlert, feature: Star, docs: FileText, question: CircleQuestionMark, help: HandHelping, chore: Wrench };
 const type = computed<IssueType | null>(() => issueType(props.issue.labels));
+// The label the type icon stands for is not repeated as a chip on the card (#197).
+const typeLabel = computed(() => issueTypeLabel(props.issue.labels));
 const typeTitle = computed(() => {
   if (!type.value) return undefined;
   const name = {
@@ -150,7 +152,7 @@ const typeTitle = computed(() => {
 });
 const rank = computed(() => priority(props.issue, props.rules));
 const visibleLabels = computed(() =>
-  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, 4),
+  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value).slice(0, 4),
 );
 </script>
 <template>
@@ -177,7 +179,7 @@ const visibleLabels = computed(() =>
         /></template>
         #{{ issue.number }}</span
       >
-      <span class="labels">
+      <span v-if="(repository && showRepository) || visibleLabels.length" class="labels">
         <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name">{{ repository }}</span></span>
         <span
           v-for="label in visibleLabels"

@@ -23,3 +23,10 @@ export function issueType(labels: readonly { name: string }[]): IssueType | null
   const names = new Set(labels.map((l) => normalize(l.name)));
   return ISSUE_TYPE_ORDER.find((type) => NAMES[type].some((n) => names.has(n))) ?? null;
 }
+
+// The single label the type icon was derived from (#197), so cards can hide it. Same matching and priority as issueType;
+// with several labels of the winning type, the first one in label order is consumed.
+export function issueTypeLabel<T extends { name: string }>(labels: readonly T[]): T | null {
+  const type = issueType(labels);
+  return type ? labels.find((l) => NAMES[type].includes(normalize(l.name))) ?? null : null;
+}

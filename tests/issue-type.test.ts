@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { issueType } from "../src/lib/issue-type";
+import { issueType, issueTypeLabel } from "../src/lib/issue-type";
 const l = (...names: string[]) => names.map((name) => ({ name }));
 describe("issueType", () => {
   it.each([
@@ -23,5 +23,21 @@ describe("issueType", () => {
   it("returns null without a known type label", () => {
     expect(issueType([])).toBeNull();
     expect(issueType(l("priority: high", "in-progress", "wontfix"))).toBeNull();
+  });
+});
+describe("issueTypeLabel", () => {
+  it("returns the label the type was derived from, matching issueType priority", () => {
+    const labels = l("priority: high", "docs", "Bug", "enhancement");
+    expect(issueTypeLabel(labels)).toBe(labels[2]);
+    const f = l("x", "Feature Request");
+    expect(issueTypeLabel(f)).toBe(f[1]);
+  });
+  it("consumes only the first label when several match the winning type", () => {
+    const labels = l("defect", "bug");
+    expect(issueTypeLabel(labels)).toBe(labels[0]);
+  });
+  it("returns null without a type", () => {
+    expect(issueTypeLabel([])).toBeNull();
+    expect(issueTypeLabel(l("wontfix"))).toBeNull();
   });
 });

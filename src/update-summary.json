@@ -1,10 +1,10 @@
 {
-  "baseCommit": "10447276cba201a844f85f0dd929e1c486d06172",
+  "baseCommit": "7bb1bc23b3bdbde292ff6e9b526908611130f1a0",
   "summary": {
-    "sv": "Tydligare hover- och fokusmarkering för vänstermenyn (Overview, Statistics) och andra klickbara delar i gränssnittet.",
-    "en": "Clearer hover and focus feedback for the left menu (Overview, Statistics) and other clickable parts of the interface."
+    "sv": "Korten visar inte längre den label som typikonen redan representerar (t.ex. bug eller enhancement); övriga labels är oförändrade.",
+    "en": "Cards no longer show the label the type icon already represents (e.g. bug or enhancement); all other labels are unchanged."
   },
   "issues": [
-    196
+    197
   ]
 }

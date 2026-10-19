@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Korten upprepar inte längre typlabeln (bug, enhancement med flera) som ikonen redan visar; övriga labels visas som förut.",
+          "en": "Cards no longer repeat the type label (bug, enhancement and so on) that the icon already shows; other labels appear as before."
+        },
+        "issues": [197]
+      },
+      {
+        "text": {
           "sv": "Tydligare hover- och fokusmarkering i hela gränssnittet, bland annat Overview och Statistics i vänstermenyn, i samma stil som repositories.",
           "en": "Clearer hover and focus feedback across the interface, including Overview and Statistics in the left menu, in the same style as repositories."
         },
