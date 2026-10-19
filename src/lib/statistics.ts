@@ -130,9 +130,14 @@ export function statisticsDurationMs(filter: Pick<StatisticsFilter, "from" | "to
   return Math.min(30, Math.round((end - start) / 86_400_000) + 1) * 86_400_000;
 }
 export function allowedStatisticsResolutions(durationMs: number): StatisticsResolution[] {
+  // Thirty local calendar days can span 718–722 hours (e.g. Troll changes by
+  // two hours). Apply one duration policy to presets, custom windows and saved
+  // preferences; the two-hour tolerance deliberately includes 29d22h windows.
+  const minimumStep = durationMs >= statisticsRangeMs["30d"] - 2 * 3_600_000
+    ? statisticsResolutionMs["6h"] : 0;
   const valid = statisticsResolutions.filter(res => {
     const step = statisticsResolutionMs[res];
-    return step * 2 <= durationMs && durationMs / step <= MAX_STATISTICS_BUCKETS;
+    return step >= minimumStep && step * 2 <= durationMs && durationMs / step <= MAX_STATISTICS_BUCKETS;
   });
   return valid.length ? valid : ["1d"];
 }

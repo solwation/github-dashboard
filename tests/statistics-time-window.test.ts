@@ -130,7 +130,7 @@ describe("statistics preferences with UTC clock time (#168)", () => {
     expect(normalizeStatisticsPreference({ ...preference, from: "2026-10-15", to: "2026-10-16T12:00" }, period))
       .toEqual({ ...preference, from: "2026-10-15", to: "2026-10-16T12:00" });
     // Resolution is clamped against the concrete duration, not the preset label.
-    expect(normalizeStatisticsPreference({ ...preference, from: "2026-09-17T00:00", to: "2026-10-17T00:00", range: "8h", resolution: "1m" }, period).resolution).toBe("1h");
+    expect(normalizeStatisticsPreference({ ...preference, from: "2026-09-17T00:00", to: "2026-10-17T00:00", range: "8h", resolution: "1m" }, period).resolution).toBe("6h");
   });
   it("accepts transferred datetime windows and rejects malformed ones", () => {
     const statistics = { "sample/repo": { from: "2026-10-15T16:00", to: "2026-10-16T16:00", label: "", contributor: "", metric: "closed", range: "24h" } };

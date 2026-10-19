@@ -105,9 +105,9 @@ describe("statistics calculations", () => {
   it("bounds resolutions by duration and buckets sub-day and preset windows accurately", () => {
     expect(DEFAULT_STATISTICS_RANGE).toBe("3d");
     const duration30d = statisticsDurationMs({ ...filter, range: "30d" });
-    expect(allowedStatisticsResolutions(duration30d)).toEqual(["1h", "6h", "12h", "1d"]);
+    expect(allowedStatisticsResolutions(duration30d)).toEqual(["6h", "12h", "1d"]);
     expect(allowedStatisticsResolutions(duration30d)).not.toContain("1m");
-    expect(clampStatisticsResolution("1m", duration30d, "30d")).toBe("1h");
+    expect(clampStatisticsResolution("1m", duration30d, "30d")).toBe("6h");
 
     const duration8h = statisticsDurationMs({ ...filter, range: "8h" });
     expect(allowedStatisticsResolutions(duration8h)).toContain("1m");

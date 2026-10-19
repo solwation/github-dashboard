@@ -116,9 +116,9 @@ describe("browser-local statistics without changing absolute UTC storage", () =>
   });
   it("does not merge the final partial bucket of an unaligned custom window", () => {
     process.env.TZ = "Europe/Stockholm";
-    const result = summary("2026-09-01T00:30:00Z", "2026-10-01T00:30:00Z", ["2026-09-30T23:45:00Z", "2026-10-01T00:15:00Z"], "1h");
+    const result = summary("2026-09-24T00:30:00Z", "2026-10-01T00:30:00Z", ["2026-09-30T23:45:00Z", "2026-10-01T00:15:00Z"], "1h");
     // Like existing UTC windows, a partial first and last bucket can add one boundary bucket.
-    expect(result.days).toHaveLength(721);
+    expect(result.days).toHaveLength(169);
     expect(result.days.slice(-2).map(day => day.values.created)).toEqual([1, 1]);
   });
   it("aligns half-hour-zone subday presets to local wall-clock grid", () => {

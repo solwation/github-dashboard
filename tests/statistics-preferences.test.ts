@@ -37,7 +37,7 @@ describe("repository statistics preferences", () => {
       metric: "created",
       metrics: ["created", "closed"],
       range: "30d",
-      resolution: "1h",
+      resolution: "6h",
     });
     const fine8h = normalizeStatisticsPreference(
       { ...preference, range: "8h", resolution: "1m" },
