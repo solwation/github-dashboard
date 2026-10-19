@@ -41,7 +41,7 @@ test('encrypted statistics restore before revalidation, extend two days with ove
   await page.getByRole('checkbox', { name: repo.full_name }).check();
   await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
   await page.getByRole('link', { name: 'Statistik', exact: true }).click();
-  await page.getByRole('button', { name: '30 dagar', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('30d');
   const total = page.locator('.statistics-total').filter({ has: page.getByText('Commits', { exact: true }) });
   await expect(total.locator('strong')).toHaveText('2');
   await expect.poll(() => hasStatistics(page)).toBe(true);

@@ -16,3 +16,13 @@ export function parseBrowserDateTime(value: string): number {
   date.setHours(Number(hour), Number(minute), 0, 0);
   return formatBrowserDateTime(date.getTime()) === value ? date.getTime() : NaN;
 }
+
+/** A wall-clock time that occurs twice needs an offset even with a shared zone label. */
+export function isAmbiguousBrowserTime(ms: number): boolean {
+  if (!Number.isFinite(ms)) return false;
+  const date = new Date(ms), local = formatBrowserDateTime(ms), offset = date.getTimezoneOffset();
+  return [-86_400_000, 86_400_000].some(delta => {
+    const otherOffset = new Date(ms + delta).getTimezoneOffset();
+    return otherOffset !== offset && formatBrowserDateTime(ms + (otherOffset - offset) * 60_000) === local;
+  });
+}

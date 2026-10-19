@@ -33,7 +33,8 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     const to = page.getByLabel('Till (lokal tid)', { exact: true });
     await expect(from).toHaveValue(zone === 'Europe/Stockholm' ? '2026-10-17T00:00' : '2026-10-16T00:00');
     await expect(to).toHaveValue(zone === 'Europe/Stockholm' ? '2026-10-20T00:00' : '2026-10-19T00:00');
-    await expect(page.locator('.statistics-period-label')).toContainText(zone);
+    await expect(page.locator('.statistics-period-label')).not.toContainText(/GMT|UTC|Europe|America/);
+    await expect(page.locator('.account-timezone')).toHaveText(zone);
     // The same 22:30Z issue belongs to Oct19 in Stockholm and Oct18 in Los Angeles.
     const created = page.getByRole('group', { name: 'Mätvärden i diagrammet' }).getByRole('button', { name: /^Skapade issues/ });
     await created.click();
@@ -42,7 +43,7 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     await expect(page.getByRole('tooltip')).toContainText(zone === 'Europe/Stockholm' ? '19 okt.' : '18 okt.');
     await expect(page.getByRole('tooltip').locator('.chart-selection-value').filter({ hasText: 'Skapade issues' }).locator('b')).toHaveText('1');
     await expect(from).toBeHidden();
-    await page.getByRole('button', { name: 'Anpassat', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('custom');
     await expect(from).toBeVisible();
     await expect(from).toBeFocused();
     await from.fill('2026-10-18T10:00');
@@ -54,7 +55,7 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     await expect(from).toHaveValue('2026-10-18T10:00');
     await expect(from).toBeVisible();
     await expect(to).toHaveValue('2026-10-18T11:00');
-    await expect(page.locator('.statistics-range-custom')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('combobox', { name: 'Tidsintervall', exact: true })).toHaveValue('custom');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // Import the saved absolute window on a device in the other zone: only display changes.
     const saved = await readSettings(page, login);
@@ -75,10 +76,10 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     await expect(second.getByLabel('Från (lokal tid)', { exact: true })).toHaveValue(displayedFrom);
     expect((await readSettings(second, login)).preferences.statistics[name].from).toBe(expected.from);
     await other.close();
-    await page.getByRole('button', { name: '7 dagar', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('7d');
     await expect(from).toBeHidden();
     await page.reload();
-    await expect(page.getByRole('button', { name: '7 dagar', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('combobox', { name: 'Tidsintervall', exact: true })).toHaveValue('7d');
     await expect(from).toBeHidden();
     await expect(to).toBeHidden();
     await expect(page.locator('.statistics-period-label')).toBeVisible();
@@ -94,19 +95,19 @@ test('spring gap is rejected and repeated autumn hours have distinct offsets', a
   await page.getByRole('button', { name: 'Uppdatera statistik', exact: true }).click();
   const from = page.getByLabel('Från (lokal tid)', { exact: true });
   const before = await from.inputValue();
-  await page.getByRole('button', { name: 'Anpassat', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('custom');
   await from.fill('2026-03-29T02:30');
   expect(await from.evaluate((input: HTMLInputElement) => input.validity.customError)).toBe(true);
-  await page.getByRole('button', { name: '3 dagar', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('3d');
   await expect(from).toBeHidden();
-  await page.getByRole('button', { name: 'Anpassat', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('custom');
   await expect(from).toBeFocused();
   expect(await from.evaluate((input: HTMLInputElement) => input.validity.customError)).toBe(false);
   await page.reload();
   await expect(from).toHaveValue(before);
   await page.clock.setSystemTime(new Date('2026-10-25T04:00:00Z'));
   await page.getByRole('button', { name: 'Uppdatera statistik', exact: true }).click();
-  await page.getByRole('button', { name: '8h', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tidsintervall', exact: true }).selectOption('8h');
   await page.getByRole('combobox', { name: 'Upplösning', exact: true }).selectOption('1h');
   const slider = page.getByRole('slider');
   const titles = await page.locator('.statistics-chart > svg circle title').allTextContents();
@@ -126,6 +127,7 @@ test('spring gap is rejected and repeated autumn hours have distinct offsets', a
   }, { login, saved });
   await page.reload();
   await expect(from).toHaveValue('2026-10-25T02:30');
+  await expect(page.locator('.statistics-period-label')).toContainText('02:30 GMT+1 –');
   await expect(from).toBeVisible();
   await page.getByLabel('Till (lokal tid)', { exact: true }).fill('2026-10-25T04:30');
   await expect.poll(async () => (await readSettings(page, login))?.preferences?.statistics?.[name]?.from).toBe('2026-10-25T01:30');

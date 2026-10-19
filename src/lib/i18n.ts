@@ -126,6 +126,7 @@ export const english: Record<string, string> = {
   "Från (UTC)": "From (UTC)",
   "Till (UTC)": "To (UTC)",
   "Anpassat": "Custom",
+  "Visar {period}": "Showing {period}",
   "Återställ period": "Reset period",
   "Demostatistiken visar fiktiva data.": "Demo statistics use fictional data.",
   "Välj upp till fem repositories för att jämföra.": "Select up to five repositories to compare.",

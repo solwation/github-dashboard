@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
-import { RefreshCw, BarChart3 } from "@lucide/vue";
+import { RefreshCw, BarChart3, RotateCcw } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { StatisticsCollector, type StatisticsClient } from "../lib/statistics-client";
@@ -12,7 +12,7 @@ import {
 } from "../lib/statistics";
 import { readStatisticsCache, writeStatisticsCache } from "../lib/statistics-cache";
 import { demoStatistics } from "../lib/statistics-demo";
-import { browserTimeZone, formatBrowserDateTime, parseBrowserDateTime } from "../lib/browser-time";
+import { formatBrowserDateTime, parseBrowserDateTime, isAmbiguousBrowserTime } from "../lib/browser-time";
 import StatisticsRepository from "./StatisticsRepository.vue";
 const { t, locale } = useLanguage();
 const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
@@ -111,23 +111,25 @@ const timeSpan = computed(() => ({
   range: activeRange.value,
   resolution: activeResolution.value,
 }));
-const boundFormat = computed(() => new Intl.DateTimeFormat(locale.value, {
-  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "shortOffset",
-}));
+function formatPeriodBound(ms: number) {
+  return new Intl.DateTimeFormat(locale.value, {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    ...(isAmbiguousBrowserTime(ms) ? { timeZoneName: "shortOffset" as const } : {}),
+  }).format(ms);
+}
 const periodText = computed(() => {
   if (invalidRange.value) return "";
   const { start, end } = statisticsWindowMs({ from: globalFrom.value, to: globalTo.value });
-  return `${boundFormat.value.format(start)} – ${boundFormat.value.format(end)}`;
+  return `${formatPeriodBound(start)} – ${formatPeriodBound(end)}`;
 });
-const timeZone = browserTimeZone();
 const localFrom = computed(() => formatBrowserDateTime(parseStatisticsBound(globalFrom.value, "start")));
 const localTo = computed(() => formatBrowserDateTime(parseStatisticsBound(globalTo.value, "end")));
-const periodLabel = computed(() => periodText.value
-  ? t("Visar {period} · {zone} · upplösning {resolution}", { period: periodText.value, zone: timeZone, resolution: t(resolutionNames[activeResolution.value]) })
-  : "");
-const subtitle = computed(() => periodText.value
-  ? t("{period} · {zone}, repository för repository.", { period: periodText.value, zone: timeZone })
-  : t("Repository för repository."));
+const periodLabel = computed(() => periodText.value ? t("Visar {period}", { period: periodText.value }) : "");
+function changeRange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value;
+  if (value === "custom") void selectCustom();
+  else selectRange(value as StatisticsRangePreset);
+}
 const resettable = computed(() => activeRange.value !== DEFAULT_STATISTICS_RANGE || !!globalResolution.value);
 
 function applyGlobalTimeSpan() {
@@ -322,30 +324,29 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
-    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1><p class="statistics-subtitle">{{ subtitle }}</p></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
+    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
     <div v-if="repositories.length && !initialLoading" class="statistics-time-controls" role="region" :aria-label="t('Tidsintervall')">
-      <div class="statistics-time-presets">
-        <div class="statistics-range-presets" role="group" :aria-label="t('Tidsintervall')">
-          <button v-for="preset in statisticsRanges" :key="preset" type="button" class="button small statistics-range-preset"
-            :class="{ active: activeRange === preset }" :aria-pressed="activeRange === preset"
-            @click="selectRange(preset)">{{ t(rangeNames[preset]) }}</button>
-          <button type="button" class="button small statistics-range-preset statistics-range-custom"
-            :class="{ active: !activeRange }" :aria-pressed="!activeRange" @click="selectCustom">{{ t("Anpassat") }}</button>
-        </div>
-        <div class="statistics-resolution-select">
-          <label>{{ t("Upplösning") }}
+      <div class="statistics-time-row">
+        <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
+        <div class="statistics-time-selects">
+          <label class="statistics-range-select">{{ t("Tidsintervall") }}
+            <select :value="activeRange || 'custom'" @change="changeRange">
+              <option v-for="preset in statisticsRanges" :key="preset" :value="preset">{{ t(rangeNames[preset]) }}</option>
+              <option value="custom">{{ t("Anpassat") }}</option>
+            </select>
+          </label>
+          <label class="statistics-resolution-select">{{ t("Upplösning") }}
             <select :value="activeResolution" @change="selectResolution(($event.target as HTMLSelectElement).value as StatisticsResolution)">
               <option v-for="res in statisticsResolutions" :key="res" :value="res" :disabled="!allowedResolutions.has(res)">{{ t(resolutionNames[res]) }}</option>
             </select>
           </label>
+          <button v-if="resettable" type="button" class="icon-button statistics-time-reset" :aria-label="t('Återställ period')" :title="t('Återställ period')" @click="resetTimeSpan"><RotateCcw :size="15" aria-hidden="true" /></button>
         </div>
       </div>
       <div v-show="!activeRange" class="statistics-time-dates">
         <label>{{ t("Från (lokal tid)") }}<input ref="fromInput" :value="localFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'start')" /></label>
         <label>{{ t("Till (lokal tid)") }}<input ref="toInput" :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
       </div>
-      <button v-if="resettable" type="button" class="button small statistics-time-reset" @click="resetTimeSpan">{{ t("Återställ period") }}</button>
-      <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
     </div>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
@@ -372,7 +373,7 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
         <li>{{ t("Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.") }}</li>
         <li>{{ t("Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från den senast hämtade delen, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.") }}</li>
       </ul></details>
-      <p v-if="historyVerifiedAt">{{ t("Äldsta omvalideringen av återanvänd commithistorik: {time}.", { time: new Date(historyVerifiedAt).toLocaleString(locale, { timeZoneName: 'short' }) }) }}</p>
+      <p v-if="historyVerifiedAt">{{ t("Äldsta omvalideringen av återanvänd commithistorik: {time}.", { time: new Date(historyVerifiedAt).toLocaleString(locale) }) }}</p>
       <p v-if="partial" class="statistics-coverage">{{ t("Delvis data: markerade värden omfattar det underlag som hann hämtas inom sidans gränser. De är inte fullständiga totalsummor.") }}</p>
     </footer>
   </section>
@@ -381,20 +382,18 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-view { width: 100%; min-width: 0; }
 .statistics-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 25px; }
 .statistics-heading h1 { margin: 6px 0; font-size: 32px; }
-.statistics-heading p { margin: 0; color: var(--muted); font-size: 14px; }
-.statistics-time-controls { margin-bottom: 24px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 14px; }
-.statistics-time-presets { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; }
-.statistics-range-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.statistics-range-preset.active { background: var(--green); color: white; border-color: var(--green); }
-.statistics-resolution-select label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.statistics-resolution-select select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
-.statistics-time-reset { align-self: flex-start; }
+.statistics-time-controls { margin-bottom: 24px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; }
+.statistics-time-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; min-width: 0; }
+.statistics-time-selects { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; gap: 12px; margin-left: auto; }
+.statistics-time-selects label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.statistics-time-selects select { min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-weight: 400; background: var(--bg); color: var(--text); }
+.statistics-time-reset { flex-shrink: 0; min-width: 32px; min-height: 32px; }
 .statistics-time-dates { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; border-top: 1px solid var(--line); padding-top: 14px; }
 .statistics-time-dates label { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 0 1 210px; font-size: 12px; font-weight: 600; color: var(--muted); }
 /* #160/#169: iOS gives native date/time inputs an intrinsic width; reset it so they never overflow. */
 .statistics-time-dates input[type="datetime-local"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 36px; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; font-weight: 400; background: var(--bg); color: var(--text); }
 .statistics-time-dates input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
-.statistics-period-label { margin: -2px 0 0; color: var(--text); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.statistics-period-label { min-width: 0; margin: 0; color: var(--text); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .statistics-message { margin: 0 0 20px; padding: 12px 14px; border-radius: 8px; background: #fff0f0; color: #b91c1c; font-size: 13px; }
 :root[data-theme="dark"] .statistics-message { background: #3b1414; color: #fca5a5; }
 .statistics-footnotes { border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
@@ -412,10 +411,16 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-loading-spinner { color: var(--green); animation: statistics-spin 1s linear infinite; }
 @keyframes statistics-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }
+@media (max-width: 1100px) {
+  .statistics-time-row { flex-wrap: wrap; }
+}
 @media (max-width: 650px) {
+  .statistics-time-selects { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 10px 12px; }
+  .statistics-time-selects label { flex: 1 1 100px; flex-wrap: wrap; }
+  .statistics-time-selects select { flex: 1 1 auto; max-width: 100%; }
+
   .statistics-heading { flex-direction: column; align-items: stretch; }
   .statistics-heading h1 { font-size: 26px; }
-  .statistics-time-presets { flex-direction: column; align-items: stretch; }
   .statistics-time-dates { flex-direction: column; align-items: stretch; }
   .statistics-time-dates label { flex: 0 0 auto; }
 }

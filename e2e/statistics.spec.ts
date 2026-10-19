@@ -26,10 +26,11 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(card(design, "Stängda issues").locator("strong")).toHaveText("4");
   await expect(card(weekend, "Stängda issues").locator("strong")).toHaveText("2");
   const timeControls = page.locator(".statistics-time-controls");
-  const rangeGroup = timeControls.getByRole("group", { name: "Tidsintervall" });
-  await expect(rangeGroup.locator("button")).toHaveText(["8h", "12h", "24h", "3 dagar", "7 dagar", "3 veckor", "30 dagar", "Anpassat"]);
-  await expect(rangeGroup.getByRole("button", { name: "3 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(rangeGroup.getByRole("button", { name: "Anpassat", exact: true })).toHaveAttribute("aria-pressed", "false");
+  const rangeSelect = timeControls.getByRole("combobox", { name: "Tidsintervall", exact: true });
+  const resolutionSelect = timeControls.getByRole("combobox", { name: "Upplösning", exact: true });
+  await expect(rangeSelect.locator("option")).toHaveText(["8h", "12h", "24h", "3 dagar", "7 dagar", "3 veckor", "30 dagar", "Anpassat"]);
+  await expect(rangeSelect).toHaveValue("3d");
+  await expect(rangeSelect).not.toHaveValue("custom");
   // #169: pickers show the preset's exact UTC window and the subtitle/label describe it.
   const fromPicker = timeControls.getByLabel("Från (lokal tid)", { exact: true });
   const toPicker = timeControls.getByLabel("Till (lokal tid)", { exact: true });
@@ -39,13 +40,20 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(toPicker).toBeHidden();
   const pickerMs = async (picker: Locator) => Date.parse(`${await picker.inputValue()}:00Z`);
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(3 * 86_400_000);
-  await expect(page.locator(".statistics-heading p")).not.toContainText("30 dagarna");
-  await expect(page.locator(".statistics-heading p")).toContainText("· UTC, repository för repository.");
-  await expect(periodLabel).toHaveText(/^Visar .+ – .+ · UTC · upplösning 1 dag$/);
+  await expect(page.locator(".statistics-heading p")).toHaveCount(0);
+  await expect(periodLabel).toHaveText(/^Visar .+ – .+$/);
+  await expect(periodLabel).not.toContainText(/GMT|UTC|upplösning/);
+  await expect(timeControls.locator('.statistics-range-presets button')).toHaveCount(0);
+  const [summaryBox, rangeBox, resolutionBox, controlsBox] = await Promise.all([periodLabel, rangeSelect, resolutionSelect, timeControls].map(element => element.boundingBox()));
+  expect(summaryBox!.x + summaryBox!.width).toBeLessThan(rangeBox!.x);
+  expect(rangeBox!.x + rangeBox!.width).toBeLessThan(resolutionBox!.x);
+  expect(Math.abs(summaryBox!.y + summaryBox!.height / 2 - (rangeBox!.y + rangeBox!.height / 2))).toBeLessThan(3);
+  expect(controlsBox!.height).toBeLessThanOrEqual(70);
+  await page.screenshot({ path: test.info().outputPath("statistics-time-row-desktop.png") });
   await expect(timeControls.getByRole("button", { name: "Återställ period", exact: true })).toHaveCount(0);
   // Per-graph time controls and resolution selects are removed in favor of the global controls (#164)
-  await expect(design.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
-  await expect(weekend.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
+  await expect(design.locator(".statistics-range-select, .statistics-resolution-select")).toHaveCount(0);
+  await expect(weekend.locator(".statistics-range-select, .statistics-resolution-select")).toHaveCount(0);
   // #171 / #173: heading follows resolution, legend names the metric and point values are available in a popover.
   await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per dag");
   await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues"]);
@@ -77,9 +85,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
   await expect(card(design, "Commits").locator("strong")).toHaveText("6");
   await expect(card(design, "Skapade issues").locator("strong")).toHaveText("2");
-  await rangeGroup.getByRole("button", { name: "30 dagar", exact: true }).click();
-  await expect(rangeGroup.getByRole("button", { name: "30 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
-  const resolutionSelect = timeControls.getByRole("combobox", { name: "Upplösning", exact: true });
+  await rangeSelect.selectOption("30d");
+  await expect(rangeSelect).toHaveValue("30d");
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", true);
   await expect(resolutionSelect.locator('option[value="1h"]')).toHaveJSProperty("disabled", false);
   await day.focus(); await page.keyboard.press("End");
@@ -90,43 +97,43 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   const xLabels = design.locator(".statistics-chart .chart-x-label");
   expect(await xLabels.count()).toBeGreaterThanOrEqual(3);
   expect(await xLabels.count()).toBeLessThanOrEqual(6);
-  await rangeGroup.getByRole("button", { name: "24h", exact: true }).click();
+  await rangeSelect.selectOption("24h");
   await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per timme");
   // #169: the 24h preset fills both pickers; the chart's first point is Från and its last bucket ends at Till.
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(86_400_000);
   const points = design.locator(".statistics-chart > svg > g").filter({ has: page.locator("polyline") }).first().locator("circle");
   await expect(points).toHaveCount(24);
   await day.focus(); await day.press("Home");
-  const expectedTime = (ms: number) => page.evaluate(ms => new Date(ms).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) + " " + new Date(ms).toLocaleTimeString("sv-SE", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "shortOffset" }), ms);
+  const expectedTime = (ms: number) => page.evaluate(ms => new Date(ms).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) + " " + new Date(ms).toLocaleTimeString("sv-SE", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), ms);
   await expect(design.locator(".chart-selection-time")).toHaveText(await expectedTime(await pickerMs(fromPicker)));
   await day.press("End");
   await expect(design.locator(".chart-selection-time")).toHaveText(await expectedTime(await pickerMs(toPicker) - 3_600_000));
-  await expect(periodLabel).toContainText("upplösning 1 h");
-  await rangeGroup.getByRole("button", { name: "7 dagar", exact: true }).click();
+  await expect(resolutionSelect).toHaveValue("1h");
+  await rangeSelect.selectOption("7d");
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(7 * 86_400_000);
   // A manual edit selects "Anpassat", deselects the preset and updates the label.
   const customFrom = new Date(await pickerMs(toPicker) - 2 * 86_400_000 + 6 * 3_600_000).toISOString().slice(0, 16);
-  await rangeGroup.getByRole("button", { name: "Anpassat", exact: true }).click();
+  await rangeSelect.selectOption("custom");
   await expect(fromPicker).toBeVisible();
   await expect(fromPicker).toBeFocused();
   await fromPicker.fill(customFrom);
-  await expect(rangeGroup.getByRole("button", { name: "Anpassat", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(rangeGroup.getByRole("button", { name: "7 dagar", exact: true })).toHaveAttribute("aria-pressed", "false");
-  await expect(periodLabel).toContainText(new RegExp(` ${String(new Date(`${customFrom}:00Z`).getUTCHours()).padStart(2, "0")}:00 (GMT|UTC).* – `));
+  await expect(rangeSelect).toHaveValue("custom");
+  await expect(rangeSelect).not.toHaveValue("7d");
+  await expect(periodLabel).toContainText(new RegExp(` ${String(new Date(`${customFrom}:00Z`).getUTCHours()).padStart(2, "0")}:00 – `));
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(42 * 3_600_000);
   await fromPicker.fill(await toPicker.inputValue());
   await expect(page.getByText("Välj ett giltigt datumintervall inom de senaste 30 dagarna.", { exact: true })).toBeVisible();
   await expect(periodLabel).toHaveCount(0);
   await timeControls.getByRole("button", { name: "Återställ period", exact: true }).click();
-  await expect(rangeGroup.getByRole("button", { name: "3 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(rangeSelect).toHaveValue("3d");
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(3 * 86_400_000);
-  await rangeGroup.getByRole("button", { name: "24h", exact: true }).click();
+  await rangeSelect.selectOption("24h");
   await expect(xLabels.first()).toContainText(/\d{2}:\d{2}/);
   await day.focus();
-  await expect(design.locator(".chart-selection-time")).toContainText(/\d{2}:\d{2} (GMT|UTC)/);
+  await expect(design.locator(".chart-selection-time")).toContainText(/\d{2}:\d{2}$/);
   await design.locator(".statistics-chart circle").first().click();
   await expect(day).toHaveValue("0");
-  await rangeGroup.getByRole("button", { name: "8h", exact: true }).click();
+  await rangeSelect.selectOption("8h");
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", false);
   await resolutionSelect.selectOption("30m");
   await expect(day).toHaveAttribute("max", "15");
@@ -191,7 +198,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // #160, #164 & #169: datetime fields stay inside the global time controls on narrow portrait viewports.
     const controlsBox = await timeControls.boundingBox();
-    await rangeGroup.getByRole("button", { name: "Anpassat", exact: true }).click();
+    await rangeSelect.selectOption("custom");
     const pickers = await timeControls.locator("input[type=datetime-local]").all();
     expect(pickers).toHaveLength(2);
     for (const input of pickers) {

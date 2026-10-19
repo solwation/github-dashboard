@@ -2,7 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useLanguage } from "../lib/i18n";
 import type { StatisticsDay, StatisticsMetric, StatisticsResolution } from "../lib/statistics";
-import { formatBrowserDateTime } from "../lib/browser-time";
+import { formatBrowserDateTime, isAmbiguousBrowserTime } from "../lib/browser-time";
 import { axisTickIndices, bucketTime, hasTime, valueTicks } from "../lib/statistics-chart";
 const { t, locale } = useLanguage();
 const props = defineProps<{
@@ -70,7 +70,7 @@ function fullTime(date: string) {
   const time = pointTime(date);
   if (!Number.isFinite(time)) return date;
   const day = new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", year: "numeric" });
-  return subDay.value && hasTime(date) ? `${day} ${new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "shortOffset" })}` : day;
+  return subDay.value && hasTime(date) ? `${day} ${new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", ...(isAmbiguousBrowserTime(time) ? { timeZoneName: "shortOffset" as const } : {}) })}` : day;
 }
 const xTicks = computed(() => {
   let previousDay = "";

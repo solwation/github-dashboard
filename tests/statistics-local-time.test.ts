@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { browserTimeZone, formatBrowserDateTime, parseBrowserDateTime } from "../src/lib/browser-time";
+import { browserTimeZone, formatBrowserDateTime, parseBrowserDateTime, isAmbiguousBrowserTime } from "../src/lib/browser-time";
 import {
   formatStatisticsBound, parseStatisticsBound, statisticsCalendarWindow, statisticsCollectionWindow,
   statisticsPresetWindow, statisticsWindowMs, summarizeStatistics, type StatisticsData, type StatisticsResolution,
@@ -31,6 +31,19 @@ describe("browser-local statistics without changing absolute UTC storage", () =>
     expect(parseBrowserDateTime("2026-10-18T17:30")).toBe(instant);
     // Existing persisted/QR bounds always retain their absolute meaning.
     expect(parseStatisticsBound("2026-10-19T00:30", "start")).toBe(instant);
+  });
+  it("adds offsets only for genuinely repeated wall-clock times", () => {
+    process.env.TZ = "Europe/Stockholm";
+    expect(isAmbiguousBrowserTime(Date.parse("2026-10-25T00:30:00Z"))).toBe(true);
+    expect(isAmbiguousBrowserTime(Date.parse("2026-10-25T01:30:00Z"))).toBe(true);
+    expect(isAmbiguousBrowserTime(Date.parse("2026-10-25T02:30:00Z"))).toBe(false);
+    expect(isAmbiguousBrowserTime(Date.parse("2026-03-29T01:30:00Z"))).toBe(false);
+    process.env.TZ = "Australia/Lord_Howe";
+    expect(isAmbiguousBrowserTime(Date.parse("2026-04-04T14:45:00Z"))).toBe(true);
+    expect(isAmbiguousBrowserTime(Date.parse("2026-04-04T15:15:00Z"))).toBe(true);
+    process.env.TZ = "UTC";
+    expect(isAmbiguousBrowserTime(Date.parse("2026-10-25T01:30:00Z"))).toBe(false);
+    expect(isAmbiguousBrowserTime(NaN)).toBe(false);
   });
   it("rejects invalid calendar input and nonexistent spring times; fall-back input selects the earlier instant", () => {
     process.env.TZ = "Europe/Stockholm";
