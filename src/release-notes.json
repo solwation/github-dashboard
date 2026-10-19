@@ -57,10 +57,10 @@
       },
       {
         "text": {
-          "sv": "Tidsraden visar periodens längd och dropdowns, med korta Från/Till-etiketter och en gemensam tidszon vid kontot.",
-          "en": "The time row shows the duration and dropdowns, with short From/To labels and a shared time zone beside your account."
+          "sv": "Tidsraden visar periodens längd och dropdowns; tidsval fortsätter fungera över midnatt, med samordnad uppdatering och bevarade grafer.",
+          "en": "The time row shows duration and dropdowns; time choices keep working across midnight, with coordinated refreshes and retained charts."
         },
-        "issues": [168, 169, 179]
+        "issues": [168, 169, 179, 183]
       },
       {
         "text": {

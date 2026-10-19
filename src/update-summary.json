@@ -1,13 +1,10 @@
 {
-  "baseCommit": "41b71866122b0a05b0ca677d843ae9b279ac40b0",
+  "baseCommit": "fbdcd8e7d11ee1ec78ee408cbce3498f519f8992",
   "summary": {
-    "sv": "Periodens längd visas, datumetiketterna är kortare och 30 dagar har minst 6h upplösning. Licensrutan är klickbar och ikonerna högerjusterade.",
-    "en": "The period shows its duration, date labels are shorter, and 30 days requires at least 6h resolution. The license card is clickable with right-aligned icons."
+    "sv": "Statistics fortsätter fungera över lokal midnatt. Tidsval uppdaterar periodgränser och samordnar hämtningen utan att dölja graferna.",
+    "en": "Statistics keeps working across local midnight. Time choices update calendar boundaries and coordinate refreshes while keeping charts visible."
   },
   "issues": [
-    179,
-    180,
-    181,
-    182
+    183
   ]
 }
