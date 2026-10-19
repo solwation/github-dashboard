@@ -1,11 +1,10 @@
 {
-  "baseCommit": "749b2e5bd8d0f352b9f8da1f916efd69c49ef219",
+  "baseCommit": "59c99859d63c222cfce4ec364b1b086d5369f912",
   "summary": {
-    "sv": "Kommentarsbubblan och andra klickbara märken lyser vid hovring. Inaktuella repositories uppdateras automatiskt vid hovring eller klick i vänstermenyn.",
-    "en": "The comment bubble and other clickable chips glow on hover. Stale repositories refresh automatically on sidebar hover or click."
+    "sv": "Undersiffrorna i översiktens badges visar nu en kort +1/−1 när de ändras vid en uppdatering.",
+    "en": "Sub-values in the overview badges now show a brief +1/−1 when they change on a refresh."
   },
   "issues": [
-    186,
-    187
+    188
   ]
 }

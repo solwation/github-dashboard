@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Ändras en undersiffra i översiktens badges visas en kort +1/−1 som flyter upp, utan layoutskiftning och med stöd för minskad rörelse.",
+          "en": "When a sub-value in the overview badges changes, a brief +1/−1 floats up, with no layout shift and reduced-motion support."
+        },
+        "issues": [188]
+      },
+      {
+        "text": {
           "sv": "Att hovra (kort stund), fokusera eller klicka ett inaktuellt repository i vänstermenyn uppdaterar just det, utan att slösa API-gräns.",
           "en": "Hovering (briefly), focusing or clicking a stale repository in the left menu refreshes just that one, without wasting API quota."
         },
