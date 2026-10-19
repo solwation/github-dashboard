@@ -1,12 +1,10 @@
 {
-  "baseCommit": "c2d2912d164a8caa600fd386357de89dc658b1ef",
+  "baseCommit": "749b2e5bd8d0f352b9f8da1f916efd69c49ef219",
   "summary": {
-    "sv": "Fäll ihop repositories i Statistics, kommentarsantal i listrader, hovringsglöd och automatisk uppdatering av inaktuella repositories vid hovring eller klick.",
-    "en": "Collapse Statistics repositories, comment counts in list rows, hover glow and automatic refresh of stale repositories on sidebar hover or click."
+    "sv": "Kommentarsbubblan och andra klickbara märken lyser vid hovring. Inaktuella repositories uppdateras automatiskt vid hovring eller klick i vänstermenyn.",
+    "en": "The comment bubble and other clickable chips glow on hover. Stale repositories refresh automatically on sidebar hover or click."
   },
   "issues": [
-    184,
-    185,
     186,
     187
   ]
