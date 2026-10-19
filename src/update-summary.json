@@ -1,10 +1,11 @@
 {
   "baseCommit": "c2d2912d164a8caa600fd386357de89dc658b1ef",
   "summary": {
-    "sv": "Fäll ihop repositories i Statistics. Bidragsgivare och labels börjar stängda, och den fasta tidsraden under grafen är borttagen.",
-    "en": "Collapse repositories in Statistics. Contributors and labels start closed, and the permanent chart-time row is removed."
+    "sv": "Fäll ihop repositories i Statistics, med stängda bidragsgivare/labels och mindre grafkontroller. Breda listrader visar kommentarsikon och antal.",
+    "en": "Collapse Statistics repositories, with contributors/labels closed and simpler chart controls. Wide list rows show the comments icon and count."
   },
   "issues": [
-    184
+    184,
+    185
   ]
 }

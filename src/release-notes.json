@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Breda listrader visar kommentarsikon och antal direkt; smalare vyer behåller kommentarerna i radens detaljer eller telefonkort.",
+          "en": "Wide list rows show the comments icon and count directly; narrower views keep comments in row details or the phone card."
+        },
+        "issues": [185]
+      },
+      {
+        "text": {
           "sv": "30-dagarsdiagram använder minst sex timmars upplösning, även för sparade val och synkade inställningar.",
           "en": "Thirty-day charts use at least six-hour resolution, including saved choices and synced settings."
         },
