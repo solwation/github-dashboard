@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useLanguage } from "../lib/i18n";
-import type { StatisticsDay, StatisticsMetric } from "../lib/statistics";
+import type { StatisticsDay, StatisticsMetric, StatisticsResolution } from "../lib/statistics";
+import { axisTickIndices, bucketTime, hasTime, valueTicks } from "../lib/statistics-chart";
 const { t, locale } = useLanguage();
-const props = defineProps<{ series: { name: string; days: StatisticsDay[]; metric?: StatisticsMetric }[]; metric: StatisticsMetric; title: string }>();
+const props = defineProps<{
+  series: { name: string; days: StatisticsDay[]; metric?: StatisticsMetric }[];
+  metric: StatisticsMetric;
+  title: string;
+  resolution?: StatisticsResolution;
+}>();
 const selected = ref(0);
 const chart = ref<SVGSVGElement | null>(null);
 const chartWidth = ref(790);
-const plotEnd = computed(() => Math.max(48, chartWidth.value - 42));
+const plotStart = 48;
+const plotTop = 30;
+const plotBottom = 215;
+const plotEnd = computed(() => Math.max(plotStart, chartWidth.value - 42));
 let resizeObserver: ResizeObserver | undefined;
 function resizeChart() {
   const width = chart.value?.getBoundingClientRect().width;
@@ -26,57 +35,103 @@ onBeforeUnmount(() => {
 });
 const dates = computed(() => props.series[0]?.days.map(day => day.date) || []);
 watch(dates, dates => { selected.value = Math.min(selected.value, Math.max(0, dates.length - 1)); });
+const subDay = computed(() => props.resolution ? props.resolution !== "1d" : dates.value.some(hasTime));
 // Theme tokens from style.css, so series stay legible in light and dark mode.
 const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+function color(index: number) { return colors[index % colors.length]; }
+function dash(index: number) { return index ? `${Math.max(2, 8 - (index % 5))} ${(index % 5) + 2}` : undefined; }
 function valueOf(series: { metric?: StatisticsMetric }, day: StatisticsDay | undefined) {
   return day?.values[series.metric || props.metric] || 0;
 }
-const bounds = computed(() => {
+const yTicks = computed(() => {
   const values = props.series.flatMap(series => series.days.map(day => valueOf(series, day)));
-  return { min: Math.min(0, ...values), max: Math.max(1, ...values) };
+  return valueTicks(Math.min(0, ...values), Math.max(1, ...values));
 });
-function x(index: number) { return 48 + index / Math.max(1, dates.value.length - 1) * (plotEnd.value - 48); }
-function y(value: number) { return 215 - (value - bounds.value.min) / (bounds.value.max - bounds.value.min) * 185; }
+const bounds = computed(() => ({ min: yTicks.value[0]!, max: yTicks.value[yTicks.value.length - 1]! }));
+function x(index: number) { return plotStart + index / Math.max(1, dates.value.length - 1) * (plotEnd.value - plotStart); }
+function y(value: number) { return plotBottom - (value - bounds.value.min) / Math.max(1e-9, bounds.value.max - bounds.value.min) * (plotBottom - plotTop); }
 function points(series: { days: StatisticsDay[]; metric?: StatisticsMetric }) { return series.days.map((day, index) => `${x(index)},${y(valueOf(series, day))}`).join(" "); }
 function number(value: number) { return value.toLocaleString(locale.value); }
-const selectedText = computed(() => `${dates.value[selected.value] || ""}: ${props.series.map(series => `${series.name}: ${number(valueOf(series, series.days[selected.value]))}`).join(", ")}`);
+function shortDate(date: string) {
+  const time = bucketTime(date);
+  return Number.isFinite(time) ? new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", timeZone: "UTC" }) : date;
+}
+function clock(date: string) { return date.split(" ")[1] || ""; }
+function fullTime(date: string) {
+  const time = bucketTime(date);
+  if (!Number.isFinite(time)) return date;
+  const day = new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return subDay.value && hasTime(date) ? `${day} ${clock(date)} UTC` : day;
+}
+const xTicks = computed(() => {
+  let previousDay = "";
+  return axisTickIndices(dates.value.length, plotEnd.value - plotStart).map((index, position, all) => {
+    const date = dates.value[index]!;
+    const day = date.slice(0, 10);
+    const timed = subDay.value && hasTime(date);
+    const label = timed ? clock(date) : shortDate(date);
+    const dateLine = timed && day !== previousDay ? shortDate(date) : "";
+    previousDay = day;
+    const anchor = all.length > 1 && position === 0 ? "start" : all.length > 1 && position === all.length - 1 ? "end" : "middle";
+    return { index, label, dateLine, anchor };
+  });
+});
+const selectedDate = computed(() => dates.value[selected.value] || "");
+const selectedValues = computed(() => props.series.map((series, index) => ({ name: series.name, color: color(index), dash: dash(index), value: valueOf(series, series.days[selected.value]) })));
+const selectedText = computed(() => `${fullTime(selectedDate.value)}: ${selectedValues.value.map(item => `${item.name}: ${number(item.value)}`).join(", ")}`);
+function select(index: number) { selected.value = Math.max(0, Math.min(dates.value.length - 1, index)); }
+function selectFromPointer(event: PointerEvent | MouseEvent) {
+  if (!chart.value || dates.value.length < 2) return;
+  const rect = chart.value.getBoundingClientRect();
+  if (!rect.width) return;
+  const position = (event.clientX - rect.left) * chartWidth.value / rect.width;
+  select(Math.round((position - plotStart) / Math.max(1, plotEnd.value - plotStart) * (dates.value.length - 1)));
+}
 </script>
 <template>
   <div class="statistics-chart">
-    <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title">
+    <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title" @pointermove="selectFromPointer" @click="selectFromPointer">
       <title>{{ title }}</title>
-      <line class="chart-axis" x1="48" :y1="y(0)" :x2="plotEnd" :y2="y(0)" />
-      <line class="chart-grid" x1="48" y1="30" :x2="plotEnd" y2="30" />
-      <text x="43" y="34" text-anchor="end">{{ number(bounds.max) }}</text>
-      <text x="43" y="219" text-anchor="end">{{ number(bounds.min) }}</text>
-      <text x="48" y="246">{{ dates[0] }}</text><text :x="plotEnd" y="246" text-anchor="end">{{ dates[dates.length - 1] }}</text>
-      <line v-if="dates.length" :x1="x(selected)" y1="30" :x2="x(selected)" y2="215" class="chart-axis" stroke-dasharray="3 4" />
+      <g v-for="tick in yTicks" :key="tick">
+        <line :class="tick === 0 ? 'chart-axis' : 'chart-grid'" :x1="plotStart" :y1="y(tick)" :x2="plotEnd" :y2="y(tick)" />
+        <text :x="plotStart - 5" :y="y(tick) + 4" text-anchor="end">{{ number(tick) }}</text>
+      </g>
+      <text v-for="tick in xTicks" :key="tick.index" class="chart-x-label" :x="x(tick.index)" y="234" :text-anchor="tick.anchor">
+        <tspan :x="x(tick.index)">{{ tick.label }}</tspan>
+        <tspan v-if="tick.dateLine" :x="x(tick.index)" dy="14">{{ tick.dateLine }}</tspan>
+      </text>
+      <line v-if="dates.length" :x1="x(selected)" :y1="plotTop" :x2="x(selected)" :y2="plotBottom" class="chart-axis" stroke-dasharray="3 4" />
       <g v-for="(series, index) in series" :key="series.name">
-        <polyline :points="points(series)" fill="none" :style="{ stroke: colors[index % colors.length] }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="index ? `${Math.max(2, 8 - (index % 5))} ${(index % 5) + 2}` : undefined" />
-        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(valueOf(series, day))" :r="selected === dayIndex ? 5 : 3" :style="{ fill: colors[index % colors.length] }" @mouseenter="selected = dayIndex" @click="selected = dayIndex"><title>{{ series.name }} · {{ day.date }}: {{ valueOf(series, day) }}</title></circle>
+        <polyline :points="points(series)" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
+        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(valueOf(series, day))" :r="selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }" @mouseenter="select(dayIndex)" @click.stop="select(dayIndex)"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ number(valueOf(series, day)) }}</title></circle>
       </g>
     </svg>
-    <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><i :style="{ background: colors[index % colors.length] }" />{{ series.name }}</span></div>
-    <label class="chart-day">{{ t("Dag i diagrammet") }}
+    <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: color(index) }" stroke-width="2.5" :stroke-dasharray="dash(index)" /><circle cx="11" cy="5" r="2.5" :style="{ fill: color(index) }" /></svg>{{ series.name }}</span></div>
+    <output class="chart-selection" aria-live="polite">
+      <strong class="chart-selection-time">{{ fullTime(selectedDate) }}</strong>
+      <span v-for="item in selectedValues" :key="item.name" class="chart-selection-value"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: item.color }" stroke-width="2.5" :stroke-dasharray="item.dash" /></svg>{{ item.name }}: <b>{{ number(item.value) }}</b></span>
+    </output>
+    <label class="chart-day">{{ t("Tidpunkt i diagrammet") }}
       <input v-model.number="selected" type="range" min="0" :max="Math.max(0, dates.length - 1)" :aria-valuetext="selectedText" />
     </label>
-    <output class="chart-selection" aria-live="polite">{{ selectedText }}</output>
-    <details class="daily-values"><summary>{{ t("Visa dagliga värden") }}</summary><div class="statistics-table-scroll"><table><caption>{{ title }}</caption><thead><tr><th scope="col">{{ t("Datum (UTC)") }}</th><th v-for="series in series" :key="series.name" scope="col">{{ series.name }}</th></tr></thead><tbody><tr v-for="(date, index) in dates" :key="date"><th scope="row">{{ date }}</th><td v-for="series in series" :key="series.name">{{ number(valueOf(series, series.days[index])) }}</td></tr></tbody></table></div></details>
+    <details class="daily-values"><summary>{{ t("Visa värden") }}</summary><div class="statistics-table-scroll"><table><caption>{{ title }}</caption><thead><tr><th scope="col">{{ t("Tid (UTC)") }}</th><th v-for="series in series" :key="series.name" scope="col">{{ series.name }}</th></tr></thead><tbody><tr v-for="(date, index) in dates" :key="date"><th scope="row">{{ date }}</th><td v-for="series in series" :key="series.name">{{ number(valueOf(series, series.days[index])) }}</td></tr></tbody></table></div></details>
   </div>
 </template>
 <style scoped>
 .statistics-chart { min-width: 0; }
-svg { width: 100%; height: 255px; display: block; overflow: hidden; }
+svg { width: 100%; height: 255px; display: block; overflow: hidden; touch-action: pan-y; }
 svg line { vector-effect: non-scaling-stroke; }
 svg text { fill: var(--chart-text); font: 11px system-ui; }
 .chart-axis { stroke: var(--chart-axis); }
 .chart-grid { stroke: var(--chart-grid); }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px; margin: 10px 0; }
 .chart-legend span { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
-.chart-legend i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.chart-day { display: grid; gap: 6px; font-size: 12px; }
+.chart-swatch { width: 22px; height: 10px; flex-shrink: 0; overflow: visible; }
+.chart-day { display: grid; gap: 6px; font-size: 12px; margin-bottom: 14px; }
 .chart-day input { width: 100%; accent-color: var(--green); }
-.chart-selection { display: block; font-size: 12px; margin: 8px 0 16px; overflow-wrap: anywhere; }
+.chart-selection { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12px; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--green) 6%, var(--surface)); overflow-wrap: anywhere; min-width: 0; }
+.chart-selection-time { flex-basis: 100%; font-size: 13px; }
+.chart-selection-value { display: inline-flex; align-items: center; gap: 6px; }
 .daily-values summary { cursor: pointer; font-size: 13px; }
 .statistics-table-scroll { overflow: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }

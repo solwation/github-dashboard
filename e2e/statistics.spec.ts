@@ -30,11 +30,19 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   // Per-graph time controls and resolution selects are removed in favor of the global controls (#164)
   await expect(design.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
   await expect(weekend.locator(".statistics-range-presets, .statistics-resolution-select")).toHaveCount(0);
-  const day = design.getByRole("slider", { name: "Dag i diagrammet" });
+  // #171: heading follows the resolution, legend names the metric and the selected point is shown in a box.
+  await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per dag");
+  await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues"]);
+  await expect(design.locator(".chart-legend .chart-swatch line")).toHaveCount(1);
+  const yLabels = await design.locator(".statistics-chart > svg > g > text").count();
+  expect(yLabels).toBeGreaterThanOrEqual(2);
+  const day = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("2");
-  await expect(day).toHaveAttribute("aria-valuetext", /demo\/design-system/);
-  await design.getByText("Visa dagliga värden", { exact: true }).click();
+  await expect(day).toHaveAttribute("aria-valuetext", /Stängda issues: \d/);
+  await expect(design.locator(".chart-selection")).toContainText("Stängda issues:");
+  await design.getByText("Visa värden", { exact: true }).click();
+  await expect(design.locator(".daily-values thead th").first()).toHaveText("Tid (UTC)");
   await expect(design.locator(".daily-values tbody tr")).toHaveCount(3);
   // #167: cards summarize the same three-day window as the chart, not the full 30 days.
   expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
@@ -50,6 +58,15 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(design.locator(".daily-values tbody tr")).toHaveCount(30);
   await expect(card(design, "Commits").locator("strong")).toHaveText("42");
   expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
+  const xLabels = design.locator(".statistics-chart .chart-x-label");
+  expect(await xLabels.count()).toBeGreaterThanOrEqual(3);
+  expect(await xLabels.count()).toBeLessThanOrEqual(6);
+  await rangeGroup.getByRole("button", { name: "24h", exact: true }).click();
+  await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per timme");
+  await expect(xLabels.first()).toContainText(/\d{2}:\d{2}/);
+  await expect(design.locator(".chart-selection-time")).toContainText(/\d{2}:\d{2} UTC/);
+  await design.locator(".statistics-chart circle").first().click();
+  await expect(day).toHaveValue("0");
   await rangeGroup.getByRole("button", { name: "8h", exact: true }).click();
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", false);
   await resolutionSelect.selectOption("30m");
@@ -86,7 +103,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
-  await expect(design.getByRole("slider", { name: "Chart day" })).toBeVisible();
+  await expect(design.getByRole("slider", { name: "Chart time" })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

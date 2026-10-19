@@ -10,6 +10,7 @@ import {
   type StatisticsData, type StatisticsFilter, type StatisticsMetric, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
 } from "../lib/statistics";
 import StatisticsChart from "./StatisticsChart.vue";
+import { activityHeadings } from "../lib/statistics-chart";
 const { t, locale } = useLanguage();
 const props = defineProps<{
   repository: Repo;
@@ -87,7 +88,7 @@ const chartSeries = computed(() => {
   if (metrics.length === 1) {
     const metric = metrics[0]!;
     return summary.value.totals[metric] !== undefined
-      ? [{ name: props.repository.full_name, metric, days: summary.value.days }]
+      ? [{ name: t(metricNames[metric]), metric, days: summary.value.days }]
       : [];
   }
   return metrics.map(metric => ({
@@ -181,7 +182,7 @@ function reset() {
       <div class="statistics-totals"><div v-for="key in availableMetrics" :key="key" class="statistics-total"><span>{{ t(metricNames[key]) }}</span><strong>{{ number(summary.totals[key]!) }}</strong><small v-if="summary.complete[key] === false">{{ t("Delvis data") }}</small></div><div v-if="summary.closureAgeDays !== null" class="statistics-total"><span>{{ t("Medianålder vid stängning") }}</span><strong>{{ summary.closureAgeDays.toLocaleString(locale, { maximumFractionDigits: 1 }) }} <small>{{ t("dagar") }}</small></strong><small v-if="summary.complete.closed === false">{{ t("Delvis data") }}</small></div></div>
       <section class="statistics-panel">
         <div class="statistics-panel-heading">
-          <h3>{{ t("Daglig aktivitet") }}</h3>
+          <h3>{{ t(activityHeadings[timeSpan.resolution]) }}</h3>
           <div class="statistics-chart-selects">
             <label>{{ t("Mätvärde") }}<select :value="state.metric" @change="selectPrimaryMetric(($event.target as HTMLSelectElement).value as StatisticsMetric)"><option v-for="key in availableMetrics" :key="key" :value="key">{{ t(metricNames[key]) }}</option></select></label>
           </div>
@@ -191,7 +192,7 @@ function reset() {
             <button v-for="key in availableMetrics" :key="key" type="button" class="button small statistics-metric-chip" :class="{ active: selectedMetrics.includes(key) }" :aria-pressed="selectedMetrics.includes(key)" @click="toggleMetric(key)">{{ t(metricNames[key]) }}</button>
           </div>
         </div>
-        <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" />
+        <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" :resolution="timeSpan.resolution" />
       </section>
       <div class="statistics-breakdowns"><section v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel"><h3>{{ t("Bidragsgivare") }}</h3><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></section><section v-if="summary.labels.length" class="statistics-panel"><h3>{{ t("Labels på skapade issues") }}</h3><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></section></div>
       <p v-if="lastFetched" class="statistics-source-time">{{ t("Äldsta underlaget hämtat {time}", { time: new Date(lastFetched).toLocaleString(locale, { timeZone: 'UTC' }) }) }} UTC.</p>
