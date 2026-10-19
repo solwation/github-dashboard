@@ -1,13 +1,10 @@
 {
-  "baseCommit": "b593b2422f969e854581b69f0d6b3db3facdbd6d",
+  "baseCommit": "05a86ff46e2e6b286690a349f042c8dcacce43f6",
   "summary": {
-    "sv": "Statistik visar alla diagramvärden i en popover. Tider, tidsval och statistikdygn följer nu webbläsarens tidszon, även vid sommartidsbyte.",
-    "en": "Statistics shows every chart value in a popover. Times, time pickers and Statistics days now follow your browser’s time zone, including daylight saving."
+    "sv": "Statistikens Från/Till-väljare visas bara när Anpassat är valt. Snabbvalen håller tidskontrollerna kompakta.",
+    "en": "Statistics From/To pickers appear only when Custom is selected. Presets keep the time controls compact."
   },
   "issues": [
-    173,
-    174,
-    176,
-    177
+    178
   ]
 }

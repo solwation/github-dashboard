@@ -15,10 +15,10 @@
       },
       {
         "text": {
-          "sv": "Tider och statistikdygn följer webbläsarens tidszon och sommartid; sparade tidsfönster behåller samma tidpunkt mellan enheter.",
-          "en": "Times and Statistics days follow your browser’s time zone and daylight saving; saved windows retain the same instants across devices."
+          "sv": "Tider följer webbläsarens tidszon och sommartid; Från/Till visas bara för Anpassat, med bevarade tidsfönster mellan enheter.",
+          "en": "Times follow your browser’s time zone and daylight saving; From/To appear only for Custom, preserving windows across devices."
         },
-        "issues": [174, 176, 177]
+        "issues": [174, 176, 177, 178]
       },
       {
         "text": {
