@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Hovermarkeringen på licenssektionen omger nu innehållet jämnt i stället för att ligga förskjuten.",
+          "en": "The license section's hover highlight now surrounds its content evenly instead of sitting offset."
+        },
+        "issues": [191]
+      },
+      {
+        "text": {
           "sv": "I listläget börjar kommentarsbubblor, labels och övriga kolumner på samma plats i alla rader och sektioner, oavsett antal kommentarer.",
           "en": "In list mode, comment bubbles, labels and the other columns start at the same position in every row and section, whatever the comment count."
         },

@@ -182,7 +182,8 @@ input[type="checkbox"] {
   gap: 10px;
   align-items: center;
   border-top: 1px solid var(--line);
-  padding: 22px 3px 0;
+  padding: 12px 8px;
+  margin-inline: -5px;
   color: #6c797e;
   font-size: 11px;
 }
@@ -195,7 +196,7 @@ input[type="checkbox"] {
 .sidebar-credits { min-width: 0; }
 .sidebar-footer-open { margin-left: auto; flex-shrink: 0; }
 .sidebar-footer > svg { flex-shrink: 0; }
-.sidebar-footer { border-radius: 8px; transition: background-color .15s ease, color .15s ease; }
+.sidebar-footer { border-radius: 0 0 8px 8px; transition: background-color .15s ease, color .15s ease; }
 .sidebar-footer:hover, .sidebar-footer:focus-visible { background: color-mix(in srgb, var(--green) 10%, transparent); }
 .sidebar-footer:hover .sidebar-license-label { text-decoration: underline; }
 .sidebar-footer:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }

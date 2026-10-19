@@ -1442,7 +1442,7 @@ onMounted(async () => {
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
-    <a class="sidebar-footer interactive-glow" href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+    <a class="sidebar-footer" href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
       <Github :size="19" aria-hidden="true" />
       <span class="sidebar-credits">
         <span>Olof Wingren</span>

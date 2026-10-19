@@ -1,10 +1,10 @@
 {
-  "baseCommit": "9f785b8f4538a644ab4609c6f1f1a9670e2b9fe1",
+  "baseCommit": "5ec5d75d30c792d0ea341f4eacb5afff181b6ac0",
   "summary": {
-    "sv": "Listläget har nu raka kolumner: kommentarsbubblor, labels och övriga kolumner börjar på samma plats i alla rader och sektioner.",
-    "en": "List mode now has straight columns: comment bubbles, labels and the other columns start at the same position in every row and section."
+    "sv": "Hovermarkeringen på licenssektionen i vänstermenyn ligger nu jämnt runt innehållet.",
+    "en": "The license section's hover highlight in the left menu now sits evenly around its content."
   },
   "issues": [
-    190
+    191
   ]
 }
