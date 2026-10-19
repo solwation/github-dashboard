@@ -2,6 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useLanguage } from "../lib/i18n";
 import type { StatisticsDay, StatisticsMetric, StatisticsResolution } from "../lib/statistics";
+import { formatBrowserDateTime } from "../lib/browser-time";
 import { axisTickIndices, bucketTime, hasTime, valueTicks } from "../lib/statistics-chart";
 const { t, locale } = useLanguage();
 const props = defineProps<{
@@ -55,22 +56,28 @@ function x(index: number) { return plotStart + index / Math.max(1, dates.value.l
 function y(value: number) { return plotBottom - (value - bounds.value.min) / Math.max(1e-9, bounds.value.max - bounds.value.min) * (plotBottom - plotTop); }
 function points(series: { days: StatisticsDay[]; metric?: StatisticsMetric }) { return series.days.map((day, index) => `${x(index)},${y(valueOf(series, day))}`).join(" "); }
 function number(value: number) { return value.toLocaleString(locale.value); }
+const bucketStarts = computed(() => new Map((props.series[0]?.days || []).map(day => [day.date, day.start ?? bucketTime(day.date)])));
+function pointTime(date: string) { return bucketStarts.value.get(date) ?? bucketTime(date); }
 function shortDate(date: string) {
-  const time = bucketTime(date);
-  return Number.isFinite(time) ? new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", timeZone: "UTC" }) : date;
+  const time = pointTime(date);
+  return Number.isFinite(time) ? new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short" }) : date;
 }
-function clock(date: string) { return date.split(" ")[1] || ""; }
+function clock(date: string) {
+  const time = pointTime(date);
+  return Number.isFinite(time) ? new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : "";
+}
 function fullTime(date: string) {
-  const time = bucketTime(date);
+  const time = pointTime(date);
   if (!Number.isFinite(time)) return date;
-  const day = new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-  return subDay.value && hasTime(date) ? `${day} ${clock(date)} UTC` : day;
+  const day = new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", year: "numeric" });
+  return subDay.value && hasTime(date) ? `${day} ${new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "shortOffset" })}` : day;
 }
 const xTicks = computed(() => {
   let previousDay = "";
   return axisTickIndices(dates.value.length, plotEnd.value - plotStart).map((index, position, all) => {
     const date = dates.value[index]!;
-    const day = date.slice(0, 10);
+    const time = pointTime(date);
+    const day = Number.isFinite(time) ? formatBrowserDateTime(time).slice(0, 10) : date;
     const timed = subDay.value && hasTime(date);
     const label = timed ? clock(date) : shortDate(date);
     const dateLine = timed && day !== previousDay ? shortDate(date) : "";

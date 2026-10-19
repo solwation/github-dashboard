@@ -7,28 +7,29 @@ import { StatisticsCollector, type StatisticsClient } from "../lib/statistics-cl
 import {
   allowedStatisticsResolutions, clampStatisticsResolution, DEFAULT_STATISTICS_RANGE, formatStatisticsBound, hasStatisticsTime,
   parseStatisticsBound, rangeNames, resolutionNames, statisticsDurationMs, statisticsPresetWindow, statisticsRangeMs, statisticsRanges,
-  statisticsResolutions, statisticsWindow, statisticsWindowMs, validStatisticsBound, type StatisticsData, type StatisticsPreference,
+  statisticsResolutions, statisticsCalendarWindow, statisticsWindowMs, validStatisticsBound, type StatisticsData, type StatisticsPreference,
   type StatisticsPreferences, type StatisticsRangePreset, type StatisticsResolution,
 } from "../lib/statistics";
 import { readStatisticsCache, writeStatisticsCache } from "../lib/statistics-cache";
 import { demoStatistics } from "../lib/statistics-demo";
+import { browserTimeZone, formatBrowserDateTime, parseBrowserDateTime } from "../lib/browser-time";
 import StatisticsRepository from "./StatisticsRepository.vue";
 const { t, locale } = useLanguage();
 const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
-const period = ref(statisticsWindow());
+const period = ref(statisticsCalendarWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
 
-// #169: the global window is always concrete UTC "YYYY-MM-DDTHH:mm" bounds shown in
-// the pickers. A preset recomputes its window from now; undefined range = custom.
+// Saved bounds stay absolute UTC minute strings; only the picker view uses local wall time.
+// A preset recomputes its window from now; undefined range = custom.
 const periodBounds = computed(() => ({
   start: parseStatisticsBound(period.value.from, "start"),
   end: parseStatisticsBound(period.value.to, "end"),
 }));
-const pickerMin = computed(() => formatStatisticsBound(periodBounds.value.start));
-const pickerMax = computed(() => formatStatisticsBound(periodBounds.value.end));
+const pickerMin = computed(() => formatBrowserDateTime(periodBounds.value.start));
+const pickerMax = computed(() => formatBrowserDateTime(periodBounds.value.end));
 function presetWindow(preset: StatisticsRangePreset, resolution?: StatisticsResolution) {
-  return statisticsPresetWindow(preset, Date.now(), period.value, resolution);
+  return statisticsPresetWindow(preset, Date.now(), period.value, resolution, { calendar: "local" });
 }
 const initialWindow = presetWindow(DEFAULT_STATISTICS_RANGE);
 const globalFrom = ref(initialWindow.from);
@@ -107,18 +108,21 @@ const timeSpan = computed(() => ({
   resolution: activeResolution.value,
 }));
 const boundFormat = computed(() => new Intl.DateTimeFormat(locale.value, {
-  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC",
+  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "shortOffset",
 }));
 const periodText = computed(() => {
   if (invalidRange.value) return "";
   const { start, end } = statisticsWindowMs({ from: globalFrom.value, to: globalTo.value });
   return `${boundFormat.value.format(start)} – ${boundFormat.value.format(end)}`;
 });
+const timeZone = browserTimeZone();
+const localFrom = computed(() => formatBrowserDateTime(parseStatisticsBound(globalFrom.value, "start")));
+const localTo = computed(() => formatBrowserDateTime(parseStatisticsBound(globalTo.value, "end")));
 const periodLabel = computed(() => periodText.value
-  ? t("Visar {period} UTC · upplösning {resolution}", { period: periodText.value, resolution: t(resolutionNames[activeResolution.value]) })
+  ? t("Visar {period} · {zone} · upplösning {resolution}", { period: periodText.value, zone: timeZone, resolution: t(resolutionNames[activeResolution.value]) })
   : "");
 const subtitle = computed(() => periodText.value
-  ? t("{period} UTC, repository för repository.", { period: periodText.value })
+  ? t("{period} · {zone}, repository för repository.", { period: periodText.value, zone: timeZone })
   : t("Repository för repository."));
 const resettable = computed(() => activeRange.value !== DEFAULT_STATISTICS_RANGE || !!globalResolution.value);
 
@@ -165,6 +169,22 @@ function selectResolution(resolution: StatisticsResolution) {
   if (globalRange.value) applyPreset(globalRange.value, resolution);
   else globalResolution.value = resolution;
   applyGlobalTimeSpan();
+}
+
+// Preserve an untouched ambiguous autumn value exactly; parse only the edited field.
+function setLocalBound(event: Event, edge: "start" | "end") {
+  const input = event.target as HTMLInputElement;
+  const current = edge === "start" ? localFrom.value : localTo.value;
+  if (input.value === current) return;
+  const ms = parseBrowserDateTime(input.value);
+  if (!Number.isFinite(ms)) {
+    input.setCustomValidity(t("Tiden finns inte i din tidszon. Välj en annan tid."));
+    input.reportValidity();
+    return;
+  }
+  input.setCustomValidity("");
+  const value = formatStatisticsBound(ms);
+  setBounds(edge === "start" ? value : globalFrom.value, edge === "end" ? value : globalTo.value);
 }
 
 function setBounds(from: string, to: string) {
@@ -243,7 +263,7 @@ async function load(force = false) {
   const selected = new Set(names);
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
   if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
-  period.value = statisticsWindow();
+  period.value = statisticsCalendarWindow();
   // #169: a preset follows the clock on every reload; a custom window is kept (clamped to the period).
   const previous = `${globalFrom.value}|${globalTo.value}|${globalRange.value}`;
   if (globalRange.value) applyPreset(globalRange.value, globalResolution.value);
@@ -273,7 +293,7 @@ watch([() => props.client, () => props.session, () => props.demo, () => props.cr
   generation++; const epoch = ++sessionEpoch;
   collector?.dispose(); collector = props.client ? new StatisticsCollector(props.client) : null;
   const activeCollector = collector, token = props.credential;
-  snapshots.value = {}; preparedRepositories.value = new Set(); period.value = statisticsWindow(); cacheFailed.value = false;
+  snapshots.value = {}; preparedRepositories.value = new Set(); period.value = statisticsCalendarWindow(); cacheFailed.value = false;
   loading.value = Object.fromEntries(props.repositories.map(repo => [repo.full_name, true]));
   restoration = (async () => {
     const saved = token && !props.demo ? await readStatisticsCache(token) : [];
@@ -317,8 +337,8 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
         </div>
       </div>
       <div class="statistics-time-dates">
-        <label>{{ t("Från (UTC)") }}<input ref="fromInput" :value="globalFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @change="setBounds(($event.target as HTMLInputElement).value, globalTo)" /></label>
-        <label>{{ t("Till (UTC)") }}<input :value="globalTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @change="setBounds(globalFrom, ($event.target as HTMLInputElement).value)" /></label>
+        <label>{{ t("Från (lokal tid)") }}<input ref="fromInput" :value="localFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'start')" /></label>
+        <label>{{ t("Till (lokal tid)") }}<input :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
         <button v-if="resettable" type="button" class="button small" @click="resetTimeSpan">{{ t("Återställ period") }}</button>
       </div>
       <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
@@ -339,16 +359,16 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">
-      <p>{{ t("Kalenderdagar i UTC. Dagens värden är preliminära.") }}</p>
+      <p>{{ t("Kalenderdagar i din tidszon. Dagens värden är preliminära.") }}</p>
       <details class="statistics-panel statistics-definitions"><summary>{{ t("Definitioner och datatäckning") }}</summary><ul>
         <li>{{ t("Stängda och återöppnade issues räknas från faktiska GitHub-händelser. Samma issue kan stängas flera gånger. Nettoflöde = skapade + återöppnade − stängda; detta är förändringen, inte antalet öppna issues.") }}</li>
         <li>{{ t("Labels avser dagens labels, även när äldre händelser filtreras. Bidragsgivare avser skaparen för issues och pull requests, aktören för issue-händelser och författaren för commits. Ett labelfilter döljer kodstatistik eftersom commits inte har issue-labels.") }}</li>
-        <li>{{ t("Commits följer standardbranchens historik och grupperas efter committer-datum i UTC. Merge-commits räknas som commits men deras diff undantas från kodmåtten för att undvika dubbelräkning. Filändringar är summan av berörda filer per commit, inte unika filer i perioden.") }}</li>
+        <li>{{ t("Commits följer standardbranchens historik och grupperas efter committer-datum i din tidszon. Merge-commits räknas som commits men deras diff undantas från kodmåtten för att undvika dubbelräkning. Filändringar är summan av berörda filer per commit, inte unika filer i perioden.") }}</li>
         <li>{{ t("Medianålder vid stängning mäter tiden från skapande till varje stängningshändelse i urvalet, inte aktiv arbetstid. Pull requests räknas separat efter skapande, merge och stängning utan merge.") }}</li>
         <li>{{ t("Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.") }}</li>
-        <li>{{ t("Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från föregående sista UTC-dag, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.") }}</li>
+        <li>{{ t("Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från den senast hämtade delen, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.") }}</li>
       </ul></details>
-      <p v-if="historyVerifiedAt">{{ t("Äldsta omvalideringen av återanvänd commithistorik: {time} UTC.", { time: new Date(historyVerifiedAt).toLocaleString(locale, { timeZone: 'UTC' }) }) }}</p>
+      <p v-if="historyVerifiedAt">{{ t("Äldsta omvalideringen av återanvänd commithistorik: {time}.", { time: new Date(historyVerifiedAt).toLocaleString(locale, { timeZoneName: 'short' }) }) }}</p>
       <p v-if="partial" class="statistics-coverage">{{ t("Delvis data: markerade värden omfattar det underlag som hann hämtas inom sidans gränser. De är inte fullständiga totalsummor.") }}</p>
     </footer>
   </section>

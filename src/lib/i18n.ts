@@ -37,7 +37,7 @@ export const locale = computed(() =>
 export const english: Record<string, string> = {
   "Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.": "Statistics could not be saved on this device. The collected charts remain available.",
   "Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.": "At most 300 updated issues, 500 issue events, 300 commits and 300 pull requests are fetched per repository. Code metrics cover at most 60 non-merge commits and 300 files per commit. Bounded sources are marked as partial data. Collected data is reused for five minutes; Refresh revalidates the whole period.",
-  "Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från föregående sista UTC-dag, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.": "Statistics are encrypted for up to ten repositories for seven days, up to 8 MiB. Issues, events and pull requests are always revalidated. Commit history is reused with an overlap from the previous final UTC day, and fully revalidated at least every seven days or on Refresh. SHA-bound code metrics are reused. Reused source data can include up to 600 commits; incomplete coverage is marked as partial data.",
+  "Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från den senast hämtade delen, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.": "Statistics are encrypted for up to ten repositories for seven days, up to 8 MiB. Issues, events and pull requests are always revalidated. Commit history is reused with an overlap from the most recently collected portion, and fully revalidated at least every seven days or on Refresh. SHA-bound code metrics are reused. Reused source data can include up to 600 commits; incomplete coverage is marked as partial data.",
   "Äldsta omvalideringen av återanvänd commithistorik: {time} UTC.": "Oldest revalidation of reused commit history: {time} UTC.",
   "Dela upp per repository": "Split by repository",
   "Gemensam board": "Combined board",
@@ -114,6 +114,14 @@ export const english: Record<string, string> = {
   // #169: statistics time controls and period label.
   "{period} UTC, repository för repository.": "{period} UTC, repository by repository.",
   "Repository för repository.": "Repository by repository.",
+  "Visar {period} · {zone} · upplösning {resolution}": "Showing {period} · {zone} · {resolution} resolution",
+  "{period} · {zone}, repository för repository.": "{period} · {zone}, repository by repository.",
+  "Från (lokal tid)": "From (local time)",
+  "Till (lokal tid)": "To (local time)",
+  "Tiden finns inte i din tidszon. Välj en annan tid.": "This time does not exist in your time zone. Choose another time.",
+  "Kalenderdagar i din tidszon. Dagens värden är preliminära.": "Calendar days in your time zone. Today's values are provisional.",
+  "Äldsta omvalideringen av återanvänd commithistorik: {time}.": "Oldest revalidation of reused commit history: {time}.",
+  "Commits följer standardbranchens historik och grupperas efter committer-datum i din tidszon. Merge-commits räknas som commits men deras diff undantas från kodmåtten för att undvika dubbelräkning. Filändringar är summan av berörda filer per commit, inte unika filer i perioden.": "Commits follow the default branch history and are grouped by committer date in your time zone. Merge commits count as commits but their diffs are excluded from code metrics to avoid double counting. File changes sum the files touched in each commit, rather than unique files across the period.",
   "Visar {period} UTC · upplösning {resolution}": "Showing {period} UTC · {resolution} resolution",
   "Från (UTC)": "From (UTC)",
   "Till (UTC)": "To (UTC)",

@@ -16,7 +16,7 @@ const builtDate = computed(() =>
 
 <template>
   <span class="build-identity">
-    <time v-if="builtAt" :datetime="builtAt" :title="builtAt">{{ builtDate }}</time>
+    <time v-if="builtAt" :datetime="builtAt" :title="new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeStyle: 'long' }).format(new Date(builtAt))">{{ builtDate }}</time>
     <span v-else>{{ t("Utvecklingsläge") }}</span>
     <code v-if="commit" :title="commit">{{ commit.slice(0, 7) }}</code>
     <span v-else>{{ t("Okänd commit") }}</span>
