@@ -5,6 +5,8 @@ import { repositoryColor } from "../lib/repository-color";
 import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
 import { recentlyChanged, RECENT_CHANGE_MS, type SidebarRepository } from "../lib/sidebar";
+import { HOVER_DELAY_MS } from "../lib/adhoc-refresh";
+import { onBeforeUnmount } from "vue";
 import { useNow } from "../composables/useNow";
 
 const props = defineProps<{ repos: SidebarRepository[]; repositoryColors?: Record<string, string>; canSelect: boolean; restoring?: boolean; statistics?: boolean }>();
@@ -13,7 +15,12 @@ const now = useNow(at => Math.min(...props.repos.map(repo => {
   const left = Date.parse((repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt) || "") + RECENT_CHANGE_MS - at;
   return left >= 0 ? left : Infinity;
 })));
-const emit = defineEmits<{ select: []; move: [name: string, direction: -1 | 1]; reorder: [source: string, target: string] }>();
+const emit = defineEmits<{ select: []; move: [name: string, direction: -1 | 1]; reorder: [source: string, target: string]; interest: [name: string] }>();
+// Interest in a repository (#187): click and focus act at once, hover after a short rest.
+let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+function hoverStart(name: string) { hoverEnd(); hoverTimer = setTimeout(() => emit('interest', name), HOVER_DELAY_MS); }
+function hoverEnd() { clearTimeout(hoverTimer); hoverTimer = undefined; }
+onBeforeUnmount(hoverEnd);
 function drop(event: DragEvent, target: string) {
   const source = event.dataTransfer?.getData(projectDragType);
   if (source) emit("reorder", source, target);
@@ -40,7 +47,7 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
     <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
-    <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="!statistics && revealRepository(repo.id)" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
+    <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="!statistics && revealRepository(repo.id); emit('interest', repo.fullName)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repository-name">
         <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>

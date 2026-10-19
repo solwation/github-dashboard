@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Att hovra (kort stund), fokusera eller klicka ett inaktuellt repository i vänstermenyn uppdaterar just det, utan att slösa API-gräns.",
+          "en": "Hovering (briefly), focusing or clicking a stale repository in the left menu refreshes just that one, without wasting API quota."
+        },
+        "issues": [187]
+      },
+      {
+        "text": {
           "sv": "Breda listrader visar kommentarsikon och antal direkt; smalare vyer behåller kommentarerna i radens detaljer eller telefonkort.",
           "en": "Wide list rows show the comments icon and count directly; narrower views keep comments in row details or the phone card."
         },

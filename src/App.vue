@@ -45,6 +45,7 @@ import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds"
 import { createIssueSync } from "./lib/sync";
 import { createBackgroundCheckScheduler } from "./lib/background-sync";
 import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
+import { shouldAdhocRefresh } from "./lib/adhoc-refresh";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import { combinedItems, boardEntryKey } from "./lib/combined-board";
@@ -304,6 +305,21 @@ function refreshFromStatus(name?: string) {
   if (!loggedIn.value || isDemo.value || authBusy.value) return;
   if (name ? syncingRepos.value.has(name) : combinedSyncing.value) return;
   void refresh(false, false, true, false, name ? [name] : undefined);
+}
+/**
+ * Ad-hoc refresh (#187): interest in a stale repository's sidebar entry refreshes just that one
+ * through the manual per-repository path. Policy lives in lib/adhoc-refresh; every guard skips silently.
+ */
+const lastAdhoc = new Map<string, number>();
+function refreshStaleRepository(name: string) {
+  if (!api || !loggedIn.value || isDemo.value || authBusy.value || busy.value || restoring.value || !selected.value.includes(name)) return;
+  const lane = lanes.value.find(entry => entry.repo.full_name === name);
+  if (!lane || lane.loading || lane.error || syncingRepos.value.has(name)) return;
+  const now = Date.now();
+  if (!shouldAdhocRefresh({ now, lastSuccess: lastSynced.get(name), lastAttempt: lastAdhoc.get(name), inFlight: false,
+    retryAfterMs: api.retryAfterMs(), remainingQuota: api.rateLimit()?.remaining })) return;
+  lastAdhoc.set(name, now);
+  void refresh(false, false, true, false, [name]).catch(() => {});
 }
 const query = ref("");
 const repositoryQueries = ref<Record<string, string>>({});
@@ -1422,6 +1438,7 @@ onMounted(async () => {
       @select="picker = true"
       @move="moveRepository"
       @reorder="reorderProject"
+      @interest="refreshStaleRepository"
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />

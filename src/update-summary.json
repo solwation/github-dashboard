@@ -1,12 +1,13 @@
 {
   "baseCommit": "c2d2912d164a8caa600fd386357de89dc658b1ef",
   "summary": {
-    "sv": "Fäll ihop repositories i Statistics. Listrader visar kommentarsantal, och kommentarsbubblan och andra klickbara märken lyser vid hovring.",
-    "en": "Collapse Statistics repositories. List rows show comment counts, and the comment bubble and other clickable chips glow on hover."
+    "sv": "Fäll ihop repositories i Statistics, kommentarsantal i listrader, hovringsglöd och automatisk uppdatering av inaktuella repositories vid hovring eller klick.",
+    "en": "Collapse Statistics repositories, comment counts in list rows, hover glow and automatic refresh of stale repositories on sidebar hover or click."
   },
   "issues": [
     184,
     185,
-    186
+    186,
+    187
   ]
 }
