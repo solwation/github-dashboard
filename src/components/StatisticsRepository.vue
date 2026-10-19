@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { BarChart3, RefreshCw } from "@lucide/vue";
+import { BarChart3, RefreshCw, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { normalizeStatisticsPreference } from "../lib/statistics-preferences";
@@ -115,11 +115,13 @@ function metricStyle(metric: StatisticsMetric) {
   const index = seriesIndex(metric);
   return index >= 0 ? { "--metric-color": seriesColor(index) } : undefined;
 }
-const filtersActive = computed(() =>
-  !!state.value.label ||
-  !!state.value.contributor ||
-  (state.value.metrics?.length ?? 0) > 1,
-);
+// Only label/contributor count as filters; the selected chart metrics are not (#172).
+const filtersActive = computed(() => !!state.value.label || !!state.value.contributor);
+const showFilters = computed(() => !!props.data && (dimensions.value.labels.length > 0 || dimensions.value.contributors.length > 0));
+// Breakdowns start open on desktop and collapsed on phones; later toggling is the user's (#172).
+const startOpen = typeof window === "undefined" || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width: 650px)").matches;
+const breakdownOpen = ref({ contributors: startOpen, labels: startOpen });
+function syncOpen(key: "contributors" | "labels", event: Event) { breakdownOpen.value[key] = (event.target as HTMLDetailsElement).open; }
 const lastFetched = computed(() => {
   const values = props.data ? [props.data.issues, props.data.events, props.data.commits, props.data.changes, props.data.pulls].filter(value => !!value).map(value => value!.fetchedAt) : [];
   return values.length ? Math.min(...values) : 0;
@@ -153,34 +155,33 @@ function toggleMetric(metric: StatisticsMetric) {
     metrics: next.length > 1 ? next : undefined,
   });
 }
-function reset() {
-  state.value = normalize({
-    metric: state.value.metric,
-    from: props.timeSpan.from,
-    to: props.timeSpan.to,
-    range: props.timeSpan.range,
-    resolution: props.timeSpan.resolution,
-    label: "",
-    contributor: "",
-  });
+function clearFilter(key: "label" | "contributor") {
+  state.value = normalize({ ...state.value, [key]: "" });
+}
+function clearFilters() {
+  state.value = normalize({ ...state.value, label: "", contributor: "" });
 }
 </script>
 <template>
   <section :id="'statistics-repo-' + repository.id" class="statistics-repository" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
-    <header class="statistics-repository-heading"><h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" target="_blank" rel="noopener noreferrer">{{ repository.full_name }}</a></h2></header>
+    <header class="statistics-repository-heading">
+      <h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" target="_blank" rel="noopener noreferrer">{{ repository.full_name }}</a></h2>
+      <div v-if="showFilters" class="statistics-repo-filters" role="group" :aria-label="t('Filter för {name}', { name: repository.full_name })">
+        <select v-if="dimensions.labels.length" v-model="state.label" class="statistics-filter-select" :class="{ active: state.label }" :aria-label="t('Nuvarande label')"><option value="">{{ t("Alla labels") }}</option><option v-for="name in dimensions.labels" :key="name" :value="name">{{ name }}</option></select>
+        <select v-if="dimensions.contributors.length" v-model="state.contributor" class="statistics-filter-select" :class="{ active: state.contributor }" :aria-label="t('Bidragsgivare')"><option value="">{{ t("Alla bidragsgivare") }}</option><option v-for="name in dimensions.contributors" :key="name" :value="name">{{ name }}</option></select>
+      </div>
+    </header>
+    <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
+      <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="13" aria-hidden="true" /></button>
+      <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="13" aria-hidden="true" /></button>
+      <button type="button" class="statistics-filter-clear" @click="clearFilters">{{ t("Rensa filter") }}</button>
+    </div>
     <div v-if="loading && !data" class="statistics-repository-loading" role="status" aria-live="polite">
       <RefreshCw class="statistics-loading-spinner" :size="26" aria-hidden="true" />
       <div><strong>{{ t("Hämtar och sammanställer statistik") }}</strong><p>{{ t("Vänta medan underlaget för {name} hämtas.", { name: repository.full_name }) }}</p></div>
     </div>
     <p v-else-if="loading" class="statistics-refreshing" role="status" aria-live="polite"><RefreshCw class="statistics-loading-spinner" :size="15" aria-hidden="true" />{{ t("Uppdaterar statistik. Tidigare värden visas under tiden.") }}</p>
     <div class="statistics-repository-content" :aria-busy="loading">
-    <div v-if="anyData && (dimensions.labels.length || dimensions.contributors.length)" class="statistics-filters">
-      <div class="statistics-filter-grid">
-        <label v-if="dimensions.labels.length">{{ t("Nuvarande label") }}<select v-model="state.label"><option value="">{{ t("Alla labels") }}</option><option v-for="name in dimensions.labels" :key="name" :value="name">{{ name }}</option></select></label>
-        <label v-if="dimensions.contributors.length">{{ t("Bidragsgivare") }}<select v-model="state.contributor"><option value="">{{ t("Alla bidragsgivare") }}</option><option v-for="name in dimensions.contributors" :key="name" :value="name">{{ name }}</option></select></label>
-      </div>
-      <div class="statistics-filter-actions"><button class="button small" :disabled="!filtersActive" @click="reset">{{ t("Återställ filter") }}</button></div>
-    </div>
     <p v-if="temporary && !loading" role="status" class="notice">{{ anyData ? t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") : t("Statistiken kunde inte hämtas just nu. Försök igen senare.") }}</p>
     <template v-if="anyData">
       <div class="statistics-totals" role="group" :aria-label="t('Mätvärden i diagrammet')" :aria-describedby="'statistics-metrics-hint-' + repository.id">
@@ -205,7 +206,7 @@ function reset() {
         </div>
         <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" :resolution="timeSpan.resolution" />
       </section>
-      <div class="statistics-breakdowns"><section v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel"><h3>{{ t("Bidragsgivare") }}</h3><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></section><section v-if="summary.labels.length" class="statistics-panel"><h3>{{ t("Labels på skapade issues") }}</h3><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></section></div>
+      <div class="statistics-breakdowns"><details v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.contributors" @toggle="syncOpen('contributors', $event)"><summary><h3>{{ t("Bidragsgivare") }}</h3></summary><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></details><details v-if="summary.labels.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.labels" @toggle="syncOpen('labels', $event)"><summary><h3>{{ t("Labels på skapade issues") }}</h3></summary><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></details></div>
       <p v-if="lastFetched" class="statistics-source-time">{{ t("Äldsta underlaget hämtat {time}", { time: new Date(lastFetched).toLocaleString(locale, { timeZone: 'UTC' }) }) }} UTC.</p>
     </template>
     <div v-else-if="!loading && !temporary" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
@@ -213,19 +214,23 @@ function reset() {
   </section>
 </template>
 <style scoped>
-.statistics-repository { scroll-margin-top: 20px; min-width: 0; margin-bottom: 40px; }
-.statistics-repository-heading h2 { margin: 0 0 18px; font-size: 23px; overflow-wrap: anywhere; }
+.statistics-repository { scroll-margin-top: 20px; min-width: 0; margin-bottom: 32px; padding-top: 18px; border-top: 1px solid var(--line); }
+.statistics-repository-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; min-width: 0; }
+.statistics-repository-heading h2 { margin: 0; font-size: 23px; overflow-wrap: anywhere; min-width: 0; }
 .statistics-repository-heading a { color: inherit; text-decoration: none; }
 .statistics-repository-heading a:hover { text-decoration: underline; }
-.statistics-filters, .statistics-panel { padding: 20px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; margin-bottom: 20px; min-width: 0; }
-.statistics-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; }
-.statistics-filter-grid label { display: grid; gap: 6px; font-size: 12px; min-width: 0; }
-.statistics-filter-grid input, select { width: 100%; min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: inherit; }
-.statistics-filter-grid input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-height: 38px; font: inherit; text-align: left; }
-.statistics-filter-grid input[type="date"]::-webkit-date-and-time-value { text-align: left; min-width: 0; }
-.statistics-filter-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.statistics-repo-filters { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
+.statistics-filter-select { min-width: 0; max-width: 100%; width: auto; padding: 5px 8px; font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: inherit; }
+.statistics-filter-select.active { border-color: var(--green); }
+.statistics-filter-select:focus-visible, .statistics-filter-chip:focus-visible, .statistics-filter-clear:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.statistics-filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 0 12px; }
+.statistics-filter-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 3px 8px 3px 10px; border: 1px solid color-mix(in srgb, var(--green) 45%, var(--line)); border-radius: 999px; background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: inherit; font: inherit; font-size: 12px; cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+.statistics-filter-chip:hover { border-color: var(--green); }
+.statistics-filter-clear { padding: 3px 6px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.statistics-filter-clear:hover { color: inherit; }
+.statistics-panel { padding: 20px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; margin-bottom: 20px; min-width: 0; }
 .statistics-message, .statistics-source-time { font-size: 12px; color: var(--muted); }
-.statistics-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 14px 18px; margin: 20px 0; min-width: 0; }
+.statistics-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 14px 18px; margin: 0 0 20px; min-width: 0; }
 .statistics-total-group { min-width: 0; }
 .statistics-total-group h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .statistics-total-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(120px, 100%), 1fr)); gap: 8px; }
@@ -249,7 +254,15 @@ function reset() {
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 caption { text-align: left; margin: 0 0 10px; color: var(--muted); }
 th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
-.statistics-breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 20px; }
+.statistics-breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 0 20px; align-items: start; }
+.statistics-breakdown > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; border-radius: 5px; }
+.statistics-breakdown > summary::-webkit-details-marker { display: none; }
+.statistics-breakdown > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s ease; flex-shrink: 0; }
+.statistics-breakdown[open] > summary::before { transform: rotate(45deg); }
+.statistics-breakdown > summary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }
+.statistics-breakdown > summary h3 { margin: 0; }
+.statistics-breakdown[open] > summary { margin-bottom: 15px; }
+@media (prefers-reduced-motion: reduce) { .statistics-breakdown > summary::before { transition: none; } }
 .statistics-labels { list-style: none; padding: 0; margin: 0; }
 .statistics-labels li { display: flex; gap: 12px; justify-content: space-between; padding: 8px; font-size: 12px; }
 .statistics-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
@@ -262,5 +275,26 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
 .statistics-loading-spinner { flex-shrink: 0; color: var(--green); animation: statistics-spin 1s linear infinite; }
 @keyframes statistics-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }
-@media (max-width: 650px) { .statistics-panel-heading { flex-direction: column; align-items: stretch; } .statistics-filters, .statistics-panel { padding: 14px; } .statistics-total-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 650px) {
+  .statistics-repository { margin-bottom: 12px; padding-top: 12px; }
+  .statistics-repository-heading { margin-bottom: 10px; }
+  .statistics-repository-heading h2 { font-size: 19px; }
+  .statistics-panel-heading { flex-direction: column; align-items: stretch; margin-bottom: 8px; }
+  .statistics-panel { padding: 10px 12px; margin-bottom: 8px; border-radius: 8px; }
+  .statistics-totals { gap: 8px; margin-bottom: 8px; }
+  .statistics-total-group h3 { margin-bottom: 4px; }
+  .statistics-total-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .statistics-total { padding: 5px 8px; border-left-width: 3px; }
+  .statistics-total-label { font-size: 11px; }
+  .statistics-total strong { font-size: 16px; }
+  /* Collapsed breakdowns sit side by side; an opened one takes the full row. */
+  .statistics-breakdowns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; }
+  .statistics-breakdown { padding: 8px 10px; margin-bottom: 8px; }
+  .statistics-breakdown[open] { grid-column: 1 / -1; }
+  .statistics-breakdown > summary { min-height: 24px; }
+  .statistics-breakdown[open] > summary { margin-bottom: 10px; }
+  .statistics-breakdown > summary h3 { font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+  .statistics-source-time { margin: 2px 0 0; }
+}
+@media (min-width: 360px) and (max-width: 650px) { .statistics-total-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 </style>

@@ -184,6 +184,12 @@ export const english: Record<string, string> = {
   "Författare": "Author",
   "Okänd författare": "Unknown author",
   "Labels på skapade issues": "Labels on created issues",
+  // Compact per-repository statistics filters (#172)
+  "Filter för {name}": "Filters for {name}",
+  "Label: {name}": "Label: {name}",
+  "Bidragsgivare: {name}": "Contributor: {name}",
+  "Ta bort filter {filter}": "Remove filter {filter}",
+  "Rensa filter": "Clear filters",
   "Definitioner och datatäckning": "Definitions and data coverage",
   "Stängda och återöppnade issues räknas från faktiska GitHub-händelser. Samma issue kan stängas flera gånger. Nettoflöde = skapade + återöppnade − stängda; detta är förändringen, inte antalet öppna issues.": "Closed and reopened issues are counted from actual GitHub events. An issue can close more than once. Net flow = created + reopened − closed; this is the change, not the number of open issues.",
   "Labels avser dagens labels, även när äldre händelser filtreras. Bidragsgivare avser skaparen för issues och pull requests, aktören för issue-händelser och författaren för commits. Ett labelfilter döljer kodstatistik eftersom commits inte har issue-labels.": "Labels refer to current labels, including when filtering historical events. Contributors mean the creator for issues and pull requests, the actor for issue events and the author for commits. A label filter hides code statistics because commits do not have issue labels.",

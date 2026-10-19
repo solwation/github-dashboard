@@ -56,6 +56,11 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(metricButton(design, "Commits")).toHaveAttribute("aria-pressed", "false");
   await expect(design.getByRole("button", { name: /Medianålder/ })).toHaveCount(0);
   await expect(design.locator(".statistics-total-static")).toContainText("Medianålder vid stängning");
+  // #172: breakdowns are collapsible <details> and open by default on desktop-sized viewports.
+  const breakdowns = design.locator(".statistics-breakdowns > details");
+  await expect(breakdowns.locator("summary")).toHaveText(["Bidragsgivare", "Labels på skapade issues"]);
+  for (const element of await breakdowns.all()) await expect(element).toHaveJSProperty("open", true);
+  await expect(design.getByRole("table")).toBeVisible();
   const yLabels = await design.locator(".statistics-chart > svg > g > text").count();
   expect(yLabels).toBeGreaterThanOrEqual(2);
   const day = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
@@ -140,15 +145,34 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(metricButton(design, "Skapade issues")).toHaveAttribute("aria-pressed", "true");
   await metricButton(design, "Stängda issues").click();
   await expect(design.locator(".chart-legend span")).toHaveText(["Skapade issues", "Stängda issues"]);
-  await design.getByRole("combobox", { name: "Nuvarande label", exact: true }).selectOption("bug");
+  // #172: compact filters live in the repository heading; active filters appear as removable chips.
+  await expect(page.locator(".statistics-filters")).toHaveCount(0);
+  const designHeading = design.locator(".statistics-repository-heading");
+  const designLabel = designHeading.getByRole("combobox", { name: "Nuvarande label", exact: true });
+  const designContributor = designHeading.getByRole("combobox", { name: "Bidragsgivare", exact: true });
+  await expect(design.locator(".statistics-filter-chip")).toHaveCount(0);
+  await expect(design.getByRole("button", { name: "Rensa filter", exact: true })).toHaveCount(0);
+  await designLabel.selectOption("bug");
   await expect(card(design, "Commits")).toHaveCount(0);
   await expect(card(weekend, "Commits")).toHaveCount(1);
+  await expect(design.locator(".statistics-filter-chip")).toHaveText(["Label: bug"]);
+  await design.getByRole("button", { name: "Ta bort filter Label: bug", exact: true }).click();
+  await expect(designLabel).toHaveValue("");
+  await expect(card(design, "Commits")).toHaveCount(1);
+  await expect(design.locator(".statistics-filter-chip")).toHaveCount(0);
+  await designLabel.selectOption("bug");
+  await designContributor.selectOption("demo-alex");
+  await expect(design.locator(".statistics-filter-chip")).toHaveText(["Label: bug", "Bidragsgivare: demo-alex"]);
   await expect(weekend.getByRole("combobox", { name: "Nuvarande label", exact: true })).toHaveValue("");
   await weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true }).selectOption("demo-alex");
-  await design.getByRole("button", { name: "Återställ filter" }).click();
-  await expect(design.getByRole("combobox", { name: "Nuvarande label", exact: true })).toHaveValue("");
-  await expect(design.locator(".statistics-chart svg polyline")).toHaveCount(1);
+  await design.getByRole("button", { name: "Rensa filter", exact: true }).click();
+  await expect(designLabel).toHaveValue("");
+  await expect(designContributor).toHaveValue("");
+  await expect(design.locator(".statistics-filter-chip")).toHaveCount(0);
+  // Clearing filters keeps the chosen chart metrics; they are not filters.
+  await expect(design.locator(".chart-legend span")).toHaveText(["Skapade issues", "Stängda issues"]);
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
+  await expect(weekend.locator(".statistics-filter-chip")).toHaveText(["Bidragsgivare: demo-alex"]);
   const reorder = page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna weekend-project med/ });
   await reorder.focus(); await page.keyboard.press("ArrowUp");
   await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/design-system", "demo/weekend-project", "demo/personal-website"]);
@@ -172,6 +196,33 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
   await expect(design.getByRole("slider", { name: "Chart time" })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("Statistics collapses per-repository breakdowns on phones and keeps heading filters reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Utforska en demo" }).click();
+  await openStatistics(page);
+  const design = page.locator(".statistics-repository").filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
+  const breakdowns = design.locator(".statistics-breakdowns > details");
+  await expect(breakdowns).toHaveCount(2);
+  for (const element of await breakdowns.all()) await expect(element).toHaveJSProperty("open", false);
+  await expect(design.getByRole("table")).toBeHidden();
+  await breakdowns.locator("summary").filter({ hasText: "Bidragsgivare" }).click();
+  await expect(breakdowns.first()).toHaveJSProperty("open", true);
+  await expect(design.getByRole("table")).toBeVisible();
+  const label = design.locator(".statistics-repository-heading").getByRole("combobox", { name: "Nuvarande label", exact: true });
+  await expect(label).toBeVisible();
+  await label.selectOption("bug");
+  await expect(design.locator(".statistics-filter-chip")).toHaveText(["Label: bug"]);
+  await design.getByRole("button", { name: "Ta bort filter Label: bug", exact: true }).click();
+  // The user's own toggle survives the contributor table being hidden and shown again.
+  await expect(breakdowns.first()).toHaveJSProperty("open", true);
+  await expect(breakdowns.nth(1)).toHaveJSProperty("open", false);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
 });
 
 test("Statistics hides inaccessible metrics silently and retains issue values after rate limiting", async ({ page }) => {
