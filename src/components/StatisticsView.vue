@@ -124,7 +124,24 @@ const periodText = computed(() => {
 });
 const localFrom = computed(() => formatBrowserDateTime(parseStatisticsBound(globalFrom.value, "start")));
 const localTo = computed(() => formatBrowserDateTime(parseStatisticsBound(globalTo.value, "end")));
-const periodLabel = computed(() => periodText.value ? t("Visar {period}", { period: periodText.value }) : "");
+const durationLabel = computed(() => {
+  if (invalidRange.value) return "";
+  const { start, end } = statisticsWindowMs({ from: globalFrom.value, to: globalTo.value });
+  const unit = (value: number, unit: "day" | "hour" | "minute") => unit === "day"
+    ? t(value === 1 ? "{count} dag" : "{count} dagar", { count: value.toLocaleString(locale.value) })
+    : new Intl.NumberFormat(locale.value, { style: "unit", unit, unitDisplay: "long" }).format(value);
+  if (activeRange.value?.endsWith("d")) return unit(Number.parseInt(activeRange.value), "day");
+  const from = new Date(start), to = new Date(end);
+  const dayStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  if (start === dayStart(from) && end === dayStart(to)) {
+    const days = (Date.UTC(to.getFullYear(), to.getMonth(), to.getDate()) - Date.UTC(from.getFullYear(), from.getMonth(), from.getDate())) / 86_400_000;
+    return unit(days, "day");
+  }
+  const total = Math.round((end - start) / 60_000), days = Math.floor(total / 1440), hours = Math.floor(total % 1440 / 60), minutes = total % 60;
+  const parts = [days ? unit(days, "day") : "", hours ? unit(hours, "hour") : "", minutes ? unit(minutes, "minute") : ""].filter(Boolean);
+  return new Intl.ListFormat(locale.value, { style: "short", type: "unit" }).format(parts);
+});
+const periodLabel = computed(() => periodText.value ? t("Visar {period} ({duration})", { period: periodText.value, duration: durationLabel.value }) : "");
 function changeRange(event: Event) {
   const value = (event.target as HTMLSelectElement).value;
   if (value === "custom") void selectCustom();
@@ -344,8 +361,8 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
         </div>
       </div>
       <div v-show="!activeRange" class="statistics-time-dates">
-        <label>{{ t("Från (lokal tid)") }}<input ref="fromInput" :value="localFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'start')" /></label>
-        <label>{{ t("Till (lokal tid)") }}<input ref="toInput" :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
+        <label>{{ t("Från") }}<input ref="fromInput" :value="localFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'start')" /></label>
+        <label>{{ t("Till") }}<input ref="toInput" :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
       </div>
     </div>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>

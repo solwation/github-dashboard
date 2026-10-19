@@ -32,8 +32,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(rangeSelect).toHaveValue("3d");
   await expect(rangeSelect).not.toHaveValue("custom");
   // #169: pickers show the preset's exact UTC window and the subtitle/label describe it.
-  const fromPicker = timeControls.getByLabel("Från (lokal tid)", { exact: true });
-  const toPicker = timeControls.getByLabel("Till (lokal tid)", { exact: true });
+  const fromPicker = timeControls.getByLabel("Från", { exact: true });
+  const toPicker = timeControls.getByLabel("Till", { exact: true });
   const periodLabel = timeControls.locator(".statistics-period-label");
   await expect(fromPicker).toHaveAttribute("type", "datetime-local");
   await expect(fromPicker).toBeHidden();
@@ -41,7 +41,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   const pickerMs = async (picker: Locator) => Date.parse(`${await picker.inputValue()}:00Z`);
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(3 * 86_400_000);
   await expect(page.locator(".statistics-heading p")).toHaveCount(0);
-  await expect(periodLabel).toHaveText(/^Visar .+ – .+$/);
+  await expect(periodLabel).toHaveText(/^Visar .+ – .+ \(3 dagar\)$/);
   await expect(periodLabel).not.toContainText(/GMT|UTC|upplösning/);
   await expect(timeControls.locator('.statistics-range-presets button')).toHaveCount(0);
   const [summaryBox, rangeBox, resolutionBox, controlsBox] = await Promise.all([periodLabel, rangeSelect, resolutionSelect, timeControls].map(element => element.boundingBox()));
@@ -85,10 +85,16 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
   await expect(card(design, "Commits").locator("strong")).toHaveText("6");
   await expect(card(design, "Skapade issues").locator("strong")).toHaveText("2");
+  await resolutionSelect.selectOption("1h");
   await rangeSelect.selectOption("30d");
   await expect(rangeSelect).toHaveValue("30d");
+  await expect(periodLabel).toContainText("(30 dagar)");
+  await expect(resolutionSelect).toHaveValue("6h");
+  await expect(day).toHaveAttribute("max", "119");
+  await resolutionSelect.selectOption("1d");
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", true);
-  await expect(resolutionSelect.locator('option[value="1h"]')).toHaveJSProperty("disabled", false);
+  await expect(resolutionSelect.locator('option[value="1h"]')).toHaveJSProperty("disabled", true);
+  await expect(resolutionSelect.locator('option[value="6h"]')).toHaveJSProperty("disabled", false);
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("29");
   await expect(day).toHaveAttribute("max", "29");
@@ -97,6 +103,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   const xLabels = design.locator(".statistics-chart .chart-x-label");
   expect(await xLabels.count()).toBeGreaterThanOrEqual(3);
   expect(await xLabels.count()).toBeLessThanOrEqual(6);
+  await timeControls.getByRole("button", { name: "Återställ period", exact: true }).click();
   await rangeSelect.selectOption("24h");
   await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per timme");
   // #169: the 24h preset fills both pickers; the chart's first point is Från and its last bucket ends at Till.
@@ -109,6 +116,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await day.press("End");
   await expect(design.locator(".chart-selection-time")).toHaveText(await expectedTime(await pickerMs(toPicker) - 3_600_000));
   await expect(resolutionSelect).toHaveValue("1h");
+  await expect(periodLabel).toContainText("(1 dag)");
   await rangeSelect.selectOption("7d");
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(7 * 86_400_000);
   // A manual edit selects "Anpassat", deselects the preset and updates the label.
@@ -212,6 +220,13 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
   await expect(design.getByRole("slider", { name: "Chart time" })).toBeVisible();
+  const englishRange = page.getByRole("combobox", { name: "Time range", exact: true });
+  await englishRange.selectOption("30d");
+  await expect(periodLabel).toContainText("(30 days)");
+  await expect(page.getByRole("combobox", { name: "Resolution", exact: true })).toHaveValue("6h");
+  await englishRange.selectOption("custom");
+  await expect(timeControls.getByLabel("From", { exact: true })).toBeVisible();
+  await expect(timeControls.getByLabel("To", { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
