@@ -2,8 +2,8 @@
   {
     "date": "2026-10-19",
     "summary": {
-      "sv": "Statistikens nyckeltal följer vald period och är grupperade, och diagrammet visar tidsaxel, rubrik efter upplösning och vald punkt.",
-      "en": "Statistics totals follow the selected period and are grouped, and the chart shows a time axis, a resolution-based title and the selected point."
+      "sv": "Omdesignad statistik: snabbval fyller tidväljarna, nyckeltalen följer perioden och styr diagrammet, och filter och mobilvy är kompaktare.",
+      "en": "Redesigned Statistics: presets fill the time pickers, totals follow the period and drive the chart, and filters and the mobile view are more compact."
     },
     "sections": [
       {
@@ -26,6 +26,20 @@
           "en": "Totals are grouped into Issues, Pull requests and Code, and the cards choose what the chart shows in the same colour as its line."
         },
         "issues": [170]
+      },
+      {
+        "text": {
+          "sv": "Snabbvalen fyller datum- och tidväljarna i UTC, egna intervall markeras som Anpassat och en periodetikett visar exakt vad som visas.",
+          "en": "Presets fill the UTC date and time pickers, custom ranges are marked Custom, and a period label shows exactly what is displayed."
+        },
+        "issues": [168, 169]
+      },
+      {
+        "text": {
+          "sv": "Filtren ligger i varje repositorys rubrik med borttagbara chips, och uppdelningarna kan fällas ihop så att mobilsidan blir mycket kortare.",
+          "en": "Filters sit in each repository heading with removable chips, and breakdowns can be collapsed so the mobile page is much shorter."
+        },
+        "issues": [172]
       }
     ]
   },

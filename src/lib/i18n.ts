@@ -126,7 +126,6 @@ export const english: Record<string, string> = {
   "Bidragsgivare": "Contributors",
   "Alla bidragsgivare": "All contributors",
   "{count} repositories valda": "{count} repositories selected",
-  "Återställ filter": "Reset filters",
   "Hämtar statistik…": "Loading statistics…",
   "Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.": "Statistics could not be fully refreshed. Previously collected values are shown where available. Try again later.",
   "Välj ett giltigt datumintervall inom de senaste 30 dagarna.": "Choose a valid date range within the last 30 days.",

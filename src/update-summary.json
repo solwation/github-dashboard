@@ -1,10 +1,12 @@
 {
-  "baseCommit": "aefb875a851bc00a511966305c2726cd001d767c",
+  "baseCommit": "91df2c79e965854b07dc1bc6d4be5126d157fc25",
   "summary": {
-    "sv": "Statistikens nyckeltal grupperas i Issues, Pull requests och Kod, och korten styr diagrammet i samma färg som linjen.",
-    "en": "Statistics totals are grouped into Issues, Pull requests and Code, and the cards control the chart in the same colour as the line."
+    "sv": "Snabbvalen fyller nu datum- och tidväljarna med en tydlig periodetikett, och statistikfiltren ligger kompakt i varje repositorys rubrik.",
+    "en": "Presets now fill the date and time pickers with a clear period label, and Statistics filters sit compactly in each repository heading."
   },
   "issues": [
-    170
+    168,
+    169,
+    172
   ]
 }
