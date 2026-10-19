@@ -40,3 +40,24 @@ test("cards hide the in-progress label in the In progress column", async ({ page
   await expect(inProgress.locator('.label[title="in-progress" i]')).toHaveCount(0);
   await expect(page.locator('.repo-lane .issue-card:not(.progress) .label[title="design"]').first()).toBeVisible();
 });
+
+// #199: list rows (notably on phones, where labels are shown) carry the same type icon and hide the same labels.
+test("list rows show the type icon and hide the type and in-progress labels on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/"); await page.getByRole("button", { name: "Utforska en demo" }).click();
+  await page.getByRole("button", { name: "Lista", exact: true }).first().click();
+  const rows = page.locator(".issue-row");
+  await expect(rows.first()).toBeVisible();
+  const bug = rows.filter({ has: page.locator(".type-circle.type-bug") }).first();
+  await expect(bug.locator(".type-circle")).toHaveAttribute("title", "Typ: Bugg");
+  await expect(bug.locator(".type-circle")).toHaveAttribute("role", "img");
+  await expect(rows.filter({ has: page.locator(".type-circle.type-bug") }).locator('.label[title="bug" i]')).toHaveCount(0);
+  await expect(rows.filter({ has: page.locator(".type-circle.type-feature") }).locator('.label[title="enhancement" i]')).toHaveCount(0);
+  await expect(page.locator('.issue-row.progress .label[title="in-progress" i]')).toHaveCount(0);
+  await expect(page.locator('.issue-row .label[title="design"]').first()).toBeVisible();
+  await expect(page.locator(".issue-row.closed .type-circle .type-closed").first()).toBeVisible();
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

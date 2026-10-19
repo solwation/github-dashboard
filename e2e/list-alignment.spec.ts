@@ -9,7 +9,7 @@ async function fixture(page: Page) {
     ["Backlog one", 1, null, "open", ["bug"]],
     ["Backlog twelve", 12, null, "open", ["enhancement", "bug"]],
     ["Backlog many", 123, null, "open", ["bug"]],
-    ["Backlog none", 0, null, "open", ["enhancement"]],
+    ["Backlog none", 0, null, "open", []],
     ["Progress one", 1, "in progress", "open", ["bug"]],
     ["Progress many", 123, "in progress", "open", ["enhancement"]],
     ["Closed twelve", 12, null, "closed", ["bug"]],
@@ -18,7 +18,7 @@ async function fixture(page: Page) {
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
     id: index + 1, number: index + 1, title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
-    labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...labels.map(name => ({ name, color: "a2eeef" }))],
+    labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, "ui"].map(name => ({ name, color: "a2eeef" }))],
   }));
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());

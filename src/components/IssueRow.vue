@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, Clock3, CornerDownRight, ListTree, MessageCircle, Minus, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import { repositoryColor } from "../lib/repository-color";
+import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
 import { column, duration, isProgress, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
 import type { IssueRelations } from "../lib/issue-relations";
 import type { ActivityMarker } from "../lib/activity";
@@ -84,7 +85,19 @@ onBeforeUnmount(() => {
 const col = computed(() => column(props.issue, props.rules));
 const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
 const rank = computed(() => priority(props.issue, props.rules));
-const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && !(col.value === "progress" && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
+// Same type icon as the card, and the label it stands for is not repeated as a chip (#197, #199).
+const typeIcons = { bug: Bug, security: ShieldAlert, feature: Star, docs: FileText, question: CircleQuestionMark, help: HandHelping, chore: Wrench };
+const type = computed<IssueType | null>(() => issueType(props.issue.labels));
+const typeLabel = computed(() => issueTypeLabel(props.issue.labels));
+const typeTitle = computed(() => {
+  if (!type.value) return undefined;
+  const name = {
+    bug: t("Bugg"), security: t("Säkerhet"), feature: t("Funktion"), docs: t("Dokumentation"),
+    question: t("Fråga"), help: t("Hjälp sökes"), chore: t("Underhåll"),
+  }[type.value];
+  return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
+});
+const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(col.value === "progress" && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
@@ -105,7 +118,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     :class="[col, { expanded, 'has-repository': showRepository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
   >
     <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span>{{ repository }}</span></span>
-    <a
+    <span class="row-id"
+      ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
+        ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"
+      /></span
+      ><span v-else class="type-slot" aria-hidden="true" /><a
       :href="demo ? undefined : issue.html_url"
       :aria-disabled="demo || undefined"
       target="_blank"
@@ -115,7 +132,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       :title="t('Öppna #{number} på GitHub', { number: issue.number })"
       @click="emit('read')" @auxclick="emit('read')"
       >#{{ issue.number }}<ArrowUpRight :size="11" aria-hidden="true"
-    /></a>
+    /></a></span>
     <button
       ref="toggle"
       type="button"
@@ -203,8 +220,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-comments { display: none; min-width: 0; }
 /* Keep the existing compact layout until the actual list has room for an action column. */
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
   .row-comments { display: block; }
 }
 </style>

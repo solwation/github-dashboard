@@ -1,10 +1,11 @@
 {
   "baseCommit": "45a769ea9f88503341ceae1bcae65e53a43c8f35",
   "summary": {
-    "sv": "In progress-labeln döljs på kort och rader i In progress-kolumnen.",
-    "en": "The in-progress label is hidden on cards and rows in the In progress column."
+    "sv": "Listraderna visar typikoner som korten, även på mobil, och labels som ikonen eller In progress-kolumnen redan visar döljs.",
+    "en": "List rows show type icons like cards, also on phones, and labels already shown by the icon or the In progress column are hidden."
   },
   "issues": [
-    198
+    198,
+    199
   ]
 }

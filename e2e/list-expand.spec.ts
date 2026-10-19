@@ -52,7 +52,9 @@ test("desktop expands row details in place with open description while phone ope
   const panel = page.locator("#" + await toggle.getAttribute("aria-controls"));
   await expect(panel).toBeVisible();
   // #155: on desktop the row keeps its header columns and shows all details with description already expanded, without a nested bordered card header.
-  await expect(row2.locator(".row-meta .label")).toHaveText(["enhancement"]);
+  // #199: the type label is shown as the row icon instead of a chip.
+  await expect(row2.locator(".row-meta .label")).toHaveCount(0);
+  await expect(row2.locator(".type-circle")).toHaveAttribute("title", /^Typ: /);
   await expect(row2.locator(".row-time")).toBeVisible();
   const detailsCard = panel.locator(".issue-card.row-details-card");
   await expect(detailsCard).toBeVisible();

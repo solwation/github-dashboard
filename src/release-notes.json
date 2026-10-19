@@ -15,6 +15,13 @@
       },
       {
         "text": {
+          "sv": "Listraderna visar samma typikon som korten, även på mobil, och den label som ikonen ersätter visas inte längre som chip.",
+          "en": "List rows show the same type icon as cards, also on phones, and the label the icon replaces is no longer shown as a chip."
+        },
+        "issues": [199]
+      },
+      {
+        "text": {
           "sv": "Korten upprepar inte längre typlabeln (bug, enhancement med flera) som ikonen redan visar; övriga labels visas som förut.",
           "en": "Cards no longer repeat the type label (bug, enhancement and so on) that the icon already shows; other labels appear as before."
         },
