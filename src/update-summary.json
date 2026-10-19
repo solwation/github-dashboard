@@ -1,11 +1,10 @@
 {
-  "baseCommit": "45a769ea9f88503341ceae1bcae65e53a43c8f35",
+  "baseCommit": "c605ab3fb464f6bbf913a9f99ebf4f94bc2727a5",
   "summary": {
-    "sv": "Listraderna visar typikoner som korten, även på mobil, och labels som ikonen eller In progress-kolumnen redan visar döljs.",
-    "en": "List rows show type icons like cards, also on phones, and labels already shown by the icon or the In progress column are hidden."
+    "sv": "Listraderna visar samma typikon som korten, även på mobil, och den label som ikonen ersätter visas inte längre som chip.",
+    "en": "List rows show the same type icon as cards, also on phones, and the label the icon replaces is no longer shown as a chip."
   },
   "issues": [
-    198,
     199
   ]
 }
