@@ -4,6 +4,11 @@ async function openStatistics(page: Page) {
   await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
 }
 function card(scope: Page | Locator, name: string) { return scope.locator(".statistics-total").filter({ hasText: name }); }
+async function cardValue(scope: Locator, name: string) { return Number((await card(scope, name).locator("strong").innerText()).replace(/\D/g, "")); }
+async function dailySum(scope: Locator) {
+  const cells = await scope.locator(".daily-values tbody td").allInnerTexts();
+  return cells.reduce((sum, text) => sum + Number(text.replace(/[^\d-]/g, "") || 0), 0);
+}
 
 test("Statistics stacks sidebar repositories in order with independent filters and accessible mobile graphs", async ({ page }) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
@@ -31,6 +36,10 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(day).toHaveAttribute("aria-valuetext", /demo\/design-system/);
   await design.getByText("Visa dagliga värden", { exact: true }).click();
   await expect(design.locator(".daily-values tbody tr")).toHaveCount(3);
+  // #167: cards summarize the same three-day window as the chart, not the full 30 days.
+  expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
+  await expect(card(design, "Commits").locator("strong")).toHaveText("6");
+  await expect(card(design, "Skapade issues").locator("strong")).toHaveText("2");
   await rangeGroup.getByRole("button", { name: "30 dagar", exact: true }).click();
   await expect(rangeGroup.getByRole("button", { name: "30 dagar", exact: true })).toHaveAttribute("aria-pressed", "true");
   const resolutionSelect = timeControls.getByRole("combobox", { name: "Upplösning", exact: true });
@@ -39,6 +48,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await day.focus(); await page.keyboard.press("End");
   await expect(day).toHaveValue("29");
   await expect(design.locator(".daily-values tbody tr")).toHaveCount(30);
+  await expect(card(design, "Commits").locator("strong")).toHaveText("42");
+  expect(await dailySum(design)).toBe(await cardValue(design, "Stängda issues"));
   await rangeGroup.getByRole("button", { name: "8h", exact: true }).click();
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", false);
   await resolutionSelect.selectOption("30m");

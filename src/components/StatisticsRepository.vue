@@ -41,6 +41,18 @@ function summarize(filter: StatisticsFilter) {
   }
   return cached;
 }
+// Cards, breakdowns and the chart share one time window (dates, range and
+// resolution), so each total equals the sum of the chart's points (#167).
+function windowFilter(label: string, contributor: string): StatisticsFilter {
+  return {
+    from: props.timeSpan.from,
+    to: props.timeSpan.to,
+    label,
+    contributor,
+    range: props.timeSpan.range,
+    resolution: props.timeSpan.resolution,
+  };
+}
 function normalize(value: StatisticsPreference | undefined) {
   const choices = props.data ? dimensions.value : undefined;
   const base = {
@@ -52,14 +64,14 @@ function normalize(value: StatisticsPreference | undefined) {
   };
   const normalized = normalizeStatisticsPreference(base, props.period, choices);
   if (props.data) {
-    const totals = summarize({ from: normalized.from, to: normalized.to, label: normalized.label, contributor: normalized.contributor }).totals;
+    const totals = summarize(windowFilter(normalized.label, normalized.contributor)).totals;
     const metrics = statisticsMetrics.filter(key => totals[key] !== undefined);
     return normalizeStatisticsPreference(normalized, props.period, { ...dimensions.value, metrics });
   }
   return normalized;
 }
 const state = ref<StatisticsPreference>(normalize(props.preference));
-const summary = computed(() => summarize({ from: props.timeSpan.from, to: props.timeSpan.to, label: state.value.label, contributor: state.value.contributor }));
+const summary = computed(() => summarize(windowFilter(state.value.label, state.value.contributor)));
 const availableMetrics = computed(() => statisticsMetrics.filter(key => summary.value.totals[key] !== undefined));
 const anyData = computed(() => availableMetrics.value.length > 0);
 const temporary = computed(() => props.loadFailed || !!props.data?.temporary.length);
@@ -68,16 +80,6 @@ const selectedMetrics = computed<StatisticsMetric[]>(() => {
   const valid = raw.filter(key => availableMetrics.value.includes(key));
   return valid.length ? valid : availableMetrics.value.slice(0, 1);
 });
-const chartSummary = computed(() =>
-  summarize({
-    from: props.timeSpan.from,
-    to: props.timeSpan.to,
-    label: state.value.label,
-    contributor: state.value.contributor,
-    range: props.timeSpan.range,
-    resolution: props.timeSpan.resolution,
-  }),
-);
 const chartSeries = computed(() => {
   if (!props.data) return [];
   const metrics = selectedMetrics.value;
@@ -85,13 +87,13 @@ const chartSeries = computed(() => {
   if (metrics.length === 1) {
     const metric = metrics[0]!;
     return summary.value.totals[metric] !== undefined
-      ? [{ name: props.repository.full_name, metric, days: chartSummary.value.days }]
+      ? [{ name: props.repository.full_name, metric, days: summary.value.days }]
       : [];
   }
   return metrics.map(metric => ({
     name: t(metricNames[metric]),
     metric,
-    days: chartSummary.value.days,
+    days: summary.value.days,
   }));
 });
 const chartTitle = computed(() =>

@@ -144,6 +144,13 @@ export function statisticsDimensions(data: StatisticsData[]) {
   return { labels: [...labels].sort(), contributors: [...contributors].sort() };
 }
 
+/**
+ * Buckets every source into the filter's window (range, resolution and dates).
+ * Totals, contributors, labels and the median closure age only count records
+ * that land in a bucket, so each total equals the sum of `days` (#167). Pass
+ * the same range/resolution as the chart; without them the window is the full
+ * from–to span in day buckets.
+ */
 export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFilter): StatisticsSummary {
   const days: StatisticsDay[] = [];
   const subDayRange = filter.range === "8h" || filter.range === "12h" || filter.range === "24h";
