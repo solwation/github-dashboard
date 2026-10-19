@@ -1,22 +1,31 @@
 import {
-  clampStatisticsResolution, statisticsDurationMs, statisticsMetrics, statisticsRanges, statisticsResolutions,
+  clampStatisticsResolution, formatStatisticsBound, hasStatisticsTime, parseStatisticsBound,
+  statisticsDurationMs, statisticsMetrics, statisticsRanges, statisticsResolutions, statisticsWindowMs, validStatisticsBound,
   type StatisticsMetric, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
 } from "./statistics";
 
-function validDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
-/** Shared validation for in-memory preferences and settings imported by QR. */
+/**
+ * Shared validation for in-memory preferences and settings imported by QR.
+ * from/to may be legacy "YYYY-MM-DD" or UTC "YYYY-MM-DDTHH:mm" (#168). Date-only
+ * values clamp to the period's dates as before; datetime values clamp to the
+ * period's concrete [00:00 of from, end of to] span and keep their format.
+ */
 export function normalizeStatisticsPreference(
   value: Partial<StatisticsPreference> | undefined,
   window: { from: string; to: string },
   choices?: { labels: string[]; contributors: string[]; metrics?: StatisticsMetric[] },
 ): StatisticsPreference {
-  const clamp = (date: unknown, fallback: string) => validDate(date) ? date < window.from ? window.from : date > window.to ? window.to : date : fallback;
-  let from = clamp(value?.from, window.from), to = clamp(value?.to, window.to);
-  if (from > to) { from = window.from; to = window.to; }
+  const periodStart = parseStatisticsBound(window.from, "start"), periodEnd = parseStatisticsBound(window.to, "end");
+  const clamp = (date: unknown, fallback: string, edge: "start" | "end") => {
+    if (!validStatisticsBound(date)) return fallback;
+    if (!hasStatisticsTime(date)) return date < window.from ? window.from : date > window.to ? window.to : date;
+    const ms = parseStatisticsBound(date, edge);
+    if (Number.isFinite(periodStart) && ms < periodStart) return formatStatisticsBound(periodStart);
+    if (Number.isFinite(periodEnd) && ms > periodEnd) return formatStatisticsBound(periodEnd);
+    return date;
+  };
+  let from = clamp(value?.from, window.from, "start"), to = clamp(value?.to, window.to, "end");
+  if (!Number.isFinite(statisticsWindowMs({ from, to }).start)) { from = window.from; to = window.to; }
   const label = typeof value?.label === "string" && (!choices || choices.labels.includes(value.label)) ? value.label : "";
   const contributor = typeof value?.contributor === "string" && (!choices || choices.contributors.includes(value.contributor)) ? value.contributor : "";
   const allowedMetrics = choices?.metrics || [...statisticsMetrics];

@@ -2,7 +2,7 @@ import { reconcileRepositoryColors, validRepositoryColor } from "./repository-co
 import { validColumnLimit } from "./column-limits";
 import { reconcileOrder } from "./project-layout";
 import {
-  statisticsMetrics, statisticsRanges, statisticsResolutions,
+  statisticsMetrics, statisticsRanges, statisticsResolutions, statisticsWindowMs, validStatisticsBound,
   type StatisticsMetric, type StatisticsRangePreset, type StatisticsResolution,
 } from "./statistics";
 import type { Rules } from "./model";
@@ -66,9 +66,9 @@ function repoMap(value: unknown, valid: (value: unknown) => boolean): boolean {
     new Set(Object.keys(value).map(repo => repo.toLowerCase())).size === Object.keys(value).length &&
     Object.entries(value).every(([repo, setting]) => handoffRepository(repo) && valid(setting));
 }
-function validDate(value: unknown): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+/** from/to: "YYYY-MM-DD" (legacy) or UTC "YYYY-MM-DDTHH:mm" (#168); the receiver clamps them to its period. */
+function validWindow(from: unknown, to: unknown): boolean {
+  return validStatisticsBound(from) && validStatisticsBound(to) && Number.isFinite(statisticsWindowMs({ from, to }).start);
 }
 const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> = {
   repositoryColors: value => repoMap(value, validRepositoryColor),
@@ -85,7 +85,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
     ["from", "to", "label", "contributor", "metric"].every(key => Object.hasOwn(filter, key)) &&
     Object.keys(filter).every(key => ["from", "to", "label", "contributor", "metric", "metrics", "range", "resolution"].includes(key)) &&
-    validDate(filter.from) && validDate(filter.to) && filter.from <= filter.to &&
+    validWindow(filter.from, filter.to) &&
     text(filter.label) && text(filter.contributor) && statisticsMetrics.includes(filter.metric as StatisticsMetric) &&
     (filter.metrics === undefined || (Array.isArray(filter.metrics) && filter.metrics.length >= 1 && filter.metrics.length <= statisticsMetrics.length && filter.metrics.every(m => statisticsMetrics.includes(m as StatisticsMetric)))) &&
     (filter.range === undefined || statisticsRanges.includes(filter.range as StatisticsRangePreset)) &&

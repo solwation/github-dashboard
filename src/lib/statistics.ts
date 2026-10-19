@@ -74,7 +74,54 @@ export interface StatisticsSummary {
   contributors: { name: string; commits: number; additions: number | null; deletions: number | null }[];
   labels: { name: string; count: number }[];
 }
+/**
+ * Window bounds are UTC strings in one of two formats (#168):
+ * - "YYYY-MM-DD" (legacy): `from` means 00:00 that day, `to` means the end of that day.
+ * - "YYYY-MM-DDTHH:mm": the exact minute; `to` is an exclusive end.
+ * The concrete window is always the half-open interval [from, to).
+ */
+const statisticsBoundPattern = /^(\d{4}-\d{2}-\d{2})(?:T(?:[01]\d|2[0-3]):[0-5]\d)?$/;
+/** True when the value carries a clock time ("YYYY-MM-DDTHH:mm"). */
+export function hasStatisticsTime(value: string | undefined): boolean {
+  return typeof value === "string" && /T\d{2}:\d{2}$/.test(value);
+}
+/** Strictly validates "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm" (real calendar dates only). */
+export function validStatisticsBound(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = statisticsBoundPattern.exec(value);
+  if (!match) return false;
+  const day = Date.parse(`${match[1]}T00:00:00Z`);
+  return Number.isFinite(day) && new Date(day).toISOString().slice(0, 10) === match[1];
+}
+/**
+ * Parses a window bound to epoch milliseconds. A date-only `start` is 00:00 UTC
+ * that day; a date-only `end` is 00:00 UTC the following day (exclusive end).
+ * Invalid values return NaN.
+ */
+export function parseStatisticsBound(value: string | undefined, edge: "start" | "end"): number {
+  if (!validStatisticsBound(value)) return NaN;
+  if (hasStatisticsTime(value)) return Date.parse(`${value}:00Z`);
+  const day = Date.parse(`${value}T00:00:00Z`);
+  return edge === "end" ? day + 86_400_000 : day;
+}
+/** Formats epoch milliseconds as a UTC "YYYY-MM-DDTHH:mm" window bound. */
+export function formatStatisticsBound(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 16);
+}
+/** Concrete [start, end) window in epoch ms; NaN bounds when invalid or empty/inverted. */
+export function statisticsWindowMs(filter: Pick<StatisticsFilter, "from" | "to">): { start: number; end: number } {
+  const start = parseStatisticsBound(filter.from, "start"), end = parseStatisticsBound(filter.to, "end");
+  return Number.isFinite(start) && Number.isFinite(end) && start < end ? { start, end } : { start: NaN, end: NaN };
+}
+/** A window is concrete when either bound carries a clock time; range is then only a label. */
+export function isConcreteStatisticsWindow(filter: Pick<StatisticsFilter, "from" | "to">): boolean {
+  return hasStatisticsTime(filter.from) || hasStatisticsTime(filter.to);
+}
 export function statisticsDurationMs(filter: Pick<StatisticsFilter, "from" | "to" | "range">): number {
+  if (isConcreteStatisticsWindow(filter)) {
+    const { start, end } = statisticsWindowMs(filter);
+    return Number.isFinite(start) ? end - start : statisticsRangeMs["30d"];
+  }
   if (filter.range && statisticsRangeMs[filter.range]) return statisticsRangeMs[filter.range];
   const start = Date.parse(`${filter.from}T00:00:00Z`), end = Date.parse(`${filter.to}T00:00:00Z`);
   if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return statisticsRangeMs["30d"];
@@ -113,6 +160,27 @@ export function statisticsWindow(now = Date.now()) {
   const start = new Date(`${day}T00:00:00.000Z`).getTime() - 29 * 86400000;
   return { from: new Date(start).toISOString().slice(0, 10), to: day };
 }
+/**
+ * Concrete UTC window for a preset (#168), as "YYYY-MM-DDTHH:mm" bounds.
+ * The step is the preset's default resolution,
+ * clampStatisticsResolution(undefined, duration, preset). `to` is the exclusive
+ * end of the bucket containing `now` (the first step boundary strictly after
+ * `now`), and `from` = `to` − duration, clamped to 00:00 UTC of period.from.
+ * Example: now 10:20, 24h at 1h → [yesterday 11:00, today 11:00). Day presets
+ * end at the next UTC midnight, matching the legacy date-only window.
+ */
+export function statisticsPresetWindow(
+  preset: StatisticsRangePreset,
+  now: number,
+  period: { from: string; to: string },
+): { from: string; to: string } {
+  const duration = statisticsRangeMs[preset];
+  const stepMs = statisticsResolutionMs[clampStatisticsResolution(undefined, duration, preset)];
+  const end = Math.floor(now / stepMs) * stepMs + stepMs;
+  const periodStart = parseStatisticsBound(period.from, "start");
+  const start = Number.isFinite(periodStart) ? Math.max(periodStart, end - duration) : end - duration;
+  return { from: formatStatisticsBound(start), to: formatStatisticsBound(end) };
+}
 export function commitDate(commit: StatisticsCommit) { return commit.commit.committer?.date || commit.commit.author?.date || ""; }
 export function commitContributor(commit: StatisticsCommit) { return commit.author?.login || commit.commit.author?.name || ""; }
 // GitHub timestamps are normally UTC (`YYYY-MM-DDTHH:MM:SSZ`, optionally with
@@ -146,6 +214,8 @@ export function statisticsDimensions(data: StatisticsData[]) {
 
 /**
  * Buckets every source into the filter's window (range, resolution and dates).
+ * When from/to carry a clock time the window is exactly [from, to) and range
+ * only names the active preset (#168); date-only bounds keep the legacy rules.
  * Totals, contributors, labels and the median closure age only count records
  * that land in a bucket, so each total equals the sum of `days` (#167). Pass
  * the same range/resolution as the chart; without them the window is the full
@@ -155,12 +225,32 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
   const days: StatisticsDay[] = [];
   const subDayRange = filter.range === "8h" || filter.range === "12h" || filter.range === "24h";
   const durationMs = statisticsDurationMs(filter);
-  const resolution = filter.resolution || filter.range
+  const concrete = isConcreteStatisticsWindow(filter);
+  const resolution = filter.resolution || filter.range || concrete
     ? clampStatisticsResolution(filter.resolution, durationMs, filter.range)
     : "1d";
   const presetDays = filter.range === "3d" ? 3 : filter.range === "7d" ? 7 : filter.range === "21d" ? 21 : filter.range === "30d" ? 30 : null;
   let bucketFor: (date: string) => StatisticsValues | undefined;
-  if (resolution === "1d" && !subDayRange) {
+  if (concrete) {
+    // Exact [from, to) window (#168): presets and custom datetime windows behave
+    // identically. Buckets sit on the resolution's UTC grid; only records inside
+    // the window count, so a partial first/last bucket holds only in-window data.
+    const stepMs = statisticsResolutionMs[resolution];
+    const { start, end } = statisticsWindowMs(filter);
+    const gridStart = Math.floor(start / stepMs) * stepMs;
+    if (Number.isFinite(start)) {
+      for (let t = gridStart; t < end && days.length <= MAX_STATISTICS_BUCKETS; t += stepMs) {
+        const iso = new Date(t).toISOString();
+        days.push({ date: resolution === "1d" ? iso.slice(0, 10) : iso.slice(0, 16).replace("T", " "), values: {} });
+      }
+    }
+    bucketFor = (date: string) => {
+      if (!dayOf(date)) return undefined;
+      const parsed = Date.parse(date);
+      if (!Number.isFinite(parsed) || parsed < start || parsed >= end) return undefined;
+      return days[Math.floor((parsed - gridStart) / stepMs)]?.values;
+    };
+  } else if (resolution === "1d" && !subDayRange) {
     const minStart = Date.parse(`${filter.from}T00:00:00Z`), end = Date.parse(`${filter.to}T00:00:00Z`);
     const start = presetDays && Number.isFinite(end)
       ? Math.max(Number.isFinite(minStart) ? minStart : -Infinity, end - (presetDays - 1) * 86400000)
