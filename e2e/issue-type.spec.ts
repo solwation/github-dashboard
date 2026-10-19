@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-test.use({ baseURL: "http://127.0.0.1:5195" });
 
 // #195: bug and enhancement issues get different icon, class and accessible title.
 test("issue cards show a type icon derived from labels", async ({ page }) => {
