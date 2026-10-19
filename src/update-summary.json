@@ -1,10 +1,10 @@
 {
-  "baseCommit": "5ec5d75d30c792d0ea341f4eacb5afff181b6ac0",
+  "baseCommit": "73d2cb97b5f28f01d7a247a419915b1e3660d03f",
   "summary": {
-    "sv": "Hovermarkeringen på licenssektionen i vänstermenyn ligger nu jämnt runt innehållet.",
-    "en": "The license section's hover highlight in the left menu now sits evenly around its content."
+    "sv": "Korten är mer kompakta: cirkel, id och labels delar översta rad, med repo-chip först när uppdelningen är av.",
+    "en": "Cards are more compact: circle, id and labels share the top row, with a repo chip first when split is off."
   },
   "issues": [
-    191
+    192
   ]
 }

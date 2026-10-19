@@ -690,10 +690,20 @@ h1 {
 }
 .card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
+.card-top-main {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  gap: 4px 5px;
+  min-width: 0;
+}
+.card-top-main .issue-number { flex-shrink: 0; margin-right: 2px; }
 .issue-number {
   font-size: 9px;
   color: #99a3a7;
@@ -743,10 +753,7 @@ h1 {
   opacity: 1;
 }
 .labels {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  margin-top: 11px;
+  display: contents;
 }
 .label {
   display: inline-flex;
@@ -759,8 +766,9 @@ h1 {
   border-radius: 4px;
   padding: 2px 5px;
   max-width: 100%;
-  overflow-wrap: anywhere;
+  min-width: 0;
 }
+.label-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .label i {
   width: 4px;
   height: 4px;
@@ -1827,7 +1835,6 @@ button.lane-sync:focus-visible::after {
 .row-popup-backdrop { padding: 16px; }
 .row-popup { position: relative; width: 100%; max-width: 440px; max-height: calc(100dvh - 32px); overflow-y: auto; display: flex; flex-direction: column; }
 .row-popup > .issue-card { margin: 0; box-shadow: 0 20px 60px #10263138; }
-.row-popup .card-repository { max-width: calc(100% - 44px); }
 .row-popup .movement-marker { max-width: calc(100% - 44px); }
 .row-popup .card-top { padding-right: 44px; flex-wrap: wrap; gap: 6px; }
 .row-popup-close {

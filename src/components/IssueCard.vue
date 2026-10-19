@@ -147,8 +147,8 @@ const visibleLabels = computed(() =>
       {{ recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: col === 'closed' ? t('Stängda') : col === 'progress' ? t('Pågående') : 'Backlog' }) }}
       <span aria-hidden="true">✓</span>
     </button>
-    <span v-if="repository && showRepository && !rowDetails" class="card-repository" :title="repository"><i aria-hidden="true" />{{ repository }}</span>
     <div v-if="!rowDetails" class="card-top">
+      <div class="card-top-main">
       <span class="issue-number"
         ><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
           v-else
@@ -156,6 +156,17 @@ const visibleLabels = computed(() =>
         />
         #{{ issue.number }}</span
       >
+      <span class="labels">
+        <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name">{{ repository }}</span></span>
+        <span
+          v-for="label in visibleLabels"
+          :key="label.name"
+          class="label"
+          :title="label.name"
+          ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
+        >
+      </span>
+      </div>
       <div class="card-top-meta">
         <span v-if="isSubtask && parent" class="subtask-badge"
           :title="t('Underärende till {parent} · {title}', { parent: (parent.repository.toLowerCase() === (repository || '').toLowerCase() ? '' : parent.repository) + '#' + parent.number, title: parent.title })"
@@ -188,15 +199,6 @@ const visibleLabels = computed(() =>
       @click="emit('read')" @auxclick="emit('read')"
       >{{ issue.title }}<ArrowUpRight :size="13"
     /></a>
-    <div v-if="!rowDetails" class="labels">
-      <span
-        v-for="label in visibleLabels"
-        :key="label.name"
-        class="label"
-        :title="label.name"
-        ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
-      >
-    </div>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" />
     <IssueDetails :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
@@ -312,7 +314,8 @@ const visibleLabels = computed(() =>
 }
 .issue-card.has-repository { position: relative; }
 .issue-card.has-repository::after { content: ""; position: absolute; top: 6px; bottom: 6px; right: 0; width: 3px; border-radius: 3px; background: var(--repository-color); pointer-events: none; }
-.card-repository { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin-bottom: 9px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.card-repository { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 9px; line-height: 1.4; }
+.card-repository-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-repository i { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
 
 .backlog-age {

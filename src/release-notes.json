@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Korten är mer kompakta: statuscirkel, issue-id och labels ligger på en gemensam översta rad, och repositoryn visas som första chip när uppdelning per repository är av.",
+          "en": "Cards are more compact: status circle, issue id and labels share one top row, and the repository shows as the first chip when split by repository is off."
+        },
+        "issues": [192]
+      },
+      {
+        "text": {
           "sv": "Hovermarkeringen på licenssektionen omger nu innehållet jämnt i stället för att ligga förskjuten.",
           "en": "The license section's hover highlight now surrounds its content evenly instead of sitting offset."
         },
