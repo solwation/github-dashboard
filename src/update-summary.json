@@ -1,10 +1,10 @@
 {
-  "baseCommit": "05a86ff46e2e6b286690a349f042c8dcacce43f6",
+  "baseCommit": "8d5d0dc4ee609fc61411be5716becd39fdf31182",
   "summary": {
-    "sv": "Statistikens Från/Till-väljare visas bara när Anpassat är valt. Snabbvalen håller tidskontrollerna kompakta.",
-    "en": "Statistics From/To pickers appear only when Custom is selected. Presets keep the time controls compact."
+    "sv": "Statistikens kompakta tidsrad har dropdowns för intervall och upplösning. Tidszonen visas gemensamt vid kontot i toppfältet.",
+    "en": "Statistics has a compact time row with interval and resolution dropdowns. Your time zone is shown once beside the account in the top bar."
   },
   "issues": [
-    178
+    179
   ]
 }

@@ -43,10 +43,10 @@
       },
       {
         "text": {
-          "sv": "Snabbvalen fyller datum- och tidväljarna i UTC, egna intervall markeras som Anpassat och en periodetikett visar exakt vad som visas.",
-          "en": "Presets fill the UTC date and time pickers, custom ranges are marked Custom, and a period label shows exactly what is displayed."
+          "sv": "En kompakt tidsrad visar perioden till vänster och dropdowns till höger; tidszonen visas gemensamt vid kontot.",
+          "en": "A compact time row puts the period on the left and dropdowns on the right; the account shows the shared time zone."
         },
-        "issues": [168, 169]
+        "issues": [168, 169, 179]
       },
       {
         "text": {
