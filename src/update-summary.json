@@ -1,12 +1,10 @@
 {
-  "baseCommit": "91df2c79e965854b07dc1bc6d4be5126d157fc25",
+  "baseCommit": "b593b2422f969e854581b69f0d6b3db3facdbd6d",
   "summary": {
-    "sv": "Snabbvalen fyller nu datum- och tidväljarna med en tydlig periodetikett, och statistikfiltren ligger kompakt i varje repositorys rubrik.",
-    "en": "Presets now fill the date and time pickers with a clear period label, and Statistics filters sit compactly in each repository heading."
+    "sv": "Statistikdiagram visar nu alla seriers värden i en popover vid markören, även med mobiltryck och tangentbord.",
+    "en": "Statistics charts now show every series value in a cursor popover, also available through touch and keyboard."
   },
   "issues": [
-    168,
-    169,
-    172
+    173
   ]
 }
