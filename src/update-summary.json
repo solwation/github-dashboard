@@ -1,11 +1,12 @@
 {
   "baseCommit": "c2d2912d164a8caa600fd386357de89dc658b1ef",
   "summary": {
-    "sv": "Fäll ihop repositories i Statistics, med stängda bidragsgivare/labels och mindre grafkontroller. Breda listrader visar kommentarsikon och antal.",
-    "en": "Collapse Statistics repositories, with contributors/labels closed and simpler chart controls. Wide list rows show the comments icon and count."
+    "sv": "Fäll ihop repositories i Statistics. Listrader visar kommentarsantal, och kommentarsbubblan och andra klickbara märken lyser vid hovring.",
+    "en": "Collapse Statistics repositories. List rows show comment counts, and the comment bubble and other clickable chips glow on hover."
   },
   "issues": [
     184,
-    185
+    185,
+    186
   ]
 }
