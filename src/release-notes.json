@@ -1,5 +1,28 @@
 [
   {
+    "date": "2026-10-19",
+    "summary": {
+      "sv": "Statistikens nyckeltal följer nu vald period, och diagrammet visar tidsaxel, rubrik efter upplösning och vald punkt tydligt.",
+      "en": "Statistics totals now follow the selected period, and the chart shows a time axis, a resolution-based title and the selected point clearly."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Nyckeltal, bidragsgivare, labels och medianålder räknas över samma period som diagrammet i stället för hela 30 dagar.",
+          "en": "Totals, contributors, labels and median age now cover the same period as the chart instead of the full 30 days."
+        },
+        "issues": [167]
+      },
+      {
+        "text": {
+          "sv": "Diagrammet får rubrik efter upplösning, fler axeletiketter med klockslag, måttnamn i förklaringen och vald punkt i en tydlig ruta.",
+          "en": "The chart gets a resolution-based title, more axis labels with times, metric names in the legend and the selected point in a clear box."
+        },
+        "issues": [171]
+      }
+    ]
+  },
+  {
     "date": "2026-10-18",
     "summary": {
       "sv": "Animerade kommentarer, subtask-indikering, mobilkortkryss, balanserade ladd-cirklar, samlad statistik-tidsväljare och klickbar versionsruta.",

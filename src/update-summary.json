@@ -1,10 +1,11 @@
 {
-  "baseCommit": "2e1c5fc7eeac01c86b191f7d0aac6c345433ab91",
+  "baseCommit": "1dfd026064dba74a58990094ee9af8cba4437ff0",
   "summary": {
-    "sv": "Hela versionsrutan i sidomenyn är nu klickbar för att visa versionsnyheter och har tydlig hover-indikering.",
-    "en": "The entire sidebar version box is now clickable to open release notes with clear hover indication."
+    "sv": "Statistikens nyckeltal följer nu vald period, och diagrammet visar tidsaxel, rubrik efter upplösning och vald punkt tydligt.",
+    "en": "Statistics totals now follow the selected period, and the chart shows a time axis, a resolution-based title and the selected point."
   },
   "issues": [
-    165
+    167,
+    171
   ]
 }
