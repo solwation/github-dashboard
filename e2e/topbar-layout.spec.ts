@@ -50,6 +50,10 @@ test('phone topbar right-aligns account controls and keeps connection status acc
   await expectPhoneTopbar(page, 'Inställningar', 'Logga ut');
   await page.screenshot({ path: test.info().outputPath('topbar-375-sv.png'), clip: { x: 0, y: 0, width: 375, height: 200 } });
 
+  const timezone = page.locator('.topbar .account-timezone');
+  await expect(timezone).toHaveCount(1);
+  await expect(timezone).toHaveText(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone));
+  await expect(timezone).toBeVisible();
   const connection = page.locator('.topbar .connection');
   const label = connection.locator('.connection-label');
   // Text is visually hidden but stays in the accessibility tree and as a tooltip.
@@ -87,5 +91,7 @@ test('phone topbar keeps the demo status visible', async ({ page }) => {
   const label = page.locator('.topbar .connection-label');
   await expect(label).toHaveText('Demoläge');
   expect((await box(label)).width).toBeGreaterThan(20);
+  await expect(page.locator('.topbar .account-timezone')).toHaveCount(1);
+  await expect(page.locator('.topbar .account-timezone')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useLanguage } from "./lib/i18n";
+import { browserTimeZone } from "./lib/browser-time";
+const accountTimeZone = browserTimeZone();
 const { t, locale, preference, setLanguage } = useLanguage();
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
@@ -1453,10 +1455,7 @@ onMounted(async () => {
         <span class="connection" :class="{ connected: loggedIn }" :title="connectionLabel"
           ><i :class="{ connected: loggedIn }" aria-hidden="true" /><span class="connection-label">{{ connectionLabel }}</span></span
         ><template v-if="user || savedSession"
-          ><img v-if="user" :src="user.avatar_url" alt="" class="avatar" :title="`${user.login} · ${connectionLabel}`" /><span
-            class="username"
-            v-if="user"
-            >{{ user.login }}</span
+          ><img v-if="user" :src="user.avatar_url" alt="" class="avatar" :title="`${user.login} · ${connectionLabel}`" /><span class="account-context"><span class="username" v-if="user">{{ user.login }}</span><span class="account-timezone">{{ accountTimeZone }}</span></span
           ><button
             class="icon-button"
             @click="logoutPrompt = true"
@@ -1465,9 +1464,9 @@ onMounted(async () => {
             :title="t('Logga ut')"
           >
             <LogOut :size="17" /></button></template
-        ><button v-else-if="isDemo" class="button small" @click="logout">
+        ><template v-else-if="isDemo"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">
           {{ t("Till inloggning") }}
-        </button>
+        </button></template>
       </div>
     </header>
     <main :id="currentView === 'statistics' && (loggedIn || isDemo) ? 'statistics' : 'overview'" tabindex="-1">

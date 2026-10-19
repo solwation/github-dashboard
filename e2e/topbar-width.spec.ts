@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
+// A long IANA timezone must remain readable even alongside a long account name.
+test.use({ timezoneId: 'America/North_Dakota/New_Salem' });
+
 // Issue #113: the signed-in topbar must fit between the phone breakpoint and wide screens.
 async function signIn(page: Page) {
   const repos = [{ id: 1, name: 'first', full_name: 'sample/first', private: true, description: 'Fixture',
@@ -36,6 +39,7 @@ const measure = (page: Page) => page.evaluate(() => {
     overflow: document.documentElement.scrollWidth - innerWidth,
     topbar: rect(topbar),
     breadcrumb: rect(topbar.querySelector('.breadcrumb')!),
+    timezone: rect(topbar.querySelector('.account-timezone')!),
     controls: controls.map(el => ({ name: el.className || el.tagName, ...rect(el) })),
   };
 });
@@ -46,6 +50,15 @@ async function expectFits(page: Page, width: number) {
   await page.setViewportSize({ width, height: 900 });
   const m = await measure(page);
   expect(m.overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+  const timezone = page.locator('.topbar .account-timezone');
+  await expect(timezone).toHaveCount(1);
+  await expect(timezone).toBeVisible();
+  await expect(timezone).toHaveText(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone));
+  expect(m.timezone.left).toBeGreaterThanOrEqual(m.topbar.left);
+  expect(m.timezone.right).toBeLessThanOrEqual(m.topbar.right);
+  expect(m.timezone.bottom).toBeLessThanOrEqual(m.topbar.bottom);
+  // The sticky offset follows wrapped controls and the extra timezone line.
+  await expect.poll(() => page.evaluate(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height')) - document.querySelector('.topbar')!.getBoundingClientRect().height))).toBeLessThanOrEqual(1);
   for (const control of m.controls) {
     expect(control.left, `${control.name} inside topbar at ${width}px`).toBeGreaterThanOrEqual(m.topbar.left);
     expect(control.right, `${control.name} inside viewport at ${width}px`).toBeLessThanOrEqual(width);
