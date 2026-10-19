@@ -125,7 +125,7 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
       <span v-for="item in selectedValues" :key="item.name" class="chart-selection-value"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: item.color }" stroke-width="2.5" :stroke-dasharray="item.dash" /></svg><span>{{ item.name }}</span><b>{{ number(item.value) }}</b></span>
     </div>
     <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: color(index) }" stroke-width="2.5" :stroke-dasharray="dash(index)" /><circle cx="11" cy="5" r="2.5" :style="{ fill: color(index) }" /></svg>{{ series.name }}</span></div>
-    <label class="chart-day">{{ t("Tidpunkt i diagrammet") }}
+    <label class="chart-keyboard-control">{{ t("Tidpunkt i diagrammet") }}
       <input v-model.number="selected" type="range" min="0" :max="Math.max(0, dates.length - 1)" :aria-valuetext="selectedText" @focus="interaction = 'keyboard'" @input="interaction = 'keyboard'" @blur="interaction = 'none'" @keydown.esc="interaction = 'none'" />
     </label>
   </div>
@@ -140,8 +140,10 @@ svg text { fill: var(--chart-text); font: 11px system-ui; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px; margin: 10px 0; }
 .chart-legend span { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .chart-swatch { width: 22px; height: 10px; flex-shrink: 0; overflow: visible; }
-.chart-day { display: grid; gap: 6px; font-size: 12px; margin-bottom: 14px; }
-.chart-day input { width: 100%; accent-color: var(--green); }
+/* Keep native slider semantics and keyboard navigation without a redundant visible row. */
+.chart-keyboard-control { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.chart-keyboard-control:focus-within { left: 0; right: 0; bottom: 0; z-index: 3; display: grid; gap: 6px; width: auto; height: auto; padding: 8px 10px; border: 2px solid var(--green); border-radius: 6px; background: var(--surface); font-size: 12px; clip-path: none; white-space: normal; }
+.chart-keyboard-control input { width: 100%; accent-color: var(--green); }
 .chart-popover { position: absolute; top: 12px; z-index: 2; width: min(280px, calc(100% - 16px)); box-sizing: border-box; display: grid; gap: 5px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 3px 12px #0002; font-size: 12px; overflow-wrap: anywhere; pointer-events: none; }
 .chart-selection-time { font-size: 12px; margin-bottom: 2px; }
 .chart-selection-value { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 6px; }

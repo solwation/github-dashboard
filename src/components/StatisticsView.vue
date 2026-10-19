@@ -274,18 +274,32 @@ const historyVerifiedAt = computed(() => {
   const values = props.repositories.map(repo => snapshots.value[repo.full_name]?.commits).filter(source => source?.historyVerifiedAt && source.historyVerifiedAt < source.fetchedAt).map(source => source!.historyVerifiedAt!);
   return values.length ? Math.min(...values) : null;
 });
+const collapsedRepositories = ref(new Set<number>());
 let followedAnchor = "";
-async function followRepositoryAnchor() {
-  const hash = window.location.hash;
+async function followRepositoryAnchor(hash = window.location.hash) {
   if (!/^#statistics-repo-\d+$/.test(hash) || followedAnchor === hash || initialLoading.value) return;
   await nextTick();
   const target = document.getElementById(hash.slice(1));
   if (!target?.getClientRects().length) return;
+  const id = Number(hash.slice("#statistics-repo-".length));
+  if (collapsedRepositories.value.delete(id)) await nextTick();
   target.scrollIntoView({ block: "start" });
   followedAnchor = hash;
 }
 watch([initialLoading, renderedRepositories], () => { void followRepositoryAnchor(); }, { flush: "post" });
-onMounted(() => { window.addEventListener("hashchange", followRepositoryAnchor); void followRepositoryAnchor(); });
+function followHashChange() { void followRepositoryAnchor(); }
+function followSidebarLink(event: MouseEvent) {
+  const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href^="#statistics-repo-"]') : null;
+  if (!link) return;
+  // A repeated click on the current fragment must still reveal a newly collapsed section.
+  followedAnchor = "";
+  void followRepositoryAnchor(link.hash);
+}
+onMounted(() => {
+  window.addEventListener("hashchange", followHashChange);
+  document.addEventListener("click", followSidebarLink);
+  void followRepositoryAnchor();
+});
 let collector: StatisticsCollector | null = null;
 let generation = 0;
 let sessionEpoch = 0;
@@ -351,6 +365,7 @@ async function load(force = false) {
 }
 watch([() => props.client, () => props.session, () => props.demo, () => props.credential], () => {
   generation++; const epoch = ++sessionEpoch;
+  collapsedRepositories.value.clear();
   collector?.dispose(); collector = props.client ? new StatisticsCollector(props.client) : null;
   const activeCollector = collector, token = props.credential;
   snapshots.value = {}; preparedRepositories.value = new Set(); period.value = statisticsCalendarWindow(); cacheFailed.value = false;
@@ -374,7 +389,7 @@ watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
   preparedRepositories.value = new Set([...preparedRepositories.value].filter(name => selected.has(name)));
   void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
 });
-onUnmounted(() => { rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followRepositoryAnchor); });
+onUnmounted(() => { rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); document.removeEventListener("click", followSidebarLink); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
@@ -414,7 +429,7 @@ onUnmounted(() => { rolloverReloadPending = false; generation++; sessionEpoch++;
     <div v-show="!initialLoading && !invalidRange" class="statistics-repositories">
       <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-failed="!!failures[repository.full_name]"
-        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" @update:preference="updatePreference(repository.full_name, $event)" />
+        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="$event ? collapsedRepositories.add(repository.id) : collapsedRepositories.delete(repository.id)" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">

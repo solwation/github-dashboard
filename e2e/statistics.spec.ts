@@ -67,10 +67,12 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(metricButton(design, "Commits")).toHaveAttribute("aria-pressed", "false");
   await expect(design.getByRole("button", { name: /Medianålder/ })).toHaveCount(0);
   await expect(design.locator(".statistics-total-static")).toContainText("Medianålder vid stängning");
-  // #172: breakdowns are collapsible <details> and open by default on desktop-sized viewports.
+  // #184: optional breakdowns start closed on every screen size.
   const breakdowns = design.locator(".statistics-breakdowns > details");
   await expect(breakdowns.locator("summary")).toHaveText(["Bidragsgivare", "Labels på skapade issues"]);
-  for (const element of await breakdowns.all()) await expect(element).toHaveJSProperty("open", true);
+  for (const element of await breakdowns.all()) await expect(element).toHaveJSProperty("open", false);
+  await expect(design.getByRole("table")).toBeHidden();
+  await breakdowns.first().locator("summary").click();
   await expect(design.getByRole("table")).toBeVisible();
   const yLabels = await design.locator(".statistics-chart > svg > g > text").count();
   expect(yLabels).toBeGreaterThanOrEqual(2);
@@ -219,7 +221,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
-  await expect(design.getByRole("slider", { name: "Chart time" })).toBeVisible();
+  await design.getByRole("slider", { name: "Chart time" }).focus();
+  await expect(design.getByRole("slider", { name: "Chart time" })).toBeFocused();
   const englishRange = page.getByRole("combobox", { name: "Time range", exact: true });
   await englishRange.selectOption("30d");
   await expect(periodLabel).toContainText("(30 days)");

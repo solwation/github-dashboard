@@ -5,7 +5,7 @@ test("sidebar project links stay on Statistics and preserve charts and filters t
   await page.getByRole("link", { name: "Statistik", exact: true }).click();
   const section = page.locator('#statistics-repo-2');
   await expect(section).toBeVisible();
-  await section.getByRole("combobox", { name: "Mätvärde", exact: true }).selectOption("commits");
+  await section.getByRole("group", { name: "Mätvärden i diagrammet" }).getByRole("button", { name: "Commits" }).click();
   await section.evaluate(element => element.setAttribute("data-retained", "yes"));
   const link = page.locator('.sidebar-repository-row[data-repository="demo/weekend-project"] .sidebar-repository');
   await expect(link).toHaveAttribute("href", "#statistics-repo-2"); await link.click();
@@ -15,7 +15,7 @@ test("sidebar project links stay on Statistics and preserve charts and filters t
   await expect(section).toHaveAttribute("data-retained", "yes");
   await page.goBack(); await expect(page).toHaveURL(/#statistics$/);
   await page.goForward(); await expect(section.locator("h2")).toBeInViewport();
-  await expect(section.getByRole("combobox", { name: "Mätvärde", exact: true })).toHaveValue("commits");
+  await expect(section.getByRole("group", { name: "Mätvärden i diagrammet" }).getByRole("button", { name: "Commits" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("link", { name: "Översikt", exact: true }).click();
   await expect(link).toHaveAttribute("href", "#repo-2"); await link.click();
   await expect(page.locator("#repo-2 h2")).toBeInViewport();
@@ -52,7 +52,11 @@ test("direct statistics project links override saved Overview and wait for loadi
   await expect(page.locator('.statistics-loading-splash, .statistics-repository-content[aria-busy="true"]')).toHaveCount(0);
   await expect(page.locator("#statistics-repo-2 h2")).toBeInViewport();
   const count = api.count();
+  const alpha = page.locator("#statistics-repo-1");
+  await alpha.getByRole("button", { name: "Kollapsa sample/alpha", exact: true }).click();
+  await expect(alpha.locator(".statistics-repository-body")).toBeHidden();
   await page.locator('.sidebar-repository-row[data-repository="sample/alpha"] .sidebar-repository').click();
+  await expect(alpha.locator(".statistics-repository-body")).toBeVisible();
   await expect(page.locator("#statistics-repo-1 h2")).toBeInViewport();
   expect(api.count()).toBe(count);
   await page.reload();

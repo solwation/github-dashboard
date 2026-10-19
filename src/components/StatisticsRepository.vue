@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { BarChart3, RefreshCw, X } from "@lucide/vue";
+import { BarChart3, ChevronDown, ChevronRight, RefreshCw, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
 import { normalizeStatisticsPreference } from "../lib/statistics-preferences";
@@ -21,8 +21,9 @@ const props = defineProps<{
   period: { from: string; to: string };
   timeSpan: { from: string; to: string; range?: StatisticsRangePreset; resolution: StatisticsResolution };
   preference?: StatisticsPreference;
+  collapsed?: boolean;
 }>();
-const emit = defineEmits<{ "update:preference": [value: StatisticsPreference] }>();
+const emit = defineEmits<{ "update:preference": [value: StatisticsPreference]; "update:collapsed": [value: boolean] }>();
 const metricNames: Record<StatisticsMetric, string> = {
   closed: "Stängda issues", created: "Skapade issues", reopened: "Återöppnade issues", netIssues: "Nettoförändring av issues",
   commits: "Commits", additions: "Tillagda rader", deletions: "Borttagna rader", netLines: "Nettoförändring av kod", files: "Filändringar",
@@ -120,9 +121,8 @@ function metricStyle(metric: StatisticsMetric) {
 // Only label/contributor count as filters; the selected chart metrics are not (#172).
 const filtersActive = computed(() => !!state.value.label || !!state.value.contributor);
 const showFilters = computed(() => !!props.data && (dimensions.value.labels.length > 0 || dimensions.value.contributors.length > 0));
-// Breakdowns start open on desktop and collapsed on phones; later toggling is the user's (#172).
-const startOpen = typeof window === "undefined" || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width: 650px)").matches;
-const breakdownOpen = ref({ contributors: startOpen, labels: startOpen });
+// Each optional breakdown starts closed; reopening a repository preserves the user's toggles.
+const breakdownOpen = ref({ contributors: false, labels: false });
 function syncOpen(key: "contributors" | "labels", event: Event) { breakdownOpen.value[key] = (event.target as HTMLDetailsElement).open; }
 const lastFetched = computed(() => {
   const values = props.data ? [props.data.issues, props.data.events, props.data.commits, props.data.changes, props.data.pulls].filter(value => !!value).map(value => value!.fetchedAt) : [];
@@ -167,12 +167,16 @@ function clearFilters() {
 <template>
   <section :id="'statistics-repo-' + repository.id" class="statistics-repository" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
     <header class="statistics-repository-heading">
-      <h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" target="_blank" rel="noopener noreferrer">{{ repository.full_name }}</a></h2>
+      <div class="statistics-repository-identity">
+        <button type="button" class="statistics-repository-toggle" :aria-expanded="!collapsed" :aria-controls="'statistics-repository-body-' + repository.id" :aria-label="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: repository.full_name })" @click="emit('update:collapsed', !collapsed)"><ChevronRight v-if="collapsed" :size="20" aria-hidden="true" /><ChevronDown v-else :size="20" aria-hidden="true" /></button>
+        <h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" target="_blank" rel="noopener noreferrer">{{ repository.full_name }}</a></h2>
+      </div>
       <div v-if="showFilters" class="statistics-repo-filters" role="group" :aria-label="t('Filter för {name}', { name: repository.full_name })">
         <select v-if="dimensions.labels.length" v-model="state.label" class="statistics-filter-select" :class="{ active: state.label }" :aria-label="t('Nuvarande label')"><option value="">{{ t("Alla labels") }}</option><option v-for="name in dimensions.labels" :key="name" :value="name">{{ name }}</option></select>
         <select v-if="dimensions.contributors.length" v-model="state.contributor" class="statistics-filter-select" :class="{ active: state.contributor }" :aria-label="t('Bidragsgivare')"><option value="">{{ t("Alla bidragsgivare") }}</option><option v-for="name in dimensions.contributors" :key="name" :value="name">{{ name }}</option></select>
       </div>
     </header>
+    <div v-show="!collapsed" :id="'statistics-repository-body-' + repository.id" class="statistics-repository-body">
     <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
       <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="13" aria-hidden="true" /></button>
       <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="13" aria-hidden="true" /></button>
@@ -213,11 +217,16 @@ function clearFilters() {
     </template>
     <div v-else-if="!loading && !temporary" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
     </div>
+    </div>
   </section>
 </template>
 <style scoped>
 .statistics-repository { scroll-margin-top: 20px; min-width: 0; margin-bottom: 32px; padding-top: 18px; border-top: 1px solid var(--line); }
 .statistics-repository-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; min-width: 0; }
+.statistics-repository-identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.statistics-repository-toggle { display: inline-grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; padding: 4px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; }
+.statistics-repository-toggle:hover { background: var(--surface); color: var(--text); }
+.statistics-repository-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .statistics-repository-heading h2 { margin: 0; font-size: 23px; overflow-wrap: anywhere; min-width: 0; }
 .statistics-repository-heading a { color: inherit; text-decoration: none; }
 .statistics-repository-heading a:hover { text-decoration: underline; }
