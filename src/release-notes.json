@@ -8,6 +8,20 @@
     "sections": [
       {
         "text": {
+          "sv": "30-dagarsdiagram använder minst sex timmars upplösning, även för sparade val och synkade inställningar.",
+          "en": "Thirty-day charts use at least six-hour resolution, including saved choices and synced settings."
+        },
+        "issues": [180]
+      },
+      {
+        "text": {
+          "sv": "Hela licensrutan är klickbar; licens och version har högerjusterade ikoner och uppdateringsmärket fungerar med tangentbord.",
+          "en": "The whole license card is clickable; license and version have right-aligned icons, and the update badge works with the keyboard."
+        },
+        "issues": [181]
+      },
+      {
+        "text": {
           "sv": "Läs alla diagramseriers värden direkt vid markören, med samma popover via mobiltryck och tangentbord.",
           "en": "Read every chart series at the cursor, with the same popover available through touch and keyboard."
         },
@@ -18,7 +32,7 @@
           "sv": "Tider följer webbläsarens tidszon och sommartid; Från/Till visas bara för Anpassat, med bevarade tidsfönster mellan enheter.",
           "en": "Times follow your browser’s time zone and daylight saving; From/To appear only for Custom, preserving windows across devices."
         },
-        "issues": [174, 176, 177, 178]
+        "issues": [174, 176, 177, 178, 182]
       },
       {
         "text": {
@@ -43,8 +57,8 @@
       },
       {
         "text": {
-          "sv": "En kompakt tidsrad visar perioden till vänster och dropdowns till höger; tidszonen visas gemensamt vid kontot.",
-          "en": "A compact time row puts the period on the left and dropdowns on the right; the account shows the shared time zone."
+          "sv": "Tidsraden visar periodens längd och dropdowns, med korta Från/Till-etiketter och en gemensam tidszon vid kontot.",
+          "en": "The time row shows the duration and dropdowns, with short From/To labels and a shared time zone beside your account."
         },
         "issues": [168, 169, 179]
       },

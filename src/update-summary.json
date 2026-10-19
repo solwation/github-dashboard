@@ -1,10 +1,13 @@
 {
-  "baseCommit": "8d5d0dc4ee609fc61411be5716becd39fdf31182",
+  "baseCommit": "41b71866122b0a05b0ca677d843ae9b279ac40b0",
   "summary": {
-    "sv": "Statistikens kompakta tidsrad har dropdowns för intervall och upplösning. Tidszonen visas gemensamt vid kontot i toppfältet.",
-    "en": "Statistics has a compact time row with interval and resolution dropdowns. Your time zone is shown once beside the account in the top bar."
+    "sv": "Periodens längd visas, datumetiketterna är kortare och 30 dagar har minst 6h upplösning. Licensrutan är klickbar och ikonerna högerjusterade.",
+    "en": "The period shows its duration, date labels are shorter, and 30 days requires at least 6h resolution. The license card is clickable with right-aligned icons."
   },
   "issues": [
-    179
+    179,
+    180,
+    181,
+    182
   ]
 }
