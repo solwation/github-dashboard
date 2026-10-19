@@ -1,10 +1,10 @@
 {
-  "baseCommit": "fbdcd8e7d11ee1ec78ee408cbce3498f519f8992",
+  "baseCommit": "c2d2912d164a8caa600fd386357de89dc658b1ef",
   "summary": {
-    "sv": "Statistics fortsätter fungera över lokal midnatt. Tidsval uppdaterar periodgränser och samordnar hämtningen utan att dölja graferna.",
-    "en": "Statistics keeps working across local midnight. Time choices update calendar boundaries and coordinate refreshes while keeping charts visible."
+    "sv": "Fäll ihop repositories i Statistics. Bidragsgivare och labels börjar stängda, och den fasta tidsraden under grafen är borttagen.",
+    "en": "Collapse repositories in Statistics. Contributors and labels start closed, and the permanent chart-time row is removed."
   },
   "issues": [
-    183
+    184
   ]
 }

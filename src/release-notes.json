@@ -64,10 +64,10 @@
       },
       {
         "text": {
-          "sv": "Filtren ligger i varje repositorys rubrik med borttagbara chips, och uppdelningarna kan fällas ihop så att mobilsidan blir mycket kortare.",
-          "en": "Filters sit in each repository heading with removable chips, and breakdowns can be collapsed so the mobile page is much shorter."
+          "sv": "Fäll ihop repositories separat; bidragsgivare och labels börjar stängda, och grafens tidsreglage visas bara vid tangentbordsfokus.",
+          "en": "Collapse repositories independently; contributors and labels start closed, and the chart’s time slider appears only on keyboard focus."
         },
-        "issues": [172]
+        "issues": [172, 184]
       }
     ]
   },
