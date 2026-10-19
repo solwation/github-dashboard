@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, Clock3, CornerDownRight, ListTree, MessageCircle, Minus, X } from "@lucide/vue";
+import IssueComments from "./IssueComments.vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import { repositoryColor } from "../lib/repository-color";
-import { column, duration, priority, type Issue, type Rules } from "../lib/model";
+import { column, duration, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
 import type { IssueRelations } from "../lib/issue-relations";
 import type { ActivityMarker } from "../lib/activity";
 const { t, locale } = useLanguage();
@@ -32,6 +33,7 @@ const props = defineProps<{
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
   commentsSession?: number;
+  loadComments?: (issue: Issue) => Promise<IssueComment[]>;
 }>();
 const emit = defineEmits<{ read: [] }>();
 const row = ref<HTMLElement>();
@@ -157,6 +159,9 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </span>
+    <div class="row-comments" @click.stop>
+      <IssueComments :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
+    </div>
     <span class="row-time">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
@@ -193,3 +198,13 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     </Teleport>
   </li>
 </template>
+
+<style scoped>
+.row-comments { display: none; min-width: 0; }
+/* Keep the existing compact layout until the actual list has room for an action column. */
+@container issue-list (min-width: 850px) {
+  .issue-row { grid-template-columns: 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) auto 6.5rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) auto 6.5rem; }
+  .row-comments { display: block; }
+}
+</style>
