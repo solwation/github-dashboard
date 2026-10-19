@@ -62,7 +62,8 @@ for (const [zone, [before, after]] of Object.entries(moments)) {
   });
 }
 
-test('rollover queues one revalidation behind a pending request even within the UTC cache day', async ({ browser }) => {
+for (const addRepository of [false, true]) {
+test(`rollover queues one revalidation behind a pending request within the UTC cache day${addRepository ? ' when repositories change' : ''}`, async ({ browser }) => {
   const context = await browser.newContext({ timezoneId: 'America/Los_Angeles', locale: 'sv-SE' });
   const page = await context.newPage();
   await page.clock.install({ time: new Date('2026-10-20T06:59:00Z') });
@@ -70,13 +71,14 @@ test('rollover queues one revalidation behind a pending request even within the 
   let release: (() => void) | undefined;
   const held = new Promise<void>(resolve => { release = resolve; });
   const repo = { id: 1, name: 'midnight', full_name: 'sample/midnight', private: true, html_url: 'https://github.com/sample/midnight', owner: { login: 'sample' } };
+  const second = { ...repo, id: 2, name: 'second', full_name: 'sample/second' };
   await page.route('https://api.github.com/**', async route => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith('/issues/events')) {
+    if (url.pathname === '/repos/sample/midnight/issues/events') {
       events++;
       if (events === 2) await held;
     }
-    await route.fulfill({ json: url.pathname === '/user' ? { login: 'midnight-fixture', avatar_url: '' } : url.pathname === '/user/repos' ? [repo] : [] });
+    await route.fulfill({ json: url.pathname === '/user' ? { login: 'midnight-fixture', avatar_url: '' } : url.pathname === '/user/repos' ? [repo, second] : [] });
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
@@ -98,6 +100,14 @@ test('rollover queues one revalidation behind a pending request even within the 
   await expect(page.locator('.statistics-chart')).toHaveCount(1);
   await expect(page.locator('.statistics-period-label')).toBeVisible();
   expect(events).toBe(2);
+  if (addRepository) {
+    await page.getByRole('button', { name: 'Välj repositories', exact: true }).click();
+    const picker = page.getByRole('dialog', { name: 'Välj repositories', exact: true });
+    await picker.getByRole('checkbox', { name: second.full_name }).check();
+    await picker.getByRole('button', { name: 'Visa översikt', exact: true }).click();
+    await expect(page.locator('.statistics-repository')).toHaveCount(2);
+    expect(events).toBe(2);
+  }
   release!();
   await expect.poll(() => events).toBe(3);
   await expect(refresh).toBeEnabled();
@@ -105,3 +115,4 @@ test('rollover queues one revalidation behind a pending request even within the 
   await expect(page.getByLabel('Till', { exact: true })).toHaveValue('2026-10-21T00:00');
   await context.close();
 });
+}

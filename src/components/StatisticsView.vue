@@ -316,9 +316,12 @@ async function load(force = false) {
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
   if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
   const periodChanged = refreshCalendarPeriod();
-  // Consume a queued rollover refresh even when another caller starts this load first.
-  force ||= rolloverReloadPending;
-  rolloverReloadPending = false;
+  // A repository-triggered load may join the collector's old pending request.
+  // Keep the rollover queued until that request has settled, then force fresh data.
+  if (rolloverReloadPending && !busy.value) {
+    force = true;
+    rolloverReloadPending = false;
+  }
   // #169: a preset follows the clock on every reload; a custom window is kept (clamped to the period).
   const previous = `${globalFrom.value}|${globalTo.value}|${globalRange.value}`;
   if (globalRange.value) applyPreset(globalRange.value, globalResolution.value);
