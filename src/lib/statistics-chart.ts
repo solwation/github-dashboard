@@ -42,3 +42,9 @@ export function valueTicks(min: number, max: number): number[] {
   if (ticks.length < 2) ticks.push(start + step);
   return ticks;
 }
+
+/** Theme tokens from style.css used for chart series, in series order, so other views can match a line's colour. */
+export const seriesColors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"] as const;
+export function seriesColor(index: number) { return seriesColors[((index % seriesColors.length) + seriesColors.length) % seriesColors.length]!; }
+/** Dash pattern for a series: the first is solid, later ones are dashed so lines differ without colour. */
+export function seriesDash(index: number) { return index ? `${Math.max(2, 8 - (index % 5))} ${(index % 5) + 2}` : undefined; }

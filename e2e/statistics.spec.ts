@@ -3,6 +3,7 @@ async function openStatistics(page: Page) {
   await page.getByRole('link', { name: /^(Statistics|Statistik)$/, exact: true }).click();
   await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
 }
+function metricButton(scope: Locator, name: string) { return scope.getByRole("group", { name: "Mätvärden i diagrammet" }).getByRole("button", { name }); }
 function card(scope: Page | Locator, name: string) { return scope.locator(".statistics-total").filter({ hasText: name }); }
 async function cardValue(scope: Locator, name: string) { return Number((await card(scope, name).locator("strong").innerText()).replace(/\D/g, "")); }
 async function dailySum(scope: Locator) {
@@ -34,6 +35,15 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(design.locator(".statistics-panel-heading h3")).toHaveText("Aktivitet per dag");
   await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues"]);
   await expect(design.locator(".chart-legend .chart-swatch line")).toHaveCount(1);
+  // #170: totals are grouped, the cards themselves select chart metrics and the old select/chips are gone.
+  await expect(design.locator(".statistics-total-group h3")).toHaveText(["Issues", "Pull requests", "Kod"]);
+  await expect(design.getByRole("combobox", { name: "Mätvärde", exact: true })).toHaveCount(0);
+  await expect(design.locator(".statistics-metric-chips, .statistics-metric-chip")).toHaveCount(0);
+  await expect(metricButton(design, "Stängda issues")).toHaveAttribute("aria-pressed", "true");
+  await expect(metricButton(design, "Stängda issues")).toHaveAttribute("data-series-index", "0");
+  await expect(metricButton(design, "Commits")).toHaveAttribute("aria-pressed", "false");
+  await expect(design.getByRole("button", { name: /Medianålder/ })).toHaveCount(0);
+  await expect(design.locator(".statistics-total-static")).toContainText("Medianålder vid stängning");
   const yLabels = await design.locator(".statistics-chart > svg > g > text").count();
   expect(yLabels).toBeGreaterThanOrEqual(2);
   const day = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
@@ -71,10 +81,30 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(resolutionSelect.locator('option[value="1m"]')).toHaveJSProperty("disabled", false);
   await resolutionSelect.selectOption("30m");
   await expect(design.locator(".daily-values tbody tr")).toHaveCount(16);
-  const metricChips = design.getByRole("group", { name: "Mätvärden i diagrammet" });
-  await metricChips.getByRole("button", { name: "Skapade issues", exact: true }).click();
+  await metricButton(design, "Skapade issues").click();
   await expect(design.locator(".statistics-chart svg polyline")).toHaveCount(2);
   await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues", "Skapade issues"]);
+  await expect(metricButton(design, "Skapade issues")).toHaveAttribute("aria-pressed", "true");
+  await metricButton(design, "Commits").focus();
+  await page.keyboard.press("Space");
+  await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues", "Skapade issues", "Commits"]);
+  // Each selected card carries its series position and the same colour as its legend entry.
+  const legendColors = await design.locator(".chart-legend .chart-swatch line").evaluateAll(lines => lines.map(line => getComputedStyle(line).stroke));
+  for (const [index, name] of ["Stängda issues", "Skapade issues", "Commits"].entries()) {
+    const button = metricButton(design, name);
+    await expect(button).toHaveAttribute("data-series-index", String(index));
+    expect(await button.evaluate(element => getComputedStyle(element).borderLeftColor)).toBe(legendColors[index]);
+  }
+  await metricButton(design, "Stängda issues").press("Enter");
+  await expect(design.locator(".chart-legend span")).toHaveText(["Skapade issues", "Commits"]);
+  await expect(metricButton(design, "Stängda issues")).toHaveAttribute("aria-pressed", "false");
+  await expect(metricButton(design, "Skapade issues")).toHaveAttribute("data-series-index", "0");
+  await metricButton(design, "Commits").click();
+  await metricButton(design, "Skapade issues").click(); // the last selected metric cannot be deselected
+  await expect(design.locator(".chart-legend span")).toHaveText(["Skapade issues"]);
+  await expect(metricButton(design, "Skapade issues")).toHaveAttribute("aria-pressed", "true");
+  await metricButton(design, "Stängda issues").click();
+  await expect(design.locator(".chart-legend span")).toHaveText(["Skapade issues", "Stängda issues"]);
   await design.getByRole("combobox", { name: "Nuvarande label", exact: true }).selectOption("bug");
   await expect(card(design, "Commits")).toHaveCount(0);
   await expect(card(weekend, "Commits")).toHaveCount(1);
