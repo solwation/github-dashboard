@@ -1,11 +1,10 @@
 {
-  "baseCommit": "1dfd026064dba74a58990094ee9af8cba4437ff0",
+  "baseCommit": "aefb875a851bc00a511966305c2726cd001d767c",
   "summary": {
-    "sv": "Statistikens nyckeltal följer nu vald period, och diagrammet visar tidsaxel, rubrik efter upplösning och vald punkt tydligt.",
-    "en": "Statistics totals now follow the selected period, and the chart shows a time axis, a resolution-based title and the selected point."
+    "sv": "Statistikens nyckeltal grupperas i Issues, Pull requests och Kod, och korten styr diagrammet i samma färg som linjen.",
+    "en": "Statistics totals are grouped into Issues, Pull requests and Code, and the cards control the chart in the same colour as the line."
   },
   "issues": [
-    167,
-    171
+    170
   ]
 }

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-19",
     "summary": {
-      "sv": "Statistikens nyckeltal följer nu vald period, och diagrammet visar tidsaxel, rubrik efter upplösning och vald punkt tydligt.",
-      "en": "Statistics totals now follow the selected period, and the chart shows a time axis, a resolution-based title and the selected point clearly."
+      "sv": "Statistikens nyckeltal följer vald period och är grupperade, och diagrammet visar tidsaxel, rubrik efter upplösning och vald punkt.",
+      "en": "Statistics totals follow the selected period and are grouped, and the chart shows a time axis, a resolution-based title and the selected point."
     },
     "sections": [
       {
@@ -19,6 +19,13 @@
           "en": "The chart gets a resolution-based title, more axis labels with times, metric names in the legend and the selected point in a clear box."
         },
         "issues": [171]
+      },
+      {
+        "text": {
+          "sv": "Nyckeltalen grupperas i Issues, Pull requests och Kod, och korten väljer vad diagrammet visar i samma färg som linjen.",
+          "en": "Totals are grouped into Issues, Pull requests and Code, and the cards choose what the chart shows in the same colour as its line."
+        },
+        "issues": [170]
       }
     ]
   },
