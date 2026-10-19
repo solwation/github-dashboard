@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Tydligare hover- och fokusmarkering i hela gränssnittet, bland annat Overview och Statistics i vänstermenyn, i samma stil som repositories.",
+          "en": "Clearer hover and focus feedback across the interface, including Overview and Statistics in the left menu, in the same style as repositories."
+        },
+        "issues": [196]
+      },
+      {
+        "text": {
           "sv": "Cirkeln på korten visar issue-typ (bugg, funktion, dokumentation, fråga med mera) med egen ikon och färg, härledd från labels; stängda markeras med bock.",
           "en": "The card circle shows the issue type (bug, feature, docs, question and more) with its own icon and tint, derived from labels; closed issues keep a check mark."
         },

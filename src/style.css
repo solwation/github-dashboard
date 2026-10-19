@@ -2336,3 +2336,45 @@ a.sidebar-repository:focus-visible {
 .type-circle.type-question { background: var(--type-question-bg); color: var(--type-question-fg); }
 .type-circle.type-help { background: var(--type-help-bg); color: var(--type-help-fg); }
 .type-circle.type-chore { background: var(--type-chore-bg); color: var(--type-chore-fg); }
+
+/* Consistent hover/focus feedback (#196). Shared tokens; same green tint as repository rows (#193) and the license footer (#189). */
+:root {
+  --hover-tint: color-mix(in srgb, var(--green) 10%, transparent);
+  --hover-ring: color-mix(in srgb, var(--green) 28%, transparent);
+  --hover-border: color-mix(in srgb, var(--green) 55%, var(--input-border));
+}
+/* Surfaces: tint plus inset ring. Differs from the solid .active background; the active item keeps its look. */
+.nav-item, a.brand { transition: background-color .15s ease, box-shadow .15s ease; }
+.nav-item:not(.active):focus-visible, a.brand:focus-visible {
+  background: var(--hover-tint);
+  box-shadow: inset 0 0 0 1px var(--hover-ring);
+  outline-offset: -2px;
+}
+.nav-item.active:focus-visible { box-shadow: inset 0 0 0 1px var(--hover-ring); outline-offset: -2px; }
+/* Bare text/icon controls: tint grows outwards via box-shadow so nothing moves. */
+.sidebar-add, .text-button, .details-toggle { border-radius: 5px; transition: background-color .15s ease, box-shadow .15s ease; }
+.sidebar-add:focus-visible, .text-button:focus-visible, .details-toggle:focus-visible {
+  background: var(--hover-tint);
+  box-shadow: 0 0 0 3px var(--hover-tint);
+}
+.retry-comments { transition: background-color .15s ease, border-color .15s ease; }
+.retry-comments:focus-visible { background: var(--hover-tint); border-color: var(--green); }
+@media (hover: hover) {
+  .nav-item:not(.active):hover, a.brand:hover {
+    background: var(--hover-tint);
+    box-shadow: inset 0 0 0 1px var(--hover-ring);
+  }
+  .nav-item.active:hover { box-shadow: inset 0 0 0 1px var(--hover-ring); }
+  .sidebar-add:hover, .text-button:hover, .details-toggle:hover {
+    background: var(--hover-tint);
+    box-shadow: 0 0 0 3px var(--hover-tint);
+  }
+  .sidebar-add:hover { color: var(--text); }
+  .retry-comments:hover { background: var(--hover-tint); border-color: var(--green); }
+  .project-drag-handle:hover { background: var(--hover-tint); color: var(--green); }
+  .search:hover, select:hover { border-color: var(--hover-border); }
+  .repo-option:hover, .coord-toggle:hover { background: var(--hover-tint); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-item, a.brand, .sidebar-add, .text-button, .details-toggle, .retry-comments { transition: none; }
+}

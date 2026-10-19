@@ -1,10 +1,10 @@
 {
-  "baseCommit": "45b24793353fb148ad61270067142c97ce4600b8",
+  "baseCommit": "10447276cba201a844f85f0dd929e1c486d06172",
   "summary": {
-    "sv": "Cirkeln på korten visar nu issue-typ (bugg, funktion, dokumentation med mera) med egen ikon och färg, härledd från labels.",
-    "en": "The card circle now shows the issue type (bug, feature, docs and more) with its own icon and tint, derived from labels."
+    "sv": "Tydligare hover- och fokusmarkering för vänstermenyn (Overview, Statistics) och andra klickbara delar i gränssnittet.",
+    "en": "Clearer hover and focus feedback for the left menu (Overview, Statistics) and other clickable parts of the interface."
   },
   "issues": [
-    195
+    196
   ]
 }
