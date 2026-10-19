@@ -31,7 +31,8 @@ test("one global list mode for every repository and the combined board keeps fil
   await expect(progress.locator(".row-title")).toHaveText("Samla färger i gemensamma designtokens");
   await expect(progress.locator(".row-status")).toHaveText("Pågående");
   await expect(progress.locator(".timer")).toBeVisible();
-  await expect(progress.locator(".label")).toHaveText(["in-progress", "enhancement"]);
+  // #198: the in-progress label is not repeated inside the In progress section.
+  await expect(progress.locator(".label")).toHaveText(["enhancement"]);
   const rowHeight = (await design.locator(".backlog .issue-row").first().boundingBox())!.height;
   await toggle.getByRole("button", { name: "Kort", exact: true }).click();
   const cardHeight = (await design.locator(".backlog .issue-card").first().boundingBox())!.height;

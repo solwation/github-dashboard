@@ -62,6 +62,7 @@ export function demo(): Lane[] {
             color: "ededed",
           },
           ...(i === 1 ? [{ name: "in-progress", color: "147d69" }] : []),
+          ...(i === 2 ? [{ name: "design", color: "c5def5" }] : []),
           {
             name: i % 2 ? "enhancement" : "bug",
             color: i % 2 ? "a2eeef" : "d73a4a",

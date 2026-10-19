@@ -31,3 +31,12 @@ test("cards hide the label the type icon stands for", async ({ page }) => {
   await expect(withOther.locator(".label")).not.toHaveCount(0);
   await expect(withOther.locator(".type-circle")).toHaveAttribute("title", /Typ: /);
 });
+
+// #198: the in-progress label is redundant inside the In progress column; other columns are untouched.
+test("cards hide the in-progress label in the In progress column", async ({ page }) => {
+  await page.goto("/"); await page.getByRole("button", { name: "Utforska en demo" }).click();
+  const inProgress = page.locator(".repo-lane .issue-card.progress");
+  await expect(inProgress.first()).toBeVisible();
+  await expect(inProgress.locator('.label[title="in-progress" i]')).toHaveCount(0);
+  await expect(page.locator('.repo-lane .issue-card:not(.progress) .label[title="design"]').first()).toBeVisible();
+});

@@ -1,10 +1,10 @@
 {
-  "baseCommit": "7bb1bc23b3bdbde292ff6e9b526908611130f1a0",
+  "baseCommit": "45a769ea9f88503341ceae1bcae65e53a43c8f35",
   "summary": {
-    "sv": "Korten visar inte längre den label som typikonen redan representerar (t.ex. bug eller enhancement); övriga labels är oförändrade.",
-    "en": "Cards no longer show the label the type icon already represents (e.g. bug or enhancement); all other labels are unchanged."
+    "sv": "In progress-labeln döljs på kort och rader i In progress-kolumnen.",
+    "en": "The in-progress label is hidden on cards and rows in the In progress column."
   },
   "issues": [
-    197
+    198
   ]
 }

@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "In progress-labeln döljs på kort och rader som redan ligger i In progress-kolumnen.",
+          "en": "The in-progress label is hidden on cards and rows that already sit in the In progress column."
+        },
+        "issues": [198]
+      },
+      {
+        "text": {
           "sv": "Korten upprepar inte längre typlabeln (bug, enhancement med flera) som ikonen redan visar; övriga labels visas som förut.",
           "en": "Cards no longer repeat the type label (bug, enhancement and so on) that the icon already shows; other labels appear as before."
         },

@@ -7,7 +7,7 @@ import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import { repositoryColor } from "../lib/repository-color";
-import { column, duration, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
+import { column, duration, isProgress, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
 import type { IssueRelations } from "../lib/issue-relations";
 import type { ActivityMarker } from "../lib/activity";
 const { t, locale } = useLanguage();
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
 const col = computed(() => column(props.issue, props.rules));
 const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
 const rank = computed(() => priority(props.issue, props.rules));
-const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name)).slice(0, expanded.value && !isPhone.value ? 4 : 3));
+const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && !(col.value === "progress" && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
