@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Licenssektionen längst ner i vänstermenyn lyser upp vid hovring och fokus igen.",
+          "en": "The license section at the bottom of the left menu highlights again on hover and focus."
+        },
+        "issues": [189]
+      },
+      {
+        "text": {
           "sv": "Ändras en undersiffra i översiktens badges visas en kort +1/−1 som flyter upp, utan layoutskiftning och med stöd för minskad rörelse.",
           "en": "When a sub-value in the overview badges changes, a brief +1/−1 floats up, with no layout shift and reduced-motion support."
         },
