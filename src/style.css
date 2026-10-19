@@ -2213,3 +2213,40 @@ html {
     top: var(--phone-brand-height);
   }
 }
+
+/* Shared hover/focus feedback for interactive chips, badges and icon buttons (#186). */
+.comment-count,
+.row-marker,
+.row-comment-marker,
+.new-comments-badge,
+.close-comments,
+.interactive-glow {
+  --glow: rgba(20, 125, 105, .45);
+  transition: box-shadow .15s ease, filter .15s ease, transform .15s ease;
+}
+:root[data-theme="dark"] .comment-count,
+:root[data-theme="dark"] .row-marker,
+:root[data-theme="dark"] .row-comment-marker,
+:root[data-theme="dark"] .new-comments-badge,
+:root[data-theme="dark"] .close-comments,
+:root[data-theme="dark"] .interactive-glow {
+  --glow: rgba(140, 220, 190, .5);
+}
+button.comment-count:hover, button.comment-count:focus-visible,
+button.row-marker:hover, button.row-marker:focus-visible,
+button.close-comments:hover, button.close-comments:focus-visible,
+button.interactive-glow:hover, button.interactive-glow:focus-visible,
+a.interactive-glow:hover, a.interactive-glow:focus-visible {
+  filter: brightness(1.12) saturate(1.15);
+  box-shadow: 0 0 0 1px var(--glow), 0 0 10px 2px var(--glow);
+  transform: translateY(-1px);
+}
+button.comment-count:active, button.row-marker:active, button.close-comments:active, button.interactive-glow:active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .comment-count, .row-marker, .row-comment-marker, .new-comments-badge, .close-comments, .interactive-glow { transition: none; }
+  button.comment-count:hover, button.comment-count:focus-visible,
+  button.row-marker:hover, button.row-marker:focus-visible,
+  button.close-comments:hover, button.close-comments:focus-visible,
+  button.interactive-glow:hover, button.interactive-glow:focus-visible,
+  a.interactive-glow:hover, a.interactive-glow:focus-visible { transform: none; }
+}

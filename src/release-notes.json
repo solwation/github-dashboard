@@ -15,6 +15,13 @@
       },
       {
         "text": {
+          "sv": "Kommentarsbubblan och andra klickbara märken och ikonknappar lyser upp vid hovring och tangentbordsfokus.",
+          "en": "The comment bubble and other clickable chips and icon buttons glow on hover and keyboard focus."
+        },
+        "issues": [186]
+      },
+      {
+        "text": {
           "sv": "30-dagarsdiagram använder minst sex timmars upplösning, även för sparade val och synkade inställningar.",
           "en": "Thirty-day charts use at least six-hour resolution, including saved choices and synced settings."
         },
