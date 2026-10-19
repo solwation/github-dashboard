@@ -1,11 +1,10 @@
 {
-  "baseCommit": "59c99859d63c222cfce4ec364b1b086d5369f912",
+  "baseCommit": "9f785b8f4538a644ab4609c6f1f1a9670e2b9fe1",
   "summary": {
-    "sv": "Undersiffrorna i översiktens badges visar nu en kort +1/−1 när de ändras vid en uppdatering. Licenssektionen i vänstermenyn får hovereffekt igen.",
-    "en": "Sub-values in the overview badges now show a brief +1/−1 when they change on a refresh. The license section in the left menu highlights on hover again."
+    "sv": "Listläget har nu raka kolumner: kommentarsbubblor, labels och övriga kolumner börjar på samma plats i alla rader och sektioner.",
+    "en": "List mode now has straight columns: comment bubbles, labels and the other columns start at the same position in every row and section."
   },
   "issues": [
-    188,
-    189
+    190
   ]
 }

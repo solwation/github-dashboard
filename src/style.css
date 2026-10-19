@@ -1877,6 +1877,21 @@ button.lane-sync:focus-visible::after {
 .row-subtask-badge, .row-parent-badge { display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
 .row-subtask-badge { background: #edf0f4; color: #5b6b75; }
 .row-parent-badge { color: #1c6239; background: #d8efde; font-weight: 700; }
+/* Column alignment (#190): the slots only reserve width on wide rows, so every row and section shares the same left edges;
+   in the compact layout they are transparent and the badges flow as before. */
+.row-slot { display: contents; }
+.row-comments .comment-count { justify-content: flex-start; }
+.row-comments .comment-count-value { min-width: 3ch; font-variant-numeric: tabular-nums; text-align: left; }
+.row-comment-marker { font-variant-numeric: tabular-nums; }
+@media (min-width: 951px) {
+  .row-slot { display: flex; align-items: center; flex: 0 0 auto; overflow: hidden; }
+  .row-slot-comment { order: 1; width: 5.4rem; }
+  .row-slot-status { order: 2; width: 5.6rem; }
+  .row-slot-priority { order: 3; width: 4.8rem; }
+  .issue-row .row-time { justify-self: stretch; text-align: left; }
+  .row-meta > .label { order: 4; }
+  .row-meta > .row-marker:not(.row-comment-marker), .row-meta > .row-timeout { order: 5; }
+}
 .row-time { justify-self: end; font-size: 10px; text-align: right; white-space: nowrap; }
 .issue-row.unread-move { border-color: #2875ba; background: #f1f8ff; }
 .issue-row.unread-created { border-color: #39885b; background: #edf8f0; }

@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "I listläget börjar kommentarsbubblor, labels och övriga kolumner på samma plats i alla rader och sektioner, oavsett antal kommentarer.",
+          "en": "In list mode, comment bubbles, labels and the other columns start at the same position in every row and section, whatever the comment count."
+        },
+        "issues": [190]
+      },
+      {
+        "text": {
           "sv": "Licenssektionen längst ner i vänstermenyn lyser upp vid hovring och fokus igen.",
           "en": "The license section at the bottom of the left menu highlights again on hover and focus."
         },

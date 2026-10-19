@@ -141,21 +141,21 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         <span>{{ progress.completed }}/{{ progress.total }}</span>
         <span class="row-parent-label">{{ t("klara") }}</span>
       </span>
-      <button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
+      <span class="row-slot row-slot-comment"><button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
-        ><MessageCircle :size="11" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button
+        ><MessageCircle :size="11" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
       ><button v-if="recentMove" type="button" class="row-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
         >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button
-      ><span class="row-status" :class="col">{{ status }}</span
+      ><span class="row-slot row-slot-status"><span class="row-status" :class="col">{{ status }}</span></span
       ><span v-if="timeout && issue.startedAt" class="row-timeout"
         :title="t('Timeout: pågående i {duration}, över gränsen {minutes} min.', { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 })"
         >{{ t("Timeout") }}</span
-      ><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
+      ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
         ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="11" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
-      ><span v-for="label in labels" :key="label.name" class="label" :title="label.name"
+      ></span><span v-for="label in labels" :key="label.name" class="label" :title="label.name"
         ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
       >
     </span>
@@ -203,8 +203,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-comments { display: none; min-width: 0; }
 /* Keep the existing compact layout until the actual list has room for an action column. */
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) auto 6.5rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) auto 6.5rem; }
+  .issue-row { grid-template-columns: 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 3.4rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
   .row-comments { display: block; }
 }
 </style>
