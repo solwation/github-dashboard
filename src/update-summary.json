@@ -1,11 +1,10 @@
 {
-  "baseCommit": "73d2cb97b5f28f01d7a247a419915b1e3660d03f",
+  "baseCommit": "e3ac05256671e74ae7bb7bfa39aeb38927aede2a",
   "summary": {
-    "sv": "Kompaktare kort med cirkel, id och labels överst, och repo som första label utan uppdelning. Repositories i vänstermenyn markeras vid hovring.",
-    "en": "More compact cards with circle, id and labels on top, and the repo as first label when not split. Left-menu repositories highlight on hover."
+    "sv": "Vanliga labels på korten är nu lika stora som repo-labeln.",
+    "en": "Regular labels on cards are now the same size as the repository label."
   },
   "issues": [
-    192,
-    193
+    194
   ]
 }

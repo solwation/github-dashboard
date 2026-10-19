@@ -2292,3 +2292,13 @@ a.sidebar-repository:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   a.sidebar-repository { transition: none; }
 }
+
+/* Card labels match the repository chip's size (#194). */
+.card-top .label {
+  gap: 5px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.card-top .label i { width: 9px; height: 9px; }
