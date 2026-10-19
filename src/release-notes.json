@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Repositories i vänstermenyn markeras vid hovring och fokus så att du ser vilken som är aktiv innan du klickar.",
+          "en": "Repositories in the left menu highlight on hover and focus so you see which is active before clicking."
+        },
+        "issues": [193]
+      },
+      {
+        "text": {
           "sv": "Korten är mer kompakta: statuscirkel, issue-id och labels ligger på en gemensam översta rad, och repositoryn visas som första chip när uppdelning per repository är av.",
           "en": "Cards are more compact: status circle, issue id and labels share one top row, and the repository shows as the first chip when split by repository is off."
         },
