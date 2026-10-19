@@ -19,6 +19,8 @@ const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsCalendarWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
+const fromInput = ref<HTMLInputElement | null>(null);
+const toInput = ref<HTMLInputElement | null>(null);
 
 // Saved bounds stay absolute UTC minute strings; only the picker view uses local wall time.
 // A preset recomputes its window from now; undefined range = custom.
@@ -40,6 +42,8 @@ const globalResolution = ref<StatisticsResolution | undefined>(undefined);
 function applyPreset(preset: StatisticsRangePreset, resolution?: StatisticsResolution) {
   const clamped = resolution ? clampStatisticsResolution(resolution, statisticsRangeMs[preset], preset) : undefined;
   const window = presetWindow(preset, clamped);
+  fromInput.value?.setCustomValidity("");
+  toInput.value?.setCustomValidity("");
   globalFrom.value = window.from;
   globalTo.value = window.to;
   globalRange.value = preset;
@@ -154,13 +158,13 @@ function selectRange(preset: StatisticsRangePreset) {
   applyGlobalTimeSpan();
 }
 
-const fromInput = ref<HTMLInputElement | null>(null);
-function selectCustom() {
+async function selectCustom() {
   // Keeps the shown window but detaches it from the preset, then moves focus to the pickers.
   if (globalRange.value) {
     globalRange.value = undefined;
     applyGlobalTimeSpan();
   }
+  await nextTick();
   fromInput.value?.focus();
 }
 
@@ -336,11 +340,11 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
           </label>
         </div>
       </div>
-      <div class="statistics-time-dates">
+      <div v-show="!activeRange" class="statistics-time-dates">
         <label>{{ t("Från (lokal tid)") }}<input ref="fromInput" :value="localFrom" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'start')" /></label>
-        <label>{{ t("Till (lokal tid)") }}<input :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
-        <button v-if="resettable" type="button" class="button small" @click="resetTimeSpan">{{ t("Återställ period") }}</button>
+        <label>{{ t("Till (lokal tid)") }}<input ref="toInput" :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
       </div>
+      <button v-if="resettable" type="button" class="button small statistics-time-reset" @click="resetTimeSpan">{{ t("Återställ period") }}</button>
       <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
     </div>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
@@ -384,6 +388,7 @@ onUnmounted(() => { generation++; sessionEpoch++; collector?.dispose(); window.r
 .statistics-range-preset.active { background: var(--green); color: white; border-color: var(--green); }
 .statistics-resolution-select label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .statistics-resolution-select select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+.statistics-time-reset { align-self: flex-start; }
 .statistics-time-dates { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; border-top: 1px solid var(--line); padding-top: 14px; }
 .statistics-time-dates label { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 0 1 210px; font-size: 12px; font-weight: 600; color: var(--muted); }
 /* #160/#169: iOS gives native date/time inputs an intrinsic width; reset it so they never overflow. */

@@ -35,6 +35,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   const toPicker = timeControls.getByLabel("Till (lokal tid)", { exact: true });
   const periodLabel = timeControls.locator(".statistics-period-label");
   await expect(fromPicker).toHaveAttribute("type", "datetime-local");
+  await expect(fromPicker).toBeHidden();
+  await expect(toPicker).toBeHidden();
   const pickerMs = async (picker: Locator) => Date.parse(`${await picker.inputValue()}:00Z`);
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(3 * 86_400_000);
   await expect(page.locator(".statistics-heading p")).not.toContainText("30 dagarna");
@@ -104,6 +106,9 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   expect(await pickerMs(toPicker) - await pickerMs(fromPicker)).toBe(7 * 86_400_000);
   // A manual edit selects "Anpassat", deselects the preset and updates the label.
   const customFrom = new Date(await pickerMs(toPicker) - 2 * 86_400_000 + 6 * 3_600_000).toISOString().slice(0, 16);
+  await rangeGroup.getByRole("button", { name: "Anpassat", exact: true }).click();
+  await expect(fromPicker).toBeVisible();
+  await expect(fromPicker).toBeFocused();
   await fromPicker.fill(customFrom);
   await expect(rangeGroup.getByRole("button", { name: "Anpassat", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(rangeGroup.getByRole("button", { name: "7 dagar", exact: true })).toHaveAttribute("aria-pressed", "false");
@@ -186,6 +191,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // #160, #164 & #169: datetime fields stay inside the global time controls on narrow portrait viewports.
     const controlsBox = await timeControls.boundingBox();
+    await rangeGroup.getByRole("button", { name: "Anpassat", exact: true }).click();
     const pickers = await timeControls.locator("input[type=datetime-local]").all();
     expect(pickers).toHaveLength(2);
     for (const input of pickers) {

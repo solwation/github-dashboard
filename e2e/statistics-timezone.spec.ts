@@ -41,6 +41,10 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     await slider.focus(); await slider.press('End');
     await expect(page.getByRole('tooltip')).toContainText(zone === 'Europe/Stockholm' ? '19 okt.' : '18 okt.');
     await expect(page.getByRole('tooltip').locator('.chart-selection-value').filter({ hasText: 'Skapade issues' }).locator('b')).toHaveText('1');
+    await expect(from).toBeHidden();
+    await page.getByRole('button', { name: 'Anpassat', exact: true }).click();
+    await expect(from).toBeVisible();
+    await expect(from).toBeFocused();
     await from.fill('2026-10-18T10:00');
     await to.fill('2026-10-18T11:00');
     const expected = await page.evaluate(() => ({ from: new Date(2026, 9, 18, 10).toISOString().slice(0, 16), to: new Date(2026, 9, 18, 11).toISOString().slice(0, 16) }));
@@ -48,6 +52,7 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     await expect.poll(async () => (await readSettings(page, login))?.preferences?.statistics?.[name]?.to).toBe(expected.to);
     await page.reload();
     await expect(from).toHaveValue('2026-10-18T10:00');
+    await expect(from).toBeVisible();
     await expect(to).toHaveValue('2026-10-18T11:00');
     await expect(page.locator('.statistics-range-custom')).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -69,7 +74,15 @@ for (const zone of ['Europe/Stockholm', 'America/Los_Angeles']) {
     }, expected.from);
     await expect(second.getByLabel('Från (lokal tid)', { exact: true })).toHaveValue(displayedFrom);
     expect((await readSettings(second, login)).preferences.statistics[name].from).toBe(expected.from);
-    await other.close(); await context.close();
+    await other.close();
+    await page.getByRole('button', { name: '7 dagar', exact: true }).click();
+    await expect(from).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole('button', { name: '7 dagar', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(from).toBeHidden();
+    await expect(to).toBeHidden();
+    await expect(page.locator('.statistics-period-label')).toBeVisible();
+    await context.close();
   });
 }
 
@@ -81,8 +94,14 @@ test('spring gap is rejected and repeated autumn hours have distinct offsets', a
   await page.getByRole('button', { name: 'Uppdatera statistik', exact: true }).click();
   const from = page.getByLabel('Från (lokal tid)', { exact: true });
   const before = await from.inputValue();
+  await page.getByRole('button', { name: 'Anpassat', exact: true }).click();
   await from.fill('2026-03-29T02:30');
   expect(await from.evaluate((input: HTMLInputElement) => input.validity.customError)).toBe(true);
+  await page.getByRole('button', { name: '3 dagar', exact: true }).click();
+  await expect(from).toBeHidden();
+  await page.getByRole('button', { name: 'Anpassat', exact: true }).click();
+  await expect(from).toBeFocused();
+  expect(await from.evaluate((input: HTMLInputElement) => input.validity.customError)).toBe(false);
   await page.reload();
   await expect(from).toHaveValue(before);
   await page.clock.setSystemTime(new Date('2026-10-25T04:00:00Z'));
@@ -107,6 +126,7 @@ test('spring gap is rejected and repeated autumn hours have distinct offsets', a
   }, { login, saved });
   await page.reload();
   await expect(from).toHaveValue('2026-10-25T02:30');
+  await expect(from).toBeVisible();
   await page.getByLabel('Till (lokal tid)', { exact: true }).fill('2026-10-25T04:30');
   await expect.poll(async () => (await readSettings(page, login))?.preferences?.statistics?.[name]?.from).toBe('2026-10-25T01:30');
   await context.close();
