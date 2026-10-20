@@ -1,10 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 
 test("sidebar project links stay on Statistics and preserve charts and filters through history", async ({ page }) => {
   await page.goto("/"); await page.getByRole("button", { name: "Utforska en demo" }).click();
   await page.getByRole("link", { name: "Statistik", exact: true }).click();
   const section = page.locator('#statistics-repo-2');
   await expect(section).toBeVisible();
+  await section.getByRole("button", { name: "Expandera demo/weekend-project", exact: true }).click();
   await section.getByRole("group", { name: "Mätvärden i diagrammet" }).getByRole("button", { name: "Commits" }).click();
   await section.evaluate(element => element.setAttribute("data-retained", "yes"));
   const link = page.locator('.sidebar-repository-row[data-repository="demo/weekend-project"] .sidebar-repository');
@@ -59,6 +61,10 @@ test("direct statistics project links override saved Overview and wait for loadi
   await expect(alpha.locator(".statistics-repository-body")).toBeVisible();
   await expect(page.locator("#statistics-repo-1 h2")).toBeInViewport();
   expect(api.count()).toBe(count);
+  await page.locator('.sidebar-repository-row[data-repository="sample/alpha"] .sidebar-repository').press("Enter");
+  await expect(alpha.locator(".statistics-repository-body")).toBeHidden();
+  await expect.poll(() => readSettings(page, "statistics-navigation").then(saved => saved?.preferences?.statistics?.["sample/alpha"]?.collapsed)).toBe(true);
+  // A fresh deep link reveals the saved collapsed section rather than treating it as a repeat.
   await page.reload();
   await expect(page).toHaveURL(/#statistics-repo-1$/);
   await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();

@@ -205,18 +205,34 @@ function clearRepositoryHighlight() {
   highlightedRepository = null;
   repositoryNavigationTarget = null;
 }
-async function revealRepository(name: string) {
+const focusedSidebarRepository = ref<string | null>(null);
+const statisticsNavigation = ref<{ name: string; toggle: boolean; sequence: number }>();
+let sidebarNavigationSequence = 0;
+function activateSidebarRepository(name: string) {
+  const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
+  if (!repo) return;
+  const toggle = focusedSidebarRepository.value === name;
+  focusedSidebarRepository.value = name;
+  const hash = (currentView.value === "statistics" ? "#statistics-repo-" : "#repo-") + repo.id;
+  // Explicit activation owns this navigation; a hashchange would also reveal collapsed content.
+  if (window.location.hash !== hash) history.pushState(null, "", hash);
+  if (currentView.value === "statistics") statisticsNavigation.value = { name, toggle, sequence: ++sidebarNavigationSequence };
+  void revealRepository(name, toggle);
+}
+async function revealRepository(name: string, toggle = false) {
   clearRepositoryHighlight();
   const run = repositoryNavigationRun;
   const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
   if (!repo) return;
-  const targetId = "repo-" + repo.id;
+  const targetId = (currentView.value === "statistics" ? "statistics-repo-" : "repo-") + repo.id;
   repositoryNavigationTarget = targetId;
-  if (collapsedRepos.value.includes(name)) toggleCollapsed(name);
+  if (currentView.value === "overview" && splitByRepository.value && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
   await nextTick();
   if (run !== repositoryNavigationRun) return;
   const target = document.getElementById(targetId);
   if (!target) return;
+  const controls = target.closest("details");
+  if (controls) controls.open = toggle ? !controls.open : true;
   target.scrollIntoView({ block: "start" });
   // Flush removal of the previous outline so same-repository activation restarts its pulse.
   void target.offsetWidth;
@@ -232,6 +248,8 @@ const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
 // Board time labels keep their own clocks and stop while Statistics is shown.
 watch(currentView, view => setBoardVisible(view === "overview"), { immediate: true });
 async function navigateWorkspace() {
+  focusedSidebarRepository.value = null;
+  statisticsNavigation.value = undefined;
   if (window.location.hash !== "#" + repositoryNavigationTarget) clearRepositoryHighlight();
   currentView.value = isStatisticsHash() ? "statistics" : "overview";
   await nextTick();
@@ -410,6 +428,11 @@ const authBusy = ref(false);
 const restoring = ref(true);
 const savedSession = ref(false);
 const sessionToken = ref("");
+watch([currentView, splitByRepository, sessionToken, () => lanes.value.map(lane => lane.repo.full_name).sort().join("\n")], () => {
+  focusedSidebarRepository.value = null;
+  statisticsNavigation.value = undefined;
+});
+
 watch([currentView, splitByRepository, sessionToken], clearRepositoryHighlight);
 const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
@@ -1498,7 +1521,7 @@ onMounted(async () => {
       @move="moveRepository"
       @reorder="reorderProject"
       @interest="refreshStaleRepository"
-      @reveal="revealRepository"
+      @activate="activateSidebarRepository"
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
@@ -1687,7 +1710,7 @@ onMounted(async () => {
         </div></template
       >
       <template v-else>
-        <StatisticsView v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
+        <StatisticsView :navigation="statisticsNavigation" v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
         <div v-show="currentView === 'overview'">
         <section class="page-heading">
           <div>

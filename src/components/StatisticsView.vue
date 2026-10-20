@@ -17,7 +17,7 @@ import { demoStatistics } from "../lib/statistics-demo";
 import { formatBrowserDateTime, parseBrowserDateTime, isAmbiguousBrowserTime } from "../lib/browser-time";
 import StatisticsRepository from "./StatisticsRepository.vue";
 const { t, locale } = useLanguage();
-const props = defineProps<{ client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
+const props = defineProps<{ navigation?: { name: string; toggle: boolean; sequence: number }; client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsCalendarWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
@@ -299,28 +299,27 @@ function setCollapsed(id: number, collapsed: boolean) {
   updatePreference(repository.full_name, { ...normalizeStatisticsPreference(preferencesState.value[repository.full_name], period.value), collapsed });
 }
 let followedAnchor = "";
+let sidebarAnchor = "";
 async function followRepositoryAnchor(hash = window.location.hash) {
   if (!/^#statistics-repo-\d+$/.test(hash) || followedAnchor === hash) return;
   await nextTick();
   const target = document.getElementById(hash.slice(1));
   if (!target?.getClientRects().length) return;
   const id = Number(hash.slice("#statistics-repo-".length));
-  if (collapsedRepositories.value.has(id)) { setCollapsed(id, false); await nextTick(); }
+  if (sidebarAnchor !== hash && collapsedRepositories.value.has(id)) { setCollapsed(id, false); await nextTick(); }
+  // Loading content can change the sections above this target; scroll once it has settled.
+  if (initialLoading.value) return;
   target.scrollIntoView({ block: "start" });
   followedAnchor = hash;
 }
 watch([initialLoading, renderedRepositories], () => { void followRepositoryAnchor(); }, { flush: "post" });
-function followHashChange() { void followRepositoryAnchor(); }
-function followSidebarLink(event: MouseEvent) {
-  const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href^="#statistics-repo-"]') : null;
-  if (!link) return;
-  // A repeated click on the current fragment must still reveal a newly collapsed section.
+function followHashChange() {
+  sidebarAnchor = "";
   followedAnchor = "";
-  void followRepositoryAnchor(link.hash);
+  void followRepositoryAnchor();
 }
 onMounted(() => {
   window.addEventListener("hashchange", followHashChange);
-  document.addEventListener("click", followSidebarLink);
   void followRepositoryAnchor();
 });
 let collector: StatisticsCollector | null = null;
@@ -437,7 +436,16 @@ watch(() => expandedRepositories.value.map(repo => repo.full_name), (names, prev
     void restoration.then(() => { if (epoch === sessionEpoch) return load(false, name); });
   }
 });
-onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); document.removeEventListener("click", followSidebarLink); });
+watch(() => props.navigation, navigation => {
+  if (!navigation) { sidebarAnchor = ""; return; }
+  const repo = props.repositories.find(repository => repository.full_name === navigation.name);
+  if (!repo) return;
+  sidebarAnchor = "#statistics-repo-" + repo.id;
+  followedAnchor = "";
+  setCollapsed(repo.id, navigation.toggle ? !collapsedRepositories.value.has(repo.id) : false);
+  void followRepositoryAnchor(sidebarAnchor);
+}, { immediate: true });
+onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">

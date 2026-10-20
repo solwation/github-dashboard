@@ -48,6 +48,10 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await sidebarProject.click();
   await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
   await expect(board.locator(".combined-limit-note")).toBeVisible();
+  await sidebarProject.click();
+  await expect(board.locator(".combined-repository-controls")).not.toHaveAttribute("open", "");
+  await sidebarProject.press("Enter");
+  await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
   await board.getByText("Repositoryinställningar", { exact: true }).click();
   await sidebarProject.click(); // The same hash must also reveal a manually closed panel.
   await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
