@@ -104,7 +104,7 @@ test("desktop expands row details in place with open description while phone ope
   await beta.click();
   await expect(beta).toHaveAttribute("aria-expanded", "true");
   const betaRow = board.locator(".issue-row").filter({ has: page.getByRole("button", { name: "beta task 1", exact: true }) });
-  await expect(betaRow.locator(".row-repository")).toHaveText("sample/beta");
+  await expect(betaRow.locator(".row-repository")).toHaveAttribute("title", "sample/beta");
   await expect(betaRow.getByText("Description of beta task 1")).toBeVisible();
   await expect(betaRow.getByRole("link", { name: "Öppna #1 på GitHub", exact: true })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
   for (const scheme of ["light", "dark"] as const) {
@@ -131,7 +131,7 @@ test("desktop expands row details in place with open description while phone ope
       await expect(dialog).toBeVisible();
       const popupCard = dialog.locator(".issue-card:not(.row-details-card)");
       await expect(popupCard).toBeVisible();
-      await expect(popupCard.locator(".card-repository")).toHaveText("sample/beta");
+      await expect(popupCard.locator(".card-repository")).toHaveAttribute("title", "sample/beta");
       await expect(popupCard.getByRole("link", { name: /beta task 1/ })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
       // #197: the enhancement label is shown by the type icon instead of a chip.
       await expect(popupCard.locator(".type-circle.type-feature")).toBeVisible();

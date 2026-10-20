@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Kombinerade kort och listor visar kortare repolabels när alla valda repositories har samma ägare; fullnamnet finns i tooltipen.",
+          "en": "Combined cards and lists shorten repository labels when every selected repository has the same owner; tooltips retain full names."
+        },
+        "issues": [220]
+      },
+      {
+        "text": {
           "sv": "Flyttad- och kommentarsmarkeringar har egna platser i listvyn utan att rubba radens höjd eller kolumner.",
           "en": "Movement and comment markers have reserved list positions without shifting row height or columns."
         },

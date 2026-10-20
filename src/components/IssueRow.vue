@@ -9,6 +9,7 @@ import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useIssueRelations } from "../composables/useIssueRelations";
+import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { repositoryColor } from "../lib/repository-color";
 import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
 import { column, duration, isProgress, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
@@ -41,6 +42,7 @@ const props = defineProps<{
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
 }>();
 const emit = defineEmits<{ read: [] }>();
+const repositoryLabel = useRepositoryDisplayName(() => props.repository);
 const row = ref<HTMLElement>();
 const visible = ref(false);
 const toggle = ref<HTMLButtonElement>();
@@ -121,7 +123,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     @click="rowClick"
     :class="[col, { expanded, 'has-repository': showRepository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
   >
-    <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span>{{ repository }}</span></span>
+    <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
     <span class="row-id"
       ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
         ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"

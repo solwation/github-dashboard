@@ -82,7 +82,7 @@ test("one global list mode for every repository and the combined board keeps fil
   const colors = await page.locator(".sidebar-repository-row").evaluateAll(rows => Object.fromEntries(rows.map(row =>
     [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".repo-dot")!).backgroundColor])));
   for (const row of await board.locator(".issue-row").all()) {
-    const name = (await row.locator(".row-repository").textContent())!.trim();
+    const name = (await row.locator(".row-repository").getAttribute("title"))!;
     expect(await row.locator(".row-repository i").evaluate(element => getComputedStyle(element).backgroundColor)).toBe(colors[name]);
   }
   await board.locator(".backlog").getByRole("button", { name: "Visa fler", exact: true }).click();
@@ -164,7 +164,7 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
   await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
   const board = page.locator(".combined-board");
   await expect(board.locator(".issue-row")).toHaveCount(10);
-  const names = (await board.locator(".row-repository").allTextContents()).map(name => name.trim());
+  const names = await board.locator(".row-repository").evaluateAll(elements => elements.map(element => element.getAttribute("title")));
   expect(new Set(names)).toEqual(new Set(["sample/alpha", "sample/beta"]));
   await page.reload();
   await expect(board.locator(".issue-row")).toHaveCount(10);
