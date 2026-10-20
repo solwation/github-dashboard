@@ -1196,6 +1196,7 @@ function logout() {
   error.value = "";
   query.value = "";
   currentView.value = "overview";
+  history.replaceState(null, "", "#overview");
   splitByRepository.value = true;
   listMode.value = false;
   combinedLimits.value = {};

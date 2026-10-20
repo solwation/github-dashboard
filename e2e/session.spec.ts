@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readSettings } from "./support/settings";
 import { createHandoffUrl } from "../src/lib/handoff";
 async function fixture(page: Page) {
   const repo = {
@@ -97,3 +98,44 @@ test("mobile handoff scrubs URL, imports repo selections and renders a local exp
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
 });
+
+for (const fragment of ["#statistics", "#statistics-repo-1"]) {
+  test(`logout from ${fragment} keeps navigation and encrypted preferences consistent on sign-in`, async ({ page }) => {
+    await fixture(page);
+    await page.goto("/");
+    const signIn = async () => {
+      await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
+      await page.getByLabel("GitHub personal access token").fill("fixture-persistent-token");
+      await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
+    };
+    await signIn();
+    await page.getByRole("checkbox", { name: "sample/test" }).check();
+    await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
+    await expect(page.locator(".repo-lane")).toHaveCount(1);
+    await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+    await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("6");
+    await page.getByLabel("Visa max work items per kolumn", { exact: true }).press("Tab");
+    await page.getByRole("button", { name: "Klart", exact: true }).click();
+    await page.getByRole("link", { name: "Statistik", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
+    if (fragment !== "#statistics") await page.locator(".sidebar-repository").click();
+    await expect(page).toHaveURL(new RegExp(fragment + "$"));
+    await expect.poll(() => readSettings(page, "session-test").then(saved => saved?.columnLimit)).toBe(6);
+    await page.getByRole("button", { name: "Logga ut", exact: true }).click();
+    await page.getByRole("button", { name: "Logga ut och ta bort token", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Anslut GitHub", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/#overview$/);
+    const saved = await readSettings(page, "session-test");
+    expect(saved.selected).toEqual(["sample/test"]);
+    expect(saved.columnLimit).toBe(6);
+    await signIn();
+    await expect(page.locator(".repo-lane")).toHaveCount(1);
+    await expect(page.locator("main#overview")).toBeVisible();
+    await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+    await expect(page.getByLabel("Visa max work items per kolumn", { exact: true })).toHaveValue("6");
+    await page.getByRole("button", { name: "Klart", exact: true }).click();
+    await page.getByRole("link", { name: "Statistik", exact: true }).click();
+    await expect(page).toHaveURL(/#statistics$/);
+    await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
+  });
+}
