@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Översiktens öppna och pågående badges visar summerade story points och uppskattad tid kvar, med tydlig markering för delvis underlag.",
+          "en": "Overview’s open and in-progress badges show summed story points and estimated time remaining, with partial coverage clearly marked."
+        },
+        "issues": [219]
+      },
+      {
+        "text": {
           "sv": "Följ statistikens hämtade historik och färdiga underlag, med procent och ungefärlig tid kvar när arbetsmängden är känd.",
           "en": "Follow collected statistics history and finished sources, with percentage and approximate time remaining once the workload is known."
         },

@@ -35,6 +35,11 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Tid för {known} av {total} repos": "Time for {known} of {total} repos",
+  "Poängen omfattar samma filtrerade issues som antalet.": "Points cover the same filtered issues as the count.",
+  "Tiden bygger på historisk tid per poäng och parallellitet inom varje repository. Långsammaste repository avgör.": "Time uses historical time per point and parallelism within each repository. The slowest repository determines the estimate.",
+  "{count} pågående saknar säker starttid och räknas med sin fulla uppskattade tid.": "{count} in-progress issues lack a safe start time and use their full estimated duration.",
+  "{count} pågående har passerat sin uppskattade tid.": "{count} in-progress issues have exceeded their estimated duration.",
   "Statistikhämtning": "Statistics loading",
   "Kontrollerar underlag: {done} av {total} källor.": "Checking data: {done} of {total} sources.",
   "Fullt hämtade underlag: {done} av {total}.": "Fully collected sources: {done} of {total}.",
