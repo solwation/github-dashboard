@@ -40,7 +40,7 @@ import { setBoardVisible } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
-import { TimeoutTracker, DEFAULT_TIMEOUT_MINUTES, nextTimeout, parseTimeoutMinutes, type TimeoutEntry } from "./lib/timeouts";
+import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
 import { ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
@@ -390,15 +390,27 @@ watch(picker, (open) => {
 });
 const visibleLimit = ref<Record<string, number>>({});
 const columnLimit = ref(defaultColumnLimit);
-const timeoutMinutes = ref(DEFAULT_TIMEOUT_MINUTES);
+const timeoutSettings = ref(normalizeTimeoutSettings({}));
 const timeoutTracker = new TimeoutTracker();
 const timedOut = ref<TimeoutEntry[]>([]);
-function setTimeoutMinutes(minutes: number) {
-  timeoutMinutes.value = parseTimeoutMinutes(minutes) ?? DEFAULT_TIMEOUT_MINUTES;
+function setTimeoutEnabled(enabled: boolean) {
+  timeoutSettings.value = { ...timeoutSettings.value, timeoutEnabled: enabled };
   save();
 }
+function setTimeoutOverrunPercent(percent: number) {
+  const parsed = parseTimeoutOverrunPercent(percent);
+  if (parsed === null) return;
+  timeoutSettings.value = { ...timeoutSettings.value, timeoutOverrunPercent: parsed };
+  save();
+}
+function timeoutEstimateMs(repo: string, issue: Issue) {
+  return timedOut.value.find(entry => entry.repo === repo && entry.issue.id === issue.id)?.estimatedMs;
+}
 function issueTimedOut(repo: string, issue: Issue) {
-  return timedOut.value.some(entry => entry.repo === repo && entry.issue.id === issue.id);
+  const started = issue.startedAt ? Date.parse(issue.startedAt) : NaN;
+  if (!timeoutSettings.value.timeoutEnabled || issue.timerError || !Number.isFinite(started) || started > Date.now()) return false;
+  return timedOut.value.some(entry => entry.repo === repo && entry.issue.id === issue.id &&
+    entry.issue.startedAt === issue.startedAt && Date.now() - started > entry.estimatedMs * (1 + timeoutSettings.value.timeoutOverrunPercent / 100));
 }
 const repositoryColumnLimits = ref<Record<string, number>>({});
 function initialLimit(repo: string) {
@@ -544,7 +556,7 @@ function cardProps(lane: Lane, issue: Issue, showRepository = false) {
   return {
     issue, repository: repo, showRepository, assignedColor: workspaceRepositoryColors.value[repo],
     loadRelations: load?.relations, relationsRevision: relationsRevisions.value[repo] ?? 0,
-    rules: rules.value[repo] || {}, timedOut: issueTimedOut(repo, issue), timeoutMinutes: timeoutMinutes.value,
+    rules: rules.value[repo] || {}, timedOut: issueTimedOut(repo, issue), timeoutOverrunPercent: timeoutSettings.value.timeoutOverrunPercent, timeoutEstimateMs: timeoutEstimateMs(repo, issue),
     loadCommit: load?.commit, demo: isDemo.value, loadComments: load?.comments, commentsSession: generation,
     commitRetry: commitRetry.value, recentMove: activity.moved(repo, issue, activityNow.value),
     newComments: activity.newComments(repo, issue, activityNow.value),
@@ -683,21 +695,6 @@ let repositoryRequestClient: GitHub | null = null;
 // Scan on data changes and when the next work period crosses the threshold, not every second (#120).
 const timeoutCheck = ref(0);
 let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
-watch([lanes, rules, timeoutCheck, timeoutMinutes, showingCache, restoring, busy, hideCoordination], () => {
-  clearTimeout(timeoutTimer);
-  if (busy.value) return;
-  const at = Date.now();
-  const next = nextTimeout(lanes.value, rules.value, timeoutMinutes.value, at);
-  if (next !== null) timeoutTimer = setTimeout(() => timeoutCheck.value++, next - at);
-  const result = timeoutTracker.scan(lanes.value, rules.value, timeoutMinutes.value, at,
-    { notify: !showingCache.value && !restoring.value });
-  timedOut.value = result.active.filter(entry => !hideCoordination.value || !isCoordination(entry.issue));
-  for (const entry of result.newlyTimedOut) {
-    if ((hideCoordination.value && isCoordination(entry.issue)) || !notificationsEnabled(entry.repo)) continue;
-    const repo = lanes.value.find(lane => lane.repo.full_name === entry.repo)?.repo;
-    if (repo) void notifyTimeout(repo, entry.issue).catch(() => {});
-  }
-}, { deep: true });
 const loggedIn = computed(() => Boolean(user.value));
 const connectionLabel = computed(() =>
   loggedIn.value ? t("GitHub anslutet") : isDemo.value ? t("Demoläge") : t("Ej ansluten"),
@@ -746,6 +743,31 @@ const combinedEstimateGroups = computed(() => orderedLanes.value.filter((lane) =
 provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
   orderedLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
 ));
+const timeoutCalibrationLanes = computed(() => lanes.value.filter(lane => splitByRepository.value || !lane.loading).map(lane => ({
+  ...lane, issues: splitByRepository.value ? laneIssues(lane) : lane.issues.filter(issue =>
+    (!hideCoordination.value || !isCoordination(issue)) && matchesIssueFilters(issue, query.value, "")),
+})));
+watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, showingCache, restoring, busy, hideCoordination], () => {
+  clearTimeout(timeoutTimer);
+  if (!timeoutSettings.value.timeoutEnabled) {
+    timedOut.value = [];
+    timeoutTracker.scan(lanes.value, rules.value, timeoutSettings.value, Date.now(), { notify: false });
+    return;
+  }
+  if (busy.value) return;
+  const at = Date.now();
+  const bases = timeoutBases(timeoutCalibrationLanes.value, rules.value, at);
+  const next = nextTimeout(lanes.value, rules.value, timeoutSettings.value, at, bases);
+  if (next !== null) timeoutTimer = setTimeout(() => timeoutCheck.value++, Math.min(2147483647, Math.max(1, next - at)));
+  const result = timeoutTracker.scan(lanes.value, rules.value, timeoutSettings.value, at,
+    { notify: !showingCache.value && !restoring.value, bases });
+  timedOut.value = result.active.filter(entry => !hideCoordination.value || !isCoordination(entry.issue));
+  for (const entry of result.newlyTimedOut) {
+    if ((hideCoordination.value && isCoordination(entry.issue)) || !notificationsEnabled(entry.repo)) continue;
+    const repo = lanes.value.find(lane => lane.repo.full_name === entry.repo)?.repo;
+    if (repo) void notifyTimeout(repo, entry.issue, entry.estimatedMs, timeoutSettings.value.timeoutOverrunPercent).catch(() => {});
+  }
+}, { deep: true });
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
 watch(columnLimit, () => { combinedLimits.value = {}; });
 // One set of loaders per repository and session keeps card props stable between renders (#120).
@@ -794,7 +816,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   notificationRepos: notificationRepos.value, notificationSounds: notificationSounds.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
   hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value,
-  listMode: listMode.value, timeoutMinutes: timeoutMinutes.value,
+  listMode: listMode.value, ...timeoutSettings.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
@@ -812,7 +834,8 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   hideCoordination.value = value.hideCoordination ?? hideCoordination.value;
   splitByRepository.value = value.splitByRepository ?? splitByRepository.value;
   listMode.value = value.listMode ?? listMode.value;
-  timeoutMinutes.value = value.timeoutMinutes ?? timeoutMinutes.value;
+  const legacyTimeout = value.timeoutMinutes !== undefined && value.timeoutEnabled === undefined && value.timeoutOverrunPercent === undefined;
+  timeoutSettings.value = normalizeTimeoutSettings(legacyTimeout ? {} : { ...timeoutSettings.value, ...value });
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
   if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+)$/.test(window.location.hash))) {
     currentView.value = value.currentView;
@@ -866,7 +889,7 @@ function save(): Promise<void> {
         notificationRepos: notificationRepos.value,
         activityRead: activity.acknowledgements(),
         permissionAcknowledgements: permissionAcknowledgements.value,
-        timeoutMinutes: timeoutMinutes.value,
+        ...timeoutSettings.value,
       }).catch(() => { /* App remains usable without storage. */ });
   } catch {
     return Promise.resolve(); // Unserializable state must not break the board.
@@ -879,7 +902,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
     columnLimit.value = defaultColumnLimit;
-    timeoutMinutes.value = DEFAULT_TIMEOUT_MINUTES;
+    timeoutSettings.value = normalizeTimeoutSettings({});
     repositoryColumnLimits.value = {};
     visibleLimit.value = {};
     combinedLimits.value = {};
@@ -890,7 +913,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     try {
       const saved = settings.value;
       if (saved) {
-        timeoutMinutes.value = parseTimeoutMinutes(saved.timeoutMinutes) ?? DEFAULT_TIMEOUT_MINUTES;
+        timeoutSettings.value = normalizeTimeoutSettings(saved);
         const limits = restoreColumnLimits(saved, available.map(repo => repo.full_name));
         columnLimit.value = limits.global;
         repositoryColumnLimits.value = limits.overrides;
@@ -1147,6 +1170,7 @@ async function applyRepos() {
   await refresh(false, true);
 }
 function showDemo() {
+  timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
@@ -1184,6 +1208,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
   settingsAccount = null; // Encrypted settings stay saved for this account's next sign-in.
   permissionAcknowledgements.value = [];
@@ -1540,7 +1565,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -1896,7 +1921,7 @@ onMounted(async () => {
                     :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                     :rules="rules[lane.repo.full_name] || {}"
                     :timed-out="issueTimedOut(lane.repo.full_name, issue)"
-                    :timeout-minutes="timeoutMinutes"
+                    :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" :timeout-estimate-ms="timeoutEstimateMs(lane.repo.full_name, issue)"
                     :demo="isDemo"
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
@@ -2007,7 +2032,7 @@ onMounted(async () => {
                     :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
                     :rules="rules[lane.repo.full_name] || {}"
                     :timed-out="issueTimedOut(lane.repo.full_name, issue)"
-                    :timeout-minutes="timeoutMinutes"
+                    :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" :timeout-estimate-ms="timeoutEstimateMs(lane.repo.full_name, issue)"
                     :demo="isDemo"
                     :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
                     :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
 import { ArrowDown, ArrowUp, ArrowUpRight, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
@@ -32,7 +33,8 @@ const props = defineProps<{
   recentMove?: ActivityMarker;
   newComments?: number;
   timedOut?: boolean;
-  timeoutMinutes?: number;
+  timeoutOverrunPercent?: number;
+  timeoutEstimateMs?: number;
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
   commentsSession?: number;
@@ -171,7 +173,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button
       ><span class="row-slot row-slot-status"><span class="row-status" :class="col">{{ status }}</span></span
       ><span v-if="timeout && issue.startedAt" class="row-timeout"
-        :title="t('Timeout: pågående i {duration}, över gränsen {minutes} min.', { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 })"
+        :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
         >{{ t("Timeout") }}</span
       ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
         ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="11" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span

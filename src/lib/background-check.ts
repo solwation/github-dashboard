@@ -4,8 +4,9 @@
  * tested without a service worker. Token, settings and the last seen state are only read from
  * and written to the encrypted IndexedDB stores; nothing private enters caches or plaintext.
  */
+import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Label, type Lane, type Repo, type Rules } from "./model";
-import { DEFAULT_TIMEOUT_MINUTES, parseTimeoutMinutes, TimeoutTracker } from "./timeouts";
+import { normalizeTimeoutSettings, TimeoutTracker, timeoutBases, timeoutDetail, type TimeoutSettings } from "./timeouts";
 import { setLanguage, t, type LanguagePreference } from "./i18n";
 import type { GitHub } from "./github";
 
@@ -26,6 +27,8 @@ export interface StoredRepo {
   since: number;
   checkedAt: number;
   rules: string;
+  timeoutSettings?: TimeoutSettings;
+  timeoutCalibrationKey?: string;
   labels: Label[];
   issues: Issue[];
 }
@@ -36,11 +39,15 @@ export interface BackgroundState {
   responses: unknown[];
 }
 export type NoticeKind = "closed" | "progress" | "backlog" | "reopened" | "timeout";
-export interface BackgroundNotice { kind: NoticeKind; repo: Repo; issue: Issue }
+export interface BackgroundNotice { detail?: string; kind: NoticeKind; repo: Repo; issue: Issue }
 export interface WatchSettings {
   repos: string[];
   rules: Record<string, Rules>;
-  timeoutMinutes: number;
+  timeoutEnabled: boolean;
+  timeoutOverrunPercent: number;
+  query: string;
+  repositoryQueries: Record<string, string>;
+  splitByRepository: boolean;
   hideCoordination: boolean;
   language: LanguagePreference;
 }
@@ -65,18 +72,24 @@ export function watchSettings(saved: unknown): WatchSettings {
   return {
     repos: [...new Set(notify.filter(name => selected.has(name)))].slice(0, MAX_WATCHED_REPOS),
     rules,
-    timeoutMinutes: parseTimeoutMinutes(preferences.timeoutMinutes ?? value.timeoutMinutes) ?? DEFAULT_TIMEOUT_MINUTES,
+    ...normalizeTimeoutSettings({ ...value, ...preferences }),
+    query: typeof preferences.query === "string" ? preferences.query.slice(0, 500) : "",
+    repositoryQueries: isRecord(preferences.repositoryQueries) ? Object.fromEntries(Object.entries(preferences.repositoryQueries).filter((entry): entry is [string, string] => REPO_NAME.test(entry[0]) && typeof entry[1] === "string").map(([name, query]) => [name, query.slice(0, 500)])) : {},
+    splitByRepository: preferences.splitByRepository !== false,
     hideCoordination: typeof preferences.hideCoordination === "boolean" ? preferences.hideCoordination : true,
     language,
   };
 }
 
-/** Only fields the comparison, timers and notifications use; bodies stay out of stored state. */
+/** Preserve bounded sizing/history inputs in the encrypted state so calibration matches the board. */
 export function compactIssue(issue: Issue): Issue {
   return {
     id: issue.id, number: issue.number, title: issue.title, html_url: issue.html_url, state: issue.state,
     created_at: issue.created_at, updated_at: issue.updated_at, closed_at: issue.closed_at,
     labels: (issue.labels ?? []).map(label => ({ name: label.name, color: label.color })), assignees: [],
+    body: issue.body?.slice(0, 65536) ?? null,
+    ...(issue.workStartedAt ? { workStartedAt: issue.workStartedAt } : {}),
+    ...(issue.pull_request ? { pull_request: {} } : {}),
     ...(issue.startedAt !== undefined ? { startedAt: issue.startedAt } : {}),
     ...(issue.timerError !== undefined ? { timerError: issue.timerError } : {}),
   };
@@ -122,14 +135,16 @@ export function statusNotices(previous: StoredRepo, current: Lane, rules: Rules 
 }
 
 /** Work periods that crossed the timeout threshold since the previous check, reusing TimeoutTracker. */
-export function timeoutNotices(previous: StoredRepo, current: Lane, rules: Rules, minutes: number, now: number, hideCoordination = true): BackgroundNotice[] {
+export function timeoutNotices(previous: StoredRepo, current: Lane, rules: Rules, settings: TimeoutSettings, now: number, hideCoordination = true, calibrationIssues = current.issues): BackgroundNotice[] {
+  if (!settings.timeoutEnabled || !previous.timeoutSettings || JSON.stringify(previous.timeoutSettings) !== JSON.stringify(settings)) return [];
   const tracker = new TimeoutTracker();
   const name = current.repo.full_name;
+  const bases = timeoutBases([{ ...current, issues: calibrationIssues.filter(issue => !hideCoordination || !isCoordination(issue)) }], { [name]: rules }, now);
   // Periods already over the threshold at the previous check were notified then (or predate it).
-  tracker.scan([{ repo: current.repo, issues: previous.issues, labels: [] }], { [name]: rules }, minutes, previous.checkedAt, { notify: false });
-  return tracker.scan([current], { [name]: rules }, minutes, now).newlyTimedOut
+  tracker.scan([{ repo: current.repo, issues: previous.issues, labels: [] }], { [name]: rules }, settings, previous.checkedAt, { notify: false, bases });
+  return tracker.scan([current], { [name]: rules }, settings, now, { bases }).newlyTimedOut
     .filter(entry => !(hideCoordination && isCoordination(entry.issue)))
-    .map(entry => ({ kind: "timeout", repo: current.repo, issue: entry.issue }));
+    .map(entry => ({ kind: "timeout", repo: current.repo, issue: entry.issue, detail: timeoutDetail(entry.issue, entry.estimatedMs, settings.timeoutOverrunPercent, now) }));
 }
 
 /** Tags match the open app's notifications (closureKey / notifyTimeout), so one replaces the other. */
@@ -140,7 +155,7 @@ export function notificationTag({ kind, repo, issue }: BackgroundNotice): string
 }
 const descriptions: Record<NoticeKind, string> = {
   closed: "Issue stängd",
-  timeout: "Timeout för pågående issue",
+  timeout: "Estimatet för pågående arbete har överskridits",
   progress: "Issue påbörjad",
   backlog: "Issue tillbaka i backlog",
   reopened: "Issue återöppnad",
@@ -149,7 +164,7 @@ export function notificationFor(notice: BackgroundNotice, root: string): Notific
   return {
     title: `${notice.repo.name} · ${t(descriptions[notice.kind])}`,
     options: {
-      body: `#${notice.issue.number} ${notice.issue.title}`,
+      body: `#${notice.issue.number} ${notice.issue.title}${notice.detail ? "\n" + notice.detail : ""}`,
       tag: notificationTag(notice),
       icon: new URL("favicon.svg", root).href,
       // The click opens or focuses the app at the issue's repository lane.
@@ -212,6 +227,8 @@ export async function runBackgroundCheck(deps: BackgroundDependencies): Promise<
       if (api.retryAfterMs()) { if (prev) next.repos[name] = prev; continue; }
       const rules = settings.rules[name] ?? {};
       const started = deps.now();
+      const repositoryQuery = settings.splitByRepository ? settings.repositoryQueries[name] ?? "" : "";
+      const timeoutCalibrationKey = JSON.stringify([settings.query, repositoryQuery, settings.hideCoordination]);
       try {
         const repo = prev?.repo ?? compactRepo((await api.request<Repo>(`/repos/${name}`, { store: false })).data);
         const full = !prev || started - prev.since >= FULL_RELOAD_MS || started - prev.checkedAt >= FULL_RELOAD_MS;
@@ -221,9 +238,11 @@ export async function runBackgroundCheck(deps: BackgroundDependencies): Promise<
         const current: Lane = { ...lane, repo };
         if (prev && prev.rules === rulesKey(rules) && started - prev.checkedAt < COMPARABLE_MS && started >= prev.checkedAt)
           notices.push(...statusNotices(prev, current, rules, settings.hideCoordination),
-            ...timeoutNotices(prev, current, rules, settings.timeoutMinutes, started, settings.hideCoordination));
+            ...(prev.timeoutCalibrationKey === timeoutCalibrationKey ? timeoutNotices(prev, current, rules, { timeoutEnabled: settings.timeoutEnabled, timeoutOverrunPercent: settings.timeoutOverrunPercent }, started, settings.hideCoordination, current.issues.filter(issue => matchesIssueFilters(issue, settings.query, repositoryQuery))) : []));
         next.repos[name] = {
           repo, since: full ? started : prev.since, checkedAt: started, rules: rulesKey(rules),
+          timeoutCalibrationKey,
+          timeoutSettings: { timeoutEnabled: settings.timeoutEnabled, timeoutOverrunPercent: settings.timeoutOverrunPercent },
           labels: lane.labels.map(label => ({ name: label.name, color: label.color })),
           issues: lane.issues.filter(issue => !issue.pull_request).map(compactIssue),
         };

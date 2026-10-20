@@ -25,6 +25,7 @@ const DICTIONARY = [
   "auto", "sv", "en", "overview",
   "closed", "created", "reopened", "netIssues", "commits", "additions", "deletions",
   "netLines", "files", "prsOpened", "prsMerged", "prsClosed",
+  "timeoutEnabled", "timeoutOverrunPercent",
 ];
 const DICTIONARY_INDEX = new Map(DICTIONARY.map((word, index) => [word, index]));
 const PACKED = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";

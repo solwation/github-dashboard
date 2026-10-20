@@ -1,3 +1,4 @@
+import { parseHandoffPreferences } from "../src/lib/handoff-preferences";
 import { describe, expect, it, vi } from "vitest";
 import { consumeHandoff, createHandoffUrl, decodeHandoff, encodeHandoff, handoffQrSegments, parseHandoffUrl, mergeHandoffPreferences, type HandoffPreferences, HANDOFF_LIFETIME_MS, HandoffError } from "../src/lib/handoff";
 import { setLanguage, t } from "../src/lib/i18n";
@@ -70,13 +71,13 @@ describe("mobile handoff", () => {
   });
 });
 
-const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList">> = {
+const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList" | "timeoutMinutes">> = {
   repositoryColors: { "sample/repo": "#8b43b5" },
   projectOrder: ["sample/second", "sample/repo"],
   collapsedRepos: ["sample/second"], columnLimit: 8,
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"], notificationSounds: false,
   language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
-  repoQuery: "sample", hideCoordination: false, splitByRepository: false, listMode: true, timeoutMinutes: 45, currentView: "statistics",
+  repoQuery: "sample", hideCoordination: false, splitByRepository: false, listMode: true, timeoutEnabled: false, timeoutOverrunPercent: 45, currentView: "statistics",
   statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions", collapsed: true } },
 };
 describe("optical preference schema v2", () => {
@@ -148,7 +149,7 @@ describe("optical preference schema v2", () => {
     { repositoryColors: { "sample/repo": "#245bc1", "SAMPLE/REPO": "#c65d16" } },
     { repositoryColors: Object.fromEntries(Array.from({ length: 101 }, (_, n) => ["sample/repo" + n, "#245bc1"])) },
     { columnLimit: 0 }, { columnLimit: 101 }, { columnLimit: "6" },
-    { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
+    { timeoutOverrunPercent: -1 }, { timeoutOverrunPercent: 1001 }, { timeoutEnabled: "yes" }, { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
     { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" }, { splitByRepository: "false" }, { listMode: "true" }, { combinedList: "true" }, { listRepos: ["../private"] },
     { projectOrder: ["sample/repo", "SAMPLE/REPO"] }, { collapsedRepos: ["../private"] },
     { notificationRepos: Array.from({ length: 101 }, (_, n) => "sample/repo" + n) }, { notificationSounds: "false" },
@@ -215,4 +216,8 @@ describe("compact format limits", () => {
     for (let level = 0; level < 4; level++) value = Array.from({ length: 8 }, () => value);
     expect(() => decodeCompactHandoff(encodeCompactHandoff(value))).toThrow();
   });
+});
+
+it('migrates legacy minute preferences instead of treating minutes as a percentage', () => {
+  expect(parseHandoffPreferences({ timeoutMinutes: 180 })).toEqual({ timeoutEnabled: true, timeoutOverrunPercent: 25 });
 });

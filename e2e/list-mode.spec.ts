@@ -117,9 +117,9 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
     else if (url.pathname.endsWith("/events")) data = [{ id: 1, event: "labeled", created_at: started, label: { name: "in-progress" } }];
     else if (repo && url.pathname.endsWith("/issues")) {
       const titles = ["waiting work", "slow work", "finished work"];
-      data = [1, 2, 3].map(number => ({ id: number, number, title: `${repo.name} ${titles[number - 1]}`, body: "", comments: 0,
-        state: number === 3 ? "closed" : "open", created_at: created, updated_at: number === 1 ? updated : created,
-        closed_at: number === 3 ? created : null, html_url: `${repo.html_url}/issues/${number}`, assignees: [],
+      data = [1, 2, 3, 4, 5].map(number => ({ id: number, number, title: `${repo.name} ${titles[Math.min(number - 1, 2)]}`, body: "", comments: 0,
+        state: number >= 3 ? "closed" : "open", created_at: created, updated_at: number === 1 ? updated : created,
+        closed_at: number >= 3 ? created : null, workStartedAt: number >= 3 ? new Date(Date.parse(created) - 20 * 60000).toISOString() : undefined, html_url: `${repo.html_url}/issues/${number}`, assignees: [],
         labels: number === 2 || (number === 1 && moved) ? [{ name: "in-progress", color: "147d69" }] : [] }))
         .filter(issue => url.searchParams.get("state") === "all" || issue.state === url.searchParams.get("state"));
     }
@@ -130,15 +130,15 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   for (const repo of repos) await page.getByRole("dialog").getByRole("checkbox", { name: repo.full_name }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
-  await expect(page.locator(".issue-card")).toHaveCount(6);
+  await expect(page.locator(".issue-card")).toHaveCount(10);
   const alpha = page.locator("#repo-1"), beta = page.locator("#repo-2");
   const toggle = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
   await toggle.getByRole("button", { name: "Lista", exact: true }).click();
-  await expect(alpha.locator(".issue-row")).toHaveCount(3);
-  await expect(beta.locator(".issue-row")).toHaveCount(3);
+  await expect(alpha.locator(".issue-row")).toHaveCount(5);
+  await expect(beta.locator(".issue-row")).toHaveCount(5);
   const slow = alpha.locator(".issue-row").filter({ has: page.getByRole("button", { name: "alpha slow work" }) });
   await expect(slow).toHaveClass(/issue-timeout/);
-  await expect(slow.locator(".row-timeout")).toHaveAttribute("title", /över gränsen 30 min/);
+  await expect(slow.locator(".row-timeout")).toHaveAttribute("title", /över estimatet ≈ 20 min plus 25 %/);
   // #154: the title expands the row; the number is the separate GitHub link.
   await expect(slow.getByRole("button", { name: "alpha slow work" })).toHaveAttribute("aria-expanded", "false");
   await expect(slow.getByRole("link", { name: "Öppna #2 på GitHub", exact: true })).toHaveAttribute("href", "https://github.com/sample/alpha/issues/2");
@@ -157,17 +157,17 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
   expect(stored?.preferences).not.toHaveProperty("listRepos");
   expect(stored?.preferences).not.toHaveProperty("combinedList");
   await page.reload();
-  await expect(alpha.locator(".issue-row")).toHaveCount(3);
-  await expect(beta.locator(".issue-row")).toHaveCount(3);
+  await expect(alpha.locator(".issue-row")).toHaveCount(5);
+  await expect(beta.locator(".issue-row")).toHaveCount(5);
   await expect(toggle.getByRole("button", { name: "Lista", exact: true })).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
   const board = page.locator(".combined-board");
-  await expect(board.locator(".issue-row")).toHaveCount(6);
+  await expect(board.locator(".issue-row")).toHaveCount(10);
   const names = (await board.locator(".row-repository").allTextContents()).map(name => name.trim());
   expect(new Set(names)).toEqual(new Set(["sample/alpha", "sample/beta"]));
   await page.reload();
-  await expect(board.locator(".issue-row")).toHaveCount(6);
+  await expect(board.locator(".issue-row")).toHaveCount(10);
   await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).not.toBeChecked();
 
   // An older QR code with #127's per-repository choices migrates to the global mode (strict majority).
@@ -176,13 +176,13 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
   page.on("console", message => { if (["warning", "error"].includes(message.type())) warnings.push(message.text()); });
   await page.goto("about:blank");
   await page.goto("/#issueflow-handoff=" + transfer);
-  await expect(alpha.locator(".issue-card")).toHaveCount(3);
-  await expect(beta.locator(".issue-card")).toHaveCount(3);
+  await expect(alpha.locator(".issue-card")).toHaveCount(5);
+  await expect(beta.locator(".issue-card")).toHaveCount(5);
   await expect.poll(() => readSettings(page, "list-fixture").then(saved => saved?.preferences?.listMode)).toBe(false);
   const current = encodeHandoff({ token: "fictional-list-token", selected: ["sample/alpha", "sample/beta"], rules: {}, preferences: { splitByRepository: true, listRepos: ["sample/alpha", "sample/beta"] } });
   await page.goto("about:blank");
   await page.goto("/#issueflow-handoff=" + current);
-  await expect(alpha.locator(".issue-row")).toHaveCount(3);
-  await expect(beta.locator(".issue-row")).toHaveCount(3);
+  await expect(alpha.locator(".issue-row")).toHaveCount(5);
+  await expect(beta.locator(".issue-row")).toHaveCount(5);
   expect(warnings).toEqual([]);
 });

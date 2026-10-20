@@ -1,3 +1,4 @@
+import { normalizeTimeoutSettings } from "./timeouts";
 import { reconcileRepositoryColors, validRepositoryColor } from "./repository-color";
 import { validColumnLimit } from "./column-limits";
 import { reconcileOrder } from "./project-layout";
@@ -46,7 +47,10 @@ export interface HandoffPreferences {
   listRepos?: string[];
   /** @deprecated Read only: combined-board list choice from #127, migrated to listMode. */
   combinedList?: boolean;
+  /** @deprecated Read-only minute setting; receivers migrate to estimate defaults. */
   timeoutMinutes?: number;
+  timeoutEnabled?: boolean;
+  timeoutOverrunPercent?: number;
   currentView?: "overview" | "statistics";
   statistics?: HandoffStatisticsPreferences;
 }
@@ -83,6 +87,8 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   splitByRepository: value => typeof value === "boolean",
   listMode: value => typeof value === "boolean",
   listRepos: handoffRepositoryList, combinedList: value => typeof value === "boolean",
+  timeoutEnabled: value => typeof value === "boolean",
+  timeoutOverrunPercent: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 1000,
   timeoutMinutes: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 1 && value <= 10080,
   currentView: value => value === "overview" || value === "statistics",
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
@@ -105,6 +111,10 @@ export function parseHandoffPreferences(value: unknown): HandoffPreferences {
     if (!validate(value[key])) throw new Error("Invalid handoff preference");
     // Copy JSON data so application edits cannot mutate the decoded transfer.
     supported[key] = JSON.parse(JSON.stringify(value[key]));
+  }
+  if (Object.hasOwn(supported, "timeoutMinutes") && !Object.hasOwn(supported, "timeoutEnabled") && !Object.hasOwn(supported, "timeoutOverrunPercent")) {
+    delete supported.timeoutMinutes;
+    Object.assign(supported, normalizeTimeoutSettings({}));
   }
   return supported as HandoffPreferences;
 }

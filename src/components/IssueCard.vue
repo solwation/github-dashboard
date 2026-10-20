@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { estimateLabel } from "../lib/estimates";
 import IssueRelationsView from "./IssueRelations.vue";
 import type { IssueRelations } from "../lib/issue-relations";
 import IssueDetails from "./IssueDetails.vue";
@@ -60,7 +61,8 @@ const props = defineProps<{
   recentMove?: ActivityMarker;
   newComments?: number;
   timedOut?: boolean;
-  timeoutMinutes?: number;
+  timeoutOverrunPercent?: number;
+  timeoutEstimateMs?: number;
 }>();
 const emit = defineEmits<{ read: [] }>();
 const card = ref<HTMLElement>();
@@ -230,7 +232,7 @@ const visibleLabels = computed(() =>
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" />
     <IssueDetails :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
-      <p>{{ t("Timeout: pågående i {duration}, över gränsen {minutes} min.", { duration: duration(issue.startedAt, now), minutes: timeoutMinutes ?? 30 }) }}</p>
+      <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
     </div>
     <div v-if="!rowDetails || issue.assignees.length" class="card-bottom">
       <template v-if="!rowDetails">

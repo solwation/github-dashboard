@@ -11,7 +11,7 @@ const preferences: HandoffPreferences = {
   columnLimit: 7, repositoryColumnLimits: { "sample/test": 2 }, notificationRepos: ["sample/test"],
   repositoryColors: { "sample/test": "#8b43b5", "sample/second": "#987016" },
   language: "sv", query: "Fixture", repositoryQueries: { "sample/test": "ready" },
-  repoQuery: "sample", hideCoordination: false, timeoutMinutes: 45, currentView: "overview",
+  repoQuery: "sample", hideCoordination: false, timeoutEnabled: false, timeoutOverrunPercent: 45, currentView: "overview",
   statistics: { "sample/test": { from: "2026-10-01", to: "2026-10-16", label: "", contributor: "", metric: "closed" } },
 };
 async function fixture(page: Page, readable = ["test", "second"]) {
@@ -128,7 +128,9 @@ test("optical import filters inaccessible repository preferences and legacy code
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   const afterLegacy = await exportCode(page);
   expect(afterLegacy.payload.preferences?.columnLimit).toBe(7);
-  expect(afterLegacy.payload.preferences?.timeoutMinutes).toBe(45);
+  expect(afterLegacy.payload.preferences?.timeoutOverrunPercent).toBe(45);
+  expect(afterLegacy.payload.preferences?.timeoutEnabled).toBe(false);
+  expect(afterLegacy.payload.preferences?.timeoutMinutes).toBeUndefined();
   expect(afterLegacy.payload.preferences?.query).toBe("Fixture");
   expect(afterLegacy.payload.preferences?.repositoryColors).toEqual({ "sample/test": "#8b43b5" });
 });

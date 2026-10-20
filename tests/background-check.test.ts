@@ -28,7 +28,7 @@ describe("background comparison", () => {
     expect(watchSettings(settings).repos).toEqual(["acme/board"]);
     expect(watchSettings({ selected: ["acme/board"], notificationRepos: [] }).repos).toEqual([]);
     expect(watchSettings({ selected: [], notificationRepos: ["acme/board"] }).repos).toEqual([]);
-    expect(watchSettings(null)).toMatchObject({ repos: [], hideCoordination: true, timeoutMinutes: 30 });
+    expect(watchSettings(null)).toMatchObject({ repos: [], hideCoordination: true, timeoutEnabled: true, timeoutOverrunPercent: 25 });
   });
   it("reports closures, reopenings and progress moves but not unchanged or pull request items", () => {
     const before = stored([issue(1), issue(2, progress), issue(3, closed("2026-10-10T00:00:00Z")), issue(4, progress), issue(5), issue(6, { pull_request: {} })]);
@@ -46,9 +46,11 @@ describe("background comparison", () => {
   it("notifies a timeout once, when the work period crosses the threshold between checks", () => {
     const started = new Date(NOW - 35 * 60000).toISOString(); // Crossed 30 minutes five minutes ago.
     const old = new Date(NOW - 120 * 60000).toISOString(); // Already over the threshold at the previous check.
-    const items = [issue(1, { ...progress, startedAt: started }), issue(2, { ...progress, startedAt: old })];
-    expect(timeoutNotices(stored(items), lane(items), {}, 30, NOW).map(n => n.issue.id)).toEqual([1]);
-    expect(timeoutNotices(stored(items, { checkedAt: NOW - 60000 }), lane(items), {}, 30, NOW)).toEqual([]);
+    const history = [101, 102, 103].map(id => issue(id, { ...closed(new Date(NOW - 3600000).toISOString()), workStartedAt: new Date(NOW - 5400000).toISOString() }));
+    const items = [issue(1, { ...progress, startedAt: started }), issue(2, { ...progress, startedAt: old }), ...history];
+    expect(timeoutNotices(stored(items), lane(items), {}, { timeoutEnabled: true, timeoutOverrunPercent: 0 }, NOW)).toEqual([]);
+    expect(timeoutNotices(stored(items, { timeoutSettings: { timeoutEnabled: true, timeoutOverrunPercent: 0 } }), lane(items), {}, { timeoutEnabled: true, timeoutOverrunPercent: 0 }, NOW).map(n => n.issue.id)).toEqual([1]);
+    expect(timeoutNotices(stored(items, { checkedAt: NOW - 60000, timeoutSettings: { timeoutEnabled: true, timeoutOverrunPercent: 0 } }), lane(items), {}, { timeoutEnabled: true, timeoutOverrunPercent: 0 }, NOW)).toEqual([]);
   });
   it("builds app-focused notifications whose tags match the open app's notifications", () => {
     setLanguage("en");

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { DEFAULT_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES, parseTimeoutMinutes } from "../lib/timeouts";
+import { DEFAULT_TIMEOUT_OVERRUN_PERCENT, MAX_TIMEOUT_OVERRUN_PERCENT, parseTimeoutOverrunPercent } from "../lib/timeouts";
 import RepositoryOrderDialog from "./RepositoryOrderDialog.vue";
 import type { SidebarRepository } from "../lib/sidebar";
 import ColumnLimitField from "./ColumnLimitField.vue";
@@ -15,7 +15,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ repositories?: SidebarRepository[]; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number; notificationSounds?: boolean }>(), { repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES, notificationSounds: true });
+const props = withDefaults(defineProps<{ repositories?: SidebarRepository[]; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -33,12 +33,12 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number]; "update:notificationSounds": [value: boolean] }>();
+const emit = defineEmits<{ reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
-  const minutes = parseTimeoutMinutes(input.value);
-  input.setCustomValidity(minutes === null ? t("Ange ett heltal mellan 1 och 10080 minuter.") : "");
-  if (minutes !== null) emit("update:timeoutMinutes", minutes);
+  const percent = parseTimeoutOverrunPercent(input.value);
+  input.setCustomValidity(percent === null ? t("Ange ett heltal mellan 0 och 1000 procent.") : "");
+  if (percent !== null) emit("update:timeoutOverrunPercent", percent);
   else input.reportValidity();
 }
 
@@ -104,10 +104,12 @@ function changeTheme(event: Event) {
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
-    <label class="rule-field" for="issue-timeout-minutes">{{ t("Tidsgräns för pågående issues (minuter)") }}</label>
-    <input id="issue-timeout-minutes" type="number" min="1" :max="MAX_TIMEOUT_MINUTES" step="1" required
-      :value="timeoutMinutes" :disabled="!canEditLimit" aria-describedby="issue-timeout-help" @change="changeTimeout" />
-    <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
+    <label class="rule-field timeout-toggle" for="issue-timeout-enabled"><input id="issue-timeout-enabled" type="checkbox" :checked="timeoutEnabled" :disabled="!canEditLimit"
+      @change="emit('update:timeoutEnabled', ($event.target as HTMLInputElement).checked)" /> {{ t("Varna när pågående arbete överskrider estimatet") }}</label>
+    <label class="rule-field" for="issue-timeout-overrun">{{ t("Tillåten överskridning (%)") }}</label>
+    <input id="issue-timeout-overrun" type="number" min="0" :max="MAX_TIMEOUT_OVERRUN_PERCENT" step="1" required
+      :value="timeoutOverrunPercent" :disabled="!canEditLimit || !timeoutEnabled" aria-describedby="issue-timeout-help" @change="changeTimeout" />
+    <p id="issue-timeout-help">{{ t("Varnar först efter uppskattad totaltid plus tillåten procent. Kräver känd starttid och tillräcklig historik. Standard: 25 %.") }}</p>
     <div class="settings-actions">
       <RepositoryOrderDialog v-if="repositories.length" :repos="repositories" @reorder="(source, target) => emit('reorder', source, target)" />
       <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
@@ -124,6 +126,8 @@ function changeTheme(event: Event) {
 </template>
 
 <style scoped>
+.timeout-toggle { display: flex; align-items: center; gap: .65rem; min-height: 44px; line-height: 1.5; }
+.timeout-toggle input { width: 20px; height: 20px; flex-shrink: 0; margin: 0; padding: 0; }
 .settings-actions { display: grid; gap: .625rem; border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
 .settings-actions > .button,
 .settings-actions :deep(.repository-order-open),
