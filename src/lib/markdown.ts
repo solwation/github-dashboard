@@ -27,6 +27,19 @@ markdown.renderer.rules.link_open = (tokens, index, options, env, self) => {
   tokens[index]!.attrSet("rel", "noopener noreferrer");
   return defaultLink ? defaultLink(tokens, index, options, env, self) : self.renderToken(tokens, index, options);
 };
+// Mark standalone image paragraphs without moving them or treating inline illustrations as a separate block.
+markdown.core.ruler.after("inline", "image_paragraphs", (state) => {
+  for (let index = 1; index < state.tokens.length; index++) {
+    const token = state.tokens[index]!;
+    const paragraph = state.tokens[index - 1]!;
+    if (token.type !== "inline" || paragraph.type !== "paragraph_open") continue;
+    const children = (token.children ?? []).filter(child => child.type !== "text" || child.content.trim());
+    const image = children.length === 1 && children[0]!.type === "image";
+    const linkedImage = children.length === 3 && children[0]!.type === "link_open" &&
+      children[1]!.type === "image" && children[2]!.type === "link_close";
+    if (image || linkedImage) paragraph.attrJoin("class", "markdown-image-block");
+  }
+});
 markdown.core.ruler.after("inline", "readonly_task_lists", (state) => {
   for (let index = 2; index < state.tokens.length; index++) {
     const token = state.tokens[index]!;

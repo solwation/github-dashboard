@@ -19,6 +19,19 @@ describe("safe issue Markdown", () => {
     expect(renderMarkdown('![<script>](https://github.com/sample/project/blob/main/report.jpg)'))
       .toContain('alt="&lt;script&gt;"');
   });
+  it("marks standalone and linked image paragraphs while keeping inline images with their text", () => {
+    const image = "![Diagram](https://example.com/diagram.png)";
+    expect(renderMarkdown(image)).toContain('<p class="markdown-image-block"><img');
+    const linked = renderMarkdown(`[${image}](https://example.com/full)`);
+    expect(linked).toContain('<p class="markdown-image-block"><a href="https://example.com/full"');
+    expect(linked).toContain('alt="Diagram"');
+    for (const text of [`Before ${image}`, `${image} after`, `${image}\ncontext`, `\`${image}\``, `\`\`\`\n${image}\n\`\`\``]) {
+      expect(renderMarkdown(text)).not.toContain('class="markdown-image-block"');
+    }
+    const ordered = renderMarkdown(`First paragraph\n\n${image}\n\nLast paragraph`);
+    expect(ordered.indexOf("First paragraph")).toBeLessThan(ordered.indexOf('class="markdown-image-block"'));
+    expect(ordered.indexOf('class="markdown-image-block"')).toBeLessThan(ordered.indexOf("Last paragraph"));
+  });
   it("renders headings, emphasis, lists, fenced code and read-only task checkboxes", () => {
     const html = renderMarkdown("## Plan\n\n**Read me**\n\n- [x] Complete\n- [ ] Next\n\n```js\nconst text = '<script>';\n```\n");
     expect(html).toContain("<h2>Plan</h2>");

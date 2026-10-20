@@ -1834,6 +1834,22 @@ button.lane-sync:focus-visible::after {
 .row-card > .issue-card.row-details-card,
 .row-card > .issue-card.row-details-card:hover { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; }
 .row-card > .issue-card.row-details-card > .issue-details:first-child { margin-top: 0; }
+/* Expanded descriptions keep a readable measure; optional media stays beside its original text (#204). */
+.row-card .row-details-card .details-panel { container: list-description / inline-size; }
+.row-card .row-details-card .issue-markdown { display: flow-root; max-width: 128ch; }
+.row-card .row-details-card .issue-markdown > * { max-width: 70ch; }
+.row-card .row-details-card .issue-markdown > table { overflow-wrap: normal; }
+.row-card .row-details-card .plain-description { max-width: 70ch; }
+@container list-description (min-width: 850px) {
+  .row-card .row-details-card .issue-markdown > .markdown-image-block {
+    float: right;
+    clear: right;
+    width: 40%;
+    margin: 0 0 1rem 1.5rem;
+    text-align: right;
+  }
+}
+
 .row-popup-backdrop { padding: 16px; }
 .row-popup { position: relative; width: 100%; max-width: 440px; max-height: calc(100dvh - 32px); overflow-y: auto; display: flex; flex-direction: column; }
 .row-popup > .issue-card { margin: 0; box-shadow: 0 20px 60px #10263138; }
