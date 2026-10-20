@@ -181,7 +181,7 @@ const visibleLabels = computed(() =>
         /></template>
         #{{ issue.number }}</span
       >
-      <IssuePoints :issue="issue" />
+      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="(repository && showRepository) || visibleLabels.length" class="labels">
         <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name">{{ repository }}</span></span>
         <span

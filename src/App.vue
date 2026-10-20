@@ -34,6 +34,7 @@ import SidebarVersion from "./components/SidebarVersion.vue";
 import ReleaseNotes from "./components/ReleaseNotes.vue";
 import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
+import { provideIssueEstimates } from "./composables/useIssueEstimates";
 import { setBoardVisible } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
@@ -717,6 +718,10 @@ const combinedEstimateGroups = computed(() => orderedLanes.value.filter((lane) =
   issues: lane.issues.filter((issue) => (!hideCoordination.value || !isCoordination(issue)) && matchesIssueFilters(issue, query.value, "")),
   rules: rules.value[lane.repo.full_name],
 })));
+// Match the current column calibration, including filters and loading repository exclusion.
+provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
+  orderedLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
+));
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
 watch(columnLimit, () => { combinedLimits.value = {}; });
 // One set of loaders per repository and session keeps card props stable between renders (#120).

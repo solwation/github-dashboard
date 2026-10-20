@@ -145,7 +145,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     <span class="row-meta">
-      <IssuePoints :issue="issue" />
+      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
         :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
       >

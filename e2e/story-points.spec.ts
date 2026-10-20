@@ -29,7 +29,7 @@ async function assertSizes(items: Locator) {
   for (const spec of specs) {
     const badge = items.filter({ hasText: spec.title }).locator(".issue-points");
     await expect(badge).toHaveText(`≈ ${spec.points} SP`);
-    await expect(badge).toHaveAttribute("aria-label", `Uppskattade story points: cirka ${spec.points}`);
+    await expect(badge).toHaveAttribute("aria-label", new RegExp(`^Uppskattade story points: cirka ${spec.points}[.]`));
     await expect(badge).toHaveAttribute("title", /En entydig poängetikett används först.*Inte uppmätt komplexitet/);
   }
 }
@@ -66,7 +66,7 @@ test("cards and rows show explicit and heuristic sizes without timing history in
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   const badge = page.locator(".issue-row").filter({ hasText: specs[0]!.title }).locator(".issue-points");
-  await expect(badge).toHaveAttribute("aria-label", "Estimated story points: approximately 13");
+  await expect(badge).toHaveAttribute("aria-label", /^Estimated story points: approximately 13\./);
   await expect(badge).toHaveAttribute("title", /An unambiguous points label takes precedence.*Not measured complexity/);
 });
 

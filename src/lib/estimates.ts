@@ -204,6 +204,17 @@ export function repositoryEstimate(
   };
 }
 
+/** Individual forecast uses the same calibrated rate and size as column estimates. */
+export function issueEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean) {
+  if (msPerPoint == null || !Number.isFinite(msPerPoint) || msPerPoint <= 0) return null;
+  const totalMs = approximatePoints(issue) * msPerPoint;
+  const start = time(issue.startedAt);
+  // Unknown or future starts cannot justify a remaining-time countdown.
+  if (!inProgress || !Number.isFinite(start) || start > now) return { totalMs, remainingMs: null, overdue: false };
+  const remaining = totalMs - (now - start);
+  return { totalMs, remainingMs: Math.max(0, remaining), overdue: remaining < 0 };
+}
+
 /** Combined board: repositories work in parallel, so each column takes the slowest repository. */
 export function combinedEstimate(estimates: RepositoryEstimate[]): CombinedEstimate | null {
   const known = estimates.filter((estimate) => estimate.basis.typicalMs !== null);

@@ -3,6 +3,7 @@ import {
   combinedEstimate,
   estimateLabel,
   historySamples,
+  issueEstimate,
   MAX_HISTORY_SAMPLES,
   nextHistoryExpiry,
   median,
@@ -199,5 +200,34 @@ describe("recent point-calibrated forecasts", () => {
     ], now).progress!;
     expect(progress).toMatchObject({ points: 9, remainingMs: 4.5 * hour, overdue: 1, unknownStart: 1 });
     expect(progress.items.map(item => item.remainingMs)).toEqual([4.5 * hour, 3 * hour, 0]);
+  });
+});
+
+
+describe("individual issue forecasts", () => {
+  it("shares the repository's point calibration and counts down without changing total", () => {
+    const active = running(10 * min);
+    active.labels.push({ name: "points: 3", color: "" });
+    const estimate = repositoryEstimate([done(hour), done(hour), done(hour), active], now);
+    const initial = issueEstimate(active, estimate.basis.msPerPoint, now, true)!;
+    expect(initial).toEqual({ totalMs: 3 * hour, remainingMs: 170 * min, overdue: false });
+    expect(initial.remainingMs).toBe(estimate.progress!.items[0]!.remainingMs);
+    expect(issueEstimate(active, estimate.basis.msPerPoint, now + 5 * min, true))
+      .toEqual({ totalMs: 3 * hour, remainingMs: 165 * min, overdue: false });
+  });
+  it("omits forecasts without history and remaining time without a safe active start", () => {
+    const unknown = issue("progress");
+    for (const rate of [null, undefined, 0, -1, Infinity, NaN]) expect(issueEstimate(unknown, rate, now, true)).toBeNull();
+    for (const startedAt of [undefined, null, "invalid", iso(now + min)]) {
+      expect(issueEstimate({ ...unknown, startedAt }, hour, now, true))
+        .toEqual({ totalMs: hour, remainingMs: null, overdue: false });
+    }
+    expect(issueEstimate(running(10 * min), hour, now, false)?.remainingMs).toBeNull();
+  });
+  it("never gives negative remaining time and explicitly flags overdue work", () => {
+    expect(issueEstimate(running(2 * hour), hour, now, true))
+      .toEqual({ totalMs: hour, remainingMs: 0, overdue: true });
+    expect(issueEstimate(running(hour), hour, now, true))
+      .toEqual({ totalMs: hour, remainingMs: 0, overdue: false });
   });
 });
