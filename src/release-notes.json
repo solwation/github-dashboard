@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Följ statistikens hämtade historik och färdiga underlag, med procent och ungefärlig tid kvar när arbetsmängden är känd.",
+          "en": "Follow collected statistics history and finished sources, with percentage and approximate time remaining once the workload is known."
+        },
+        "issues": [216]
+      },
+      {
+        "text": {
           "sv": "Klicka igen på fokuserat projekt i sidomenyn för att fälla ihop eller expandera det i Översikt och Statistik.",
           "en": "Activate the focused sidebar project again to collapse or expand it in Overview and Statistics."
         },

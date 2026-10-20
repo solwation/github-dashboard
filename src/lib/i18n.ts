@@ -35,6 +35,18 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Statistikhämtning": "Statistics loading",
+  "Kontrollerar underlag: {done} av {total} källor.": "Checking data: {done} of {total} sources.",
+  "Fullt hämtade underlag: {done} av {total}.": "Fully collected sources: {done} of {total}.",
+  "Kodändringar: {done} av {total} commits ({percent} %).": "Code changes: {done} of {total} commits ({percent}%).",
+  "Ungefär {time} kvar.": "About {time} remaining.",
+  "Insamlingsperiod: {from} – {to}.": "Collection window: {from} – {to}.",
+  "Visad period: {from} – {to}.": "Displayed window: {from} – {to}.",
+  "Äldsta hittade aktivitet: {date} (cirka {days} dagar bakåt).": "Oldest activity found: {date} (about {days} days ago).",
+  "Äldre aktivitet betyder inte att hela perioden är färdighämtad.": "Older activity does not mean the entire window has been collected.",
+  "{count} s": "{count} s",
+  "{count} min": "{count} min",
+  "{count} h": "{count} h",
   "Hämtar statistik. Värden och diagram uppdateras löpande.": "Fetching statistics. Values and charts update gradually.",
   "Vi hämtar underlaget från GitHub. Tillgängliga värden visas löpande under hämtningen.": "We are fetching data from GitHub. Available values appear gradually while loading.",
   "Förfluten andel av uppskattad tid": "Elapsed share of estimated time",

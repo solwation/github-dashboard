@@ -1,8 +1,6 @@
 import { expect, test } from '@playwright/test';
 function gate() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done; }); return { promise, resolve }; }
 
-// Run after StatisticsView wires the collector's second callback argument into
-// StatisticsPreviewBatch and the per-repository loadStatus prop (#216).
 test('loading status separates sparse history from coverage and estimates discovered diff work', async ({ page }) => {
   const until = Date.parse('2026-10-20T12:00:00Z');
   const old = '2026-09-30T12:00:00Z';

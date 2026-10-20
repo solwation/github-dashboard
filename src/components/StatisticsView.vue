@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { normalizeStatisticsPreference, statisticsRepositoryCollapsed } from "../lib/statistics-preferences";
 import { StatisticsPreviewBatch } from "../lib/statistics-progress";
+import type { StatisticsLoadStatus } from "../lib/statistics-load-status";
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { RefreshCw, BarChart3, RotateCcw } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
@@ -256,8 +257,17 @@ function resetTimeSpan() {
 }
 
 const snapshots = shallowRef<Record<string, StatisticsData>>({});
-const previewBatch = new StatisticsPreviewBatch(previews => {
+const loadStatuses = shallowRef<Record<string, StatisticsLoadStatus>>({});
+function clearLoadStatus(name: string) {
+  previewBatch.discard(name);
+  if (!(name in loadStatuses.value)) return;
+  const next = { ...loadStatuses.value };
+  delete next[name];
+  loadStatuses.value = next;
+}
+const previewBatch = new StatisticsPreviewBatch((previews, statuses) => {
   snapshots.value = { ...snapshots.value, ...previews };
+  loadStatuses.value = { ...loadStatuses.value, ...statuses };
 });
 const renderedRepositories = computed(() => props.repositories);
 const loading = ref<Record<string, boolean>>({});
@@ -347,7 +357,8 @@ watch(() => props.preferences, value => {
 }, { deep: true });
 async function load(force = false, target?: string) {
   const run = target ? generation : ++generation;
-  if (!target) previewBatch.clear();
+  if (!target) { previewBatch.clear(); loadStatuses.value = {}; }
+  else clearLoadStatus(target);
   const epoch = sessionEpoch, activeCollector = collector, token = props.credential;
   const names = expandedRepositories.value.filter(repo => !target || repo.full_name === target).map(repo => repo.full_name);
   const selected = new Set(props.repositories.map(repo => repo.full_name));
@@ -380,22 +391,22 @@ async function load(force = false, target?: string) {
     const current = () => run === generation && epoch === sessionEpoch && repositoryRuns.get(name) === repositoryRun
       && token === props.credential && expandedRepositories.value.some(repo => repo.full_name === name);
     try {
-      const data = props.demo ? demoStatistics(name) : await activeCollector!.load(name, Date.now(), force, preview => {
+      const data = props.demo ? demoStatistics(name) : await activeCollector!.load(name, Date.now(), force, (preview, status) => {
         if (current() && activeCollector === collector) {
-          previewBatch.add(name, preview);
+          previewBatch.add(name, preview, status);
         }
       });
-      if (current()) { previewBatch.discard(name); snapshots.value = { ...snapshots.value, [name]: data }; }
+      if (current()) { clearLoadStatus(name); snapshots.value = { ...snapshots.value, [name]: data }; }
       if (current() && activeCollector && token && !props.demo) {
         try { await writeStatisticsCache(token, activeCollector.export()); if (epoch === sessionEpoch) cacheFailed.value = false; }
         catch { if (epoch === sessionEpoch) cacheFailed.value = true; }
       }
     } catch { if (current()) failures.value = { ...failures.value, [name]: true }; }
-    finally { if (current()) loading.value = { ...loading.value, [name]: false }; }
+    finally { if (current()) { clearLoadStatus(name); loading.value = { ...loading.value, [name]: false }; } }
   }));
 }
 watch([() => props.client, () => props.session, () => props.demo, () => props.credential], () => {
-  generation++; previewBatch.clear(); const epoch = ++sessionEpoch;
+  generation++; previewBatch.clear(); loadStatuses.value = {}; const epoch = ++sessionEpoch;
   preferencesState.value = { ...props.preferences };
   initializeCollapsePreferences();
   repositoryRuns.clear();
@@ -420,12 +431,12 @@ watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
   const epoch = sessionEpoch;
   const selected = new Set(props.repositories.map(repo => repo.full_name));
   initializeCollapsePreferences();
-  for (const name of repositoryRuns.keys()) if (!selected.has(name)) { collector?.cancel(name); repositoryRuns.delete(name); }
+  for (const name of repositoryRuns.keys()) if (!selected.has(name)) { collector?.cancel(name); clearLoadStatus(name); repositoryRuns.delete(name); }
   void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
 });
 watch(() => expandedRepositories.value.map(repo => repo.full_name), (names, previous) => {
   for (const name of previous) if (!names.includes(name)) {
-    collector?.cancel(name); previewBatch.discard(name);
+    collector?.cancel(name); clearLoadStatus(name);
     repositoryRuns.set(name, (repositoryRuns.get(name) ?? 0) + 1);
     loading.value = { ...loading.value, [name]: false };
   }
@@ -445,7 +456,7 @@ watch(() => props.navigation, navigation => {
   setCollapsed(repo.id, navigation.toggle ? !collapsedRepositories.value.has(repo.id) : false);
   void followRepositoryAnchor(sidebarAnchor);
 }, { immediate: true });
-onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); });
+onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
@@ -484,7 +495,7 @@ onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generat
     </div>
     <div v-show="!invalidRange" class="statistics-repositories">
       <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
-        :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-failed="!!failures[repository.full_name]"
+        :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-status="loadStatuses[repository.full_name]" :load-failed="!!failures[repository.full_name]"
         :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
