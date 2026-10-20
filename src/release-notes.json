@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Klicka igen på fokuserat projekt i sidomenyn för att fälla ihop eller expandera det i Översikt och Statistik.",
+          "en": "Activate the focused sidebar project again to collapse or expand it in Overview and Statistics."
+        },
+        "issues": [218]
+      },
+      {
+        "text": {
           "sv": "Statistik hämtar bara expanderade repos, sparar kollapsläget per konto och öppnar endast första repot som standard.",
           "en": "Statistics loads only expanded repositories, remembers collapse choices per account and opens only the first repository by default."
         },
