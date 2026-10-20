@@ -53,6 +53,7 @@ export class StatusSoundPlayer {
   private pending: StatusSound | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private busyUntil = 0;
+  private active = new Map<OscillatorNode, GainNode>();
 
   constructor(private readonly unavailable: () => void = () => {}, private readonly createContext = () => new AudioContext()) {}
 
@@ -94,7 +95,8 @@ export class StatusSoundPlayer {
         gain.gain.exponentialRampToValueAtTime(0.001, at + 0.105);
         oscillator.connect(gain);
         gain.connect(context.destination);
-        oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+        this.active.set(oscillator, gain);
+        oscillator.onended = () => { this.active.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
         oscillator.start(at);
         oscillator.stop(at + 0.11);
       }
@@ -102,10 +104,17 @@ export class StatusSoundPlayer {
     } catch { this.unavailable(); }
   }
 
-  /** Forget queued sounds when changing account or leaving the board. */
+  /** Stop active and queued sounds when muted, changing account or leaving the board. */
   clear() {
     if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
     this.pending = null;
+    this.busyUntil = 0;
+    for (const [oscillator, gain] of this.active) {
+      try { oscillator.stop(); } catch { /* Already ended. */ }
+      oscillator.disconnect();
+      gain.disconnect();
+    }
+    this.active.clear();
   }
 }

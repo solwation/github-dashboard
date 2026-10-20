@@ -49,21 +49,38 @@ describe("status transitions", () => {
 });
 
 function audio() {
-  const starts: number[] = [], frequencies: number[] = [];
+  const starts: number[] = [], frequencies: number[] = [], stops: ReturnType<typeof vi.fn>[] = [];
   const disconnect = vi.fn();
   const context = {
     state: "suspended", currentTime: 0, destination: {},
     resume: vi.fn(async () => { context.state = "running"; }),
     createOscillator: () => {
       const frequency = { value: 0 };
-      return { frequency, connect: vi.fn(), disconnect, onended: null, start: (at: number) => { starts.push(at); frequencies.push(frequency.value); }, stop: vi.fn(), type: "" };
+      const stop = vi.fn(); stops.push(stop);
+      return { frequency, connect: vi.fn(), disconnect, onended: null, start: (at: number) => { starts.push(at); frequencies.push(frequency.value); }, stop, type: "" };
     },
     createGain: () => ({ gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn(), disconnect }),
   };
-  return { context, starts, frequencies, create: () => context as unknown as AudioContext };
+  return { context, starts, frequencies, stops, create: () => context as unknown as AudioContext };
 }
 afterEach(() => vi.useRealTimers());
 describe("status audio", () => {
+  it("clearing stops active and scheduled notes, cancels pending audio and allows fresh playback", async () => {
+    vi.useFakeTimers();
+    const a = audio();
+    const player = new StatusSoundPlayer(undefined, a.create);
+    await player.unlock();
+    player.play(["closed"]);
+    vi.advanceTimersByTime(120);
+    player.play(["negative"]);
+    player.clear();
+    for (const stop of a.stops) expect(stop).toHaveBeenLastCalledWith();
+    vi.advanceTimersByTime(1000);
+    expect(a.frequencies).toEqual([523, 659, 784]);
+    player.play(["progress"]);
+    vi.advanceTimersByTime(120);
+    expect(a.frequencies).toEqual([523, 659, 784, 440, 554]);
+  });
   it("requires user activation and reports blocked or unsupported audio without throwing", async () => {
     const unavailable = vi.fn();
     const unsupported = new StatusSoundPlayer(unavailable, () => { throw new Error("unsupported"); });

@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { readSettings } from "./support/settings";
 
 test("status sounds follow repository opt-in and live transitions without replay", async ({ page }) => {
   await page.addInitScript(() => {
     const frequencies: number[] = [];
-    Object.assign(window, { soundFrequencies: frequencies });
+    const notices: string[] = [];
+    Object.assign(window, { soundFrequencies: frequencies, soundNotices: notices });
     class FakeAudioContext {
       state = "running";
       get currentTime() { return performance.now() / 1000; }
@@ -19,16 +21,18 @@ test("status sounds follow repository opt-in and live transitions without replay
     class FakeNotification {
       static permission = "granted";
       static async requestPermission() { return "granted"; }
+      constructor(title: string) { notices.push(title); }
       close() {}
     }
     Object.assign(window, { AudioContext: FakeAudioContext, Notification: FakeNotification });
   });
   const repositories = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: false, description: "Fixture", html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
   const states: Record<string, { state: string; labels: string[] }> = { alpha: { state: "open", labels: [] }, beta: { state: "open", labels: [] } };
+  let login = "sound-test";
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     let data: unknown = [];
-    if (url.pathname === "/user") data = { login: "sound-test", avatar_url: "" };
+    if (url.pathname === "/user") data = { login, avatar_url: "" };
     else if (url.pathname === "/user/repos") data = repositories;
     else if (url.pathname.endsWith("/issues")) {
       const repo = repositories.find(repo => url.pathname.includes(`/${repo.name}/`))!;
@@ -65,14 +69,79 @@ test("status sounds follow repository opt-in and live transitions without replay
   states.alpha!.state = "closed";
   await refreshWhenIdle();
   await expect.poll(notes).toEqual([440, 554, 330, 247, 196, 523, 659, 784]);
+  // Global mute preserves subscriptions, browser notices and live visual feedback.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByLabel("Språk", { exact: true }).selectOption("en");
+  const soundChoice = page.getByLabel("Notification sounds", { exact: true });
+  await expect(soundChoice).toHaveValue("true");
+  await soundChoice.focus(); await page.keyboard.press("End"); await page.keyboard.press("Tab");
+  await expect(soundChoice).toHaveValue("false");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("switch", { name: "Notifications for alpha", exact: true })).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => readSettings(page, "sound-test").then(saved => saved?.preferences?.notificationSounds)).toBe(false);
+  states.alpha = { state: "open", labels: [] };
+  await refreshWhenIdle();
+  await expect(page.locator("#repo-1 .backlog .issue-card")).toHaveCount(1);
+  states.alpha!.state = "closed";
+  await refreshWhenIdle();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { soundNotices: string[] }).soundNotices.length)).toBe(2);
+  await expect(page.locator("#repo-1 .closed .issue-card.just-closed")).toHaveCount(1);
+  expect(await notes()).toHaveLength(8);
+  await page.reload();
+  await expect(page.locator(".repo-lane")).toHaveCount(2);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(soundChoice).toHaveValue("false");
+  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("notificationSounds");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  states.alpha = { state: "open", labels: [] };
+  await refreshWhenIdle();
+  await expect(page.locator("#repo-1 .backlog .issue-card")).toHaveCount(1);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await soundChoice.focus(); await page.keyboard.press("Home"); await page.keyboard.press("Tab");
+  await expect(soundChoice).toHaveValue("true");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  expect(await notes()).toEqual([]);
+  states.alpha!.labels = ["in-progress"];
+  states.beta!.state = "closed";
+  await refreshWhenIdle();
+  await expect.poll(notes).toEqual([440, 554]);
+  // Restore Swedish for the existing per-repository opt-out checks.
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByLabel("Language", { exact: true }).selectOption("sv");
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
   await page.getByRole("switch", { name: "Notiser för alpha", exact: true }).click();
   states.alpha = { state: "open", labels: [] };
   await refreshWhenIdle();
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
-  expect(await notes()).toHaveLength(8);
+  expect(await notes()).toHaveLength(2);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   expect(await notes()).toEqual([]);
+  // Muting belongs to the signed-in account and survives explicit logout.
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await page.getByLabel("Notifikationsljud", { exact: true }).selectOption("false");
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
+  await expect.poll(() => readSettings(page, "sound-test").then(saved => saved?.preferences?.notificationSounds)).toBe(false);
+  const signOut = async () => {
+    await page.getByRole("button", { name: "Logga ut", exact: true }).click();
+    await page.getByRole("button", { name: "Logga ut och ta bort token", exact: true }).click();
+  };
+  const signIn = async () => {
+    await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
+    await page.getByLabel("GitHub personal access token").fill("fictional-sound-token");
+    await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
+  };
+  await signOut(); login = "sound-other"; await signIn();
+  await page.getByRole("checkbox", { name: "sample/alpha" }).check();
+  await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await expect(page.getByLabel("Notifikationsljud", { exact: true })).toHaveValue("true");
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
+  await signOut(); login = "sound-test"; await signIn();
+  await expect(page.locator(".repo-lane")).toHaveCount(2);
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await expect(page.getByLabel("Notifikationsljud", { exact: true })).toHaveValue("false");
 });
 
 for (const audioMode of ['unsupported', 'denied'] as const) {

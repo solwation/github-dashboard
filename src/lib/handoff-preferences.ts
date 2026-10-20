@@ -32,6 +32,7 @@ export interface HandoffPreferences {
   columnLimit?: number;
   repositoryColumnLimits?: Record<string, number>;
   notificationRepos?: string[];
+  notificationSounds?: boolean;
   language?: "auto" | "sv" | "en";
   query?: string;
   repositoryQueries?: Record<string, string>;
@@ -75,6 +76,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   projectOrder: handoffRepositoryList, collapsedRepos: handoffRepositoryList,
   columnLimit: validColumnLimit, repositoryColumnLimits: value => repoMap(value, validColumnLimit),
   notificationRepos: handoffRepositoryList, language: value => ["auto", "sv", "en"].includes(value as string),
+  notificationSounds: value => typeof value === "boolean",
   query: text, repositoryQueries: value => repoMap(value, text), repoQuery: text,
   hideCoordination: value => typeof value === "boolean",
   splitByRepository: value => typeof value === "boolean",

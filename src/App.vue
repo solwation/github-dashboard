@@ -455,6 +455,7 @@ watch([sessionToken, permissionRepos], () => {
   void refreshPermissions();
 }, { flush: "post" });
 const notificationRepos = ref<string[]>([]);
+const notificationSounds = ref(true);
 const notificationNotice = ref("");
 const permission = ref(notificationPermission());
 const notificationPending = ref<string | null>(null);
@@ -465,6 +466,14 @@ const audioUnavailableText = "Ljud kunde inte aktiveras. Klicka eller tryck på 
 // Background playback failures stay silent. Explain unavailable audio only when
 // the user explicitly enables repository notifications below.
 const statusPlayer = new StatusSoundPlayer();
+watch(notificationSounds, enabled => {
+  if (!enabled) statusPlayer.clear();
+}, { flush: "sync" });
+function setNotificationSounds(enabled: boolean) {
+  notificationSounds.value = enabled;
+  if (enabled && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
+  save();
+}
 const activity = new ActivityTracker();
 const activityRevision = ref(0);
 // Activity markers are re-evaluated when one appears or expires, never on a per-second clock (#120).
@@ -530,7 +539,7 @@ async function toggleNotifications(repo: string) {
   const run = generation;
   notificationPending.value = repo;
   // Start audio while the click still supplies browser user activation.
-  const audioReady = statusPlayer.unlock();
+  const audioReady = notificationSounds.value ? statusPlayer.unlock() : Promise.resolve(true);
   try {
     const result = await requestNotifications();
     if (run !== generation) return;
@@ -541,10 +550,11 @@ async function toggleNotifications(repo: string) {
       save();
       const soundReady = await audioReady;
       if (run !== generation) return;
-      notificationNotice.value = t(
-        "Notiser på för {repo}. Statusändringar spelar ljud och nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden.",
+      notificationNotice.value = t(notificationSounds.value ?
+        "Notiser på för {repo}. Statusändringar spelar ljud och nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden."
+        : "Notiser på för {repo}. Nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden.",
         { repo },
-      ) + (soundReady ? "" : " " + t(audioUnavailableText));
+      ) + (soundReady || !notificationSounds.value ? "" : " " + t(audioUnavailableText));
     } else {
       notificationNotice.value =
         result === "unsupported"
@@ -593,7 +603,7 @@ function closureFeedback(result: Lane[], fullSnapshot = true) {
   activityRevision.value++;
   permission.value = notificationPermission();
   statusTracker.retain(selected.value);
-  statusPlayer.play(statusTracker.update(result, rules.value, notificationsEnabled, hideCoordination.value));
+  statusPlayer.play(statusTracker.update(result, rules.value, repo => notificationSounds.value && notificationsEnabled(repo), hideCoordination.value));
   for (const lane of result) {
     for (const issue of closureTracker.update(lane)) {
       if (hideCoordination.value && isCoordination(issue)) continue;
@@ -722,7 +732,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   repositoryColors: workspaceRepositoryColors.value,
   projectOrder: projectOrder.value, collapsedRepos: collapsedRepos.value,
   columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
-  notificationRepos: notificationRepos.value, language: preference.value,
+  notificationRepos: notificationRepos.value, notificationSounds: notificationSounds.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
   hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value,
   listMode: listMode.value, timeoutMinutes: timeoutMinutes.value,
@@ -735,6 +745,7 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   columnLimit.value = value.columnLimit ?? columnLimit.value;
   repositoryColumnLimits.value = value.repositoryColumnLimits ?? repositoryColumnLimits.value;
   notificationRepos.value = value.notificationRepos ?? notificationRepos.value;
+  notificationSounds.value = value.notificationSounds ?? notificationSounds.value;
   if (value.language !== undefined) setLanguage(value.language);
   query.value = value.query ?? query.value;
   repositoryQueries.value = value.repositoryQueries ?? repositoryQueries.value;
@@ -816,6 +827,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
     hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
     listMode.value = false;
+    notificationSounds.value = true;
     try {
       const saved = settings.value;
       if (saved) {
@@ -1076,6 +1088,7 @@ async function applyRepos() {
   await refresh(false, true);
 }
 function showDemo() {
+  notificationSounds.value = true;
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   splitByRepository.value = true;
@@ -1112,6 +1125,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  notificationSounds.value = true;
   settingsAccount = null; // Encrypted settings stay saved for this account's next sign-in.
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
@@ -1323,7 +1337,7 @@ function handleRefreshShortcut(event: KeyboardEvent) {
   if (!event.repeat && !authBusy.value) void refresh(false, false, true);
 }
 function resumeStatusAudio(event: Event) {
-  if (event.isTrusted && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
+  if (event.isTrusted && notificationSounds.value && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();
 }
 // The header stays sticky (#145, #153); its measured height keeps anchor jumps clear of it.
 const topbar = ref<HTMLElement | null>(null);
@@ -1464,7 +1478,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button

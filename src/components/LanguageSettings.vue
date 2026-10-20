@@ -13,7 +13,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number }>(), { permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES });
+const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number; notificationSounds?: boolean }>(), { permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES, notificationSounds: true });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -31,7 +31,7 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number] }>();
+const emit = defineEmits<{ scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number]; "update:notificationSounds": [value: boolean] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const minutes = parseTimeoutMinutes(input.value);
@@ -92,6 +92,13 @@ function changeTheme(event: Event) {
       <option value="dark">{{ t("Mörkt") }}</option>
     </select>
     <p id="theme-preference-help">{{ t("Auto följer enhetens ljusa eller mörka läge. Temavalet sparas på den här enheten.") }}</p>
+    <label class="rule-field" for="notification-sounds">{{ t("Notifikationsljud") }}</label>
+    <select id="notification-sounds" :value="String(notificationSounds)" :disabled="!canEditLimit" aria-describedby="notification-sounds-help"
+      @change="emit('update:notificationSounds', ($event.target as HTMLSelectElement).value === 'true')">
+      <option value="true">{{ t("på") }}</option>
+      <option value="false">{{ t("av") }}</option>
+    </select>
+    <p id="notification-sounds-help">{{ t("Spelar ljud för repositories där notiser är på. Övriga notiser påverkas inte.") }}</p>
     <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
       @update:model-value="emit('update:columnLimit', $event)" />
     <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
