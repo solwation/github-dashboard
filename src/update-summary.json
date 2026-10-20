@@ -1,14 +1,10 @@
 {
-  "baseCommit": "799664055518c84156aac964bf4acd4093f60ae6",
+  "baseCommit": "3eb91f2e4a06c028bdaa55d0e8eb6884092b1b0b",
   "summary": {
-    "sv": "Läsbarare beskrivningar och jämnstora labels i listvyn. Automatisk repoexpansion, samlade repoinställningar och separat ljudavstängning.",
-    "en": "Readable descriptions and consistent labels in list view. Automatic repository expansion, grouped repository settings and separate sound muting."
+    "sv": "Workflow-badgen flyttas intill Private och får samma stil, så repots högra kontroller ligger stabilt.",
+    "en": "The workflow badge moves beside Private with matching styling, keeping repository controls consistently positioned."
   },
   "issues": [
-    200,
-    201,
-    202,
-    203,
-    204
+    205
   ]
 }

@@ -2,10 +2,19 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Tydligare listvy med läsbara beskrivningar och jämnstora labels. Samlade repoinställningar och separat ljudavstängning.",
-      "en": "A clearer list view with readable descriptions and consistent labels. Grouped repository settings and separate sound muting."
+      "sv": "Tydligare listvy med läsbara beskrivningar och jämnstora labels. Samlade repoinställningar, lugnare reporubriker och separat ljudavstängning.",
+      "en": "A clearer list view with readable descriptions and consistent labels. Grouped repository settings, cleaner headers and separate sound muting."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Workflow-badgen ligger intill Private med samma stil, så kontrollerna till höger behåller sin placering.",
+          "en": "The workflow badge sits beside Private with matching styling, keeping right-side controls in a stable position."
+        },
+        "issues": [
+          205
+        ]
+      },
       {
         "text": {
           "sv": "Beskrivningar i expanderade listrader får läsbara radlängder och separat utrymme för bilder på breda skärmar.",
