@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, watch } from "vue";
 import { Activity, CircleCheck, Layers3, LayoutDashboard, Plus } from "@lucide/vue";
+import OverviewEstimate from "./OverviewEstimate.vue";
+import { overviewEstimateGroups } from "../lib/overview-estimates";
 import { useLanguage } from "../lib/i18n";
 import { untilNext, useNow } from "../composables/useNow";
 import type { Lane, Rules } from "../lib/model";
@@ -71,6 +73,7 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
 }, { immediate: true, deep: 3 });
 watch(clock, () => secondaryTracker.rebaseline(summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries })));
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); for (const key of secondaryKeys) clearCell(key); });
+const estimateGroups = computed(() => overviewEstimateGroups(props.lanes, props.rules, props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
 const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
 const secondary = computed(() => summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
 const activeDefinition = computed(() => t("Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet."));
@@ -127,6 +130,7 @@ const announcement = computed(() => [
       <div class="stat-content">
         <span class="stat-label">{{ card.label }}</span>
         <strong>{{ counts[card.key] }}<span v-if="deltas[card.key]" class="stat-delta" aria-hidden="true">{{ signedDelta(deltas[card.key]) }}</span><small>{{ card.hint }}</small></strong>
+        <OverviewEstimate v-if="card.key !== 'closed'" :groups="estimateGroups" :column="card.key" />
         <div class="stat-cells">
           <span v-for="(cell, index) in card.cells" :key="index" class="stat-cell" :class="cell.className" :title="cell.title">{{ cell.text }}<span v-if="cellDeltas[cell.key]" class="cell-delta" :class="cellDeltas[cell.key]! > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas[cell.key]!) }}</span></span>
         </div>

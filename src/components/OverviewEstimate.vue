@@ -1,0 +1,51 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import { useNow } from "../composables/useNow";
+import { estimateLabel, nextHistoryExpiry } from "../lib/estimates";
+import { overviewPoints, overviewTimeEstimate, type OverviewEstimateColumn, type OverviewEstimateGroup } from "../lib/overview-estimates";
+import { useLanguage } from "../lib/i18n";
+const props = defineProps<{ groups: OverviewEstimateGroup[]; column: OverviewEstimateColumn }>();
+const { t } = useLanguage();
+const points = computed(() => overviewPoints(props.groups, props.column));
+const now = useNow(at => {
+  const current = overviewTimeEstimate(props.groups, props.column, at);
+  if (current.remainingMs === null) return Infinity;
+  const countdown = current.counting ? ((current.remainingMs - 30000) % 60000 + 60000) % 60000 || 60000 : Infinity;
+  const expiry = Math.min(...props.groups.map(group => {
+    const next = nextHistoryExpiry(group.issues, at, { rules: group.rules });
+    return next === null ? Infinity : next - at;
+  }));
+  return Math.min(countdown, expiry, current.nextStartMs - at, 86400000);
+}, { board: true });
+const estimate = computed(() => overviewTimeEstimate(props.groups, props.column, now.value));
+const time = computed(() => estimate.value.remainingMs === null ? "" : estimate.value.remainingMs === 0 && estimate.value.overdue
+  ? t("över uppskattning") : t("{time} kvar", { time: estimateLabel(estimate.value.remainingMs) }));
+const partial = computed(() => estimate.value.knownRepositories > 0 && estimate.value.knownRepositories < estimate.value.repositories);
+const coverage = computed(() => t("Tid för {known} av {total} repos", { known: estimate.value.knownRepositories, total: estimate.value.repositories }));
+const description = computed(() => [
+  t("Uppskattade story points: cirka {points}", { points: points.value }),
+  t("Poängen omfattar samma filtrerade issues som antalet."),
+  ...(time.value ? [
+    estimate.value.remainingMs === 0 && estimate.value.overdue ? t("Uppskattad tid kvar: över uppskattning")
+      : t("Uppskattad tid kvar: {time}", { time: estimateLabel(estimate.value.remainingMs!) }),
+    ...(partial.value ? [coverage.value] : []),
+    t("Tiden bygger på historisk tid per poäng och parallellitet inom varje repository. Långsammaste repository avgör."),
+    ...(estimate.value.unknownStart ? [t("{count} pågående saknar säker starttid och räknas med sin fulla uppskattade tid.", { count: estimate.value.unknownStart })] : []),
+    ...(estimate.value.overdue ? [t("{count} pågående har passerat sin uppskattade tid.", { count: estimate.value.overdue })] : []),
+  ] : []),
+].map(part => part.replace(/[.]$/, "")).join(". ") + ".");
+</script>
+<template>
+  <div class="overview-estimate" :title="description" role="img" :aria-label="description">
+    <span class="overview-points">≈ {{ points }} SP</span>
+    <span v-if="time" class="overview-time">{{ time }}</span>
+    <span v-if="partial" class="overview-coverage">{{ coverage }}</span>
+  </div>
+</template>
+<style scoped>
+.overview-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -.1rem 0 .6rem; font-size: .7rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.overview-points { color: var(--green); font-weight: 650; white-space: nowrap; }
+.overview-time { color: var(--text); }
+.overview-coverage { flex-basis: 100%; color: var(--muted); font-size: .65rem; }
+@media (max-width: 650px) { .overview-estimate { justify-content: center; } }
+</style>
