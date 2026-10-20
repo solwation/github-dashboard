@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { estimateLabel } from "../lib/estimates";
 import IssueRelationsView from "./IssueRelations.vue";
 import type { IssueRelations } from "../lib/issue-relations";
@@ -64,6 +65,7 @@ const props = defineProps<{
   timeoutOverrunPercent?: number;
   timeoutEstimateMs?: number;
 }>();
+const repositoryLabel = useRepositoryDisplayName(() => props.repository);
 const emit = defineEmits<{ read: [] }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
@@ -186,7 +188,7 @@ const visibleLabels = computed(() =>
       >
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="(repository && showRepository) || visibleLabels.length" class="labels">
-        <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name">{{ repository }}</span></span>
+        <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
         <span
           v-for="label in visibleLabels"
           :key="label.name"

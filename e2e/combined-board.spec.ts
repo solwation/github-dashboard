@@ -12,7 +12,7 @@ async function matchingColors(page: Page) {
   }
   await expect(page.locator(".combined-board .issue-card .card-repository")).toHaveCount(await page.locator(".combined-board .issue-card").count());
   for (const card of await page.locator(".issue-card").all()) {
-    const name = (await card.locator(".card-repository").textContent())!.trim();
+    const name = (await card.locator(".card-repository").getAttribute("title"))!;
     expect(await card.locator(".card-repository i").evaluate(element => getComputedStyle(element).backgroundColor)).toBe(colors[name]);
   }
   return colors;

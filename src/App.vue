@@ -35,6 +35,7 @@ import SidebarVersion from "./components/SidebarVersion.vue";
 import ReleaseNotes from "./components/ReleaseNotes.vue";
 import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
+import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
 import { setBoardVisible } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
@@ -740,6 +741,7 @@ const combinedEstimateGroups = computed(() => orderedLanes.value.filter((lane) =
   rules: rules.value[lane.repo.full_name],
 })));
 // Match the current column calibration, including filters and loading repository exclusion.
+provideRepositoryDisplayNames(() => orderedLanes.value.map(lane => lane.repo.full_name), () => !splitByRepository.value);
 provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
   orderedLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
 ));
