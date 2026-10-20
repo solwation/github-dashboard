@@ -531,6 +531,7 @@ h1 {
 }
 .lane-title h2 {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 9px;
   font-size: 13px;
@@ -575,16 +576,7 @@ h1 {
   color: #8d999c;
   white-space: nowrap;
 }
-.workflow-badge {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  color: #7b8e88;
-  background: #f3f7f5;
-  border-radius: 4px;
-  padding: 4px 7px;
-  font-size: 9px;
-}
+.repository-badges { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 9px; max-width: 100%; }
 .swimlane {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1235,7 +1227,7 @@ h1 {
   .stat-label {
     font-size: 10px;
   }
-  .lane-actions > span:not(.workflow-badge) {
+  .lane-actions > span {
     display: none;
   }
   .column-header {
@@ -1387,9 +1379,6 @@ h1 {
   .repo-owner {
     max-width: 190px;
     font-size: 9px;
-  }
-  .lane-meta .workflow-badge {
-    display: none;
   }
   .swimlane {
     grid-template-columns: minmax(0, 1fr);
@@ -2068,7 +2057,6 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .repo-avatar { background: var(--tint-green); color: var(--accent-green); border-color: #24493f; }
 :root[data-theme="dark"] .repo-lane:nth-of-type(2n) .repo-avatar { background: var(--tint-purple); color: var(--accent-purple); border-color: #3a3560; }
 :root[data-theme="dark"] .private-badge { border-color: var(--input-border); }
-:root[data-theme="dark"] .workflow-badge { background: var(--hover); color: var(--muted); }
 :root[data-theme="dark"] .board-column { background: var(--surface-sunken); }
 :root[data-theme="dark"] .column-header { border-bottom-color: var(--line); }
 :root[data-theme="dark"] .column-heading i { border-color: #7f93a8; }

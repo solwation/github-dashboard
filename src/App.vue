@@ -9,7 +9,6 @@ import {
   Bell,
   BellOff,
   ArrowRight,
-  Check,
   ChevronDown,
   ChevronRight,
   CircleCheck,
@@ -1750,9 +1749,9 @@ onMounted(async () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     ><span class="repository-name-text">{{ lane.repo.name }}</span><ArrowRight :size="14" /></a
-                  ><span v-if="lane.repo.private" class="private-badge">{{
+                  ><span class="repository-badges"><span v-if="lane.repo.private" class="private-badge">{{
                     t("Privat")
-                  }}</span>
+                  }}</span><span v-if="!lane.loading" class="private-badge workflow-badge">{{ workflow(lane.labels) }}</span></span>
                 </h2>
                 <span class="repo-owner"
                   >{{ lane.repo.owner.login }} <span> / </span>
@@ -1774,9 +1773,7 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="lane-actions">
-              <span v-if="!lane.loading" class="workflow-badge"
-                ><Check :size="12" />{{ workflow(lane.labels) }}</span
-              ><span v-if="!lane.loading && (!lane.error || lane.issues.length)">{{ laneIssues(lane).length }} issues</span><span v-else-if="lane.loading">{{ t("Hämtar…") }}</span
+              <span v-if="!lane.loading && (!lane.error || lane.issues.length)">{{ laneIssues(lane).length }} issues</span><span v-else-if="lane.loading">{{ t("Hämtar…") }}</span
               ><button
                 v-if="!isDemo"
                 class="icon-button"
