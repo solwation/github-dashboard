@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Statistik hämtar bara expanderade repos, sparar kollapsläget per konto och öppnar endast första repot som standard.",
+          "en": "Statistics loads only expanded repositories, remembers collapse choices per account and opens only the first repository by default."
+        },
+        "issues": [217]
+      },
+      {
+        "text": {
           "sv": "Statistik öppnas direkt på första klicket efter utloggning och återinloggning, även från ett repositoryankare.",
           "en": "Statistics opens on the first click after signing out and back in, including when leaving a repository anchor."
         },
