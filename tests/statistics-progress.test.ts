@@ -103,7 +103,7 @@ describe('batched statistics previews', () => {
     const work = collector.load('sample/period', now + 1000, true, listener);
     await vi.advanceTimersByTimeAsync(500);
     const preview: StatisticsData = listener.mock.calls[0]![0];
-    expect(preview.issues!.data.map(item => item.id)).toEqual([1, 2]);
+    expect(preview.issues!.data.map(item => item.id)).toEqual([2, 1]);
     expect(preview.issues!.complete).toBe(false);
     expect(preview.events).toEqual(original.events);
     expect(preview.commits).toBeNull();
@@ -153,4 +153,33 @@ it('collapses a burst of 99 event pages into one preview', async () => {
   await work;
   await vi.advanceTimersByTimeAsync(1000);
   expect(listener).toHaveBeenCalledTimes(1);
+});
+
+it('keeps fresh records and newest prior history when a partial refresh exceeds the source cap', async () => {
+  vi.useFakeTimers();
+  const previous = Array.from({ length: 300 }, (_, index) => issue(300 - index));
+  const pending = deferred<Reply>();
+  let refresh = false;
+  const replacement = { ...issue(300), labels: [{ name: 'fresh' }] };
+  const collector = new StatisticsCollector(client(url => {
+    if (!url.pathname.endsWith('/issues')) throw denied();
+    if (!refresh) return { data: previous, next: null };
+    return url.searchParams.has('page') ? pending.promise : { data: [issue(301), replacement], next: '/repos/sample/period/issues?page=2' };
+  }));
+  const original = await collector.load('sample/period', now);
+  refresh = true;
+  const listener = vi.fn();
+  const work = collector.load('sample/period', now + 1000, true, listener);
+  await vi.advanceTimersByTimeAsync(500);
+  const snapshot: StatisticsData = listener.mock.calls[0]![0];
+  expect(snapshot.issues!.data.map(item => item.id)).toEqual(Array.from({ length: 300 }, (_, index) => 301 - index));
+  expect(snapshot.issues!.data[1]!.labels).toEqual([{ name: 'fresh' }]);
+  expect(snapshot.issues!.complete).toBe(false);
+  expect(original.issues!.data).toHaveLength(300);
+  expect(original.issues!.data[0]!.labels).toEqual([]);
+  expect(original.issues!.data.at(-1)!.id).toBe(1);
+  pending.resolve({ data: [issue(302)], next: null });
+  await work;
+  expect(snapshot.issues!.data).toHaveLength(300);
+  expect(snapshot.issues!.data.some(item => item.id === 302)).toBe(false);
 });

@@ -113,10 +113,15 @@ export class StatisticsCollector {
           let data = source?.data;
           if (source && !source.complete && base[sourceName]) {
             const identity = (item: unknown) => { const record = item as { id?: number; sha?: string }; return record.sha ?? record.id; };
-            data = [...new Map([...base[sourceName]!.data, ...source.data].map(item => [identity(item), item])).values()] as typeof data;
+            // Prefer newly fetched records, then fill from prior data in its
+            // existing order. Keeping the tail of a newest-first list would
+            // discard the newest known history when the union exceeds its cap.
+            const merged = new Map(source.data.map(item => [identity(item), item]));
+            for (const item of base[sourceName]!.data) if (!merged.has(identity(item))) merged.set(identity(item), item);
+            data = [...merged.values()] as typeof data;
           }
           const limit = { issues: 300, events: 10_000, commits: 600, changes: 600, pulls: 300 }[sourceName];
-          Object.assign(snapshot, { [sourceName]: source ? { ...source, data: data!.slice(-limit) } : null });
+          Object.assign(snapshot, { [sourceName]: source ? { ...source, data: data!.slice(0, limit) } : null });
         }
         state.latest = snapshot;
         for (const listener of state.listeners) listener(snapshot);
