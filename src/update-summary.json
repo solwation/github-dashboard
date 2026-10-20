@@ -1,10 +1,10 @@
 {
-  "baseCommit": "af2f7e336d634c8773bf9db3c6485e5d54d65f59",
+  "baseCommit": "435bb4664a3b457452e53b98f2bb0bbf81a7f127",
   "summary": {
-    "sv": "Uppskattade story points visas nu per issue i både kort- och listläge.",
-    "en": "Estimated story points now appear per issue in both card and list views."
+    "sv": "Ordna repositories från Inställningar även på mobilen.",
+    "en": "Reorder repositories from Settings on mobile as well."
   },
   "issues": [
-    210
+    211
   ]
 }
