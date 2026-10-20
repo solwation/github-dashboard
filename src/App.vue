@@ -191,6 +191,12 @@ function toggleCollapsed(name: string) {
     ? collapsedRepos.value.filter(repo => repo !== name) : [...collapsedRepos.value, name];
   save();
 }
+async function revealRepository(name: string) {
+  if (collapsedRepos.value.includes(name)) toggleCollapsed(name);
+  await nextTick();
+  const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
+  if (repo) document.getElementById("repo-" + repo.id)?.scrollIntoView({ block: "start" });
+}
 const rules = ref<Record<string, Rules>>({});
 const editing = ref<string | null>(null);
 const isDemo = ref(false);
@@ -1439,6 +1445,7 @@ onMounted(async () => {
       @move="moveRepository"
       @reorder="reorderProject"
       @interest="refreshStaleRepository"
+      @reveal="revealRepository"
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
