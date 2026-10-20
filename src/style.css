@@ -1871,7 +1871,8 @@ button.lane-sync:focus-visible::after {
 .row-close:hover { border-color: #b4c9c1; }
 .row-meta { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
-.row-meta .label { flex-shrink: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+/* Match the priority chip's 11px icon plus 2px vertical padding. */
+.row-meta .label { height: 15px; flex-shrink: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
 .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
 .row-status { background: #edf0f4; color: #5b6b75; }
 .row-status.progress { background: #fbf1dd; color: #81621f; }
