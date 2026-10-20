@@ -24,7 +24,7 @@ export function parseStatisticsCache(value: unknown, now = Date.now()): Statisti
     for (const name of statisticsSourceNames) {
       const source = entry[name];
       if (!source || !Array.isArray(source.data) || typeof source.complete !== 'boolean' || !finite(source.fetchedAt) || source.fetchedAt > now || now - source.fetchedAt >= STATISTICS_RETENTION_MS) { copy[name] = null; continue; }
-      const limit = { issues: 300, events: 500, commits: 600, changes: 600, pulls: 300 }[name];
+      const limit = { issues: 300, events: 10_000, commits: 600, changes: 600, pulls: 300 }[name];
       let valid = source.data.length <= limit;
       for (const raw of source.data) {
         if (!raw || typeof raw !== 'object') { valid = false; break; }

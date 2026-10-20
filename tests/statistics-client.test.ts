@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { StatisticsCollector, statisticsLimits, type StatisticsClient } from "../src/lib/statistics-client";
-import { summarizeStatistics, type StatisticsCommit } from "../src/lib/statistics";
+import { formatStatisticsBound, summarizeStatistics, type StatisticsCommit } from "../src/lib/statistics";
+import { parseStatisticsCache } from "../src/lib/statistics-cache";
 const now = Date.parse("2026-10-16T15:00:00Z");
 const issue = { id: 1, number: 1, created_at: "2026-10-10T00:00:00Z", updated_at: "2026-10-13T00:00:00Z", labels: [{ name: "bug" }], user: { login: "alice" } };
 const commit: StatisticsCommit = { sha: "first", parents: [{ sha: "parent" }], author: { login: "alice" }, commit: { author: { name: "Alice", date: "2026-10-12T01:00:00Z" }, committer: { date: "2026-10-12T02:00:00Z" } } };
@@ -45,6 +46,48 @@ describe("statistics transport and coverage", () => {
     expect(data.events!.data).toHaveLength(1);
     expect(data.events!.complete).toBe(false);
     expect(summarizeStatistics([data], { from: data.from, to: data.to, label: "", contributor: "" }).complete.closed).toBe(false);
+  });
+  it("collects all three days beyond the old 500-event and 60-diff cutoffs, including after cache restore", async () => {
+    const at = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
+    const events = Array.from({ length: 600 }, (_, id) => ({ id, event: "closed", created_at: at(12), issue }));
+    events.push({ id: 600, event: "closed", created_at: at(36), issue }, { id: 601, event: "closed", created_at: at(60), issue });
+    const commits = Array.from({ length: 63 }, (_, id) => ({ ...commit, sha: `period-${id}`, commit: { committer: { date: at(id < 61 ? 12 : id === 61 ? 36 : 60) } } }));
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith("/issues/events")) {
+        const page = Number(url.searchParams.get("page") || 1);
+        return { data: events.slice((page - 1) * 100, page * 100), next: page < 7 ? `/repos/sample/repo/issues/events?page=${page + 1}` : null };
+      }
+      if (url.pathname.endsWith("/commits")) return { data: commits, next: null };
+      return baseline(url);
+    });
+    const collector = new StatisticsCollector(client);
+    const data = await collector.load("sample/repo", now);
+    expect(data.events!.complete).toBe(true);
+    expect(data.changes!.complete).toBe(true);
+    const window = (hours: number) => ({ from: formatStatisticsBound(now - hours * 3_600_000), to: formatStatisticsBound(now), resolution: "1h" as const, label: "", contributor: "" });
+    const full = summarizeStatistics([data], window(72));
+    expect(full.totals.closed).toBe(602);
+    expect(full.totals.additions).toBe(630);
+    // Each older 24-hour slice contributes even though its records occur after
+    // the old transport/detail cutoffs. An actual zero stays a measured zero.
+    expect([0, 24, 48].map(start => full.days.slice(start, start + 24).reduce((sum, day) => sum + day.values.closed!, 0))).toEqual([1, 1, 600]);
+    expect([0, 24, 48].map(start => full.days.slice(start, start + 24).reduce((sum, day) => sum + day.values.additions!, 0))).toEqual([10, 10, 610]);
+    expect(summarizeStatistics([data], window(24)).totals.closed).toBe(600);
+    const saved = parseStatisticsCache({ version: 1, repositories: [data] }, now);
+    expect(saved[0]!.events!.data).toHaveLength(602);
+    const restored = new StatisticsCollector(client); restored.restore(saved);
+    expect(summarizeStatistics([restored.cached("sample/repo", now)!], window(72)).totals).toEqual(full.totals);
+    calls.length = 0;
+    const refreshed = await restored.load("sample/repo", now + 1000, true);
+    expect(summarizeStatistics([refreshed], window(72)).totals).toEqual(full.totals);
+    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(0);
+  });
+  it("retains label transitions needed by board history while dropping unrelated events", async () => {
+    const { client } = mockClient(url => url.pathname.endsWith("/issues/events")
+      ? { data: ["closed", "reopened", "labeled", "unlabeled", "assigned", "renamed"].map((event, id) => ({ id, event, created_at: "2026-10-13T00:00:00Z", issue, label: { name: "in-progress" } })), next: null }
+      : baseline(url));
+    const data = await new StatisticsCollector(client).load("sample/repo", now);
+    expect(data.events!.data.map(event => event.event)).toEqual(["closed", "reopened", "labeled", "unlabeled"]);
   });
   it("silently hides only genuinely inaccessible sources and preserves true zeros", async () => {
     const { client } = mockClient(url => {
@@ -102,17 +145,17 @@ describe("statistics transport and coverage", () => {
   });
   it("limits commit-detail work, reuses immutable SHA details and marks file truncation", async () => {
     const { calls, client } = mockClient(url => {
-      if (url.pathname.endsWith("/commits")) return { data: Array.from({ length: 65 }, (_, index) => ({ ...commit, sha: `sha${index}` })), next: null };
+      if (url.pathname.endsWith("/commits")) return { data: Array.from({ length: 605 }, (_, index) => ({ ...commit, sha: `sha${index}` })), next: null };
       if (url.pathname.includes("/commits/")) return { ...baseline(url), next: `${url.pathname}?page=${Number(url.searchParams.get("page") || 1) + 1}` };
       return baseline(url);
     });
     const collector = new StatisticsCollector(client);
     const first = await collector.load("sample/repo", now);
-    expect(first.changes!.data).toHaveLength(60); expect(first.changes!.complete).toBe(false);
+    expect(first.changes!.data).toHaveLength(statisticsLimits.changes); expect(first.changes!.complete).toBe(false);
     expect(first.changes!.data.every(change => !change.filesComplete)).toBe(true);
-    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(60 * 3);
+    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(statisticsLimits.changes * 3);
     await collector.load("sample/repo", now + 1000, true);
-    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(60 * 3);
+    expect(calls.filter(url => url.pathname.includes("/commits/"))).toHaveLength(statisticsLimits.changes * 3);
   });
   it("enforces the concurrency bound across repositories and coalesces simultaneous loads", async () => {
     let active = 0, maximum = 0;

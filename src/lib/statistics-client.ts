@@ -15,7 +15,7 @@ export interface StatisticsClient {
    */
   boardIssues?(repository: string, since: string, maxAgeMs?: number, now?: number): StatisticsIssue[] | null;
 }
-export const statisticsLimits = { issues: 3, events: 5, commits: 3, pulls: 3, changes: 60, files: 3, concurrency: 3 } as const;
+export const statisticsLimits = { issues: 3, events: 100, commits: 3, pulls: 3, changes: 600, files: 3, concurrency: 3 } as const;
 const cacheDuration = 5 * 60 * 1000;
 
 /** Every request passes through a shared gate, including concurrent repository loads. */
@@ -114,7 +114,14 @@ export class StatisticsCollector {
       }),
       attempt("events", async () => {
         const source = await unique(await this.pages<StatisticsEvent>(`${root}/issues/events?per_page=100`, statisticsLimits.events, now));
-        return { ...source, data: source.data.filter(event => event.issue && !event.issue.pull_request && event.created_at >= since && event.created_at <= until) };
+        // Repository event pages also contain labels, assignments and other activity. Five
+        // pages can cover less than a day on an active repository (#212). Follow next
+        // links to exhaustion (with a safety ceiling), without assuming date ordering:
+        // the API does not document a sort guarantee. Keep only events used by the
+        // statistics and board history so unrelated activity does not fill the vault.
+        return { ...source, data: source.data.filter(event => event.issue && !event.issue.pull_request
+          && ["closed", "reopened", "labeled", "unlabeled"].includes(event.event)
+          && event.created_at >= since && event.created_at <= until) };
       }),
       attempt("commits", async () => {
         try {
@@ -144,6 +151,8 @@ export class StatisticsCollector {
       const nonMerge = commits.data.filter(commit => commit.parents.length <= 1);
       const records: StatisticsChange[] = [];
       const old = new Map(previous?.changes?.data.map(change => [change.sha, change]) || []);
+      // Every collected commit needs its diff, including reused historical commits;
+      // taking only the newest 60 silently lost older days within a selected period.
       const queue = nonMerge.slice(0, statisticsLimits.changes);
       // Three workers, never one promise per item or repository-sized fan-out.
       let stopped = false;
