@@ -1,10 +1,12 @@
 {
   "baseCommit": "799664055518c84156aac964bf4acd4093f60ae6",
   "summary": {
-    "sv": "Hopfällda repos expanderas automatiskt när du väljer dem i vänstermenyn.",
-    "en": "Collapsed repositories expand automatically when selected in the sidebar."
+    "sv": "Jämnstora labels i listvyn, automatisk repoexpansion från vänstermenyn och separat ljudavstängning i Inställningar.",
+    "en": "Consistent label sizes in list view, automatic repository expansion from the sidebar and separate sound muting in Settings."
   },
   "issues": [
-    201
+    200,
+    201,
+    202
   ]
 }

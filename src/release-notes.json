@@ -2,10 +2,19 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Jämnstora labels i listvyn och automatisk expansion av repos som väljs i vänstermenyn.",
-      "en": "Consistent label sizes in list view and automatic expansion of repositories selected in the sidebar."
+      "sv": "Jämnstora listlabels, automatisk repoexpansion från vänstermenyn och en separat ljudväxel i Inställningar.",
+      "en": "Consistent list labels, automatic repository expansion from the sidebar and a separate sound toggle in Settings."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Stäng av notisljud i Inställningar utan att förlora repoets notiser; valet sparas för ditt konto.",
+          "en": "Mute notification sounds in Settings while keeping repository notifications; your choice is saved for your account."
+        },
+        "issues": [
+          202
+        ]
+      },
       {
         "text": {
           "sv": "Välj ett hopfällt repo i vänstermenyn för att expandera det och gå direkt till innehållet.",
@@ -17,8 +26,8 @@
       },
       {
         "text": {
-          "sv": "Egna labels i listvyn har samma textstorlek, höjd och padding som prioritetslabels för ett enhetligare utseende.",
-          "en": "Custom labels in list view share the font size, height and padding of priority labels for a consistent appearance."
+          "sv": "Egna labels och prioritetslabels i listvyn matchar status- och flyttmarkeringarnas textstorlek, tydlighet och höjd.",
+          "en": "Custom and priority labels in list view match the text size, weight and height of status and movement markers."
         },
         "issues": [
           200
