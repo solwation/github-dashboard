@@ -35,6 +35,7 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Delvis underlag för {metrics}. Aktivitet i den valda perioden kan saknas.": "Partial data for {metrics}. Activity in the selected period may be missing.",
   "Uppskattade story points: cirka {points}": "Estimated story points: approximately {points}",
   "Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet.": "Rough size on the 1/2/3/5/8/13 scale. An unambiguous points label takes precedence, otherwise a local estimate from the title and description is used. Not measured complexity.",
   "Typ: {type}": "Type: {type}",
@@ -46,7 +47,7 @@ export const english: Record<string, string> = {
   "Hjälp sökes": "Help wanted",
   "Underhåll": "Chore",
   "Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.": "Statistics could not be saved on this device. The collected charts remain available.",
-  "Per repository hämtas högst 300 uppdaterade issues, 500 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 60 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.": "At most 300 updated issues, 500 issue events, 300 commits and 300 pull requests are fetched per repository. Code metrics cover at most 60 non-merge commits and 300 files per commit. Bounded sources are marked as partial data. Collected data is reused for five minutes; Refresh revalidates the whole period.",
+  "Per repository hämtas högst 300 uppdaterade issues, 10 000 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 600 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.": "At most 300 updated issues, 10,000 issue events, 300 commits and 300 pull requests are fetched per repository. Code metrics cover at most 600 non-merge commits and 300 files per commit. Bounded sources are marked as partial data. Collected data is reused for five minutes; Refresh revalidates the whole period.",
   "Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från den senast hämtade delen, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.": "Statistics are encrypted for up to ten repositories for seven days, up to 8 MiB. Issues, events and pull requests are always revalidated. Commit history is reused with an overlap from the most recently collected portion, and fully revalidated at least every seven days or on Refresh. SHA-bound code metrics are reused. Reused source data can include up to 600 commits; incomplete coverage is marked as partial data.",
   "Äldsta omvalideringen av återanvänd commithistorik: {time} UTC.": "Oldest revalidation of reused commit history: {time} UTC.",
   "Dela upp per repository": "Split by repository",

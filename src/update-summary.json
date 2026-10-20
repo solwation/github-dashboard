@@ -1,10 +1,11 @@
 {
   "baseCommit": "435bb4664a3b457452e53b98f2bb0bbf81a7f127",
   "summary": {
-    "sv": "Ordna repositories från Inställningar även på mobilen.",
-    "en": "Reorder repositories from Settings on mobile as well."
+    "sv": "Ordna repositories från Inställningar på mobilen. Statistik tar med längre historik och äldre kodändringar.",
+    "en": "Reorder repositories from Settings on mobile. Statistics includes longer history and older code changes."
   },
   "issues": [
-    211
+    211,
+    212
   ]
 }

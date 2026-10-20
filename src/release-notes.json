@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Statistik hämtar längre händelsehistorik och äldre kodändringar, så aktiva repositories behåller underlag över fler dygn.",
+          "en": "Statistics fetches longer event history and older code changes, preserving more days of activity in busy repositories."
+        },
+        "issues": [212]
+      },
+      {
+        "text": {
           "sv": "Ordna repositories även på mobilen via Inställningar med draghandtag eller upp- och nedknappar.",
           "en": "Reorder repositories on mobile from Settings using drag handles or up and down buttons."
         },
