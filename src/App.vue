@@ -190,11 +190,36 @@ function toggleCollapsed(name: string) {
     ? collapsedRepos.value.filter(repo => repo !== name) : [...collapsedRepos.value, name];
   save();
 }
+let highlightedRepository: HTMLElement | null = null;
+let repositoryHighlightTimer: ReturnType<typeof setTimeout> | undefined;
+let repositoryNavigationTarget: string | null = null;
+let repositoryNavigationRun = 0;
+function clearRepositoryHighlight() {
+  repositoryNavigationRun++;
+  clearTimeout(repositoryHighlightTimer);
+  repositoryHighlightTimer = undefined;
+  highlightedRepository?.classList.remove("repository-navigation-highlight");
+  highlightedRepository = null;
+  repositoryNavigationTarget = null;
+}
 async function revealRepository(name: string) {
+  clearRepositoryHighlight();
+  const run = repositoryNavigationRun;
+  const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
+  if (!repo) return;
+  const targetId = "repo-" + repo.id;
+  repositoryNavigationTarget = targetId;
   if (collapsedRepos.value.includes(name)) toggleCollapsed(name);
   await nextTick();
-  const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
-  if (repo) document.getElementById("repo-" + repo.id)?.scrollIntoView({ block: "start" });
+  if (run !== repositoryNavigationRun) return;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.scrollIntoView({ block: "start" });
+  // Flush removal of the previous outline so same-repository activation restarts its pulse.
+  void target.offsetWidth;
+  target.classList.add("repository-navigation-highlight");
+  highlightedRepository = target;
+  repositoryHighlightTimer = setTimeout(clearRepositoryHighlight, 1200);
 }
 const rules = ref<Record<string, Rules>>({});
 const editing = ref<string | null>(null);
@@ -204,6 +229,7 @@ const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
 // Board time labels keep their own clocks and stop while Statistics is shown.
 watch(currentView, view => setBoardVisible(view === "overview"), { immediate: true });
 async function navigateWorkspace() {
+  if (window.location.hash !== "#" + repositoryNavigationTarget) clearRepositoryHighlight();
   currentView.value = isStatisticsHash() ? "statistics" : "overview";
   await nextTick();
   const target = document.getElementById(window.location.hash.slice(1));
@@ -381,6 +407,7 @@ const authBusy = ref(false);
 const restoring = ref(true);
 const savedSession = ref(false);
 const sessionToken = ref("");
+watch([currentView, splitByRepository, sessionToken], clearRepositoryHighlight);
 const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
 const handoffOpen = ref(false);
@@ -1363,6 +1390,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearRepositoryHighlight();
   clearTimeout(activityTimer);
   clearTimeout(timeoutTimer);
   sync.stop();
@@ -2182,4 +2210,16 @@ onMounted(async () => {
 .repository-properties .modal-heading > button { flex-shrink: 0; }
 .repository-properties .modal-footer { flex-wrap: wrap; }
 .repository-properties .modal-footer > button { margin-left: auto; }
+.repository-navigation-highlight {
+  outline: 2px solid var(--green);
+  outline-offset: -2px;
+  animation: repository-navigation-pulse 1.2s ease-out;
+}
+@keyframes repository-navigation-pulse {
+  0%, 55% { outline-color: var(--green); }
+  30%, 100% { outline-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .repository-navigation-highlight { animation: none; }
+}
 </style>
