@@ -224,7 +224,7 @@ export class StatisticsBackground {
     if (this.running) this.deliverCached(cached);
     const repository = nextBackgroundRepository(this.options.repositories(), cached, modules.window(now), now, this.failures);
     if (!repository) return "none";
-    const gate = this.gatedClient();
+    const gate = this.gatedClient(repository);
     const collector = modules.createCollector(gate.client);
     collector.restore(cached);
     try {
@@ -232,10 +232,11 @@ export class StatisticsBackground {
       // A refused request makes the collector fall back to partial data: never persist that.
       if (gate.paused()) { this.lastPause = gate.paused(); return "paused"; }
       const paused = this.pauseReason();
-      if (paused === "stopped" || paused === "disallowed") { this.lastPause = paused; return "paused"; }
+      if (paused === "stopped" || paused === "disallowed" || !this.options.repositories().includes(repository)) { this.lastPause = paused || "disallowed"; return "paused"; }
       if (data.temporary.length) this.failures.set(repository, now); else this.failures.delete(repository);
       // Merge with the latest cache, keeping selected repositories last so they are evicted last.
       const latest = await modules.read(token, this.environment.now());
+      if (!this.running || !this.options.allowed() || !this.options.repositories().includes(repository)) { this.lastPause = "disallowed"; return "paused"; }
       const selected = new Set(this.options.repositories().slice(0, BACKGROUND_REPOSITORIES));
       const others = latest.filter(entry => entry.repository !== repository);
       await modules.write(token, [...others.filter(entry => !selected.has(entry.repository)), ...others.filter(entry => selected.has(entry.repository)), data]);
@@ -260,14 +261,14 @@ export class StatisticsBackground {
     }
   }
   /** One request at a time, and each request first rechecks every pause condition. */
-  private gatedClient() {
+  private gatedClient(repository: string) {
     let tail: Promise<unknown> = Promise.resolve();
     let refused: PauseReason | null = null;
     const source = this.options.client;
     const client: StatisticsClient = {
       request: <T>(path: string, options?: { store?: boolean }) => {
         const run = tail.then(() => {
-          const reason = refused || this.pauseReason();
+          const reason = refused || this.pauseReason() || (!this.options.repositories().includes(repository) ? "disallowed" : null);
           if (reason) { refused = reason; throw new BackgroundPaused(reason); }
           return options ? source.request<T>(path, options) : source.request<T>(path);
         });

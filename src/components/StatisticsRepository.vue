@@ -23,6 +23,8 @@ const props = defineProps<{
   preference?: StatisticsPreference;
   collapsed?: boolean;
 }>();
+const hasOpened = ref(!props.collapsed);
+watch(() => props.collapsed, value => { if (!value) hasOpened.value = true; });
 const emit = defineEmits<{ "update:preference": [value: StatisticsPreference]; "update:collapsed": [value: boolean] }>();
 const metricNames: Record<StatisticsMetric, string> = {
   closed: "Stängda issues", created: "Skapade issues", reopened: "Återöppnade issues", netIssues: "Nettoförändring av issues",
@@ -64,7 +66,7 @@ function windowFilter(label: string, contributor: string): StatisticsFilter {
   };
 }
 function normalize(value: StatisticsPreference | undefined) {
-  const choices = props.data && !props.loading ? dimensions.value : undefined;
+  const choices = props.data && !props.loading && !props.collapsed ? dimensions.value : undefined;
   const base = {
     ...value,
     from: props.timeSpan.from,
@@ -73,7 +75,7 @@ function normalize(value: StatisticsPreference | undefined) {
     resolution: props.timeSpan.resolution,
   };
   const normalized = normalizeStatisticsPreference(base, props.period, choices);
-  if (props.data && !props.loading) {
+  if (props.data && !props.loading && !props.collapsed) {
     const totals = summarize(windowFilter(normalized.label, normalized.contributor)).totals;
     const metrics = statisticsMetrics.filter(key => totals[key] !== undefined);
     return normalizeStatisticsPreference(normalized, props.period, { ...dimensions.value, metrics });
@@ -178,6 +180,7 @@ function clearFilters() {
       </div>
     </header>
     <div v-show="!collapsed" :id="'statistics-repository-body-' + repository.id" class="statistics-repository-body">
+    <template v-if="hasOpened">
     <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
       <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="13" aria-hidden="true" /></button>
       <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="13" aria-hidden="true" /></button>
@@ -219,6 +222,7 @@ function clearFilters() {
     </template>
     <div v-else-if="!loading && !temporary" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
     </div>
+    </template>
     </div>
   </section>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { normalizeStatisticsPreference, statisticsRepositoryCollapsed } from "../lib/statistics-preferences";
 import { StatisticsPreviewBatch } from "../lib/statistics-progress";
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { RefreshCw, BarChart3, RotateCcw } from "@lucide/vue";
@@ -258,35 +259,53 @@ const snapshots = shallowRef<Record<string, StatisticsData>>({});
 const previewBatch = new StatisticsPreviewBatch(previews => {
   snapshots.value = { ...snapshots.value, ...previews };
 });
-const preparedRepositories = ref(new Set<string>());
-const renderedRepositories = computed(() => props.repositories.filter(repo => preparedRepositories.value.has(repo.full_name)));
+const renderedRepositories = computed(() => props.repositories);
 const loading = ref<Record<string, boolean>>({});
 const cacheFailed = ref(false);
 const failures = ref<Record<string, boolean>>({});
 const busy = computed(() => props.repositories.some(repo => loading.value[repo.full_name]));
 watch(busy, value => { if (!value) flushRolloverReload(); });
-const initialLoading = computed(() => busy.value && !props.repositories.some(repo => {
+const initialLoading = computed(() => busy.value && !expandedRepositories.value.some(repo => {
   const data = snapshots.value[repo.full_name];
   return data && [data.issues, data.events, data.commits, data.changes, data.pulls].some(source => source !== null);
 }));
-const completed = computed(() => props.repositories.filter(repo => loading.value[repo.full_name] === false).length);
-const partial = computed(() => props.repositories.some(repo => {
+const completed = computed(() => expandedRepositories.value.filter(repo => loading.value[repo.full_name] === false).length);
+const partial = computed(() => expandedRepositories.value.some(repo => {
   const data = snapshots.value[repo.full_name];
   return !!data && ([data.issues, data.events, data.commits, data.changes, data.pulls].some(source => source?.complete === false) || !!data.changes?.data.some(change => !change.filesComplete));
 }));
 const historyVerifiedAt = computed(() => {
-  const values = props.repositories.map(repo => snapshots.value[repo.full_name]?.commits).filter(source => source?.historyVerifiedAt && source.historyVerifiedAt < source.fetchedAt).map(source => source!.historyVerifiedAt!);
+  const values = expandedRepositories.value.map(repo => snapshots.value[repo.full_name]?.commits).filter(source => source?.historyVerifiedAt && source.historyVerifiedAt < source.fetchedAt).map(source => source!.historyVerifiedAt!);
   return values.length ? Math.min(...values) : null;
 });
-const collapsedRepositories = ref(new Set<number>());
+const collapsedRepositories = computed(() => new Set(props.repositories.filter((repo, index) =>
+  statisticsRepositoryCollapsed(preferencesState.value, repo.full_name, index)).map(repo => repo.id)));
+const expandedRepositories = computed(() => props.repositories.filter(repo => !collapsedRepositories.value.has(repo.id)));
+const repositoryRuns = new Map<string, number>();
+function initializeCollapsePreferences() {
+  let changed = false;
+  const next = { ...preferencesState.value };
+  props.repositories.forEach((repo, index) => {
+    if (typeof next[repo.full_name]?.collapsed === "boolean") return;
+    next[repo.full_name] = { ...normalizeStatisticsPreference(next[repo.full_name], period.value), ...timeSpan.value,
+      collapsed: statisticsRepositoryCollapsed(next, repo.full_name, index) };
+    changed = true;
+  });
+  if (changed) { preferencesState.value = next; emit("update:preferences", next); }
+}
+function setCollapsed(id: number, collapsed: boolean) {
+  const repository = props.repositories.find(repo => repo.id === id);
+  if (!repository) return;
+  updatePreference(repository.full_name, { ...normalizeStatisticsPreference(preferencesState.value[repository.full_name], period.value), collapsed });
+}
 let followedAnchor = "";
 async function followRepositoryAnchor(hash = window.location.hash) {
-  if (!/^#statistics-repo-\d+$/.test(hash) || followedAnchor === hash || initialLoading.value) return;
+  if (!/^#statistics-repo-\d+$/.test(hash) || followedAnchor === hash) return;
   await nextTick();
   const target = document.getElementById(hash.slice(1));
   if (!target?.getClientRects().length) return;
   const id = Number(hash.slice("#statistics-repo-".length));
-  if (collapsedRepositories.value.delete(id)) await nextTick();
+  if (collapsedRepositories.value.has(id)) { setCollapsed(id, false); await nextTick(); }
   target.scrollIntoView({ block: "start" });
   followedAnchor = hash;
 }
@@ -311,6 +330,7 @@ let restoration: Promise<void> = Promise.resolve();
 function updatePreference(repository: string, value: StatisticsPreference) {
   const merged: StatisticsPreference = {
     ...value,
+    collapsed: value.collapsed ?? preferencesState.value[repository]?.collapsed,
     from: globalFrom.value,
     to: globalTo.value,
     range: activeRange.value,
@@ -326,14 +346,14 @@ watch(() => props.preferences, value => {
     syncFromPreferences(value);
   }
 }, { deep: true });
-async function load(force = false) {
-  const run = ++generation;
-  previewBatch.clear();
+async function load(force = false, target?: string) {
+  const run = target ? generation : ++generation;
+  if (!target) previewBatch.clear();
   const epoch = sessionEpoch, activeCollector = collector, token = props.credential;
-  const names = props.repositories.map(repo => repo.full_name);
-  const selected = new Set(names);
+  const names = expandedRepositories.value.filter(repo => !target || repo.full_name === target).map(repo => repo.full_name);
+  const selected = new Set(props.repositories.map(repo => repo.full_name));
   snapshots.value = Object.fromEntries(Object.entries(snapshots.value).filter(([name]) => selected.has(name)));
-  if (!names.length || (!props.demo && !collector)) { loading.value = {}; preparedRepositories.value = new Set(); return; }
+  if (!names.length || (!props.demo && !collector)) { if (!target) loading.value = {}; return; }
   const periodChanged = refreshCalendarPeriod();
   // A repository-triggered load may join the collector's old pending request.
   // Keep the rollover queued until that request has settled, then force fresh data.
@@ -352,33 +372,38 @@ async function load(force = false) {
     const data = activeCollector?.cached(name);
     if (!snapshots.value[name] && data) snapshots.value = { ...snapshots.value, [name]: data };
   }
-  preparedRepositories.value = new Set(names);
-  loading.value = Object.fromEntries(names.map(name => [name, true]));
-  failures.value = {};
+  loading.value = { ...loading.value, ...Object.fromEntries(names.map(name => [name, true])) };
+  if (!target) failures.value = {};
   // One collector owns the semaphore for every section on this page.
   await Promise.all(names.map(async name => {
+    const repositoryRun = (repositoryRuns.get(name) ?? 0) + 1;
+    repositoryRuns.set(name, repositoryRun);
+    const current = () => run === generation && epoch === sessionEpoch && repositoryRuns.get(name) === repositoryRun
+      && token === props.credential && expandedRepositories.value.some(repo => repo.full_name === name);
     try {
       const data = props.demo ? demoStatistics(name) : await activeCollector!.load(name, Date.now(), force, preview => {
-        if (run === generation && epoch === sessionEpoch && activeCollector === collector && token === props.credential) {
+        if (current() && activeCollector === collector) {
           previewBatch.add(name, preview);
         }
       });
-      if (run === generation && epoch === sessionEpoch && token === props.credential) { previewBatch.discard(name); snapshots.value = { ...snapshots.value, [name]: data }; }
-      if (epoch === sessionEpoch && token === props.credential && activeCollector && token && !props.demo) {
+      if (current()) { previewBatch.discard(name); snapshots.value = { ...snapshots.value, [name]: data }; }
+      if (current() && activeCollector && token && !props.demo) {
         try { await writeStatisticsCache(token, activeCollector.export()); if (epoch === sessionEpoch) cacheFailed.value = false; }
         catch { if (epoch === sessionEpoch) cacheFailed.value = true; }
       }
-    } catch { if (run === generation) failures.value = { ...failures.value, [name]: true }; }
-    finally { if (run === generation) loading.value = { ...loading.value, [name]: false }; }
+    } catch { if (current()) failures.value = { ...failures.value, [name]: true }; }
+    finally { if (current()) loading.value = { ...loading.value, [name]: false }; }
   }));
 }
 watch([() => props.client, () => props.session, () => props.demo, () => props.credential], () => {
   generation++; previewBatch.clear(); const epoch = ++sessionEpoch;
-  collapsedRepositories.value.clear();
+  preferencesState.value = { ...props.preferences };
+  initializeCollapsePreferences();
+  repositoryRuns.clear();
   collector?.dispose(); collector = props.client ? new StatisticsCollector(props.client) : null;
   const activeCollector = collector, token = props.credential;
-  snapshots.value = {}; preparedRepositories.value = new Set(); period.value = statisticsCalendarWindow(); cacheFailed.value = false;
-  loading.value = Object.fromEntries(props.repositories.map(repo => [repo.full_name, true]));
+  snapshots.value = {}; period.value = statisticsCalendarWindow(); cacheFailed.value = false;
+  loading.value = Object.fromEntries(expandedRepositories.value.map(repo => [repo.full_name, true]));
   restoration = (async () => {
     const saved = token && !props.demo ? await readStatisticsCache(token) : [];
     if (epoch !== sessionEpoch || activeCollector !== collector) return;
@@ -395,14 +420,28 @@ watch([() => props.client, () => props.session, () => props.demo, () => props.cr
 watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
   const epoch = sessionEpoch;
   const selected = new Set(props.repositories.map(repo => repo.full_name));
-  preparedRepositories.value = new Set([...preparedRepositories.value].filter(name => selected.has(name)));
+  initializeCollapsePreferences();
+  for (const name of repositoryRuns.keys()) if (!selected.has(name)) { collector?.cancel(name); repositoryRuns.delete(name); }
   void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
+});
+watch(() => expandedRepositories.value.map(repo => repo.full_name), (names, previous) => {
+  for (const name of previous) if (!names.includes(name)) {
+    collector?.cancel(name); previewBatch.discard(name);
+    repositoryRuns.set(name, (repositoryRuns.get(name) ?? 0) + 1);
+    loading.value = { ...loading.value, [name]: false };
+  }
+  const epoch = sessionEpoch;
+  for (const name of names) if (!previous.includes(name)) {
+    const cached = collector?.cached(name);
+    if (cached) snapshots.value = { ...snapshots.value, [name]: cached };
+    void restoration.then(() => { if (epoch === sessionEpoch) return load(false, name); });
+  }
 });
 onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); document.removeEventListener("click", followSidebarLink); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
-    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1></div><button class="button small" :disabled="busy || !repositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
+    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1></div><button class="button small" :disabled="busy || !expandedRepositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
     <div v-if="repositories.length && !initialLoading" class="statistics-time-controls" role="region" :aria-label="t('Tidsintervall')">
       <div class="statistics-time-row">
         <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
@@ -433,12 +472,12 @@ onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generat
       <RefreshCw class="statistics-loading-spinner" :size="34" aria-hidden="true" />
       <h2>{{ t("Hämtar och sammanställer statistik") }}</h2>
       <p>{{ t("Vi hämtar underlaget från GitHub. Tillgängliga värden visas löpande under hämtningen.") }}</p>
-      <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: repositories.length }) }}</small>
+      <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: expandedRepositories.length }) }}</small>
     </div>
-    <div v-show="!initialLoading && !invalidRange" class="statistics-repositories">
+    <div v-show="!invalidRange" class="statistics-repositories">
       <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-failed="!!failures[repository.full_name]"
-        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="$event ? collapsedRepositories.add(repository.id) : collapsedRepositories.delete(repository.id)" @update:preference="updatePreference(repository.full_name, $event)" />
+        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">

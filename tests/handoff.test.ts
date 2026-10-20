@@ -77,7 +77,7 @@ const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"], notificationSounds: false,
   language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
   repoQuery: "sample", hideCoordination: false, splitByRepository: false, listMode: true, timeoutMinutes: 45, currentView: "statistics",
-  statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions" } },
+  statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions", collapsed: true } },
 };
 describe("optical preference schema v2", () => {
   it("roundtrips every chosen preference without exporting device grants or issue snapshots", () => {

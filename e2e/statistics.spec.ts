@@ -23,6 +23,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(page.locator(".statistics-view input[type=checkbox], .statistics-view .repository-selection, .statistics-active-filters")).toHaveCount(0);
   const design = sections.filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
   const weekend = sections.filter({ has: page.getByRole("heading", { name: "demo/weekend-project", exact: true }) });
+  await weekend.getByRole("button", { name: "Expandera demo/weekend-project", exact: true }).click();
   await expect(card(design, "Stängda issues").locator("strong")).toHaveText("4");
   await expect(card(weekend, "Stängda issues").locator("strong")).toHaveText("2");
   const timeControls = page.locator(".statistics-time-controls");

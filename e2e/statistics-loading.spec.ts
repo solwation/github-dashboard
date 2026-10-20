@@ -40,6 +40,7 @@ test("Statistics waits clearly, completes repositories independently and retains
     return route.fulfill({ json: [] });
   });
   await connect(page, names);
+  await page.getByRole('button', { name: 'Expandera sample/bravo', exact: true }).click();
   const splash = page.locator(".statistics-loading-splash");
   await expect(splash).toBeVisible();
   await expect(splash).toHaveAttribute("role", "status");

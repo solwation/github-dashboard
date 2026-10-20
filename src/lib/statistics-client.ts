@@ -19,7 +19,12 @@ export const statisticsLimits = { issues: 3, events: 100, commits: 3, pulls: 3, 
 export const STATISTICS_PREVIEW_INTERVAL_MS = 500;
 type StatisticsPreview = (data: StatisticsData) => void;
 type SourceReader = () => StatisticsData[StatisticsSourceName];
+export class StatisticsCancelledError extends Error {
+  constructor() { super("Statistics collection cancelled"); this.name = "StatisticsCancelledError"; }
+}
 interface PendingStatistics {
+  repository: string;
+  controller: AbortController;
   promise: Promise<StatisticsData>;
   listeners: Set<StatisticsPreview>;
   latest?: StatisticsData;
@@ -37,9 +42,14 @@ export class StatisticsCollector {
   private waiting: (() => void)[] = [];
   private disposed = false;
   constructor(private readonly client: StatisticsClient) {}
+  cancel(repository: string) {
+    for (const [key, pending] of this.pending) if (pending.repository === repository) {
+      pending.controller.abort(); clearTimeout(pending.timer); pending.listeners.clear(); this.pending.delete(key);
+    }
+  }
   dispose() {
     this.disposed = true;
-    for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.listeners.clear(); }
+    for (const pending of this.pending.values()) { pending.controller.abort(); clearTimeout(pending.timer); pending.listeners.clear(); }
     this.cache.clear(); this.restored.clear();
   }
   restore(entries: StatisticsData[]) {
@@ -54,13 +64,16 @@ export class StatisticsCollector {
     const data = [...this.cache.values()].filter(data => data.repository === repository && data.fetchedAt <= now && now - data.fetchedAt < STATISTICS_RETENTION_MS).sort((a, b) => b.fetchedAt - a.fetchedAt)[0];
     return data ? previewStatistics(data, now) : undefined;
   }
-  private async request<T>(path: string, options?: { store?: boolean }) {
+  private async request<T>(path: string, options?: { store?: boolean }, signal?: AbortSignal) {
     if (this.active >= statisticsLimits.concurrency) await new Promise<void>(resolve => this.waiting.push(resolve));
     else this.active++;
     try {
+      if (signal?.aborted) throw new StatisticsCancelledError();
       if (this.disposed) throw new Error("Statistics session ended");
       if (this.client.retryAfterMs?.()) throw new Error("Statistics temporarily rate limited");
-      return await (options ? this.client.request<T>(path, options) : this.client.request<T>(path));
+      const response = await (options ? this.client.request<T>(path, options) : this.client.request<T>(path));
+      if (signal?.aborted) throw new StatisticsCancelledError();
+      return response;
     } finally {
       const next = this.waiting.shift();
       if (next) next(); else this.active--;
@@ -70,11 +83,11 @@ export class StatisticsCollector {
     const response = error as { status?: number; permissionDenied?: boolean; rateLimited?: boolean };
     return (response?.permissionDenied === true || response?.status === 404) && !response.rateLimited && !(this.client.retryAfterMs?.() || 0);
   }
-  private async pages<T>(path: string, limit: number, now: number, stop?: (page: T[]) => boolean, progress?: (source: StatisticsSource<T>) => void): Promise<StatisticsSource<T>> {
+  private async pages<T>(path: string, limit: number, now: number, stop?: (page: T[]) => boolean, progress?: (source: StatisticsSource<T>) => void, signal?: AbortSignal): Promise<StatisticsSource<T>> {
     const data: T[] = [];
     let next: string | null = path;
     for (let page = 0; next && page < limit; page++) {
-      const response: { data: T[]; next: string | null } = await this.request<T[]>(next);
+      const response: { data: T[]; next: string | null } = await this.request<T[]>(next, undefined, signal);
       if (!Array.isArray(response.data)) throw new Error("Invalid statistics response");
       data.push(...response.data);
       next = stop?.(response.data) ? null : response.next;
@@ -93,7 +106,7 @@ export class StatisticsCollector {
       return pending.promise;
     }
     if (!force && existing && existing.from === window.from && existing.fetchedAt <= now && !this.restored.has(key) && now - existing.fetchedAt < cacheDuration) return existing;
-    const state: PendingStatistics = { promise: undefined!, listeners: new Set(onProgress ? [onProgress] : []) };
+    const state: PendingStatistics = { repository, controller: new AbortController(), promise: undefined!, listeners: new Set(onProgress ? [onProgress] : []) };
     const readers = new Map<StatisticsSourceName, SourceReader>();
     const base: StatisticsData = existing ? previewStatistics(existing, now) : {
       repository, ...window, fetchedAt: now, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [],
@@ -101,12 +114,12 @@ export class StatisticsCollector {
     // Build snapshots only on the timer, not once per page or diff. Producers may
     // reference mutable collection arrays; published arrays are detached copies.
     const update = (name: StatisticsSourceName, read: SourceReader) => {
-      if (this.disposed) return;
+      if (this.disposed || state.controller.signal.aborted) return;
       readers.set(name, read);
       if (!state.listeners.size || state.timer) return;
       state.timer = setTimeout(() => {
         state.timer = undefined;
-        if (this.disposed) return;
+        if (this.disposed || state.controller.signal.aborted) return;
         const snapshot: StatisticsData = { ...base, fetchedAt: now, temporary: [...base.temporary] };
         for (const [sourceName, get] of readers) {
           const source = get();
@@ -129,18 +142,18 @@ export class StatisticsCollector {
     };
     state.schedule = () => { const entry = readers.entries().next().value; if (entry) update(...entry); };
     this.pending.set(key, state);
-    const work = this.collect(repository, now, existing, force, update).then(result => {
-      if (!this.disposed) {
+    const work = this.collect(repository, now, existing, force, update, state.controller.signal).then(result => {
+      if (!this.disposed && !state.controller.signal.aborted) {
         for (const [oldKey, data] of this.cache) if (data.repository === repository) { this.cache.delete(oldKey); this.restored.delete(oldKey); }
         this.cache.set(key, result);
         if (this.cache.size > 10) this.cache.delete(this.cache.keys().next().value!);
       }
       return result;
-    }).finally(() => { clearTimeout(state.timer); state.listeners.clear(); this.pending.delete(key); });
+    }).finally(() => { clearTimeout(state.timer); state.listeners.clear(); if (this.pending.get(key) === state) this.pending.delete(key); });
     state.promise = work;
     return work;
   }
-  private async collect(repository: string, now: number, previous?: StatisticsData, force = false, progress: (name: StatisticsSourceName, read: SourceReader) => void = () => {}): Promise<StatisticsData> {
+  private async collect(repository: string, now: number, previous?: StatisticsData, force = false, progress: (name: StatisticsSourceName, read: SourceReader) => void = () => {}, signal?: AbortSignal): Promise<StatisticsData> {
     const window = statisticsCollectionWindow(now), root = `/repos/${repository}`;
     const since = `${window.from}T00:00:00Z`, until = new Date(now).toISOString();
     const temporary: StatisticsSourceName[] = [];
@@ -155,6 +168,7 @@ export class StatisticsCollector {
       let result: StatisticsSource<T> | null;
       try { result = await task(); }
       catch (error) {
+        if (signal?.aborted) throw new StatisticsCancelledError();
         result = null;
         if (!this.denied(error)) {
           temporary.push(name);
@@ -182,10 +196,10 @@ export class StatisticsCollector {
         // Reuse the board's fresh lists when they cover the whole window; a forced refresh always asks GitHub.
         const board = force ? null : this.client.boardIssues?.(repository, since, cacheDuration, now);
         if (board) return { data: board, complete: true, fetchedAt: now };
-        return cleanIssues(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now, undefined, source => progress("issues", () => cleanIssues(source))));
+        return cleanIssues(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now, undefined, source => progress("issues", () => cleanIssues(source)), signal));
       }),
       attempt("events", async () => {
-        const source = await this.pages<StatisticsEvent>(`${root}/issues/events?per_page=100`, statisticsLimits.events, now, undefined, source => progress("events", () => cleanEvents(source)));
+        const source = await this.pages<StatisticsEvent>(`${root}/issues/events?per_page=100`, statisticsLimits.events, now, undefined, source => progress("events", () => cleanEvents(source)), signal);
         // Repository event pages also contain labels, assignments and other activity. Five
         // pages can cover less than a day on an active repository (#212). Follow next
         // links to exhaustion (with a safety ceiling), without assuming date ordering:
@@ -209,7 +223,7 @@ export class StatisticsCollector {
               .sort((a, b) => Date.parse(commitDate(b)) - Date.parse(commitDate(a)));
             return { ...source, complete: source.complete && data.length <= 600, data: data.slice(0, 600), historyVerifiedAt: reuse ? verified : now };
           };
-          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now, undefined, source => progress("commits", () => cleanCommits(source)));
+          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now, undefined, source => progress("commits", () => cleanCommits(source)), signal);
           return cleanCommits(source);
         } catch (error) {
           // GitHub returns 409 for an empty Git repository: this is a real zero.
@@ -218,7 +232,7 @@ export class StatisticsCollector {
         }
       }),
       attempt("pulls", async () => unique(await this.pages<StatisticsPull>(`${root}/pulls?state=all&sort=updated&direction=desc&per_page=100`, statisticsLimits.pulls, now,
-        page => page.length > 0 && page[page.length - 1]!.updated_at < since, source => progress("pulls", () => unique(source))))),
+        page => page.length > 0 && page[page.length - 1]!.updated_at < since, source => progress("pulls", () => unique(source)), signal))),
     ]);
     const changes = commits ? await attempt<StatisticsChange>("changes", async () => {
       const nonMerge = commits.data.filter(commit => commit.parents.length <= 1);
@@ -233,6 +247,7 @@ export class StatisticsCollector {
       const results = await Promise.allSettled(Array.from({ length: Math.min(statisticsLimits.concurrency, queue.length) }, async () => {
         while (queue.length && !stopped) {
           try {
+          if (signal?.aborted) throw new StatisticsCancelledError();
           const commit = queue.shift()!;
           if (old.has(commit.sha)) { records.push(old.get(commit.sha)!); previewChanges(); continue; }
           let next: string | null = `${root}/commits/${encodeURIComponent(commit.sha)}?per_page=100`;
@@ -240,7 +255,7 @@ export class StatisticsCollector {
           const files = new Set<string>();
           for (let page = 0; next && page < statisticsLimits.files; page++) {
             // Commit details are immutable and kept in `changes`: never let them evict reusable ETags (#108).
-            const response: { data: { stats?: { additions: number; deletions: number }; files?: { filename: string }[] }; next: string | null } = await this.request(next, { store: false });
+            const response: { data: { stats?: { additions: number; deletions: number }; files?: { filename: string }[] }; next: string | null } = await this.request(next, { store: false }, signal);
             additions ??= response.data.stats?.additions;
             deletions ??= response.data.stats?.deletions;
             for (const file of response.data.files || []) files.add(file.filename);

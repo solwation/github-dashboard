@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { statisticsRepositoryCollapsed } from "./lib/statistics-preferences";
 import { useLanguage } from "./lib/i18n";
 import { browserTimeZone } from "./lib/browser-time";
 const accountTimeZone = browserTimeZone();
@@ -1356,7 +1357,7 @@ function restartStatisticsBackground() {
     if (run !== statisticsBackgroundRun || client !== api || token !== sessionToken.value) return;
     statisticsBackground = new StatisticsBackground({
       client, token,
-      repositories: () => statisticsRepositories.value.map(repo => repo.full_name),
+      repositories: () => statisticsRepositories.value.filter((repo, index) => !statisticsRepositoryCollapsed(statisticsPreferences.value, repo.full_name, index)).map(repo => repo.full_name),
       busy: () => busy.value || restoring.value || authBusy.value || logoutBusy.value || picker.value || editing.value !== null,
       allowed: () => client === api && token === sessionToken.value && !isDemo.value && currentView.value !== "statistics",
       collected: data => { if (run === statisticsBackgroundRun && client === api) statisticsCollected(data); },

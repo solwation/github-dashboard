@@ -63,6 +63,7 @@ export interface StatisticsFilter {
 export const statisticsMetrics = ["closed", "created", "reopened", "netIssues", "commits", "additions", "deletions", "netLines", "files", "prsOpened", "prsMerged", "prsClosed"] as const;
 export type StatisticsMetric = typeof statisticsMetrics[number];
 export interface StatisticsPreference extends StatisticsFilter {
+  collapsed?: boolean;
   metric: StatisticsMetric;
   metrics?: StatisticsMetric[];
 }

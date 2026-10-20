@@ -1,7 +1,7 @@
 import {
   clampStatisticsResolution, formatStatisticsBound, hasStatisticsTime, parseStatisticsBound,
   statisticsDurationMs, statisticsMetrics, statisticsRanges, statisticsResolutions, statisticsWindowMs, validStatisticsBound,
-  type StatisticsMetric, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
+  type StatisticsMetric, type StatisticsPreferences, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
 } from "./statistics";
 
 /**
@@ -42,8 +42,14 @@ export function normalizeStatisticsPreference(
     ? (value.resolution as StatisticsResolution)
     : undefined;
   const result: StatisticsPreference = { from, to, label, contributor, metric };
+  if (typeof value?.collapsed === "boolean") result.collapsed = value.collapsed;
   if (validList !== undefined) result.metrics = validList.length ? validList : [metric];
   if (range) result.range = range;
   if (rawResolution) result.resolution = clampStatisticsResolution(rawResolution, statisticsDurationMs({ from, to, range }), range);
   return result;
+}
+
+/** Old accounts without a flag open the first repository in the current order. */
+export function statisticsRepositoryCollapsed(preferences: StatisticsPreferences, repository: string, index: number): boolean {
+  return preferences[repository]?.collapsed ?? index > 0;
 }

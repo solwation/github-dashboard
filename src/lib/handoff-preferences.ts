@@ -15,6 +15,7 @@ import type { Rules } from "./model";
  * details are device/session state. notificationRepos records desired subscriptions only.
  */
 export interface HandoffStatisticsFilter {
+  collapsed?: boolean;
   from: string;
   to: string;
   label: string;
@@ -86,7 +87,8 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   currentView: value => value === "overview" || value === "statistics",
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
     ["from", "to", "label", "contributor", "metric"].every(key => Object.hasOwn(filter, key)) &&
-    Object.keys(filter).every(key => ["from", "to", "label", "contributor", "metric", "metrics", "range", "resolution"].includes(key)) &&
+    Object.keys(filter).every(key => ["from", "to", "label", "contributor", "metric", "metrics", "range", "resolution", "collapsed"].includes(key)) &&
+    (filter.collapsed === undefined || typeof filter.collapsed === "boolean") &&
     validWindow(filter.from, filter.to) &&
     text(filter.label) && text(filter.contributor) && statisticsMetrics.includes(filter.metric as StatisticsMetric) &&
     (filter.metrics === undefined || (Array.isArray(filter.metrics) && filter.metrics.length >= 1 && filter.metrics.length <= statisticsMetrics.length && filter.metrics.every(m => statisticsMetrics.includes(m as StatisticsMetric)))) &&

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { StatisticsCollector, STATISTICS_PREVIEW_INTERVAL_MS, type StatisticsClient } from '../src/lib/statistics-client';
+import { StatisticsCollector, StatisticsCancelledError, STATISTICS_PREVIEW_INTERVAL_MS, type StatisticsClient } from '../src/lib/statistics-client';
 import { StatisticsPreviewBatch } from '../src/lib/statistics-progress';
 import type { StatisticsData } from '../src/lib/statistics';
 const now = Date.parse('2026-10-20T12:00:00Z');
@@ -61,7 +61,7 @@ describe('batched statistics previews', () => {
     await vi.advanceTimersByTimeAsync(100);
     collector.dispose();
     events.resolve({ data: [], next: null });
-    await work;
+    await expect(work).rejects.toBeInstanceOf(StatisticsCancelledError);
     await vi.advanceTimersByTimeAsync(2000);
     expect(listener).not.toHaveBeenCalled();
     expect(collector.export()).toEqual([]);
@@ -182,4 +182,40 @@ it('keeps fresh records and newest prior history when a partial refresh exceeds 
   await work;
   expect(snapshot.issues!.data).toHaveLength(300);
   expect(snapshot.issues!.data.some(item => item.id === 302)).toBe(false);
+});
+
+it('cancels only one repository and allows immediate re-expansion without stale pending/cache writes', async () => {
+  vi.useFakeTimers();
+  const late = deferred<Reply>(), replacement = deferred<Reply>();
+  let first = true;
+  const calls: string[] = [];
+  const collector = new StatisticsCollector(client(url => {
+    calls.push(url.pathname + url.search);
+    if (url.pathname.includes('/one/') && url.pathname.endsWith('/issues')) {
+      if (first) { first = false; return late.promise; }
+      return replacement.promise;
+    }
+    return { data: [], next: null };
+  }));
+  const oldPreview = vi.fn(), newPreview = vi.fn();
+  const old = collector.load('sample/one', now, false, oldPreview);
+  const rejected = expect(old).rejects.toBeInstanceOf(StatisticsCancelledError);
+  const other = collector.load('sample/two', now);
+  await vi.advanceTimersByTimeAsync(100);
+  collector.cancel('sample/one');
+  const fresh = collector.load('sample/one', now + 1000, false, newPreview);
+  late.resolve({ data: [issue(1)], next: '/repos/sample/one/issues?page=2' });
+  await rejected;
+  expect(collector.export().some(data => data.repository === 'sample/one')).toBe(false);
+  // Old finally must not remove the new pending work.
+  const joined = collector.load('sample/one', now + 1000);
+  replacement.resolve({ data: [issue(2)], next: null });
+  const final = await fresh;
+  expect(await joined).toBe(final);
+  await other;
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(oldPreview).not.toHaveBeenCalled();
+  expect(final.issues!.data.map(item => item.id)).toEqual([2]);
+  expect(calls.some(path => path.includes('page=2'))).toBe(false);
+  expect(collector.export().map(data => data.repository).sort()).toEqual(['sample/one', 'sample/two']);
 });

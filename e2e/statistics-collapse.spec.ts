@@ -42,7 +42,7 @@ for (const width of [1440, 320]) {
     await expect(collapse).toHaveAttribute('aria-expanded', 'false');
     await expect(repository.locator('.statistics-repository-heading')).toBeVisible();
     await expect(repository.locator('.statistics-repository-body')).toBeHidden();
-    await expect(other.locator('.statistics-repository-body')).toBeVisible();
+    await expect(other.locator('.statistics-repository-body')).toBeHidden();
     await expect(chart).toHaveAttribute('data-instance', 'retained');
     await collapse.press('Enter');
     await expect(collapse).toHaveAttribute('aria-expanded', 'true');
@@ -62,6 +62,7 @@ test('sidebar navigation reveals a collapsed repository including a repeated cli
   await page.getByRole('link', { name: 'Statistik', exact: true }).click();
   const target = page.locator('#statistics-repo-2');
   const link = page.locator('.sidebar-repository-row[data-repository="demo/weekend-project"] .sidebar-repository');
+  await target.getByRole('button', { name: 'Expandera demo/weekend-project', exact: true }).click();
   for (let attempt = 0; attempt < 2; attempt++) {
     await target.getByRole('button', { name: 'Kollapsa demo/weekend-project', exact: true }).click();
     await expect(target.locator('.statistics-repository-body')).toBeHidden();

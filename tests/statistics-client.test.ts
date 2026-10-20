@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StatisticsCollector, statisticsLimits, type StatisticsClient } from "../src/lib/statistics-client";
+import { StatisticsCollector, StatisticsCancelledError, statisticsLimits, type StatisticsClient } from "../src/lib/statistics-client";
 import { formatStatisticsBound, summarizeStatistics, type StatisticsCommit } from "../src/lib/statistics";
 import { parseStatisticsCache } from "../src/lib/statistics-cache";
 const now = Date.parse("2026-10-16T15:00:00Z");
@@ -180,7 +180,7 @@ describe("statistics transport and coverage", () => {
     collector.dispose();
     expect(calls.length).toBeLessThanOrEqual(3);
     for (const resolve of finish) resolve();
-    await work;
+    await expect(work).rejects.toBeInstanceOf(StatisticsCancelledError);
     expect(collector.export()).toEqual([]);
     expect(collector.cached("sample/repo", now)).toBeUndefined();
     await expect(collector.load("sample/repo", now)).rejects.toThrow("Statistics session ended");

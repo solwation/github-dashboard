@@ -243,3 +243,14 @@ describe("background statistics pause conditions", () => {
     expect(rateLimitLow({ remaining: 3000, limit: 15000, resetAt: now })).toBe(true);
   });
 });
+
+it('stops the current background repository when the open-repository selection changes', async () => {
+  const repositories = ['sample/one', 'sample/two'];
+  const h = harness({ repositories, onRequest: () => { repositories.splice(0, 1); } });
+  h.background.start(0);
+  await h.cycle();
+  expect(h.calls).toHaveLength(1);
+  expect(h.writes).toHaveLength(0);
+  expect(h.background.lastPause).toBe('disallowed');
+  h.background.stop();
+});
