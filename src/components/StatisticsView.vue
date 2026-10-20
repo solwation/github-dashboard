@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { StatisticsPreviewBatch } from "../lib/statistics-progress";
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { RefreshCw, BarChart3, RotateCcw } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
@@ -254,6 +255,9 @@ function resetTimeSpan() {
 }
 
 const snapshots = shallowRef<Record<string, StatisticsData>>({});
+const previewBatch = new StatisticsPreviewBatch(previews => {
+  snapshots.value = { ...snapshots.value, ...previews };
+});
 const preparedRepositories = ref(new Set<string>());
 const renderedRepositories = computed(() => props.repositories.filter(repo => preparedRepositories.value.has(repo.full_name)));
 const loading = ref<Record<string, boolean>>({});
@@ -324,6 +328,7 @@ watch(() => props.preferences, value => {
 }, { deep: true });
 async function load(force = false) {
   const run = ++generation;
+  previewBatch.clear();
   const epoch = sessionEpoch, activeCollector = collector, token = props.credential;
   const names = props.repositories.map(repo => repo.full_name);
   const selected = new Set(names);
@@ -353,9 +358,13 @@ async function load(force = false) {
   // One collector owns the semaphore for every section on this page.
   await Promise.all(names.map(async name => {
     try {
-      const data = props.demo ? demoStatistics(name) : await activeCollector!.load(name, Date.now(), force);
-      if (run === generation) snapshots.value = { ...snapshots.value, [name]: data };
-      if (epoch === sessionEpoch && activeCollector && token && !props.demo) {
+      const data = props.demo ? demoStatistics(name) : await activeCollector!.load(name, Date.now(), force, preview => {
+        if (run === generation && epoch === sessionEpoch && activeCollector === collector && token === props.credential) {
+          previewBatch.add(name, preview);
+        }
+      });
+      if (run === generation && epoch === sessionEpoch && token === props.credential) { previewBatch.discard(name); snapshots.value = { ...snapshots.value, [name]: data }; }
+      if (epoch === sessionEpoch && token === props.credential && activeCollector && token && !props.demo) {
         try { await writeStatisticsCache(token, activeCollector.export()); if (epoch === sessionEpoch) cacheFailed.value = false; }
         catch { if (epoch === sessionEpoch) cacheFailed.value = true; }
       }
@@ -364,7 +373,7 @@ async function load(force = false) {
   }));
 }
 watch([() => props.client, () => props.session, () => props.demo, () => props.credential], () => {
-  generation++; const epoch = ++sessionEpoch;
+  generation++; previewBatch.clear(); const epoch = ++sessionEpoch;
   collapsedRepositories.value.clear();
   collector?.dispose(); collector = props.client ? new StatisticsCollector(props.client) : null;
   const activeCollector = collector, token = props.credential;
@@ -389,7 +398,7 @@ watch(() => props.repositories.map(repo => repo.full_name).join("\n"), () => {
   preparedRepositories.value = new Set([...preparedRepositories.value].filter(name => selected.has(name)));
   void restoration.then(() => { if (epoch === sessionEpoch) return load(); });
 });
-onUnmounted(() => { rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); document.removeEventListener("click", followSidebarLink); });
+onUnmounted(() => { previewBatch.clear(); rolloverReloadPending = false; generation++; sessionEpoch++; collector?.dispose(); window.removeEventListener("hashchange", followHashChange); document.removeEventListener("click", followSidebarLink); });
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
@@ -423,7 +432,7 @@ onUnmounted(() => { rolloverReloadPending = false; generation++; sessionEpoch++;
     <div v-if="initialLoading" class="statistics-loading-splash" role="status" aria-live="polite">
       <RefreshCw class="statistics-loading-spinner" :size="34" aria-hidden="true" />
       <h2>{{ t("Hämtar och sammanställer statistik") }}</h2>
-      <p>{{ t("Vi hämtar underlaget från GitHub. Statistiken visas så snart den är klar.") }}</p>
+      <p>{{ t("Vi hämtar underlaget från GitHub. Tillgängliga värden visas löpande under hämtningen.") }}</p>
       <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: repositories.length }) }}</small>
     </div>
     <div v-show="!initialLoading && !invalidRange" class="statistics-repositories">

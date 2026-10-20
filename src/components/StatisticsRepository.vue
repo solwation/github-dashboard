@@ -64,7 +64,7 @@ function windowFilter(label: string, contributor: string): StatisticsFilter {
   };
 }
 function normalize(value: StatisticsPreference | undefined) {
-  const choices = props.data ? dimensions.value : undefined;
+  const choices = props.data && !props.loading ? dimensions.value : undefined;
   const base = {
     ...value,
     from: props.timeSpan.from,
@@ -73,7 +73,7 @@ function normalize(value: StatisticsPreference | undefined) {
     resolution: props.timeSpan.resolution,
   };
   const normalized = normalizeStatisticsPreference(base, props.period, choices);
-  if (props.data) {
+  if (props.data && !props.loading) {
     const totals = summarize(windowFilter(normalized.label, normalized.contributor)).totals;
     const metrics = statisticsMetrics.filter(key => totals[key] !== undefined);
     return normalizeStatisticsPreference(normalized, props.period, { ...dimensions.value, metrics });
@@ -133,7 +133,7 @@ function number(value: number) { return value.toLocaleString(locale.value); }
 function publish(value: StatisticsPreference) {
   if (JSON.stringify(value) !== JSON.stringify(props.preference)) emit("update:preference", { ...value });
 }
-watch([() => props.preference, () => props.data, () => props.period, () => props.timeSpan], () => {
+watch([() => props.preference, () => props.data, () => props.period, () => props.timeSpan, () => props.loading], () => {
   const normalized = normalize(props.preference);
   if (JSON.stringify(state.value) !== JSON.stringify(normalized)) state.value = normalized;
   publish(normalized);
@@ -187,7 +187,7 @@ function clearFilters() {
       <RefreshCw class="statistics-loading-spinner" :size="26" aria-hidden="true" />
       <div><strong>{{ t("Hämtar och sammanställer statistik") }}</strong><p>{{ t("Vänta medan underlaget för {name} hämtas.", { name: repository.full_name }) }}</p></div>
     </div>
-    <p v-else-if="loading" class="statistics-refreshing" role="status" aria-live="polite"><RefreshCw class="statistics-loading-spinner" :size="15" aria-hidden="true" />{{ t("Uppdaterar statistik. Tidigare värden visas under tiden.") }}</p>
+    <p v-else-if="loading" class="statistics-refreshing" role="status" aria-live="polite"><RefreshCw class="statistics-loading-spinner" :size="15" aria-hidden="true" />{{ t("Hämtar statistik. Värden och diagram uppdateras löpande.") }}</p>
     <div class="statistics-repository-content" :aria-busy="loading">
     <p v-if="temporary && !loading" role="status" class="notice">{{ anyData ? t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") : t("Statistiken kunde inte hämtas just nu. Försök igen senare.") }}</p>
     <template v-if="anyData">

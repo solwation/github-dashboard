@@ -29,8 +29,11 @@ test("Statistics waits clearly, completes repositories independently and retains
     const url = new URL(route.request().url());
     if (url.pathname === "/user") return route.fulfill({ json: { login: "loading-fixture", avatar_url: "" } });
     if (url.pathname === "/user/repos") return route.fulfill({ json: repos });
-    if (url.pathname.endsWith("/issues/events")) {
+    if (url.pathname.endsWith("/issues/events") || (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "all")
+      || ((url.pathname.includes("/commits") || url.pathname.endsWith("/pulls")) && url.searchParams.get("per_page") !== "1")) {
       await waits[url.pathname.includes("/alpha/") ? "alpha" : "bravo"].promise;
+    }
+    if (url.pathname.endsWith("/issues/events")) {
       return route.fulfill({ json: [{ id: 1, event: "closed", created_at: timestamp, issue, actor: { login: "sample" } }] });
     }
     if (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "all") return route.fulfill({ json: [issue] });
@@ -72,7 +75,7 @@ test("Statistics waits clearly, completes repositories independently and retains
   waits = { alpha: gate(), bravo: gate() };
   await refresh.click();
   await expect(splash).toHaveCount(0);
-  await expect(alpha.locator(".statistics-refreshing")).toContainText("Tidigare värden visas under tiden.");
+  await expect(alpha.locator(".statistics-refreshing")).toContainText("Värden och diagram uppdateras löpande.");
   await expect(alpha.locator(".statistics-total").filter({ hasText: "Stängda issues" }).locator("strong")).toHaveText("1");
   await expect(bravo.locator(".statistics-total").filter({ hasText: "Stängda issues" }).locator("strong")).toHaveText("1");
   await expect(alpha.locator(".statistics-repository-content")).toHaveAttribute("aria-busy", "true");
