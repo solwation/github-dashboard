@@ -3,6 +3,8 @@ import {
   combinedEstimate,
   estimateLabel,
   historySamples,
+  MAX_HISTORY_SAMPLES,
+  nextHistoryExpiry,
   median,
   parallelism,
   repositoryEstimate,
@@ -115,7 +117,7 @@ describe("parallelism", () => {
   });
   it("starts the backlog immediately without work in progress", () => {
     const estimate = repositoryEstimate([done(hour), done(hour, 2 * day), done(hour, 3 * day), issue("backlog")], now);
-    expect(estimate.backlog).toEqual({ count: 1, remainingMs: hour });
+    expect(estimate.backlog).toEqual({ count: 1, points: 1, remainingMs: hour });
   });
 });
 
@@ -131,8 +133,8 @@ describe("combined board", () => {
       repositories: 2,
       samples: 6,
       windowDays: 30,
-      progress: { count: 3, remainingMs: 3 * hour, overdue: 1 },
-      backlog: { count: 1, remainingMs: fast.backlog!.remainingMs },
+      progress: { count: 3, points: 3, remainingMs: 3 * hour, overdue: 1 },
+      backlog: { count: 1, points: 1, remainingMs: fast.backlog!.remainingMs },
     });
     expect(fast.backlog!.remainingMs).toBeCloseTo(30 * min + hour / 1.1);
   });
@@ -154,5 +156,48 @@ describe("duration label", () => {
     expect(estimateLabel(3 * day)).toBe("≈ 3 d");
     expect(estimateLabel(59.6 * min)).toBe("≈ 1 h");
     expect(estimateLabel(Number.NaN)).toBe("");
+  });
+});
+
+describe("recent point-calibrated forecasts", () => {
+  const sized = (points: number) => ({ name: `points: ${points}`, color: "000000" });
+  it("caps calibration to the latest 30 eligible closures regardless of input order", () => {
+    const history = Array.from({ length: 40 }, (_, index) => done(index < 30 ? hour : 100 * hour, index * hour));
+    const samples = historySamples([...history].reverse(), now);
+    expect(samples).toHaveLength(MAX_HISTORY_SAMPLES);
+    expect(samples.map(sample => sample.issue.id)).toEqual(history.slice(0, 30).map(issue => issue.id));
+    expect(repositoryEstimate([...history, issue("backlog")], now).basis.msPerPoint).toBe(hour);
+  });
+  it("keeps the exact window edge, excludes invalid/future/zero durations and wakes after expiry", () => {
+    const edge = done(hour, 30 * day);
+    const items = [edge, done(hour, 30 * day - min), done(hour, 30 * day - 2 * min),
+      done(hour, 30 * day + 1), done(hour, -min), done(0), done(-min),
+      issue("closed", { workStartedAt: "invalid", startedAt: iso(now - hour), closed_at: iso(now) })];
+    expect(historySamples(items, now)).toHaveLength(3);
+    expect(nextHistoryExpiry(items, now)).toBe(now + 1);
+    expect(repositoryEstimate([...items, issue("backlog")], now).backlog).not.toBeNull();
+    expect(repositoryEstimate([...items, issue("backlog")], now + 1).backlog).toBeNull();
+    expect(nextHistoryExpiry(items, now + 1)).toBe(now + min + 1);
+    expect(nextHistoryExpiry([], now)).toBeNull();
+  });
+  it("learns a robust time per point, then sizes each issue before subtracting elapsed work", () => {
+    const history = [
+      { ...done(hour, 20 * day), labels: [sized(1)] },
+      { ...done(3 * hour, 10 * day), labels: [sized(3)] },
+      { ...done(5 * hour, 5 * day), labels: [sized(5)] },
+      { ...done(100 * hour, day), labels: [sized(1)] },
+    ];
+    const small = repositoryEstimate([...history, issue("backlog", { labels: [sized(1)] })], now);
+    const large = repositoryEstimate([...history, issue("backlog", { labels: [sized(8)] })], now);
+    expect(small.basis.typicalMs).toBe(4 * hour);
+    expect(small.basis.msPerPoint).toBe(hour);
+    expect(large.backlog!.remainingMs / small.backlog!.remainingMs).toBe(8);
+    const progress = repositoryEstimate([...history,
+      issue("progress", { labels: [{ name: "in-progress", color: "" }, sized(5)], startedAt: iso(now - 30 * min) }),
+      issue("progress", { labels: [{ name: "in-progress", color: "" }, sized(3)] }),
+      issue("progress", { labels: [{ name: "in-progress", color: "" }, sized(1)], startedAt: iso(now - 2 * hour) }),
+    ], now).progress!;
+    expect(progress).toMatchObject({ points: 9, remainingMs: 4.5 * hour, overdue: 1, unknownStart: 1 });
+    expect(progress.items.map(item => item.remainingMs)).toEqual([4.5 * hour, 3 * hour, 0]);
   });
 });

@@ -1,4 +1,5 @@
 import { t } from "./i18n";
+import { approximatePoints } from "./story-points";
 import { column, type Issue, type Rules } from "./model";
 
 /**
@@ -6,20 +7,17 @@ import { column, type Issue, type Rules } from "./model";
  * issues they already show, after their own filters (hidden coordination, search), plus `now`.
  *
  * Model:
- * - History: closed issues of one repository closed within the last `windowDays` with a known
- *   work start: `workStartedAt` (#141, set by sync or derived from repository events), falling
- *   back to `startedAt`. Their duration is start → closed_at. Issues closed without a known start
- *   (never in progress, or the timeline is unknown) are excluded.
- * - Typical time: the median duration, which resists outliers. Fewer than `MIN_SAMPLES` samples
- *   give no estimate.
- * - In progress: each issue has remaining = max(0, typical − elapsed). The column is done when
- *   the longest remaining issue finishes. Issues past the typical time count as 0 and are
- *   reported as `overdue`; issues without a known start are assumed to need the full typical time.
+ * - History: the most recent 30 positive start → close durations within 30 days, with a known
+ *   workStartedAt (falling back to startedAt). Unknown/future/invalid closures never calibrate.
+ * - Size: approximatePoints supplies bounded local 1–13 point scores, not measured complexity.
+ * - Calibration: median(duration / points) per repository; fewer than MIN_SAMPLES gives no estimate.
+ * - In progress: max(0, points × calibrated time per point − elapsed). The longest remaining issue
+ *   decides. Past-due issues count as zero and unknown starts need their full point-based duration.
  * - Parallelism: the time-weighted average number of issues in progress while at least one was in
  *   progress, over the window: sum of in-progress durations (history plus current in-progress
  *   issues, clipped to the window) divided by the length of their union. Idle periods such as
  *   nights do not dilute it. Never below 1.
- * - Backlog: in-progress remaining time + backlog count × typical ÷ parallelism, since backlog
+ * - Backlog: in-progress remaining time + backlog points × time per point ÷ parallelism, since backlog
  *   work starts when capacity frees up.
  * - Combined board: repositories work independently in parallel, so each column finishes when
  *   the slowest repository finishes (maximum per column). Repositories without an estimate are
@@ -27,6 +25,7 @@ import { column, type Issue, type Rules } from "./model";
  */
 export const ESTIMATE_WINDOW_DAYS = 30;
 export const MIN_SAMPLES = 3;
+export const MAX_HISTORY_SAMPLES = 30;
 const DAY_MS = 86400000;
 
 export interface HistorySample {
@@ -36,10 +35,12 @@ export interface HistorySample {
   durationMs: number;
 }
 export interface EstimateBasis {
-  /** Number of closed issues with a known start in the window. */
+  /** Number of recent eligible closures used, capped at MAX_HISTORY_SAMPLES. */
   samples: number;
-  /** Median duration of those samples, or null with too few samples. */
+  /** Raw median duration retained for existing consumers; forecasts use msPerPoint. */
   typicalMs: number | null;
+  /** Median positive duration divided by approximate issue points. */
+  msPerPoint: number | null;
   windowDays: number;
   /** Average concurrent in-progress issues, at least 1. */
   parallelism: number;
@@ -47,13 +48,16 @@ export interface EstimateBasis {
 export interface ProgressItemEstimate {
   issue: Issue;
   remainingMs: number;
+  points: number;
   overdue: boolean;
-  /** Start time was unknown; the full typical time is assumed. */
+  /** Start time was unknown; the full point-based duration is assumed. */
   unknownStart: boolean;
 }
 export interface ColumnEstimate {
   /** Issues in the column. */
   count: number;
+  /** Sum of bounded approximate issue sizes in this column. */
+  points: number;
   /** Time until the column is done, from `now`. */
   remainingMs: number;
 }
@@ -86,7 +90,7 @@ export interface EstimateOptions {
 const time = (value: string | null | undefined) => (value ? Date.parse(value) : NaN);
 const issuesOf = (issues: Issue[]) => issues.filter((issue) => !issue.pull_request);
 
-/** Closed issues within the window that were in progress, with their in-progress duration. */
+/** Most recent eligible closures in the rolling window, capped before calibration and concurrency. */
 export function historySamples(
   issues: Issue[],
   now: number,
@@ -98,10 +102,17 @@ export function historySamples(
     if (column(issue, rules) !== "closed") continue;
     const startedMs = time(issue.workStartedAt ?? issue.startedAt), closedMs = time(issue.closed_at);
     if (!Number.isFinite(startedMs) || !Number.isFinite(closedMs)) continue;
-    if (closedMs < cutoff || closedMs > now || closedMs < startedMs) continue;
+    if (closedMs < cutoff || closedMs > now || closedMs <= startedMs) continue;
     samples.push({ issue, startedMs, closedMs, durationMs: closedMs - startedMs });
   }
-  return samples;
+  return samples.sort((a, b) => b.closedMs - a.closedMs || b.issue.id - a.issue.id).slice(0, MAX_HISTORY_SAMPLES);
+}
+
+/** First millisecond after a currently included closure leaves the inclusive rolling window. */
+export function nextHistoryExpiry(issues: Issue[], now: number, options: EstimateOptions = {}): number | null {
+  const samples = historySamples(issues, now, options);
+  if (!samples.length) return null;
+  return Math.min(...samples.map(sample => sample.closedMs + (options.windowDays ?? ESTIMATE_WINDOW_DAYS) * DAY_MS + 1));
 }
 
 export function median(values: number[]): number | null {
@@ -155,20 +166,24 @@ export function repositoryEstimate(
   const list = issuesOf(issues);
   const samples = historySamples(list, now, options);
   const typicalMs = typicalDuration(samples);
+  const msPerPoint = samples.length < MIN_SAMPLES ? null : median(samples.map(sample => sample.durationMs / approximatePoints(sample.issue)));
   const active = list.filter((issue) => column(issue, rules) === "progress");
-  const waiting = list.filter((issue) => column(issue, rules) === "backlog").length;
+  const waiting = list.filter((issue) => column(issue, rules) === "backlog");
+  const waitingPoints = waiting.reduce((sum, issue) => sum + approximatePoints(issue), 0);
   const basis: EstimateBasis = {
     samples: samples.length,
     typicalMs,
+    msPerPoint,
     windowDays,
     parallelism: parallelism(samples, active, now, windowDays),
   };
-  if (typicalMs === null) return { basis, progress: null, backlog: null };
+  if (msPerPoint === null) return { basis, progress: null, backlog: null };
   const items = active.map((issue): ProgressItemEstimate => {
+    const points = approximatePoints(issue), durationMs = points * msPerPoint;
     const started = time(issue.startedAt);
-    if (!Number.isFinite(started)) return { issue, remainingMs: typicalMs, overdue: false, unknownStart: true };
-    const left = typicalMs - Math.max(0, now - started);
-    return { issue, remainingMs: Math.max(0, left), overdue: left < 0, unknownStart: false };
+    if (!Number.isFinite(started)) return { issue, points, remainingMs: durationMs, overdue: false, unknownStart: true };
+    const left = durationMs - Math.max(0, now - started);
+    return { issue, points, remainingMs: Math.max(0, left), overdue: left < 0, unknownStart: false };
   });
   const progressMs = items.reduce((longest, item) => Math.max(longest, item.remainingMs), 0);
   return {
@@ -176,14 +191,15 @@ export function repositoryEstimate(
     progress: items.length
       ? {
           count: items.length,
+          points: items.reduce((sum, item) => sum + item.points, 0),
           remainingMs: progressMs,
           overdue: items.filter((item) => item.overdue).length,
           unknownStart: items.filter((item) => item.unknownStart).length,
           items,
         }
       : null,
-    backlog: waiting
-      ? { count: waiting, remainingMs: progressMs + (waiting * typicalMs) / basis.parallelism }
+    backlog: waiting.length
+      ? { count: waiting.length, points: waitingPoints, remainingMs: progressMs + (waitingPoints * msPerPoint) / basis.parallelism }
       : null,
   };
 }
@@ -201,6 +217,7 @@ export function combinedEstimate(estimates: RepositoryEstimate[]): CombinedEstim
     progress: progress.length
       ? {
           count: progress.reduce((sum, p) => sum + p.count, 0),
+          points: progress.reduce((sum, p) => sum + p.points, 0),
           remainingMs: Math.max(...progress.map((p) => p.remainingMs)),
           overdue: progress.reduce((sum, p) => sum + p.overdue, 0),
         }
@@ -208,6 +225,7 @@ export function combinedEstimate(estimates: RepositoryEstimate[]): CombinedEstim
     backlog: backlog.length
       ? {
           count: backlog.reduce((sum, b) => sum + b.count, 0),
+          points: backlog.reduce((sum, b) => sum + b.points, 0),
           remainingMs: Math.max(...backlog.map((b) => b.remainingMs)),
         }
       : null,

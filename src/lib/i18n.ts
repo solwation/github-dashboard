@@ -681,6 +681,9 @@ export const english: Record<string, string> = {
   "över uppskattning": "over estimate",
   "Median {typical} för {count} stängda ärenden senaste {days} dagarna.":
     "Median {typical} for {count} closed issues in the last {days} days.",
+  "Grov storlek: {points} poäng från poänglabels eller rensad titel/beskrivning, delmål och risksignaler (1–13 per ärende, inte uppmätt komplexitet).": "Rough size: {points} points from point labels or cleaned title/description, scope items and risk signals (1–13 per issue, not measured complexity).",
+  "Median {time} per poäng från de senaste {count} användbara stängningarna inom {days} dagar (högst {max}).": "Median {time} per point from the latest {count} usable closures within {days} days (at most {max}).",
+  "Median per repository: {time} per poäng från {count} användbara stängningar i {repositories} repositories inom {days} dagar, högst {max} senaste per repository. Långsammaste repository avgör.": "Per-repository median: {time} per point from {count} usable closures in {repositories} repositories within {days} days, at most the latest {max} per repository. The slowest repository decides.",
   "Backlog delas med {parallel} samtidigt pågående i snitt.":
     "Backlog is divided by {parallel} issues in progress at a time on average.",
   "Median per repository från {count} stängda ärenden i {repositories} repositories senaste {days} dagarna. Långsammaste repository avgör.":

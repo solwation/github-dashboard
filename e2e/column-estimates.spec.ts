@@ -26,7 +26,7 @@ async function estimatesFit(page: Page, scope: Locator, progressText: RegExp, ba
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 
-function fixture(page: Page, state: { closedActive: boolean; closedAt: number }) {
+function fixture(page: Page, state: { closedActive: boolean; closedAt: number; largeBacklog: boolean }) {
   const issue = (repo: typeof repos[number], number: number, fields: Record<string, unknown>) => ({ id: repo.id * 100 + number, number, title: `${repo.name} ${number}`, body: '', comments: 0,
     state: 'open', labels: [], assignees: [], created_at: iso(base - 5 * day), updated_at: iso(base - day), closed_at: null, html_url: `${repo.html_url}/issues/${number}`, ...fields });
   const closed = (repo: typeof repos[number], number: number, daysAgo: number, minutes: number) =>
@@ -34,7 +34,7 @@ function fixture(page: Page, state: { closedActive: boolean; closedAt: number })
   const issues = (repo: typeof repos[number]) => repo.id === 1 ? [
     closed(repo, 1, 3, 20), closed(repo, 2, 2, 30), closed(repo, 3, 1, 40),
     issue(repo, 4, { labels: [{ name: 'priority: high', color: '000000' }] }),
-    issue(repo, 5, { labels: [{ name: 'priority: low', color: '000000' }] }),
+    issue(repo, 5, { updated_at: iso(state.largeBacklog ? base + 5 * minute : base - day), labels: [{ name: 'priority: low', color: '000000' }, ...(state.largeBacklog ? [{ name: 'points: 5', color: '000000' }] : [])] }),
     state.closedActive
       ? issue(repo, 6, { state: 'closed', startedAt: iso(base - 10 * minute), closed_at: iso(state.closedAt), updated_at: iso(state.closedAt) })
       : issue(repo, 6, { labels: [{ name: 'in-progress', color: '000000' }] }),
@@ -57,7 +57,7 @@ function fixture(page: Page, state: { closedActive: boolean; closedAt: number })
 }
 
 test('column estimates show the basis, count down, follow a sync and fit every board mode', async ({ page }) => {
-  const state = { closedActive: false, closedAt: 0 };
+  const state = { closedActive: false, closedAt: 0, largeBacklog: false };
   await fixture(page, state);
   await page.clock.install({ time: base });
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -74,7 +74,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   // Median 30 min, started 10 min ago: 20 min left; backlog 20 + 2 × 30 min at parallelism 1.
   await expect(progress).toHaveText(/·\s*≈ 20 min kvar/);
   await expect(backlog).toHaveText(/·\s*≈ 1 h 20 min/);
-  await expect(progress).toHaveAttribute('title', 'Median 30 min för 3 stängda ärenden senaste 30 dagarna.');
+  await expect(progress).toHaveAttribute('title', /Grov storlek: 1 poäng.*inte uppmätt komplexitet.*Median 30 min per poäng.*3 användbara stängningarna inom 30 dagar \(högst 30\)/);
   await expect(backlog).toHaveAttribute('title', /Backlog delas med 1\.0 samtidigt pågående i snitt\./);
   await expect(progress).not.toHaveAttribute('aria-live');
   await expect(page.locator('[aria-live] .column-estimate')).toHaveCount(0);
@@ -97,7 +97,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   const board = page.locator('.combined-board');
   await expect(board.locator('.progress .column-estimate')).toHaveText(/≈ 15 min kvar/);
   await expect(board.locator('.backlog .column-estimate')).toHaveText(/≈ 1 h 15 min/);
-  await expect(board.locator('.progress .column-estimate')).toHaveAttribute('title', /Median per repository från 3 stängda ärenden i 1 repositories/);
+  await expect(board.locator('.progress .column-estimate')).toHaveAttribute('title', /Median per repository: 30 min per poäng från 3 användbara stängningar i 1 repositories/);
   await expect(board.locator('.issue-row').first()).toBeVisible();
   await expect(board.locator('.backlog .column-estimate')).toHaveText(/≈ 1 h 15 min/);
   await estimatesFit(page, board, /≈ 15 min kvar/, /≈ 1 h 15 min/);
@@ -124,12 +124,42 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await expect(lane.locator('.progress .issue-row')).toHaveCount(0);
   await expect(progress).toHaveCount(0);
   await expect(backlog).toHaveText(/≈ 50 min/);
-  await expect(backlog).toHaveAttribute('title', /Median 25 min för 4 stängda ärenden/);
+  await expect(backlog).toHaveAttribute('title', /Median 25 min per poäng från de senaste 4 användbara stängningarna/);
 
   // English uses the same compact format.
   await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
   await page.getByLabel('Språk', { exact: true }).selectOption('en');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await expect(backlog).toHaveAttribute('title', /^Median 25 min for 4 closed issues in the last 30 days\. Backlog is divided by 1\.0/);
+  await expect(backlog).toHaveAttribute('title', /^Rough size: 2 points.*not measured complexity.*Median 25 min per point.*4 usable closures within 30 days.*Backlog is divided by 1\.0/);
   await expect(backlog).toHaveText(/≈ 50 min/);
+  // Explicit bounded point labels size individual work while using the same repository calibration.
+  state.largeBacklog = true;
+  await expect(page.locator('.board-toolbar')).toHaveAttribute('data-busy', 'false');
+  await page.keyboard.press('Control+r');
+  await expect(backlog).toHaveText(/≈ 2 h 30 min/);
+  await expect(backlog).toHaveAttribute('title', /^Rough size: 6 points.*Median 25 min per point/);
+});
+
+test('backlog-only forecast expires at its evidence window boundary without new issue data', async ({ page }) => {
+  const at = base + 28 * day + 30 * minute - 1000;
+  await fixture(page, { closedActive: true, closedAt: base + 5 * minute, largeBacklog: false });
+  let issueResponses = 0;
+  page.on('response', response => { if (response.ok() && /\/issues\?/.test(response.url())) issueResponses++; });
+  await page.clock.install({ time: at });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
+  await page.getByLabel('GitHub personal access token').fill('fixture-window-token');
+  await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
+  await page.getByRole('checkbox', { name: repos[0]!.full_name }).check();
+  await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
+  const estimate = page.locator('#repo-1 .backlog .column-estimate');
+  await expect(estimate).toBeVisible();
+  await expect(estimate).toHaveAttribute('title', /3 användbara stängningarna/);
+  await expect(page.locator('.board-toolbar')).toHaveAttribute('data-busy', 'false');
+  const before = issueResponses;
+  // An incidental background refresh cannot supply a changed snapshot in this check.
+  await page.route(url => url.hostname === 'api.github.com' && url.pathname.endsWith('/issues'), route => route.abort());
+  await page.clock.fastForward(2000);
+  await expect(estimate).toHaveCount(0);
+  expect(issueResponses).toBe(before);
 });
