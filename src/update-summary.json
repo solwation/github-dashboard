@@ -1,13 +1,10 @@
 {
-  "baseCommit": "fe6bd59197c243f7d7b771249094262ab15a4f69",
+  "baseCommit": "b91eb82a30f36d66c45282db8b5112a1d241c5ea",
   "summary": {
-    "sv": "Tydligare listlabels, navigeringsmarkering och stabilare reporubriker. Estimat använder senaste historiken och ungefärliga story points.",
-    "en": "Clearer list labels, navigation highlighting and steadier repository headers. Forecasts use recent history and approximate story points."
+    "sv": "När ett repo expanderas igen återställs kolumnerna till inställd issuegräns.",
+    "en": "Expanding a repository again resets its columns to the configured issue limit."
   },
   "issues": [
-    200,
-    206,
-    207,
-    208
+    209
   ]
 }

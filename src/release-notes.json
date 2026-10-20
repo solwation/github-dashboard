@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Fäll ihop och expandera ett repo för att återställa alla kolumner till inställd issuegräns.",
+          "en": "Collapse and expand a repository to reset every column to its configured issue limit."
+        },
+        "issues": [209]
+      },
+      {
+        "text": {
           "sv": "Estimat väger in ungefärliga story points och tid per poäng från de senaste avsluten, i stället för samma tid för alla ärenden.",
           "en": "Forecasts use approximate story points and time per point from recent closures instead of assuming equal duration for every issue."
         },
