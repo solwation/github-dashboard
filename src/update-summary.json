@@ -1,11 +1,13 @@
 {
   "baseCommit": "fe6bd59197c243f7d7b771249094262ab15a4f69",
   "summary": {
-    "sv": "Egna labels får samma tydlighet och mer utrymme i listvyn. Repoet markeras med en kort outline när du väljer det i vänstermenyn.",
-    "en": "Custom labels gain consistent visual weight and more room in list view. A brief outline highlights the repository selected in the sidebar."
+    "sv": "Tydligare listlabels, navigeringsmarkering och stabilare reporubriker. Estimat använder senaste historiken och ungefärliga story points.",
+    "en": "Clearer list labels, navigation highlighting and steadier repository headers. Forecasts use recent history and approximate story points."
   },
   "issues": [
     200,
-    206
+    206,
+    207,
+    208
   ]
 }

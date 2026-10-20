@@ -2,10 +2,28 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Tydligare labels och läsbara beskrivningar i listvyn. Enklare reporubriker, samlade inställningar och tydligare navigering.",
-      "en": "Clearer labels and readable descriptions in list view. Cleaner repository headers, grouped settings and clearer navigation."
+      "sv": "Tydligare listlabels, stabilare reporubriker och navigeringsmarkering. Estimat anpassas till senaste historiken och ungefärlig ärendestorlek.",
+      "en": "Clearer list labels, steadier repository headers and navigation highlighting. Forecasts adapt to recent history and approximate issue size."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Estimat väger in ungefärliga story points och tid per poäng från de senaste avsluten, i stället för samma tid för alla ärenden.",
+          "en": "Forecasts use approximate story points and time per point from recent closures instead of assuming equal duration for every issue."
+        },
+        "issues": [
+          208
+        ]
+      },
+      {
+        "text": {
+          "sv": "Antal issues visas till vänster om repoets sökfält, så siffrornas bredd inte flyttar kontrollerna till höger.",
+          "en": "Issue counts sit to the left of repository search, keeping right-side controls stable across different digit counts."
+        },
+        "issues": [
+          207
+        ]
+      },
       {
         "text": {
           "sv": "En kort outline runt valt repo visar vart vänstermenyn navigerade, med stilla markering vid minskad rörelse.",
