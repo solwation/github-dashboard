@@ -35,6 +35,7 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Förfluten andel av uppskattad tid": "Elapsed share of estimated time",
   "Uppskattad tid: {time}": "Estimated time: {time}",
   "Uppskattad tid kvar: {time}": "Estimated time remaining: {time}",
   "Uppskattad tid kvar: över uppskattning": "Estimated time remaining: over estimate",

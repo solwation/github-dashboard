@@ -8,8 +8,8 @@
     "sections": [
       {
         "text": {
-          "sv": "Hovra över story points för uppskattad tid och, för pågående issues med känd start, uppskattad tid kvar.",
-          "en": "Hover over story points for estimated duration and, for in-progress issues with a known start, estimated time remaining."
+          "sv": "Story points-tooltipen visar total tid; pågående kort har tidsstapel och listrader visar tid kvar bredvid förfluten tid.",
+          "en": "Story-point tooltips show total time; in-progress cards have a time bar and list rows show remaining time beside elapsed time."
         },
         "issues": [213]
       },
