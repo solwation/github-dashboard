@@ -9,6 +9,8 @@ import {
   statisticsDimensions, statisticsDurationMs, statisticsMetrics, statisticsRanges, statisticsResolutions, summarizeStatistics,
   type StatisticsData, type StatisticsFilter, type StatisticsMetric, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
 } from "../lib/statistics";
+import StatisticsLoadingProgress from "./StatisticsLoadingProgress.vue";
+import type { StatisticsLoadStatus } from "../lib/statistics-load-status";
 import StatisticsChart from "./StatisticsChart.vue";
 import { browserTimeZone } from "../lib/browser-time";
 import { activityHeadings, seriesColor, seriesDash } from "../lib/statistics-chart";
@@ -17,6 +19,7 @@ const props = defineProps<{
   repository: Repo;
   data: StatisticsData | null;
   loading: boolean;
+  loadStatus?: StatisticsLoadStatus;
   loadFailed: boolean;
   period: { from: string; to: string };
   timeSpan: { from: string; to: string; range?: StatisticsRangePreset; resolution: StatisticsResolution };
@@ -181,6 +184,7 @@ function clearFilters() {
     </header>
     <div v-show="!collapsed" :id="'statistics-repository-body-' + repository.id" class="statistics-repository-body">
     <template v-if="hasOpened">
+    <StatisticsLoadingProgress v-if="loading && loadStatus" :status="loadStatus" :selected-from="timeSpan.from" :selected-to="timeSpan.to" />
     <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
       <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="13" aria-hidden="true" /></button>
       <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="13" aria-hidden="true" /></button>

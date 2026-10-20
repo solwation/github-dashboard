@@ -1,3 +1,4 @@
+import { StatisticsLoadTracker, type StatisticsLoadStatus } from "./statistics-load-status";
 import { previewStatistics, validStatisticsRepository, STATISTICS_RETENTION_MS } from "./statistics-cache";
 import {
   commitContributor, commitDate, statisticsCollectionWindow,
@@ -17,7 +18,7 @@ export interface StatisticsClient {
 }
 export const statisticsLimits = { issues: 3, events: 100, commits: 3, pulls: 3, changes: 600, files: 3, concurrency: 3 } as const;
 export const STATISTICS_PREVIEW_INTERVAL_MS = 500;
-type StatisticsPreview = (data: StatisticsData) => void;
+type StatisticsPreview = (data: StatisticsData, status: StatisticsLoadStatus) => void;
 type SourceReader = () => StatisticsData[StatisticsSourceName];
 export class StatisticsCancelledError extends Error {
   constructor() { super("Statistics collection cancelled"); this.name = "StatisticsCancelledError"; }
@@ -28,6 +29,7 @@ interface PendingStatistics {
   promise: Promise<StatisticsData>;
   listeners: Set<StatisticsPreview>;
   latest?: StatisticsData;
+  latestStatus?: StatisticsLoadStatus;
   schedule?(): void;
   timer?: ReturnType<typeof setTimeout>;
 }
@@ -83,7 +85,7 @@ export class StatisticsCollector {
     const response = error as { status?: number; permissionDenied?: boolean; rateLimited?: boolean };
     return (response?.permissionDenied === true || response?.status === 404) && !response.rateLimited && !(this.client.retryAfterMs?.() || 0);
   }
-  private async pages<T>(path: string, limit: number, now: number, stop?: (page: T[]) => boolean, progress?: (source: StatisticsSource<T>) => void, signal?: AbortSignal): Promise<StatisticsSource<T>> {
+  private async pages<T>(path: string, limit: number, now: number, stop?: (page: T[]) => boolean, progress?: (source: StatisticsSource<T>, page: T[]) => void, signal?: AbortSignal): Promise<StatisticsSource<T>> {
     const data: T[] = [];
     let next: string | null = path;
     for (let page = 0; next && page < limit; page++) {
@@ -91,7 +93,7 @@ export class StatisticsCollector {
       if (!Array.isArray(response.data)) throw new Error("Invalid statistics response");
       data.push(...response.data);
       next = stop?.(response.data) ? null : response.next;
-      progress?.({ data, complete: !next, fetchedAt: now });
+      progress?.({ data, complete: !next, fetchedAt: now }, response.data);
     }
     return { data, complete: !next, fetchedAt: now };
   }
@@ -102,21 +104,20 @@ export class StatisticsCollector {
     const existing = this.cache.get(key) || [...this.cache.values()].filter(data => data.repository === repository && data.fetchedAt <= now && now - data.fetchedAt < STATISTICS_RETENTION_MS).sort((a, b) => b.fetchedAt - a.fetchedAt)[0];
     const pending = this.pending.get(key);
     if (pending) {
-      if (onProgress) { pending.listeners.add(onProgress); if (pending.latest) onProgress(pending.latest); else pending.schedule?.(); }
+      if (onProgress) { pending.listeners.add(onProgress); if (pending.latest) onProgress(pending.latest, pending.latestStatus!); else pending.schedule?.(); }
       return pending.promise;
     }
     if (!force && existing && existing.from === window.from && existing.fetchedAt <= now && !this.restored.has(key) && now - existing.fetchedAt < cacheDuration) return existing;
     const state: PendingStatistics = { repository, controller: new AbortController(), promise: undefined!, listeners: new Set(onProgress ? [onProgress] : []) };
     const readers = new Map<StatisticsSourceName, SourceReader>();
+    const tracker = new StatisticsLoadTracker(window, now);
     const base: StatisticsData = existing ? previewStatistics(existing, now) : {
       repository, ...window, fetchedAt: now, issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [],
     };
     // Build snapshots only on the timer, not once per page or diff. Producers may
     // reference mutable collection arrays; published arrays are detached copies.
-    const update = (name: StatisticsSourceName, read: SourceReader) => {
-      if (this.disposed || state.controller.signal.aborted) return;
-      readers.set(name, read);
-      if (!state.listeners.size || state.timer) return;
+    const schedule = () => {
+      if (this.disposed || state.controller.signal.aborted || !state.listeners.size || state.timer) return;
       state.timer = setTimeout(() => {
         state.timer = undefined;
         if (this.disposed || state.controller.signal.aborted) return;
@@ -137,12 +138,15 @@ export class StatisticsCollector {
           Object.assign(snapshot, { [sourceName]: source ? { ...source, data: data!.slice(0, limit) } : null });
         }
         state.latest = snapshot;
-        for (const listener of state.listeners) listener(snapshot);
+        state.latestStatus = tracker.snapshot();
+        for (const listener of state.listeners) listener(snapshot, state.latestStatus);
       }, STATISTICS_PREVIEW_INTERVAL_MS);
     };
-    state.schedule = () => { const entry = readers.entries().next().value; if (entry) update(...entry); };
+    const update = (name: StatisticsSourceName, read: SourceReader) => { readers.set(name, read); schedule(); };
+    state.schedule = schedule;
+    schedule();
     this.pending.set(key, state);
-    const work = this.collect(repository, now, existing, force, update, state.controller.signal).then(result => {
+    const work = this.collect(repository, now, existing, force, update, state.controller.signal, tracker).then(result => {
       if (!this.disposed && !state.controller.signal.aborted) {
         for (const [oldKey, data] of this.cache) if (data.repository === repository) { this.cache.delete(oldKey); this.restored.delete(oldKey); }
         this.cache.set(key, result);
@@ -153,7 +157,7 @@ export class StatisticsCollector {
     state.promise = work;
     return work;
   }
-  private async collect(repository: string, now: number, previous?: StatisticsData, force = false, progress: (name: StatisticsSourceName, read: SourceReader) => void = () => {}, signal?: AbortSignal): Promise<StatisticsData> {
+  private async collect(repository: string, now: number, previous?: StatisticsData, force = false, progress: (name: StatisticsSourceName, read: SourceReader) => void = () => {}, signal?: AbortSignal, tracker?: StatisticsLoadTracker): Promise<StatisticsData> {
     const window = statisticsCollectionWindow(now), root = `/repos/${repository}`;
     const since = `${window.from}T00:00:00Z`, until = new Date(now).toISOString();
     const temporary: StatisticsSourceName[] = [];
@@ -166,8 +170,10 @@ export class StatisticsCollector {
     };
     const attempt = async <T>(name: StatisticsSourceName, task: () => Promise<StatisticsSource<T>>): Promise<StatisticsSource<T> | null> => {
       let result: StatisticsSource<T> | null;
+      let successful = true;
       try { result = await task(); }
       catch (error) {
+        successful = false;
         if (signal?.aborted) throw new StatisticsCancelledError();
         result = null;
         if (!this.denied(error)) {
@@ -179,6 +185,7 @@ export class StatisticsCollector {
           }
         }
       }
+      tracker?.sourceDone(name, successful && result?.complete === true);
       update(name, result);
       return result;
     };
@@ -195,11 +202,17 @@ export class StatisticsCollector {
       attempt("issues", async () => {
         // Reuse the board's fresh lists when they cover the whole window; a forced refresh always asks GitHub.
         const board = force ? null : this.client.boardIssues?.(repository, since, cacheDuration, now);
-        if (board) return { data: board, complete: true, fetchedAt: now };
-        return cleanIssues(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now, undefined, source => progress("issues", () => cleanIssues(source)), signal));
+        if (board) { for (const issue of board) if (!issue.pull_request) tracker?.observe(issue.created_at); return { data: board, complete: true, fetchedAt: now }; }
+        return cleanIssues(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now, undefined, (source, page) => {
+          for (const issue of page) if (!issue.pull_request) tracker?.observe(issue.created_at);
+          progress("issues", () => cleanIssues(source));
+        }, signal));
       }),
       attempt("events", async () => {
-        const source = await this.pages<StatisticsEvent>(`${root}/issues/events?per_page=100`, statisticsLimits.events, now, undefined, source => progress("events", () => cleanEvents(source)), signal);
+        const source = await this.pages<StatisticsEvent>(`${root}/issues/events?per_page=100`, statisticsLimits.events, now, undefined, (source, page) => {
+          for (const event of page) if (event.issue && !event.issue.pull_request && ["closed", "reopened", "labeled", "unlabeled"].includes(event.event)) tracker?.observe(event.created_at);
+          progress("events", () => cleanEvents(source));
+        }, signal);
         // Repository event pages also contain labels, assignments and other activity. Five
         // pages can cover less than a day on an active repository (#212). Follow next
         // links to exhaustion (with a safety ceiling), without assuming date ordering:
@@ -223,7 +236,10 @@ export class StatisticsCollector {
               .sort((a, b) => Date.parse(commitDate(b)) - Date.parse(commitDate(a)));
             return { ...source, complete: source.complete && data.length <= 600, data: data.slice(0, 600), historyVerifiedAt: reuse ? verified : now };
           };
-          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now, undefined, source => progress("commits", () => cleanCommits(source)), signal);
+          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now, undefined, (source, page) => {
+            for (const commit of page) tracker?.observe(commitDate(commit));
+            progress("commits", () => cleanCommits(source));
+          }, signal);
           return cleanCommits(source);
         } catch (error) {
           // GitHub returns 409 for an empty Git repository: this is a real zero.
@@ -232,7 +248,10 @@ export class StatisticsCollector {
         }
       }),
       attempt("pulls", async () => unique(await this.pages<StatisticsPull>(`${root}/pulls?state=all&sort=updated&direction=desc&per_page=100`, statisticsLimits.pulls, now,
-        page => page.length > 0 && page[page.length - 1]!.updated_at < since, source => progress("pulls", () => unique(source)), signal))),
+        page => page.length > 0 && page[page.length - 1]!.updated_at < since, (source, page) => {
+          for (const pull of page) { tracker?.observe(pull.created_at); tracker?.observe(pull.closed_at); tracker?.observe(pull.merged_at); }
+          progress("pulls", () => unique(source));
+        }, signal))),
     ]);
     const changes = commits ? await attempt<StatisticsChange>("changes", async () => {
       const nonMerge = commits.data.filter(commit => commit.parents.length <= 1);
@@ -241,15 +260,17 @@ export class StatisticsCollector {
       // Every collected commit needs its diff, including reused historical commits;
       // taking only the newest 60 silently lost older days within a selected period.
       const queue = nonMerge.slice(0, statisticsLimits.changes);
+      tracker?.startChanges(queue.length, queue.filter(commit => old.has(commit.sha)).length);
       // Three workers, never one promise per item or repository-sized fan-out.
       const previewChanges = () => progress("changes", () => ({ data: records, complete: false, fetchedAt: now }));
+      previewChanges();
       let stopped = false;
       const results = await Promise.allSettled(Array.from({ length: Math.min(statisticsLimits.concurrency, queue.length) }, async () => {
         while (queue.length && !stopped) {
           try {
           if (signal?.aborted) throw new StatisticsCancelledError();
           const commit = queue.shift()!;
-          if (old.has(commit.sha)) { records.push(old.get(commit.sha)!); previewChanges(); continue; }
+          if (old.has(commit.sha)) { records.push(old.get(commit.sha)!); tracker?.diffDone(false); previewChanges(); continue; }
           let next: string | null = `${root}/commits/${encodeURIComponent(commit.sha)}?per_page=100`;
           let additions: number | undefined, deletions: number | undefined;
           const files = new Set<string>();
@@ -264,6 +285,7 @@ export class StatisticsCollector {
           }
           if (!Number.isFinite(additions) || !Number.isFinite(deletions)) throw new Error("Missing commit statistics");
           records.push({ sha: commit.sha, date: commitDate(commit), contributor: commitContributor(commit), additions: additions!, deletions: deletions!, files: files.size, filesComplete: !next });
+          tracker?.diffDone(true);
           previewChanges();
           } catch (error) { stopped = true; throw error; }
         }
