@@ -1,11 +1,12 @@
 {
   "baseCommit": "ee0d0230acaccd30e38e49393d5c27cc2034d008",
   "summary": {
-    "sv": "Pågående kort får tidsstapel och synlig tid kvar även i listan. Statistikens badges och diagram fylls på under hämtningen.",
-    "en": "In-progress cards get a time bar and visible remaining time, also in lists. Statistics badges and charts fill in during collection."
+    "sv": "Kort får tidsstapel och synlig tid kvar även i listan. Statistik fylls på under hämtningen och öppnas rätt efter återinloggning.",
+    "en": "Cards get a time bar and visible time remaining, also in lists. Statistics fills in during loading and opens correctly after signing back in."
   },
   "issues": [
     213,
-    214
+    214,
+    215
   ]
 }

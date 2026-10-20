@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Statistik öppnas direkt på första klicket efter utloggning och återinloggning, även från ett repositoryankare.",
+          "en": "Statistics opens on the first click after signing out and back in, including when leaving a repository anchor."
+        },
+        "issues": [215]
+      },
+      {
+        "text": {
           "sv": "Statistikens badges och diagram fylls på under hämtningen med samlade uppdateringar, medan tidigare värden och dina diagramval bevaras.",
           "en": "Statistics badges and charts fill in during collection with batched updates, while previous values and your chart selections remain available."
         },
