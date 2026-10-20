@@ -1874,11 +1874,12 @@ button.lane-sync:focus-visible::after {
 }
 .row-close { display: inline-flex; align-items: center; align-self: flex-end; gap: 4px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer; }
 .row-close:hover { border-color: #b4c9c1; }
-.row-meta { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
+.row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
-/* List badges share text metrics and outer spacing; the custom label's border occupies 1px of its padding. */
+/* List badges share text metrics, spacing, and neutral surfaces; custom labels keep their natural width. */
 .row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
-.row-meta .label { padding: 1px 5px; flex-shrink: 1; min-width: 0; overflow: hidden; }
+.row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: #edf0f4; color: #5b6b75; }
+.row-meta .label i { width: 9px; height: 9px; }
 .row-status { background: #edf0f4; color: #5b6b75; }
 .row-status.progress { background: #fbf1dd; color: #81621f; }
 .row-status.closed { background: #e8f3ee; color: #2b6d5c; }
@@ -1908,7 +1909,7 @@ button.lane-sync:focus-visible::after {
   .row-meta > .label { order: 4; }
   .row-meta > .row-marker:not(.row-comment-marker), .row-meta > .row-timeout { order: 5; }
 }
-.row-time { justify-self: end; font-size: 10px; text-align: right; white-space: nowrap; }
+.row-time { justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; text-align: right; white-space: nowrap; }
 .issue-row.unread-move { border-color: #2875ba; background: #f1f8ff; }
 .issue-row.unread-created { border-color: #39885b; background: #edf8f0; }
 .issue-row.issue-timeout { border-color: #b42332; background: #fff1f2; }
@@ -2154,6 +2155,7 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .row-popup-close { color: var(--muted); }
 :root[data-theme="dark"] .row-popup-close:hover { background: var(--hover); color: var(--text-strong); }
 :root[data-theme="dark"] .row-close { background: var(--card); border-color: #30424a; }
+:root[data-theme="dark"] .row-meta .label,
 :root[data-theme="dark"] .row-status { background: var(--hover); color: var(--muted); }
 :root[data-theme="dark"] .row-status.progress { background: var(--tint-amber); color: var(--accent-amber); }
 :root[data-theme="dark"] .row-status.closed { background: var(--tint-green); color: var(--accent-green); }

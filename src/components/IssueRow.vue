@@ -173,7 +173,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
         ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="11" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
       ></span><span v-for="label in labels" :key="label.name" class="label" :title="label.name"
-        ><i :style="{ background: '#' + label.color }" />{{ label.name }}</span
+        ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
       >
     </span>
     <div class="row-comments" @click.stop>
@@ -220,8 +220,16 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-comments { display: none; min-width: 0; }
 /* Keep the existing compact layout until the actual list has room for an action column. */
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(23rem, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(23rem, 1.4fr) 5.4rem 6.5rem; }
   .row-comments { display: block; }
 }
+/* Repository and action columns need room too: give badges their own line on narrower combined lists. */
+@media (min-width: 951px) {
+  @container issue-list (min-width: 850px) and (max-width: 1049px) {
+    .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 6.5rem; }
+    .issue-row.has-repository .row-meta { grid-column: 1 / -1; grid-row: 2; }
+  }
+}
+
 </style>
