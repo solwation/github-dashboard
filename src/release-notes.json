@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Uppskattade story points visas per issue på kort och i listrader, med samma beräkning som kolumnernas estimat.",
+          "en": "Estimated story points appear per issue on cards and list rows, using the same calculation as column forecasts."
+        },
+        "issues": [210]
+      },
+      {
+        "text": {
           "sv": "Fäll ihop och expandera ett repo för att återställa alla kolumner till inställd issuegräns.",
           "en": "Collapse and expand a repository to reset every column to its configured issue limit."
         },

@@ -1,10 +1,10 @@
 {
-  "baseCommit": "b91eb82a30f36d66c45282db8b5112a1d241c5ea",
+  "baseCommit": "af2f7e336d634c8773bf9db3c6485e5d54d65f59",
   "summary": {
-    "sv": "När ett repo expanderas igen återställs kolumnerna till inställd issuegräns.",
-    "en": "Expanding a repository again resets its columns to the configured issue limit."
+    "sv": "Uppskattade story points visas nu per issue i både kort- och listläge.",
+    "en": "Estimated story points now appear per issue in both card and list views."
   },
   "issues": [
-    209
+    210
   ]
 }
