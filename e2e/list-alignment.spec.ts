@@ -30,7 +30,7 @@ async function fixture(page: Page) {
       const closed = url.searchParams.get("state") === "closed";
       return route.fulfill({ json: issues.filter(issue => (issue.state === "closed") === closed || url.searchParams.get("state") === "all") });
     }
-    if (url.pathname.endsWith("/issues/5/events")) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - 10 * 60000).toISOString() }] });
+    if (/\/issues\/(?:1|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - 10 * 60000).toISOString() }] });
     if (url.pathname === "/graphql") return route.fulfill({ json: { data: { repository: { issue: { parent: null, subIssuesSummary: null } } } } });
     return route.fulfill({ json: [] });
   });
@@ -41,6 +41,20 @@ async function fixture(page: Page) {
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
   await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
   await expect(page.locator(".issue-row")).toHaveCount(specs.length);
+  return {
+    move() {
+      const issue = issues[0]!;
+      issue.labels = issue.labels.some(label => label.name === "in progress")
+        ? issue.labels.filter(label => label.name !== "in progress")
+        : [...issue.labels, { name: "in progress", color: "fbca04" }];
+      issue.comments += 2;
+      issue.updated_at = new Date().toISOString();
+    },
+    create() {
+      const source = issues[3]!;
+      issues.push({ ...source, id: 10, number: 10, title: "New observed work", created_at: new Date().toISOString(), updated_at: new Date().toISOString(), html_url: `${repo.html_url}/issues/10` });
+    },
+  };
 }
 
 // Left edge of a column cell relative to its row, rounded to sub-pixel noise.
@@ -81,10 +95,96 @@ for (const theme of ["light", "dark"]) {
   });
 }
 
-test("compact layout keeps badges flowing without reserved slots", async ({ page }) => {
+test("compact layout keeps status flowing without page overflow", async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 900 });
   await fixture(page);
   const slot = page.locator(".issue-row").first().locator(".row-slot-status");
   expect(await slot.evaluate(node => getComputedStyle(node).display)).toBe("contents");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+
+for (const combined of [false, true]) {
+  test(`activity occupies a stable slot before status in ${combined ? "combined" : "split"} rows`, async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 1000 });
+    const api = await fixture(page);
+    if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    const row = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Backlog one", exact: true }) });
+    const geometry = () => row.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const cells = [".row-status", ".priority", ".row-time"].map(selector => {
+        const cell = element.querySelector(selector)!.getBoundingClientRect();
+        return { x: cell.x - box.x, y: cell.y - box.y, height: cell.height };
+      });
+      return { height: box.height, cells };
+    });
+    const before = await geometry();
+    expect(before.height).toBe(44);
+    api.move();
+    await page.keyboard.press("Control+r");
+    const moved = row.getByRole("button", { name: "Nyligen flyttad. Markera som läst", exact: true });
+    const comments = row.getByRole("button", { name: "2 nya kommentarer. Markera som läst", exact: true });
+    await expect(moved).toBeVisible();
+    await expect(comments).toBeVisible();
+    const active = await geometry();
+    expect(active.height).toBeCloseTo(before.height, 0);
+    for (let index = 0; index < before.cells.length; index++) expect(active.cells[index]!.x).toBeCloseTo(before.cells[index]!.x, 0);
+    const marker = (await moved.boundingBox())!;
+    const status = (await row.locator(".row-status").boundingBox())!;
+    const rowBox = (await row.boundingBox())!;
+    expect(marker.x + marker.width).toBeLessThanOrEqual(status.x);
+    expect(marker.y + marker.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
+    expect(marker.y + marker.height / 2).toBeCloseTo(rowBox.y + rowBox.height / 2, 0);
+    expect(await row.locator(".issue-points").count()).toBe(1);
+    await expect(row.locator(".issue-time-remaining")).toBeVisible();
+    await moved.focus(); await page.keyboard.press("Enter");
+    await expect(moved).toHaveCount(0);
+    await expect(comments).toHaveCount(0);
+    const read = await geometry();
+    expect(read.height).toBeCloseTo(active.height, 0);
+    for (let index = 0; index < read.cells.length; index++) expect(read.cells[index]!.x).toBeCloseTo(active.cells[index]!.x, 0);
+    api.create(); await page.keyboard.press("Control+r");
+    const fresh = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "New observed work", exact: true }) });
+    const created = fresh.getByRole("button", { name: "Nyligen skapat i Backlog. Markera som läst", exact: true });
+    await expect(created).toBeVisible();
+    for (const width of [1600, 1450, 1380, 1100, 800, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const beforeRead = (await fresh.boundingBox())!;
+      const badge = (await created.boundingBox())!;
+      const status = (await fresh.locator(".row-status").boundingBox())!;
+      expect(badge.x + badge.width).toBeLessThanOrEqual(status.x);
+      expect(badge.y + badge.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      // Reading leaves the reserved movement slot in place.
+      if (width === 320) {
+        await created.click();
+        await expect(created).toHaveCount(0);
+        expect((await fresh.boundingBox())!.height).toBeCloseTo(beforeRead.height, 0);
+      }
+    }
+    // Activity also leaves geometry stable near the single-line container breakpoints.
+    for (const width of [1600, 1450, 1380, 1100, 800, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      api.move(); await page.keyboard.press("Control+r");
+      await expect(moved).toBeVisible();
+      await expect(comments).toBeVisible();
+      const active = await geometry();
+      const badge = (await moved.boundingBox())!;
+      const status = (await row.locator(".row-status").boundingBox())!;
+      const commentBox = (await comments.boundingBox())!;
+      expect(badge.x + badge.width).toBeLessThanOrEqual(status.x);
+      expect(badge.y + badge.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
+      expect(commentBox.x + commentBox.width <= badge.x || commentBox.y + commentBox.height <= badge.y || commentBox.y >= badge.y + badge.height).toBe(true);
+      await comments.click();
+      await expect(moved).toHaveCount(0);
+      await expect(comments).toHaveCount(0);
+      const read = await geometry();
+      expect(read.height).toBeCloseTo(active.height, 0);
+      for (let index = 0; index < read.cells.length; index++) {
+        expect(read.cells[index]!.x).toBeCloseTo(active.cells[index]!.x, 0);
+        expect(read.cells[index]!.y).toBeCloseTo(active.cells[index]!.y, 0);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  });
+}
