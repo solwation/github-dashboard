@@ -186,6 +186,7 @@ function moveRepository(name: string, direction: -1 | 1) {
   if (target) reorderProject(name, target);
 }
 function toggleCollapsed(name: string) {
+  if (collapsedRepos.value.includes(name)) resetVisible(name);
   collapsedRepos.value = collapsedRepos.value.includes(name)
     ? collapsedRepos.value.filter(repo => repo !== name) : [...collapsedRepos.value, name];
   save();

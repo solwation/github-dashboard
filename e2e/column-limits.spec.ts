@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 
-async function fixture(page: Page) {
+async function fixture(page: Page, allColumns = false) {
   let account = "limits-alpha";
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
@@ -11,11 +11,15 @@ async function fixture(page: Page) {
       id: id + 1, name, full_name: `sample/${name}`, private: false, description: "Fictional limits fixture",
       html_url: `https://github.com/sample/${name}`, owner: { login: "sample" },
     }));
-    else if (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open") {
+    else if (allColumns && url.pathname.endsWith("/labels")) body = [{ name: "in-progress", color: "147d69" }];
+    else if (url.pathname.endsWith("/issues") && (allColumns || url.searchParams.get("state") === "open")) {
+      const closed = url.searchParams.get("state") === "closed";
       const date = new Date().toISOString();
-      body = Array.from({ length: 9 }, (_, index) => ({ id: index + 1, number: index + 1,
-        title: `Fixture task ${index + 1}`, state: "open", created_at: date, updated_at: date,
-        closed_at: null, html_url: `https://github.com/sample/alpha/issues/${index + 1}`, labels: [], assignees: [],
+      body = Array.from({ length: allColumns && !closed ? 18 : 9 }, (_, index) => ({
+        id: index + (closed ? 101 : 1), number: index + (closed ? 101 : 1),
+        title: `Fixture task ${index + 1}`, state: closed ? "closed" : "open", created_at: date, updated_at: date,
+        closed_at: closed ? date : null, html_url: `https://github.com/sample/alpha/issues/${index + 1}`,
+        labels: allColumns && !closed && index >= 9 ? [{ name: "in-progress", color: "147d69" }] : [], assignees: [],
       }));
     }
     await route.fulfill({ json: body });
@@ -27,6 +31,53 @@ async function fixture(page: Page) {
     }
   });
   return { account: (value: string) => { account = value; } };
+}
+
+for (const mode of ["Kort", "Lista"]) {
+  test(`expanding resets all column batches in ${mode} via header and sidebar`, async ({ page }) => {
+    await fixture(page, true);
+    await page.goto("/");
+    await connect(page);
+    await globalLimit(page, "2");
+    await override(page, "3");
+    await page.getByRole("group", { name: "Visningsläge för boarden", exact: true })
+      .getByRole("button", { name: mode, exact: true }).click();
+    const entries = (repo: number, column: string) => page.locator(
+      `#repo-${repo} .${column} ${mode === "Lista" ? ".issue-row" : ".issue-card"}`,
+    );
+    const columns = ["backlog", "progress", "closed"];
+    for (const column of columns) {
+      for (const repo of [1, 2]) {
+        await page.locator(`#repo-${repo} .${column}`).getByRole("button", { name: "Visa fler" }).click();
+        await expect(entries(repo, column)).toHaveCount(repo === 1 ? 6 : 4);
+      }
+    }
+    const savedBefore = await readSettings(page, "limits-alpha");
+    for (const repo of [1, 2]) {
+      const name = repo === 1 ? "alpha" : "bravo";
+      const limit = repo === 1 ? 3 : 2;
+      for (const route of ["header", "sidebar"]) {
+        await page.getByRole("button", { name: `Kollapsa ${name}`, exact: true }).click();
+        await expect(page.locator(`#lane-content-${repo}`)).toBeHidden();
+        if (route === "header") {
+          await page.getByRole("button", { name: `Expandera ${name}`, exact: true }).click();
+        } else {
+          await page.locator(`.sidebar-repository-row[data-repository="sample/${name}"] .sidebar-repository`).click();
+        }
+        await expect(page.locator(`#lane-content-${repo}`)).toBeVisible();
+        for (const column of columns) {
+          await expect(entries(repo, column)).toHaveCount(limit);
+          await expect(entries(repo === 1 ? 2 : 1, column)).toHaveCount(repo === 1 ? 4 : 6);
+          await page.locator(`#repo-${repo} .${column}`).getByRole("button", { name: "Visa fler" }).click();
+          await expect(entries(repo, column)).toHaveCount(limit * 2);
+        }
+      }
+    }
+    await expect.poll(async () => {
+      const saved = await readSettings(page, "limits-alpha");
+      return { global: saved?.columnLimit, overrides: saved?.repositoryColumnLimits };
+    }).toEqual({ global: savedBefore?.columnLimit, overrides: savedBefore?.repositoryColumnLimits });
+  });
 }
 async function connect(page: Page) {
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
