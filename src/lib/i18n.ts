@@ -264,6 +264,8 @@ export const english: Record<string, string> = {
   "Lämna tomt för att ärva den globala inställningen ({count}).": "Leave empty to inherit the global setting ({count}).",
   "Ange ett heltal mellan 1 och 100.": "Enter a whole number between 1 and 100.",
   "Logga in för att spara inställningen för ditt konto, eller prova i demoläget.": "Sign in to save this setting for your account, or try it in demo mode.",
+  "Ordna repositories": "Reorder repositories",
+  "Dra i handtaget eller använd upp- och nedknapparna. Ordningen sparas direkt.": "Drag the handle or use the up and down buttons. The order is saved immediately.",
   "Ordna {name}": "Reorder {name}",
   "Ordna {name} med piltangenterna upp och ned, eller dra": "Reorder {name} with up and down arrow keys, or drag",
   "Dra för att ordna. Använd upp- och nedpilarna med tangentbordet.": "Drag to reorder. Use the up and down arrow keys on the keyboard.",

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { DEFAULT_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES, parseTimeoutMinutes } from "../lib/timeouts";
+import RepositoryOrderDialog from "./RepositoryOrderDialog.vue";
+import type { SidebarRepository } from "../lib/sidebar";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import GitHubPermissions from "./GitHubPermissions.vue";
@@ -13,7 +15,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number; notificationSounds?: boolean }>(), { permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES, notificationSounds: true });
+const props = withDefaults(defineProps<{ repositories?: SidebarRepository[]; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutMinutes?: number; notificationSounds?: boolean }>(), { repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutMinutes: DEFAULT_TIMEOUT_MINUTES, notificationSounds: true });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -31,7 +33,7 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number]; "update:notificationSounds": [value: boolean] }>();
+const emit = defineEmits<{ reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutMinutes": [value: number]; "update:notificationSounds": [value: boolean] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const minutes = parseTimeoutMinutes(input.value);
@@ -107,6 +109,7 @@ function changeTheme(event: Event) {
       :value="timeoutMinutes" :disabled="!canEditLimit" aria-describedby="issue-timeout-help" @change="changeTimeout" />
     <p id="issue-timeout-help">{{ t("Efter tidsgränsen markeras pågående issues som problematiska. Okänd starttid ger ingen varning. Standard: 30 minuter.") }}</p>
     <div class="settings-actions">
+      <RepositoryOrderDialog v-if="repositories.length" :repos="repositories" @reorder="(source, target) => emit('reorder', source, target)" />
       <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
       <WorkflowGuide />
       <button class="button small" aria-haspopup="dialog" @click="emit('openUpdates')">{{ t("Automatiska uppdateringar") }}</button>
@@ -123,6 +126,7 @@ function changeTheme(event: Event) {
 <style scoped>
 .settings-actions { display: grid; gap: .625rem; border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1rem; }
 .settings-actions > .button,
+.settings-actions :deep(.repository-order-open),
 .settings-actions :deep(.permissions-open),
 .settings-actions :deep(.workflow-guide > .button) { width: 100%; white-space: normal; }
 </style>

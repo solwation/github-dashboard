@@ -160,3 +160,73 @@ test.describe("phone layout controls", () => {
     await expect(page.locator(".repo-lane .project-drag-handle")).toHaveCount(0);
   });
 });
+
+test.describe("mobile repository ordering in Settings", () => {
+  test.use({ viewport: { width: 320, height: 844 }, hasTouch: true });
+  test("buttons, keyboard and touch save one order across mobile, reload and desktop", async ({ page, context }) => {
+    const api = await fixture(page);
+    api.longTitle();
+    await page.goto("/");
+    await connect(page);
+    await page.getByRole("button", { name: "Inställningar", exact: true }).tap();
+    const settings = page.locator('dialog[aria-labelledby="language-settings-title"]');
+    const open = settings.getByRole("button", { name: "Ordna repositories", exact: true });
+    await open.tap();
+    const dialog = page.getByRole("dialog", { name: "Ordna repositories", exact: true });
+    const rows = dialog.locator("li");
+    await expect(rows.locator(".order-repository-name")).toHaveText(["sample/alpha", "sample/bravo", "sample/charlie"]);
+    await expect(dialog.getByRole("button", { name: "Flytta alpha upp", exact: true })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Flytta charlie-with-a-long-unbroken-repository-name ned", exact: true })).toBeDisabled();
+    await dialog.getByRole("button", { name: "Flytta bravo upp", exact: true }).tap();
+    await expect(rows.first()).toHaveAttribute("data-repository", "sample/bravo");
+    await expect(rows.first().locator(".project-drag-handle")).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(rows.first()).toHaveAttribute("data-repository", "sample/alpha");
+    await expect(rows.nth(1).locator(".project-drag-handle")).toBeFocused();
+    await expect(dialog.getByRole("status")).toContainText("bravo flyttad till plats 2 av 3");
+    expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect(await rows.first().evaluate(el => getComputedStyle(el).touchAction)).toBe("auto");
+    expect(await rows.first().locator(".project-drag-handle").evaluate(el => getComputedStyle(el).touchAction)).toBe("none");
+    const source = (await rows.nth(2).locator(".project-drag-handle").boundingBox())!;
+    const target = (await rows.first().boundingBox())!;
+    const client = await context.newCDPSession(page);
+    const x = source.x + source.width / 2;
+    const startY = source.y + source.height / 2;
+    const endY = target.y + target.height / 2;
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: startY }] });
+    for (let step = 1; step <= 10; step++) {
+      await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: startY + (endY - startY) * step / 10 }] });
+    }
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(rows.first()).toHaveAttribute("data-repository", "sample/charlie");
+    // The list scrolls normally when a gesture begins on its repository name.
+    await page.setViewportSize({ width: 320, height: 360 });
+    const list = dialog.locator(".repository-order-list");
+    await expect.poll(() => list.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+    const bounds = (await list.boundingBox())!;
+    const name = (await rows.first().locator(".order-repository-name").boundingBox())!;
+    const scrollX = name.x + name.width / 2;
+    const scrollY = bounds.y + bounds.height - 8;
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: scrollX, y: scrollY }] });
+    for (let step = 1; step <= 8; step++) {
+      await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: scrollX, y: scrollY - step * 8 }] });
+    }
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect.poll(() => list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await expect.poll(() => readSettings(page, "layout-alpha").then(saved => saved?.projectOrder?.slice(0, 3)))
+      .toEqual(["sample/charlie", "sample/alpha", "sample/bravo"]);
+    await page.keyboard.press("Escape");
+    await expect(open).toBeFocused();
+    await page.getByLabel("Språk", { exact: true }).selectOption("en");
+    await settings.getByRole("button", { name: "Reorder repositories", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Reorder repositories", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await settings.getByRole("button", { name: "Done", exact: true }).click();
+    await page.reload();
+    await expectOrder(page, ["charlie-with-a-long-unbroken-repository-name", "alpha", "bravo"]);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(page.locator(".sidebar-projects")).toBeVisible();
+    await expectOrder(page, ["charlie-with-a-long-unbroken-repository-name", "alpha", "bravo"]);
+  });
+});

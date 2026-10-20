@@ -31,7 +31,7 @@ function touchStart(event: PointerEvent) {
 }
 function autoScroll() {
   if (!pointer || !dragging.value) return;
-  const list = pointer.handle.closest<HTMLElement>(".sidebar-projects");
+  const list = pointer.handle.closest<HTMLElement>(".sidebar-projects, .repository-order-list");
   if (list) {
     const bounds = list.getBoundingClientRect();
     const edge = Math.min(48, bounds.height / 4);

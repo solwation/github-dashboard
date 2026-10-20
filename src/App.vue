@@ -1510,7 +1510,7 @@ onMounted(async () => {
         Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-minutes="timeoutMinutes" @update:timeout-minutes="setTimeoutMinutes" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
