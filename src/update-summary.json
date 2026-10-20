@@ -1,10 +1,11 @@
 {
-  "baseCommit": "3eb91f2e4a06c028bdaa55d0e8eb6884092b1b0b",
+  "baseCommit": "fe6bd59197c243f7d7b771249094262ab15a4f69",
   "summary": {
-    "sv": "Workflow-badgen flyttas intill Private och får samma stil, så repots högra kontroller ligger stabilt.",
-    "en": "The workflow badge moves beside Private with matching styling, keeping repository controls consistently positioned."
+    "sv": "Egna labels får samma tydlighet och mer utrymme i listvyn. Repoet markeras med en kort outline när du väljer det i vänstermenyn.",
+    "en": "Custom labels gain consistent visual weight and more room in list view. A brief outline highlights the repository selected in the sidebar."
   },
   "issues": [
-    205
+    200,
+    206
   ]
 }

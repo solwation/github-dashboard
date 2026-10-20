@@ -2,10 +2,19 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Tydligare listvy med läsbara beskrivningar och jämnstora labels. Samlade repoinställningar, lugnare reporubriker och separat ljudavstängning.",
-      "en": "A clearer list view with readable descriptions and consistent labels. Grouped repository settings, cleaner headers and separate sound muting."
+      "sv": "Tydligare labels och läsbara beskrivningar i listvyn. Enklare reporubriker, samlade inställningar och tydligare navigering.",
+      "en": "Clearer labels and readable descriptions in list view. Cleaner repository headers, grouped settings and clearer navigation."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "En kort outline runt valt repo visar vart vänstermenyn navigerade, med stilla markering vid minskad rörelse.",
+          "en": "A brief outline highlights the repository selected in the sidebar, with a static indication when reduced motion is preferred."
+        },
+        "issues": [
+          206
+        ]
+      },
       {
         "text": {
           "sv": "Workflow-badgen ligger intill Private med samma stil, så kontrollerna till höger behåller sin placering.",
@@ -53,8 +62,8 @@
       },
       {
         "text": {
-          "sv": "Egna labels och prioritetslabels i listvyn matchar status- och flyttmarkeringarnas textstorlek, tydlighet och höjd.",
-          "en": "Custom and priority labels in list view match the text size, weight and height of status and movement markers."
+          "sv": "Egna labels i listvyn får tydligare text, större färgmarkör och plats för hela namnet utan att pressas ihop.",
+          "en": "Custom list labels have clearer text, a larger color marker and room for their full names without being squeezed."
         },
         "issues": [
           200
