@@ -1788,6 +1788,8 @@ onMounted(async () => {
               </div>
             </div>
             <div class="lane-meta">
+              <span v-if="!lane.loading && (!lane.error || lane.issues.length)" class="repository-issue-count">{{ laneIssues(lane).length }} issues</span>
+              <span v-else-if="lane.loading" class="repository-issue-count">{{ t("Hämtar…") }}</span>
               <div class="repository-filter">
                 <label class="sr-only" :for="'repository-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
                 <div class="repository-search">
@@ -1801,8 +1803,7 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="lane-actions">
-              <span v-if="!lane.loading && (!lane.error || lane.issues.length)">{{ laneIssues(lane).length }} issues</span><span v-else-if="lane.loading">{{ t("Hämtar…") }}</span
-              ><button
+              <button
                 v-if="!isDemo"
                 class="icon-button"
                 @click="editRules(lane)"
@@ -2185,6 +2186,11 @@ onMounted(async () => {
 /* The version section takes the free space so it sits directly above the footer. */
 .sidebar-footer { margin-top: 0; }
 .startup-placeholder { display: grid; gap: 20px; padding: 32px 0; max-width: 480px; opacity: .5; }
+/* Counts sit before search; the action button keeps the same right edge for every count. */
+.repository-issue-count { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+@media (max-width: 950px) {
+  .repository-issue-count { display: none; }
+}
 .repository-filter { flex: 0 1 220px; min-width: 0; max-width: 100%; font-size: 11px; color: var(--muted); }
 .repository-search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding-left: 8px; min-width: 0; }
 .repository-search > svg { flex-shrink: 0; }
