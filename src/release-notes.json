@@ -2,10 +2,28 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Jämnstora listlabels, automatisk repoexpansion från vänstermenyn och en separat ljudväxel i Inställningar.",
-      "en": "Consistent list labels, automatic repository expansion from the sidebar and a separate sound toggle in Settings."
+      "sv": "Tydligare listvy med läsbara beskrivningar och jämnstora labels. Samlade repoinställningar och separat ljudavstängning.",
+      "en": "A clearer list view with readable descriptions and consistent labels. Grouped repository settings and separate sound muting."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Beskrivningar i expanderade listrader får läsbara radlängder och separat utrymme för bilder på breda skärmar.",
+          "en": "Descriptions in expanded list rows have readable line lengths and separate space for images on wide screens."
+        },
+        "issues": [
+          204
+        ]
+      },
+      {
+        "text": {
+          "sv": "Repoets labelregler och notisväxel finns samlade under Repositoryegenskaper, så rubrikerna blir lugnare.",
+          "en": "Repository label rules and notification controls are grouped under Repository properties, keeping headers cleaner."
+        },
+        "issues": [
+          203
+        ]
+      },
       {
         "text": {
           "sv": "Stäng av notisljud i Inställningar utan att förlora repoets notiser; valet sparas för ditt konto.",

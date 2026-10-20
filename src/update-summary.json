@@ -1,12 +1,14 @@
 {
   "baseCommit": "799664055518c84156aac964bf4acd4093f60ae6",
   "summary": {
-    "sv": "Jämnstora labels i listvyn, automatisk repoexpansion från vänstermenyn och separat ljudavstängning i Inställningar.",
-    "en": "Consistent label sizes in list view, automatic repository expansion from the sidebar and separate sound muting in Settings."
+    "sv": "Läsbarare beskrivningar och jämnstora labels i listvyn. Automatisk repoexpansion, samlade repoinställningar och separat ljudavstängning.",
+    "en": "Readable descriptions and consistent labels in list view. Automatic repository expansion, grouped repository settings and separate sound muting."
   },
   "issues": [
     200,
     201,
-    202
+    202,
+    203,
+    204
   ]
 }
