@@ -1,10 +1,10 @@
 {
-  "baseCommit": "f34d2bcfccccc7fab86d05bd94d8267246472b7a",
+  "baseCommit": "799664055518c84156aac964bf4acd4093f60ae6",
   "summary": {
-    "sv": "Egna labels i listvyn har samma storlek som prioritetslabels.",
-    "en": "Custom labels in list view are the same size as priority labels."
+    "sv": "Hopfällda repos expanderas automatiskt när du väljer dem i vänstermenyn.",
+    "en": "Collapsed repositories expand automatically when selected in the sidebar."
   },
   "issues": [
-    200
+    201
   ]
 }

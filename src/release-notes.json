@@ -2,10 +2,19 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Egna labels i listvyn har samma storlek som prioritetslabels.",
-      "en": "Custom labels in list view are the same size as priority labels."
+      "sv": "Jämnstora labels i listvyn och automatisk expansion av repos som väljs i vänstermenyn.",
+      "en": "Consistent label sizes in list view and automatic expansion of repositories selected in the sidebar."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Välj ett hopfällt repo i vänstermenyn för att expandera det och gå direkt till innehållet.",
+          "en": "Select a collapsed repository in the sidebar to expand it and go directly to its contents."
+        },
+        "issues": [
+          201
+        ]
+      },
       {
         "text": {
           "sv": "Egna labels i listvyn har samma textstorlek, höjd och padding som prioritetslabels för ett enhetligare utseende.",
