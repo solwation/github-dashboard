@@ -24,7 +24,9 @@ async function fixture(page: Page, at = base, expiry = false) {
       : event ? (start === null ? [] : [{ id: number, event: "labeled", label: { name: "in-progress" }, created_at: iso(start) }])
       : url.pathname.endsWith("/issues") ? issues.filter(issue => url.searchParams.get("state") === "all" || issue.state === url.searchParams.get("state")) : [] });
   });
-  await page.clock.install({ time: at });
+  // Freeze setup so near-expiry samples do not age out while login is rendered.
+  await page.clock.install({ time: at - minute });
+  await page.clock.pauseAt(at);
   await page.goto("/");
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-time-token");

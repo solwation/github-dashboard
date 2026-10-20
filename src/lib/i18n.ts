@@ -35,6 +35,10 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Uppskattad tid: {time}": "Estimated time: {time}",
+  "Uppskattad tid kvar: {time}": "Estimated time remaining: {time}",
+  "Uppskattad tid kvar: över uppskattning": "Estimated time remaining: over estimate",
+  "Baserat på median tid per poäng från {count} användbara stängningar i detta repository inom {days} dagar.": "Based on median time per point from {count} usable closures in this repository within {days} days.",
   "Delvis underlag för {metrics}. Aktivitet i den valda perioden kan saknas.": "Partial data for {metrics}. Activity in the selected period may be missing.",
   "Uppskattade story points: cirka {points}": "Estimated story points: approximately {points}",
   "Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet.": "Rough size on the 1/2/3/5/8/13 scale. An unambiguous points label takes precedence, otherwise a local estimate from the title and description is used. Not measured complexity.",

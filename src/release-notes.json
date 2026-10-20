@@ -2,10 +2,17 @@
   {
     "date": "2026-10-20",
     "summary": {
-      "sv": "Tydligare listlabels, stabilare reporubriker och navigeringsmarkering. Estimat anpassas till senaste historiken och ungefärlig ärendestorlek.",
-      "en": "Clearer list labels, steadier repository headers and navigation highlighting. Forecasts adapt to recent history and approximate issue size."
+      "sv": "Ordna repositories på mobilen, se tid per issue och följ längre statistikhistorik. Tydligare listlabels och stabilare reporubriker.",
+      "en": "Reorder repositories on mobile, see time per issue and follow longer statistics history. Clearer list labels and steadier repository headers."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Hovra över story points för uppskattad tid och, för pågående issues med känd start, uppskattad tid kvar.",
+          "en": "Hover over story points for estimated duration and, for in-progress issues with a known start, estimated time remaining."
+        },
+        "issues": [213]
+      },
       {
         "text": {
           "sv": "Statistik hämtar längre händelsehistorik och äldre kodändringar, så aktiva repositories behåller underlag över fler dygn.",

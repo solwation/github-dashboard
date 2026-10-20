@@ -1,11 +1,12 @@
 {
   "baseCommit": "435bb4664a3b457452e53b98f2bb0bbf81a7f127",
   "summary": {
-    "sv": "Ordna repositories från Inställningar på mobilen. Statistik tar med längre historik och äldre kodändringar.",
-    "en": "Reorder repositories from Settings on mobile. Statistics includes longer history and older code changes."
+    "sv": "Ordna repos på mobilen. Statistik hämtar längre historik. Story points visar uppskattad tid och tid kvar för pågående issues.",
+    "en": "Reorder repos on mobile. Statistics fetches longer history. Story points show estimated duration and time remaining for in-progress issues."
   },
   "issues": [
     211,
-    212
+    212,
+    213
   ]
 }
