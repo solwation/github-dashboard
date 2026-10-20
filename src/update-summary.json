@@ -1,10 +1,10 @@
 {
-  "baseCommit": "c605ab3fb464f6bbf913a9f99ebf4f94bc2727a5",
+  "baseCommit": "f34d2bcfccccc7fab86d05bd94d8267246472b7a",
   "summary": {
-    "sv": "Listraderna visar samma typikon som korten, även på mobil, och den label som ikonen ersätter visas inte längre som chip.",
-    "en": "List rows show the same type icon as cards, also on phones, and the label the icon replaces is no longer shown as a chip."
+    "sv": "Egna labels i listvyn har samma storlek som prioritetslabels.",
+    "en": "Custom labels in list view are the same size as priority labels."
   },
   "issues": [
-    199
+    200
   ]
 }

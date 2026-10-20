@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-20",
+    "summary": {
+      "sv": "Egna labels i listvyn har samma storlek som prioritetslabels.",
+      "en": "Custom labels in list view are the same size as priority labels."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Egna labels i listvyn har samma textstorlek, höjd och padding som prioritetslabels för ett enhetligare utseende.",
+          "en": "Custom labels in list view share the font size, height and padding of priority labels for a consistent appearance."
+        },
+        "issues": [
+          200
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-19",
     "summary": {
       "sv": "Omdesignad statistik: snabbval fyller tidväljarna, nyckeltalen följer perioden och styr diagrammet, och filter och mobilvy är kompaktare.",
