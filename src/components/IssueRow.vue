@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue"
 import { ArrowDown, ArrowUp, ArrowUpRight, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
+import IssueTimeRemaining from "./IssueTimeRemaining.vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
@@ -193,6 +194,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :title="new Date(issue.closed_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
       >
+      <IssueTimeRemaining v-if="col === 'progress'" :issue="issue" :repository="repository" :active="visible" />
     </span>
     <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
       <slot :in-popup="false" />
@@ -220,18 +222,20 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 
 <style scoped>
 .row-comments { display: none; min-width: 0; }
-/* Keep the compact layout until the list has room for actions; reserve metadata space for points and aligned labels. */
+/* Keep title and both time values readable; metadata gets its own line until all columns fit. */
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 6.5rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 5.4rem 14rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 14rem; }
+  .row-meta { grid-column: 1 / -1; grid-row: 2; }
   .row-comments { display: block; }
 }
-/* Repository and action columns need room too: give badges their own line on narrower combined lists. */
-@media (min-width: 951px) {
-  @container issue-list (min-width: 850px) and (max-width: 1049px) {
-    .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 6.5rem; }
-    .issue-row.has-repository .row-meta { grid-column: 1 / -1; grid-row: 2; }
-  }
+@container issue-list (min-width: 1100px) {
+  .issue-row:not(.has-repository) { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 14rem; }
+  .issue-row:not(.has-repository) .row-meta { grid-column: auto; grid-row: auto; }
 }
-
+@container issue-list (min-width: 1250px) {
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 14rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 14rem; }
+  .row-meta { grid-column: auto; grid-row: auto; }
+}
 </style>

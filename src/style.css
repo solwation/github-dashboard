@@ -2391,3 +2391,27 @@ a.sidebar-repository:focus-visible {
 /* Per-issue sizing shares the column forecast's local heuristic (#210). */
 .issue-points { display: inline-flex; align-items: center; flex-shrink: 0; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: var(--green); font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .row-meta > .issue-points { order: 4; min-width: 3.2rem; justify-content: center; }
+
+/* The estimate is elapsed time against historical duration, never measured task completion (#213). */
+.issue-time-remaining { flex: 0 0 auto; color: var(--green); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.issue-time-remaining.overdue { color: #946300; }
+.issue-time-progress { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 108px; max-width: 100%; text-align: right; }
+.issue-time-track { display: block; height: 4px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, currentColor 18%, var(--surface)); }
+.issue-time-fill { display: block; height: 100%; border-radius: inherit; background: currentColor; }
+.card-bottom:has(.issue-time-progress) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+.card-bottom:has(.issue-time-progress) > .timer { grid-column: 1; grid-row: 1; }
+.card-bottom:has(.issue-time-progress) > .assignees { grid-column: 1; grid-row: 2; }
+.card-bottom > .assignees:empty { display: none; }
+.card-bottom > .issue-time-progress { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.row-time { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; column-gap: 10px; row-gap: 4px; overflow: visible; }
+.row-time > .timer { flex: 0 0 auto; }
+@media (min-width: 951px) {
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 14rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 14rem; }
+}
+@media (max-width: 950px) {
+  .issue-row, .issue-row.has-repository { grid-template-areas: "number title title" "meta meta meta" "time time time"; }
+  .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title title" "meta meta meta" "time time time"; }
+  .row-time { justify-self: stretch; justify-content: flex-end; }
+}
+:root[data-theme="dark"] .issue-time-remaining.overdue { color: #f3c66f; }

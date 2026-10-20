@@ -14,10 +14,12 @@ async function fixture(page: Page) {
     ["Progress many", 123, "in progress", "open", ["enhancement"]],
     ["Closed twelve", 12, null, "closed", ["bug"]],
     ["Closed none", 0, null, "closed", ["enhancement"]],
+    ["Closed third", 0, null, "closed", []],
   ];
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
     id: index + 1, number: index + 1, title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
+    startedAt: state === "closed" ? new Date(now - 3600000 - 30 * 60000).toISOString() : undefined,
     labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, "ui"].map(name => ({ name, color: "a2eeef" }))],
   }));
   await page.route("https://api.github.com/**", async route => {
@@ -28,6 +30,7 @@ async function fixture(page: Page) {
       const closed = url.searchParams.get("state") === "closed";
       return route.fulfill({ json: issues.filter(issue => (issue.state === "closed") === closed || url.searchParams.get("state") === "all") });
     }
+    if (url.pathname.endsWith("/issues/5/events")) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - 10 * 60000).toISOString() }] });
     if (url.pathname === "/graphql") return route.fulfill({ json: { data: { repository: { issue: { parent: null, subIssuesSummary: null } } } } });
     return route.fulfill({ json: [] });
   });
@@ -54,7 +57,8 @@ for (const theme of ["light", "dark"]) {
     const rows = page.locator(".issue-row");
     await expect(page.locator(".issue-row.backlog")).toHaveCount(4);
     await expect(page.locator(".issue-row.progress")).toHaveCount(2);
-    await expect(page.locator(".issue-row.closed")).toHaveCount(2);
+    await expect(page.locator(".issue-row.closed")).toHaveCount(3);
+    await expect(page.locator(".issue-row .issue-time-remaining")).toHaveCount(1);
     const columns: Record<string, string> = {
       number: ".row-number", title: ".row-title", meta: ".row-meta", commentSlot: ".row-slot-comment", status: ".row-status",
       priority: ".row-slot-priority", label: ".row-meta .label", commentIcon: ".row-comments .comment-count svg",

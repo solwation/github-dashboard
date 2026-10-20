@@ -2,27 +2,17 @@
 import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
 import { approximatePoints } from "../lib/story-points";
-import { estimateLabel, issueEstimate } from "../lib/estimates";
-import { useIssueEstimateBasis } from "../composables/useIssueEstimates";
-import { useNow } from "../composables/useNow";
+import { estimateLabel } from "../lib/estimates";
+import { useIssueForecast } from "../composables/useIssueForecast";
 import type { Issue } from "../lib/model";
 
 const props = defineProps<{ issue: Issue; repository?: string; inProgress?: boolean; active?: boolean }>();
 const { t } = useLanguage();
 const points = computed(() => approximatePoints(props.issue));
-const basis = useIssueEstimateBasis(() => props.repository);
-function estimateAt(at: number) { return issueEstimate(props.issue, basis.value?.msPerPoint, at, !!props.inProgress); }
-// Rounded minute changes and the exact overdue boundary; this clock only invalidates the badge.
-const now = useNow(at => {
-  const estimate = estimateAt(at);
-  if (!estimate || estimate.remainingMs === null || estimate.overdue) return Infinity;
-  const remaining = estimate.remainingMs;
-  const roundedChange = ((remaining - 30000) % 60000 + 60000) % 60000 || 60000;
-  return Math.min(roundedChange, remaining || 1);
-}, { board: true, active: () => props.active !== false });
+const { basis, estimate: forecast } = useIssueForecast(props);
 const description = computed(() => {
   const parts = [t("Uppskattade story points: cirka {points}", { points: points.value })];
-  const estimate = estimateAt(now.value);
+  const estimate = forecast.value;
   if (estimate) {
     parts.push(t("Uppskattad tid: {time}", { time: estimateLabel(estimate.totalMs) }));
     if (estimate.remainingMs !== null) parts.push(estimate.overdue
