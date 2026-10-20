@@ -35,6 +35,8 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Uppskattade story points: cirka {points}": "Estimated story points: approximately {points}",
+  "Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet.": "Rough size on the 1/2/3/5/8/13 scale. An unambiguous points label takes precedence, otherwise a local estimate from the title and description is used. Not measured complexity.",
   "Typ: {type}": "Type: {type}",
   "Bugg": "Bug",
   "Säkerhet": "Security",

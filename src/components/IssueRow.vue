@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
 import { ArrowDown, ArrowUp, ArrowUpRight, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
+import IssuePoints from "./IssuePoints.vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
@@ -144,6 +145,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     <span class="row-meta">
+      <IssuePoints :issue="issue" />
       <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
         :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
       >
@@ -218,10 +220,10 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 
 <style scoped>
 .row-comments { display: none; min-width: 0; }
-/* Keep the existing compact layout until the actual list has room for an action column. */
+/* Keep the compact layout until the list has room for actions; reserve metadata space for points and aligned labels. */
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(23rem, 1.4fr) 5.4rem 6.5rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(23rem, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 6.5rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(27rem, 1.4fr) 5.4rem 6.5rem; }
   .row-comments { display: block; }
 }
 /* Repository and action columns need room too: give badges their own line on narrower combined lists. */

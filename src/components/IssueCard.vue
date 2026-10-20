@@ -2,6 +2,7 @@
 import IssueRelationsView from "./IssueRelations.vue";
 import type { IssueRelations } from "../lib/issue-relations";
 import IssueDetails from "./IssueDetails.vue";
+import IssuePoints from "./IssuePoints.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
@@ -180,6 +181,7 @@ const visibleLabels = computed(() =>
         /></template>
         #{{ issue.number }}</span
       >
+      <IssuePoints :issue="issue" />
       <span v-if="(repository && showRepository) || visibleLabels.length" class="labels">
         <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name">{{ repository }}</span></span>
         <span

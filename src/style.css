@@ -2387,3 +2387,7 @@ a.sidebar-repository:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .nav-item, a.brand, .sidebar-add, .text-button, .details-toggle, .retry-comments { transition: none; }
 }
+
+/* Per-issue sizing shares the column forecast's local heuristic (#210). */
+.issue-points { display: inline-flex; align-items: center; flex-shrink: 0; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: var(--green); font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row-meta > .issue-points { order: 4; min-width: 3.2rem; justify-content: center; }
