@@ -28,13 +28,15 @@ async function fixture(page: Page) {
   let blocked = false, release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   let requests = 0;
+  const paths: string[] = [];
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     const statistics = url.pathname.endsWith("/issues/events") || (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "all") || ((url.pathname.endsWith("/commits") || url.pathname.endsWith("/pulls")) && url.searchParams.get("per_page") !== "1");
-    if (statistics) { requests++; if (blocked) await gate; }
+    if (statistics) { requests++; paths.push(url.pathname); if (blocked) await gate; }
     await route.fulfill({ json: url.pathname === "/user" ? { login: "statistics-navigation", avatar_url: "" } : url.pathname === "/user/repos" ? repos : [] });
   });
-  return { hold() { blocked = true; }, release() { blocked = false; release(); }, count() { return requests; } };
+  return { hold() { blocked = true; }, release() { blocked = false; release(); }, count() { return requests; },
+    eventCount(name: string) { return paths.filter(path => path === `/repos/sample/${name}/issues/events`).length; } };
 }
 
 test("direct statistics project links override saved Overview and wait for loading without refetching on navigation", async ({ page }) => {
@@ -64,9 +66,18 @@ test("direct statistics project links override saved Overview and wait for loadi
   await page.locator('.sidebar-repository-row[data-repository="sample/alpha"] .sidebar-repository').press("Enter");
   await expect(alpha.locator(".statistics-repository-body")).toBeHidden();
   await expect.poll(() => readSettings(page, "statistics-navigation").then(saved => saved?.preferences?.statistics?.["sample/alpha"]?.collapsed)).toBe(true);
-  // A fresh deep link reveals the saved collapsed section rather than treating it as a repeat.
+  // Reload keeps the saved collapsed choice and must not fetch that repository again.
+  await expect(page).toHaveURL(/#statistics$/);
+  const alphaEvents = api.eventCount("alpha");
   await page.reload();
-  await expect(page).toHaveURL(/#statistics-repo-1$/);
+  await expect(page).toHaveURL(/#statistics$/);
   await expect(page.getByRole("heading", { name: "Statistik", exact: true })).toBeVisible();
+  await expect(alpha.locator(".statistics-repository-toggle")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: "Uppdatera statistik", exact: true })).toBeEnabled();
+  expect(api.eventCount("alpha")).toBe(alphaEvents);
+  // An explicitly opened deep link still reveals the saved collapsed repository.
+  await page.goto("/#statistics-repo-1");
+  await expect(alpha.locator(".statistics-repository-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expect.poll(() => api.eventCount("alpha")).toBeGreaterThan(alphaEvents);
   await expect(page.locator("#statistics-repo-1 h2")).toBeInViewport();
 });

@@ -307,6 +307,8 @@ function setCollapsed(id: number, collapsed: boolean) {
   const repository = props.repositories.find(repo => repo.id === id);
   if (!repository) return;
   updatePreference(repository.full_name, { ...normalizeStatisticsPreference(preferencesState.value[repository.full_name], period.value), collapsed });
+  // A collapsed section is no longer an explicit request to reveal this anchor on reload.
+  if (collapsed && window.location.hash === "#statistics-repo-" + id) history.replaceState(history.state, "", "#statistics");
 }
 let followedAnchor = "";
 let sidebarAnchor = "";
