@@ -35,6 +35,8 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Hämtar statistik. Värden och diagram uppdateras löpande.": "Fetching statistics. Values and charts update gradually.",
+  "Vi hämtar underlaget från GitHub. Tillgängliga värden visas löpande under hämtningen.": "We are fetching data from GitHub. Available values appear gradually while loading.",
   "Förfluten andel av uppskattad tid": "Elapsed share of estimated time",
   "Uppskattad tid: {time}": "Estimated time: {time}",
   "Uppskattad tid kvar: {time}": "Estimated time remaining: {time}",

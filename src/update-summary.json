@@ -1,10 +1,11 @@
 {
   "baseCommit": "ee0d0230acaccd30e38e49393d5c27cc2034d008",
   "summary": {
-    "sv": "Pågående kort visar en tidsstapel och tid kvar nere till höger. I listvyn visas tiden kvar bredvid förfluten tid.",
-    "en": "In-progress cards show a time bar and remaining time at the bottom right. List rows show remaining time beside elapsed time."
+    "sv": "Pågående kort får tidsstapel och synlig tid kvar även i listan. Statistikens badges och diagram fylls på under hämtningen.",
+    "en": "In-progress cards get a time bar and visible remaining time, also in lists. Statistics badges and charts fill in during collection."
   },
   "issues": [
-    213
+    213,
+    214
   ]
 }

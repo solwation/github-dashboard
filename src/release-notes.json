@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Statistikens badges och diagram fylls på under hämtningen med samlade uppdateringar, medan tidigare värden och dina diagramval bevaras.",
+          "en": "Statistics badges and charts fill in during collection with batched updates, while previous values and your chart selections remain available."
+        },
+        "issues": [214]
+      },
+      {
+        "text": {
           "sv": "Story points-tooltipen visar total tid; pågående kort har tidsstapel och listrader visar tid kvar bredvid förfluten tid.",
           "en": "Story-point tooltips show total time; in-progress cards have a time bar and list rows show remaining time beside elapsed time."
         },
