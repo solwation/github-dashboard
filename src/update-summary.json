@@ -1,13 +1,14 @@
 {
   "baseCommit": "07c12aa9504079aa63d049df9d5a441d5b130f98",
   "summary": {
-    "sv": "Översiktsbadges visar poäng och tid kvar. Statistik hämtar öppna repos och visar framdrift. Upprepade sidomenyklick växlar kollapsläget i båda vyerna.",
-    "en": "Overview badges show points and time remaining. Statistics loads expanded repos and shows progress. Repeated sidebar activations toggle collapse in both views."
+    "sv": "Statistik laddas smartare med framdrift. Sidomenyn växlar kollapsläge. Översiktsbadges visar estimat och timeoutvarningar följer dem med valbar tolerans.",
+    "en": "Statistics loads on demand with progress. Sidebar activation toggles collapse. Overview badges show estimates, and warnings use them with adjustable tolerance."
   },
   "issues": [
     216,
     217,
     218,
-    219
+    219,
+    221
   ]
 }

@@ -8,6 +8,13 @@
     "sections": [
       {
         "text": {
+          "sv": "Varningar utgår från tidsestimat med valbar procentuell tolerans och kan stängas av helt i Inställningar.",
+          "en": "Warnings follow time estimates with an adjustable overrun percentage and can be disabled entirely in Settings."
+        },
+        "issues": [221]
+      },
+      {
+        "text": {
           "sv": "Översiktens öppna och pågående badges visar summerade story points och uppskattad tid kvar, med tydlig markering för delvis underlag.",
           "en": "Overview’s open and in-progress badges show summed story points and estimated time remaining, with partial coverage clearly marked."
         },

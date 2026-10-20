@@ -35,6 +35,12 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Varna när pågående arbete överskrider estimatet": "Warn when ongoing work exceeds its estimate",
+  "Tillåten överskridning (%)": "Allowed overrun (%)",
+  "Ange ett heltal mellan 0 och 1000 procent.": "Enter a whole number between 0 and 1000 percent.",
+  "Varnar först efter uppskattad totaltid plus tillåten procent. Kräver känd starttid och tillräcklig historik. Standard: 25 %.": "Warns after the estimated total time plus the allowed percentage. Requires a known start and sufficient history. Default: 25%.",
+  "Pågående i {duration}, över estimatet {estimate} plus {percent} %.": "In progress for {duration}, exceeding the estimate {estimate} plus {percent}%.",
+  "Estimatet för pågående arbete har överskridits": "Ongoing work has exceeded its estimate",
   "Tid för {known} av {total} repos": "Time for {known} of {total} repos",
   "Poängen omfattar samma filtrerade issues som antalet.": "Points cover the same filtered issues as the count.",
   "Tiden bygger på historisk tid per poäng och parallellitet inom varje repository. Långsammaste repository avgör.": "Time uses historical time per point and parallelism within each repository. The slowest repository determines the estimate.",
