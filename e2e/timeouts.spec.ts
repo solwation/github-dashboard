@@ -1,3 +1,4 @@
+import { repositoryNotification } from "./support/repository-properties";
 import { expect, test } from '@playwright/test';
 
 test('timeout uses actual work start, responds to Settings and stays marked on the card without a top list or ignore button', async ({ page }) => {
@@ -75,7 +76,7 @@ test('timeout uses actual work start, responds to Settings and stays marked on t
   await expect(slow).toHaveClass(/issue-timeout/);
   await expect(unknown).not.toHaveClass(/issue-timeout/);
   await page.clock.install();
-  await page.getByRole('switch', { name: 'Notiser för timeout-fixture', exact: true }).click();
+  await repositoryNotification(page, 'timeout-fixture', toggle => toggle.click());
   startedAt = new Date().toISOString();
   await page.keyboard.press('Control+r');
   await expect(slow).not.toHaveClass(/issue-timeout/);

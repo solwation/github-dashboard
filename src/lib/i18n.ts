@@ -403,8 +403,10 @@ export const english: Record<string, string> = {
   Notifikationsljud: "Notification sounds",
   "Spelar ljud för repositories där notiser är på. Övriga notiser påverkas inte.": "Plays sounds for repositories with notifications enabled. Other notifications are unaffected.",
   "Notiser på för {repo}. Nya stängningar meddelas medan dashboarden är öppen. Webbläsaren kan fördröja uppdateringar i bakgrunden.": "Notifications enabled for {repo}. New closures are announced while the dashboard is open. The browser may delay background updates.",
-  "Anpassa labels för ": "Customize labels for ",
-  "Anpassa labels": "Customize labels",
+  "Repositoryegenskaper för ": "Repository properties for ",
+  "Repositoryegenskaper": "Repository properties",
+  Labelregler: "Label rules",
+  "Lämna tomt för automatisk detektering. Ange exakta labelnamn.": "Leave blank for automatic detection. Enter exact label names.",
   "Tidigare data visas om de finns.": "Previous data is shown when available.",
   "Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.":
     "Some start times could not be fetched. The timer appears when the history is available.",

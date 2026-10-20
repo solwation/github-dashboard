@@ -41,7 +41,7 @@ async function globalLimit(page: Page, value: string) {
   await page.getByRole("button", { name: "Klart", exact: true }).click();
 }
 async function override(page: Page, value: string) {
-  await page.getByRole("button", { name: "Anpassa labels för alpha", exact: true }).click();
+  await page.getByRole("button", { name: "Repositoryegenskaper för alpha", exact: true }).click();
   await page.locator("#repository-column-limit").fill(value);
   await page.getByRole("button", { name: "Spara och hämta igen", exact: true }).click();
 }
@@ -104,7 +104,7 @@ test("phone settings work with keyboard and translate to English", async ({ page
   await expect(input).toHaveValue("3");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(cards(page, 1)).toHaveCount(3);
-  await page.getByRole("button", { name: "Customize labels for alpha", exact: true }).click();
+  await page.getByRole("button", { name: "Repository properties for alpha", exact: true }).click();
   const local = page.getByRole("spinbutton", { name: "Maximum work items shown per column" });
   await expect(local).toHaveAttribute("placeholder", "Inherit global setting (3)");
   await local.fill("2");

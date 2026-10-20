@@ -145,7 +145,7 @@ test("connect, select, fetch events, customize work label, preserve data on API 
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await expect(page.locator(".backlog .issue-card")).toHaveCount(1);
   await page
-    .getByRole("button", { name: "Anpassa labels för sample-project" })
+    .getByRole("button", { name: "Repositoryegenskaper för sample-project" })
     .click();
   await page.getByLabel("Pågående arbete").fill("Building");
   await page.getByRole("button", { name: "Spara och hämta igen" }).click();

@@ -1,3 +1,4 @@
+import { repositoryNotification } from "./support/repository-properties";
 import { expect, test, type Page } from "@playwright/test";
 
 async function notifications(
@@ -125,12 +126,10 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   const states = await setup(page);
   expect(await count(page)).toBe(0);
   await expect(page.locator(".just-closed")).toHaveCount(0);
-  const alpha = page.getByRole("switch", { name: "Notiser för alpha" }),
-    beta = page.getByRole("switch", { name: "Notiser för beta" });
-  await expect(alpha).not.toBeChecked();
-  await alpha.click();
-  await expect(alpha).toBeChecked();
-  await expect(beta).not.toBeChecked();
+  await repositoryNotification(page, "alpha", async toggle => {
+    await expect(toggle).not.toBeChecked(); await toggle.click(); await expect(toggle).toBeChecked();
+  });
+  await repositoryNotification(page, "beta", async toggle => { await expect(toggle).not.toBeChecked(); });
   const closedAt = new Date(Date.now() - 5000).toISOString();
   states.alpha = { state: "closed", closed_at: closedAt };
   states.beta = { state: "closed", closed_at: closedAt };
@@ -157,8 +156,7 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   states.alpha = { state: "closed", closed_at: "2026-10-15T13:45:56Z" };
   await page.clock.fastForward(301000);
   await expect.poll(() => count(page)).toBe(2);
-  await alpha.click();
-  await expect(alpha).not.toBeChecked();
+  await repositoryNotification(page, "alpha", async toggle => { await toggle.click(); await expect(toggle).not.toBeChecked(); });
   states.alpha = { state: "closed", closed_at: "2026-10-15T14:45:56Z" };
   await page.keyboard.press("Control+r");
   await expect(page.locator(".closed-date").first()).toHaveAttribute(
@@ -166,8 +164,7 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
     states.alpha.closed_at!,
   );
   expect(await count(page)).toBe(2);
-  await beta.click();
-  await expect(beta).toBeChecked();
+  await repositoryNotification(page, "beta", async toggle => { await toggle.click(); await expect(toggle).toBeChecked(); });
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
   await page
     .getByRole("button", { name: "Logga ut och ta bort token", exact: true })
@@ -175,12 +172,8 @@ test("animates newly closed cards, shows time, notifies only subscribed reposito
   await page.getByRole("button", { name: "Anslut GitHub" }).click();
   await page.getByLabel("GitHub personal access token").fill("test-only");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
-  await expect(
-    page.getByRole("switch", { name: "Notiser för beta" }),
-  ).toBeChecked();
-  await expect(
-    page.getByRole("switch", { name: "Notiser för alpha" }),
-  ).not.toBeChecked();
+  await repositoryNotification(page, "beta", async toggle => { await expect(toggle).toBeChecked(); });
+  await repositoryNotification(page, "alpha", async toggle => { await expect(toggle).not.toBeChecked(); });
   expect(await count(page)).toBe(2);
 });
 
@@ -189,9 +182,7 @@ test("denied notification permission leaves project disabled and explains how to
 }) => {
   await notifications(page, "denied");
   await setup(page);
-  const toggle = page.getByRole("switch", { name: "Notiser för alpha" });
-  await toggle.click();
-  await expect(toggle).not.toBeChecked();
+  await repositoryNotification(page, "alpha", async toggle => { await toggle.click(); await expect(toggle).not.toBeChecked(); });
   await expect(page.getByRole("status").filter({ hasText: "Notiser är blockerade" })).toBeVisible();
   expect(await count(page)).toBe(0);
 });

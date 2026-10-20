@@ -59,10 +59,10 @@ test("repository picker traps focus, closes with Escape and restores focus to it
 
 test("label dialog traps focus, closes with Escape and restores focus to its opener", async ({ page }) => {
   await fixture(page);
-  const opener = page.getByRole("button", { name: "Anpassa labels för alpha", exact: true });
+  const opener = page.getByRole("button", { name: "Repositoryegenskaper för alpha", exact: true });
   await opener.focus();
   await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog", { name: "Anpassa labels", exact: true });
+  const dialog = page.getByRole("dialog", { name: "Repositoryegenskaper", exact: true });
   await expect(dialog).toBeVisible();
   await expectTrapped(page, dialog, dialog.getByRole("button", { name: "Stäng", exact: true }), dialog.getByRole("button", { name: "Spara och hämta igen", exact: true }));
   await expect(opener).toBeFocused();

@@ -1,3 +1,4 @@
+import { repositoryNotification } from "./support/repository-properties";
 import { expect, test } from "@playwright/test";
 import { readSettings } from "./support/settings";
 
@@ -56,7 +57,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   const notes = () => page.evaluate(() => (window as Window & { soundFrequencies?: number[] }).soundFrequencies);
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   expect(await notes()).toEqual([]);
-  await page.getByRole("switch", { name: "Notiser för alpha", exact: true }).click();
+  await repositoryNotification(page, "alpha", toggle => toggle.click());
   states.alpha!.labels = ["in-progress"];
   states.beta!.labels = ["in-progress"];
   await refreshWhenIdle();
@@ -78,7 +79,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   await soundChoice.focus(); await page.keyboard.press("End"); await page.keyboard.press("Tab");
   await expect(soundChoice).toHaveValue("false");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(page.getByRole("switch", { name: "Notifications for alpha", exact: true })).toHaveAttribute("aria-checked", "true");
+  await repositoryNotification(page, "alpha", async toggle => { await expect(toggle).toBeChecked(); });
   await expect.poll(() => readSettings(page, "sound-test").then(saved => saved?.preferences?.notificationSounds)).toBe(false);
   states.alpha = { state: "open", labels: [] };
   await refreshWhenIdle();
@@ -110,7 +111,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByLabel("Language", { exact: true }).selectOption("sv");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
-  await page.getByRole("switch", { name: "Notiser för alpha", exact: true }).click();
+  await repositoryNotification(page, "alpha", toggle => toggle.click());
   states.alpha = { state: "open", labels: [] };
   await refreshWhenIdle();
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
@@ -188,10 +189,8 @@ for (const audioMode of ['unsupported', 'denied'] as const) {
     await page.getByRole('checkbox', { name: repo.full_name }).check();
     await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
     await expect(page.locator('.backlog .issue-card')).toHaveCount(1);
-    const toggle = page.getByRole('switch', { name: 'Notiser för silent', exact: true });
-    await toggle.click();
+    await repositoryNotification(page, 'silent', async toggle => { await toggle.click(); await expect(toggle).toBeChecked(); });
     await expect(page.locator('.notification-notice')).toContainText('Ljud kunde inte aktiveras');
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await page.getByRole('button', { name: 'Stäng notismeddelande', exact: true }).click();
     for (let round = 0; round < 2; round++) {
       state = 'open'; labels = ['in-progress']; closedAt = null;

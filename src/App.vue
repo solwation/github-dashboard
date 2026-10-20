@@ -457,6 +457,7 @@ watch([sessionToken, permissionRepos], () => {
 const notificationRepos = ref<string[]>([]);
 const notificationSounds = ref(true);
 const notificationNotice = ref("");
+const notificationNoticeRepo = ref<string | null>(null);
 const permission = ref(notificationPermission());
 const notificationPending = ref<string | null>(null);
 const recentClosures = ref(new Set<string>());
@@ -524,6 +525,7 @@ function notificationsEnabled(repo: string) {
 async function toggleNotifications(repo: string) {
   if (notificationPending.value) return;
   notificationNotice.value = "";
+  notificationNoticeRepo.value = repo;
   permission.value = notificationPermission();
   if (
     notificationRepos.value.includes(repo) &&
@@ -589,6 +591,7 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
       (name) => name !== lane.repo.full_name,
     );
     save();
+    notificationNoticeRepo.value = lane.repo.full_name;
     notificationNotice.value = t(
       "Notiser kunde inte visas och har stängts av för {repo}. Kontrollera webbläsarens stöd och behörigheter.",
       { repo: lane.repo.name },
@@ -1179,6 +1182,7 @@ async function oauth() {
   }
 }
 function editRules(lane: Lane) {
+  if (notificationPending.value === null && notificationNoticeRepo.value !== lane.repo.full_name) notificationNotice.value = "";
   editing.value = lane.repo.full_name;
   rules.value[lane.repo.full_name] ||= {};
 }
@@ -1510,7 +1514,7 @@ onMounted(async () => {
     <main :id="currentView === 'statistics' && (loggedIn || isDemo) ? 'statistics' : 'overview'" tabindex="-1">
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
       <div
-        v-if="notificationNotice"
+        v-if="notificationNotice && !editing"
         class="notice notification-notice"
         role="status"
       >
@@ -1770,33 +1774,6 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="lane-actions">
-              <button
-                v-if="!isDemo"
-                class="notification-toggle"
-                role="switch"
-                :aria-checked="notificationsEnabled(lane.repo.full_name)"
-                :aria-label="t('Notiser för ') + lane.repo.name"
-                :title="
-                  notificationsEnabled(lane.repo.full_name)
-                    ? t('Stäng av notiser om stängda issues')
-                    : t('Slå på notiser om stängda issues')
-                "
-                :disabled="notificationPending !== null"
-                :class="{ enabled: notificationsEnabled(lane.repo.full_name) }"
-                @click="toggleNotifications(lane.repo.full_name)"
-              >
-                <Bell
-                  v-if="notificationsEnabled(lane.repo.full_name)"
-                  :size="15"
-                /><BellOff v-else :size="15" /><span
-                  >{{ t("Notiser") }}
-                  {{
-                    notificationsEnabled(lane.repo.full_name)
-                      ? t("på")
-                      : t("av")
-                  }}</span
-                >
-              </button>
               <span v-if="!lane.loading" class="workflow-badge"
                 ><Check :size="12" />{{ workflow(lane.labels) }}</span
               ><span v-if="!lane.loading && (!lane.error || lane.issues.length)">{{ laneIssues(lane).length }} issues</span><span v-else-if="lane.loading">{{ t("Hämtar…") }}</span
@@ -1804,8 +1781,8 @@ onMounted(async () => {
                 v-if="!isDemo"
                 class="icon-button"
                 @click="editRules(lane)"
-                :aria-label="t('Anpassa labels för ') + lane.repo.name"
-                :title="t('Anpassa labels')"
+                :aria-label="t('Repositoryegenskaper för ') + lane.repo.name"
+                :title="t('Repositoryegenskaper')"
               >
                 <Settings2 :size="16" />
               </button>
@@ -1923,8 +1900,7 @@ onMounted(async () => {
             <p class="combined-limit-note">{{ t("Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.") }}</p>
             <div v-for="lane in orderedLanes" :key="lane.repo.full_name" class="combined-repository-control" :id="'repo-' + lane.repo.id">
               <span class="combined-repository-name"><i :style="{ backgroundColor: workspaceRepositoryColors[lane.repo.full_name] }" aria-hidden="true" />{{ lane.repo.full_name }}</span>
-              <button v-if="!isDemo" class="notification-toggle" role="switch" :aria-checked="notificationsEnabled(lane.repo.full_name)" :aria-label="t('Notiser för ') + lane.repo.name" :disabled="notificationPending !== null" :class="{ enabled: notificationsEnabled(lane.repo.full_name) }" @click="toggleNotifications(lane.repo.full_name)"><Bell v-if="notificationsEnabled(lane.repo.full_name)" :size="15" /><BellOff v-else :size="15" />{{ t("Notiser") }} {{ notificationsEnabled(lane.repo.full_name) ? t("på") : t("av") }}</button>
-              <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Anpassa labels för ') + lane.repo.name"><Settings2 :size="16" /></button>
+              <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Repositoryegenskaper för ') + lane.repo.name" :title="t('Repositoryegenskaper')"><Settings2 :size="16" /></button>
             </div>
           </details>
           <span v-if="isDemo" class="lane-sync combined-sync">
@@ -2099,14 +2075,14 @@ onMounted(async () => {
   <div v-if="editing" class="modal-backdrop" @click.self="applyRules">
     <form
       ref="rulesDialog"
-      class="modal"
+      class="modal repository-properties"
       role="dialog"
       aria-modal="true"
       aria-labelledby="rules-title"
       @submit.prevent="applyRules"
     >
       <div class="modal-heading">
-        <h2 id="rules-title">{{ t("Anpassa labels") }}</h2>
+        <h2 id="rules-title">{{ t("Repositoryegenskaper") }}</h2>
         <button
           type="button"
           class="icon-button"
@@ -2116,12 +2092,20 @@ onMounted(async () => {
           <X :size="20" />
         </button>
       </div>
-      <p>
-        {{ editing }}
-        {{
-          t("· Lämna tomt för automatisk detektering. Ange exakta labelnamn.")
-        }}
-      </p>
+      <p>{{ editing }} · {{ t("Gäller bara din vy") }}</p>
+      <button type="button" class="notification-toggle" role="switch"
+        :aria-checked="notificationsEnabled(editing)" :aria-label="t('Notiser för ') + editing.split('/').pop()"
+        :disabled="notificationPending !== null" :class="{ enabled: notificationsEnabled(editing) }"
+        @click="toggleNotifications(editing)">
+        <Bell v-if="notificationsEnabled(editing)" :size="15" /><BellOff v-else :size="15" />
+        {{ t("Notiser") }} {{ notificationsEnabled(editing) ? t("på") : t("av") }}
+      </button>
+      <div v-if="notificationNotice" class="notice notification-notice" role="status">
+        <span>{{ notificationNotice }}</span><button type="button" class="icon-button"
+          :aria-label="t('Stäng notismeddelande')" @click="notificationNotice = ''"><X :size="16" /></button>
+      </div>
+      <h3>{{ t("Labelregler") }}</h3>
+      <p>{{ t("Lämna tomt för automatisk detektering. Ange exakta labelnamn.") }}</p>
       <label
         v-for="field in [
           ['progress', t('Pågående arbete')],
@@ -2196,4 +2180,9 @@ onMounted(async () => {
 .combined-repository-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
 .combined-repository-name { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex: 1 1 180px; overflow-wrap: anywhere; }
 .combined-repository-name i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.repository-properties { overflow-wrap: anywhere; }
+.repository-properties .modal-heading h2 { min-width: 0; }
+.repository-properties .modal-heading > button { flex-shrink: 0; }
+.repository-properties .modal-footer { flex-wrap: wrap; }
+.repository-properties .modal-footer > button { margin-left: auto; }
 </style>
