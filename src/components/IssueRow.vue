@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, ArrowRightLeft, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
@@ -123,7 +123,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     @click="rowClick"
     :class="[col, { expanded, 'has-repository': showRepository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
   >
-    <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
+    <span v-if="showRepository && !isPhone" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
     <span class="row-id"
       ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
         ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"
@@ -149,7 +149,25 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       @click="setExpanded(!expanded)"
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
-    <span class="row-meta">
+    <span v-if="isPhone" class="row-mobile-summary">
+      <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
+      <span v-if="col !== 'closed'" class="row-mobile-priority" :class="['high', 'medium', 'low'][rank]" role="img"
+        :aria-label="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]">
+        <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
+      </span>
+      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
+      <button v-if="recentMove" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
+        :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
+        :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })">
+        <component :is="recentMove === 'created' ? Plus : ArrowRightLeft" :size="12" aria-hidden="true" />
+      </button>
+      <button v-if="newComments && newComments > 0" type="button" class="row-mobile-activity row-comment-marker" @click="emit('read')"
+        :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
+        :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })">
+        <MessageCircle :size="12" aria-hidden="true" /><span>{{ newComments }}</span>
+      </button>
+    </span>
+    <span v-else class="row-meta">
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
         :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
@@ -183,7 +201,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
       >
     </span>
-    <div class="row-comments" @click.stop>
+    <div v-if="!isPhone" class="row-comments" @click.stop>
       <IssueComments :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <span class="row-time">
@@ -198,7 +216,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :title="new Date(issue.closed_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
       >
-      <IssueTimeRemaining v-if="col === 'progress'" :issue="issue" :repository="repository" :active="visible" />
+      <IssueTimeRemaining v-if="col === 'progress' && !isPhone" :issue="issue" :repository="repository" :active="visible" />
     </span>
     <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
       <slot :in-popup="false" />
@@ -226,6 +244,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 
 <style scoped>
 .row-comments { display: none; min-width: 0; }
+.row-mobile-summary { display: none; }
 /* Keep title and both time values readable; metadata gets its own line until all columns fit. */
 @media (min-width: 951px) {
   @container issue-list (max-width: 849px) {
@@ -248,5 +267,22 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(32.4rem, 1.4fr) 5.4rem 14rem; }
   .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(32.4rem, 1.4fr) 5.4rem 14rem; }
   .row-meta { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 650px) {
+  .issue-row, .issue-row.has-repository {
+    grid-template-columns: 4.3rem minmax(0, 1fr) auto;
+    grid-template-areas: "number title title" "meta meta time";
+    gap: 2px 6px; min-height: 56px; padding: 6px 8px;
+  }
+  .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
+  .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; height: 24px; }
+  .row-mobile-summary > * { flex-shrink: 0; }
+  .row-mobile-summary > .row-repository { grid-area: auto; flex: 0 1 auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
+  .row-mobile-priority { display: inline-flex; }
+  .row-mobile-priority.high { color: var(--accent-red, #b42332); }
+  .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: #dcecff; color: #175b96; font-size: 9px; cursor: pointer; }
+  .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+  .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 7rem; overflow: hidden; font-size: 10px; }
+  .row-time > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 </style>

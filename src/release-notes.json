@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-21",
+    "summary": {
+      "sv": "Kompaktare listvy på telefonen.",
+      "en": "More compact lists on phones."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Telefonens listrader visar det viktigaste på två kompakta rader; tryck på titeln för kortets alla detaljer.",
+          "en": "Phone list rows show essentials on two compact lines; tap the title for full card details."
+        },
+        "issues": [
+          223
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-20",
     "summary": {
       "sv": "Ordna repositories på mobilen, se tid per issue och följ längre statistikhistorik. Tydligare listlabels och stabilare reporubriker.",
@@ -11,98 +29,126 @@
           "sv": "Kombinerade kort och listor visar kortare repolabels när alla valda repositories har samma ägare; fullnamnet finns i tooltipen.",
           "en": "Combined cards and lists shorten repository labels when every selected repository has the same owner; tooltips retain full names."
         },
-        "issues": [220]
+        "issues": [
+          220
+        ]
       },
       {
         "text": {
           "sv": "Flyttad- och kommentarsmarkeringar har egna platser i listvyn utan att rubba radens höjd eller kolumner.",
           "en": "Movement and comment markers have reserved list positions without shifting row height or columns."
         },
-        "issues": [222]
+        "issues": [
+          222
+        ]
       },
       {
         "text": {
           "sv": "Varningar utgår från tidsestimat med valbar procentuell tolerans och kan stängas av helt i Inställningar.",
           "en": "Warnings follow time estimates with an adjustable overrun percentage and can be disabled entirely in Settings."
         },
-        "issues": [221]
+        "issues": [
+          221
+        ]
       },
       {
         "text": {
           "sv": "Översiktens öppna och pågående badges visar summerade story points och uppskattad tid kvar, med tydlig markering för delvis underlag.",
           "en": "Overview’s open and in-progress badges show summed story points and estimated time remaining, with partial coverage clearly marked."
         },
-        "issues": [219]
+        "issues": [
+          219
+        ]
       },
       {
         "text": {
           "sv": "Följ statistikens hämtade historik och färdiga underlag, med procent och ungefärlig tid kvar när arbetsmängden är känd.",
           "en": "Follow collected statistics history and finished sources, with percentage and approximate time remaining once the workload is known."
         },
-        "issues": [216]
+        "issues": [
+          216
+        ]
       },
       {
         "text": {
           "sv": "Klicka igen på fokuserat projekt i sidomenyn för att fälla ihop eller expandera det i Översikt och Statistik.",
           "en": "Activate the focused sidebar project again to collapse or expand it in Overview and Statistics."
         },
-        "issues": [218]
+        "issues": [
+          218
+        ]
       },
       {
         "text": {
           "sv": "Statistik hämtar bara expanderade repos, sparar kollapsläget per konto och öppnar endast första repot som standard.",
           "en": "Statistics loads only expanded repositories, remembers collapse choices per account and opens only the first repository by default."
         },
-        "issues": [217]
+        "issues": [
+          217
+        ]
       },
       {
         "text": {
           "sv": "Statistik öppnas direkt på första klicket efter utloggning och återinloggning, även från ett repositoryankare.",
           "en": "Statistics opens on the first click after signing out and back in, including when leaving a repository anchor."
         },
-        "issues": [215]
+        "issues": [
+          215
+        ]
       },
       {
         "text": {
           "sv": "Statistikens badges och diagram fylls på under hämtningen med samlade uppdateringar, medan tidigare värden och dina diagramval bevaras.",
           "en": "Statistics badges and charts fill in during collection with batched updates, while previous values and your chart selections remain available."
         },
-        "issues": [214]
+        "issues": [
+          214
+        ]
       },
       {
         "text": {
           "sv": "Story points-tooltipen visar total tid; pågående kort har tidsstapel och listrader visar tid kvar bredvid förfluten tid.",
           "en": "Story-point tooltips show total time; in-progress cards have a time bar and list rows show remaining time beside elapsed time."
         },
-        "issues": [213]
+        "issues": [
+          213
+        ]
       },
       {
         "text": {
           "sv": "Statistik hämtar längre händelsehistorik och äldre kodändringar, så aktiva repositories behåller underlag över fler dygn.",
           "en": "Statistics fetches longer event history and older code changes, preserving more days of activity in busy repositories."
         },
-        "issues": [212]
+        "issues": [
+          212
+        ]
       },
       {
         "text": {
           "sv": "Ordna repositories även på mobilen via Inställningar med draghandtag eller upp- och nedknappar.",
           "en": "Reorder repositories on mobile from Settings using drag handles or up and down buttons."
         },
-        "issues": [211]
+        "issues": [
+          211
+        ]
       },
       {
         "text": {
           "sv": "Uppskattade story points visas per issue på kort och i listrader, med samma beräkning som kolumnernas estimat.",
           "en": "Estimated story points appear per issue on cards and list rows, using the same calculation as column forecasts."
         },
-        "issues": [210]
+        "issues": [
+          210
+        ]
       },
       {
         "text": {
           "sv": "Fäll ihop och expandera ett repo för att återställa alla kolumner till inställd issuegräns.",
           "en": "Collapse and expand a repository to reset every column to its configured issue limit."
         },
-        "issues": [209]
+        "issues": [
+          209
+        ]
       },
       {
         "text": {
@@ -199,168 +245,224 @@
           "sv": "In progress-labeln döljs på kort och rader som redan ligger i In progress-kolumnen.",
           "en": "The in-progress label is hidden on cards and rows that already sit in the In progress column."
         },
-        "issues": [198]
+        "issues": [
+          198
+        ]
       },
       {
         "text": {
           "sv": "Listraderna visar samma typikon som korten, även på mobil, och den label som ikonen ersätter visas inte längre som chip.",
           "en": "List rows show the same type icon as cards, also on phones, and the label the icon replaces is no longer shown as a chip."
         },
-        "issues": [199]
+        "issues": [
+          199
+        ]
       },
       {
         "text": {
           "sv": "Korten upprepar inte längre typlabeln (bug, enhancement med flera) som ikonen redan visar; övriga labels visas som förut.",
           "en": "Cards no longer repeat the type label (bug, enhancement and so on) that the icon already shows; other labels appear as before."
         },
-        "issues": [197]
+        "issues": [
+          197
+        ]
       },
       {
         "text": {
           "sv": "Tydligare hover- och fokusmarkering i hela gränssnittet, bland annat Overview och Statistics i vänstermenyn, i samma stil som repositories.",
           "en": "Clearer hover and focus feedback across the interface, including Overview and Statistics in the left menu, in the same style as repositories."
         },
-        "issues": [196]
+        "issues": [
+          196
+        ]
       },
       {
         "text": {
           "sv": "Cirkeln på korten visar issue-typ (bugg, funktion, dokumentation, fråga med mera) med egen ikon och färg, härledd från labels; stängda markeras med bock.",
           "en": "The card circle shows the issue type (bug, feature, docs, question and more) with its own icon and tint, derived from labels; closed issues keep a check mark."
         },
-        "issues": [195]
+        "issues": [
+          195
+        ]
       },
       {
         "text": {
           "sv": "Vanliga labels på korten är lika stora som repo-labeln.",
           "en": "Regular labels on cards are the same size as the repository label."
         },
-        "issues": [194]
+        "issues": [
+          194
+        ]
       },
       {
         "text": {
           "sv": "Repositories i vänstermenyn markeras vid hovring och fokus så att du ser vilken som är aktiv innan du klickar.",
           "en": "Repositories in the left menu highlight on hover and focus so you see which is active before clicking."
         },
-        "issues": [193]
+        "issues": [
+          193
+        ]
       },
       {
         "text": {
           "sv": "Korten är mer kompakta: statuscirkel, issue-id och labels ligger på en gemensam översta rad, och repositoryn visas som första chip när uppdelning per repository är av.",
           "en": "Cards are more compact: status circle, issue id and labels share one top row, and the repository shows as the first chip when split by repository is off."
         },
-        "issues": [192]
+        "issues": [
+          192
+        ]
       },
       {
         "text": {
           "sv": "Hovermarkeringen på licenssektionen omger nu innehållet jämnt i stället för att ligga förskjuten.",
           "en": "The license section's hover highlight now surrounds its content evenly instead of sitting offset."
         },
-        "issues": [191]
+        "issues": [
+          191
+        ]
       },
       {
         "text": {
           "sv": "I listläget börjar kommentarsbubblor, labels och övriga kolumner på samma plats i alla rader och sektioner, oavsett antal kommentarer.",
           "en": "In list mode, comment bubbles, labels and the other columns start at the same position in every row and section, whatever the comment count."
         },
-        "issues": [190]
+        "issues": [
+          190
+        ]
       },
       {
         "text": {
           "sv": "Licenssektionen längst ner i vänstermenyn lyser upp vid hovring och fokus igen.",
           "en": "The license section at the bottom of the left menu highlights again on hover and focus."
         },
-        "issues": [189]
+        "issues": [
+          189
+        ]
       },
       {
         "text": {
           "sv": "Ändras en undersiffra i översiktens badges visas en kort +1/−1 som flyter upp, utan layoutskiftning och med stöd för minskad rörelse.",
           "en": "When a sub-value in the overview badges changes, a brief +1/−1 floats up, with no layout shift and reduced-motion support."
         },
-        "issues": [188]
+        "issues": [
+          188
+        ]
       },
       {
         "text": {
           "sv": "Att hovra (kort stund), fokusera eller klicka ett inaktuellt repository i vänstermenyn uppdaterar just det, utan att slösa API-gräns.",
           "en": "Hovering (briefly), focusing or clicking a stale repository in the left menu refreshes just that one, without wasting API quota."
         },
-        "issues": [187]
+        "issues": [
+          187
+        ]
       },
       {
         "text": {
           "sv": "Breda listrader visar kommentarsikon och antal direkt; smalare vyer behåller kommentarerna i radens detaljer eller telefonkort.",
           "en": "Wide list rows show the comments icon and count directly; narrower views keep comments in row details or the phone card."
         },
-        "issues": [185]
+        "issues": [
+          185
+        ]
       },
       {
         "text": {
           "sv": "Kommentarsbubblan och andra klickbara märken och ikonknappar lyser upp vid hovring och tangentbordsfokus.",
           "en": "The comment bubble and other clickable chips and icon buttons glow on hover and keyboard focus."
         },
-        "issues": [186]
+        "issues": [
+          186
+        ]
       },
       {
         "text": {
           "sv": "30-dagarsdiagram använder minst sex timmars upplösning, även för sparade val och synkade inställningar.",
           "en": "Thirty-day charts use at least six-hour resolution, including saved choices and synced settings."
         },
-        "issues": [180]
+        "issues": [
+          180
+        ]
       },
       {
         "text": {
           "sv": "Hela licensrutan är klickbar; licens och version har högerjusterade ikoner och uppdateringsmärket fungerar med tangentbord.",
           "en": "The whole license card is clickable; license and version have right-aligned icons, and the update badge works with the keyboard."
         },
-        "issues": [181]
+        "issues": [
+          181
+        ]
       },
       {
         "text": {
           "sv": "Läs alla diagramseriers värden direkt vid markören, med samma popover via mobiltryck och tangentbord.",
           "en": "Read every chart series at the cursor, with the same popover available through touch and keyboard."
         },
-        "issues": [173]
+        "issues": [
+          173
+        ]
       },
       {
         "text": {
           "sv": "Tider följer webbläsarens tidszon och sommartid; Från/Till visas bara för Anpassat, med bevarade tidsfönster mellan enheter.",
           "en": "Times follow your browser’s time zone and daylight saving; From/To appear only for Custom, preserving windows across devices."
         },
-        "issues": [174, 176, 177, 178, 182]
+        "issues": [
+          174,
+          176,
+          177,
+          178,
+          182
+        ]
       },
       {
         "text": {
           "sv": "Nyckeltal, bidragsgivare, labels och medianålder räknas över samma period som diagrammet i stället för hela 30 dagar.",
           "en": "Totals, contributors, labels and median age now cover the same period as the chart instead of the full 30 days."
         },
-        "issues": [167]
+        "issues": [
+          167
+        ]
       },
       {
         "text": {
           "sv": "Diagrammet får rubrik efter upplösning, fler axeletiketter med klockslag, måttnamn i förklaringen och vald punkt i en tydlig ruta.",
           "en": "The chart gets a resolution-based title, more axis labels with times, metric names in the legend and the selected point in a clear box."
         },
-        "issues": [171]
+        "issues": [
+          171
+        ]
       },
       {
         "text": {
           "sv": "Nyckeltalen grupperas i Issues, Pull requests och Kod, och korten väljer vad diagrammet visar i samma färg som linjen.",
           "en": "Totals are grouped into Issues, Pull requests and Code, and the cards choose what the chart shows in the same colour as its line."
         },
-        "issues": [170]
+        "issues": [
+          170
+        ]
       },
       {
         "text": {
           "sv": "Tidsraden visar periodens längd och dropdowns; tidsval fortsätter fungera över midnatt, med samordnad uppdatering och bevarade grafer.",
           "en": "The time row shows duration and dropdowns; time choices keep working across midnight, with coordinated refreshes and retained charts."
         },
-        "issues": [168, 169, 179, 183]
+        "issues": [
+          168,
+          169,
+          179,
+          183
+        ]
       },
       {
         "text": {
           "sv": "Fäll ihop repositories separat; bidragsgivare och labels börjar stängda, och grafens tidsreglage visas bara vid tangentbordsfokus.",
           "en": "Collapse repositories independently; contributors and labels start closed, and the chart’s time slider appears only on keyboard focus."
         },
-        "issues": [172, 184]
+        "issues": [
+          172,
+          184
+        ]
       }
     ]
   },
@@ -376,49 +478,65 @@
           "sv": "När ett ärende får nya kommentarer animeras pratbubblan och en badge visar antalet nya kommentarer i kort- och listvy tills de läses.",
           "en": "When an issue receives new comments, the chat bubble animates and a badge shows the number of new comments in card and list view until read."
         },
-        "issues": [157]
+        "issues": [
+          157
+        ]
       },
       {
         "text": {
           "sv": "Tydligare indikering i listläge och på kort för subtasks och parent tasks med antal klara underärenden.",
           "en": "Clearer indication in list mode and on cards for subtasks and parent tasks with number of completed sub-issues."
         },
-        "issues": [158]
+        "issues": [
+          158
+        ]
       },
       {
         "text": {
           "sv": "Stängning av kortpopup i listläge på mobil sker via ett smidigt kryss uppe i högra hörnet inuti kortet.",
           "en": "Closing the card popup in list mode on mobile now uses a sleek cross icon in the top-right corner inside the card."
         },
-        "issues": [159]
+        "issues": [
+          159
+        ]
       },
       {
         "text": {
           "sv": "Statistiksidan har en samlad tidsintervall- och upplösningsväljare högst upp på sidan som styr alla grafer.",
           "en": "The Statistics page has a unified time range and resolution picker at the top of the page controlling all charts."
         },
-        "issues": [160, 164]
+        "issues": [
+          160,
+          164
+        ]
       },
       {
         "text": {
           "sv": "Ladd-cirkeln och synkstatusen i repo-rubriker och på den sammanslagna boarden har lika stor marginal till höger som uppåt.",
           "en": "The sync spinner and status in repository headers and the combined board have equal margins to the right as to the top."
         },
-        "issues": [161, 162]
+        "issues": [
+          161,
+          162
+        ]
       },
       {
         "text": {
           "sv": "I listvyn döljs den överflödiga \"Visa mindre\"-knappen när en rad expanderas, medan kommentarer och beskrivning förblir synliga.",
           "en": "In list view, the redundant \"Show less\" toggle button is hidden when a row expands, keeping comments and description visible."
         },
-        "issues": [163]
+        "issues": [
+          163
+        ]
       },
       {
         "text": {
           "sv": "Hela versionsrutan i sidomenyn är nu klickbar för att visa versionsnyheter och har tydlig hover-markering; den separata länken har tagits bort.",
           "en": "The entire sidebar version box is now clickable to open release notes with clear hover feedback; the separate link has been removed."
         },
-        "issues": [165]
+        "issues": [
+          165
+        ]
       }
     ]
   },
@@ -434,210 +552,282 @@
           "sv": "Statistikgraferna kan visa flera mätvärden samtidigt i samma skala, med valbar upplösning och snabbval för tidsintervall där 3 dagar är förvalt.",
           "en": "Statistics charts can plot multiple metrics at once on a shared scale, with selectable resolution and time range presets defaulting to 3 days."
         },
-        "issues": [156]
+        "issues": [
+          156
+        ]
       },
       {
         "text": {
           "sv": "I listvy på datorn visar en expanderad rad all kortinformation direkt med öppen beskrivning, och på mobilen öppnas kortet som en popup.",
           "en": "In list view on desktop, an expanded row shows all card details in place with the description open, while on phones the card opens in a popup."
         },
-        "issues": [155]
+        "issues": [
+          155
+        ]
       },
       {
         "text": {
           "sv": "I listläget öppnar ett tryck på en rad hela kortet direkt i listan; issuenumret är en separat länk till GitHub.",
           "en": "In list mode, tapping a row expands it into the full card in place; the issue number is a separate link to GitHub."
         },
-        "issues": [154]
+        "issues": [
+          154
+        ]
       },
       {
         "text": {
           "sv": "Översiktskorten visar nu sekundära mått som två celler längst ner i varje kort, till exempel aktiva och backlog för repositories.",
           "en": "The overview cards now show secondary metrics as two cells at the bottom of each card, such as active and backlog for repositories."
         },
-        "issues": [152]
+        "issues": [
+          152
+        ]
       },
       {
         "text": {
           "sv": "Sidhuvudet med Workspace-sökväg, inställningar och konto stannar överst vid scroll även på dator och surfplatta.",
           "en": "The header with the workspace path, settings and account now stays at the top while scrolling on desktop and tablet too."
         },
-        "issues": [153]
+        "issues": [
+          153
+        ]
       },
       {
         "text": {
           "sv": "Verktygsraden visar inte längre \"Adaptiv synk\"; Kort/Lista-växeln ligger längst till höger och synkfel visas som ett tydligt meddelande.",
           "en": "The board toolbar drops \"Adaptive sync\"; the Cards/List switch sits at the far right and sync errors appear as a visible notice."
         },
-        "issues": [151]
+        "issues": [
+          151
+        ]
       },
       {
         "text": {
           "sv": "Repository- och boardrubriker visar bara tid eller en snurra uppe till höger; klicka på tiden för att uppdatera direkt.",
           "en": "Repository and board headers show only the time or a spinner at top right; click the time to update immediately."
         },
-        "issues": [149]
+        "issues": [
+          149
+        ]
       },
       {
         "text": {
           "sv": "Tidsuppskattningen i kolumnrubrikerna visas även på datorn, eftersom bakgrundsstatistiken inte längre pausas av scrollning och sparad statistik används direkt.",
           "en": "Column time estimates now appear on desktop too, since background statistics no longer pause while scrolling and cached statistics are used right away."
         },
-        "issues": [148]
+        "issues": [
+          148
+        ]
       },
       {
         "text": {
           "sv": "På mobilen ligger toppfältet och verktygsraden kvar överst vid scroll, och innehållet syns inte bakom statusfältet i installerad app.",
           "en": "On phones the top bar and toolbar stay pinned while scrolling, and content no longer shows behind the status bar in the installed app."
         },
-        "issues": [145]
+        "issues": [
+          145
+        ]
       },
       {
         "text": {
           "sv": "Varje repository visar sin egen uppdateringstid och en snurrande symbol medan just det projektet hämtas, även den gemensamma tavlan.",
           "en": "Each repository shows its own last-updated time and a spinner while that project is fetching, including the combined board."
         },
-        "issues": [146]
+        "issues": [
+          146
+        ]
       },
       {
         "text": {
           "sv": "Växeln Kort/Lista finns en gång i verktygsraden och gäller alla repositories och den sammanslagna tavlan; tidigare val följer med.",
           "en": "The Cards/List switch appears once in the toolbar and applies to every repository and the combined board; earlier choices carry over."
         },
-        "issues": [147]
+        "issues": [
+          147
+        ]
       },
       {
         "text": {
           "sv": "Nytt mörkt tema: välj Auto, Ljust eller Mörkt i Inställningar; Auto följer enhetens färgläge direkt och valet sparas i webbläsaren.",
           "en": "New dark theme: choose Auto, Light or Dark in Settings; Auto follows your device’s color scheme live and the choice is saved per browser."
         },
-        "issues": [102]
+        "issues": [
+          102
+        ]
       },
       {
         "text": {
           "sv": "Växla mellan kort och en kompakt lista, per repository eller för hela den sammanslagna tavlan med repositorykolumn; valet sparas.",
           "en": "Switch between cards and a compact list, per repository or for the whole combined board with a repository column; your choice is saved."
         },
-        "issues": [127]
+        "issues": [
+          127
+        ]
       },
       {
         "text": {
           "sv": "Den gemensamma boarden filtreras bara av huvudsökfältet; sökningar per repository gäller i uppdelad vy och behåller sina värden.",
           "en": "The combined board filters only by the main search; per-repository searches apply in the split view and keep their values."
         },
-        "issues": [132]
+        "issues": [
+          132
+        ]
       },
       {
         "text": {
           "sv": "Versionsrutan visar en grön bock och Senaste versionen även efter en hård omladdning, och en tydlig markering när en uppdatering finns.",
           "en": "The version box shows a green check and Up to date even after a hard reload, plus a clear marker when an update is available."
         },
-        "issues": [134]
+        "issues": [
+          134
+        ]
       },
       {
         "text": {
           "sv": "Kolumnrubrikerna Pågående och Backlog visar en levande tidsuppskattning när det finns tillräcklig historik från nyligen stängda ärenden.",
           "en": "The In progress and Backlog column headers show a live time estimate when enough recently closed issues provide history."
         },
-        "issues": [139, 140, 141]
+        "issues": [
+          139,
+          140,
+          141
+        ]
       },
       {
         "text": {
           "sv": "En länk eller QR-kod för ett annat konto byter inte inloggning utan bekräftelse, och ogiltiga länkar visar ett översatt fel över din sparade tavla.",
           "en": "A link or QR code for another account never switches sign-in without confirmation, and invalid links show a translated error over your saved board."
         },
-        "issues": [103, 104, 114]
+        "issues": [
+          103,
+          104,
+          114
+        ]
       },
       {
         "text": {
           "sv": "Kontoinställningar som valda repositories, filter och läsmarkeringar sparas krypterade och finns kvar när du loggar in igen.",
           "en": "Account settings such as selected repositories, filters and read markers are stored encrypted and return when you sign in again."
         },
-        "issues": [105]
+        "issues": [
+          105
+        ]
       },
       {
         "text": {
           "sv": "Toppfältet får plats på surfplattebredder utan sidledsscroll, och uppdateringsstatusen flyttar inte tavlorna på telefon.",
           "en": "The top bar fits tablet widths without sideways scrolling, and the refresh status no longer shifts boards on phones."
         },
-        "issues": [113, 111]
+        "issues": [
+          113,
+          111
+        ]
       },
       {
         "text": {
           "sv": "Repoväljaren och label-dialogen håller tangentbordsfokus inom dialogen, stängs alltid med Esc och återför fokus till knappen.",
           "en": "The repository picker and label dialog keep keyboard focus inside, always close with Esc and return focus to the opening button."
         },
-        "issues": [109]
+        "issues": [
+          109
+        ]
       },
       {
         "text": {
           "sv": "Uppdelad per repository visar inte längre repository-badgen på varje kort; den syns bara på den sammanslagna boarden.",
           "en": "Split by repository no longer repeats the repository badge on every card; it only appears on the combined board."
         },
-        "issues": [119]
+        "issues": [
+          119
+        ]
       },
       {
         "text": {
           "sv": "Stora tavlor startar snabbare från den krypterade cachen, och tidsetiketter uppdateras bara där det behövs så webbläsaren förblir lätt.",
           "en": "Large boards start faster from the encrypted cache, and time labels update only where needed so the browser stays light."
         },
-        "issues": [120, 121]
+        "issues": [
+          120,
+          121
+        ]
       },
       {
         "text": {
           "sv": "Oförändrade bakgrundssynkar skriver inte längre om den krypterade cachen, och cachen är ungefär hälften så stor.",
           "en": "Unchanged background syncs no longer rewrite the encrypted cache, and the cache is about half the size."
         },
-        "issues": [122]
+        "issues": [
+          122
+        ]
       },
       {
         "text": {
           "sv": "Installerad app i Chrome/Edge kan visa notiser om stängda, påbörjade och tidsöverskridna issues även när appen är stängd; webbläsaren styr hur ofta.",
           "en": "The installed app in Chrome/Edge can notify you about closed, started and timed-out issues even while closed; the browser decides how often."
         },
-        "issues": [117, 129, 130, 131]
+        "issues": [
+          117,
+          129,
+          130,
+          131
+        ]
       },
       {
         "text": {
           "sv": "Appen startar snabbare eftersom Markdown-visning och QR-generering laddas först när du öppnar en beskrivning, kommentarer eller mobilöverföringen.",
           "en": "The app starts faster because Markdown rendering and QR generation load only when you open a description, comments or mobile transfer."
         },
-        "issues": [124]
+        "issues": [
+          124
+        ]
       },
       {
         "text": {
           "sv": "Statistiken räknas ihop flera gånger snabbare, så diagram och filter svarar direkt när du byter period, etikett eller bidragsgivare.",
           "en": "Statistics are computed several times faster, so charts and filters respond right away when you change period, label or contributor."
         },
-        "issues": [125]
+        "issues": [
+          125
+        ]
       },
       {
         "text": {
           "sv": "Statistiken hämtas i bakgrunden vid ledig kapacitet och återanvänder tavlans data, så statistikvyn öppnas direkt och sparar API-gräns.",
           "en": "Statistics are collected in the background at idle capacity and reuse board data, so the view opens instantly and saves rate limit."
         },
-        "issues": [135, 136]
+        "issues": [
+          135,
+          136
+        ]
       },
       {
         "text": {
           "sv": "Bakgrundssynken gör färre än hälften så många anrop: oförändrade projekt kontrolleras utan att förbruka GitHubs gräns, och relationer hämtas bara vid ändring.",
           "en": "Background sync makes less than half as many requests: unchanged projects are checked without using GitHub's rate limit, and relations reload only when they change."
         },
-        "issues": [123]
+        "issues": [
+          123
+        ]
       },
       {
         "text": {
           "sv": "Timeoutlistan överst och knappen Ignorera timeout är borttagna; ärenden över gränsen rödmarkeras på kortet och notifieras en gång.",
           "en": "The timeout list and Ignore timeout button are gone; overdue issues stay red on their card and notify once."
         },
-        "issues": [115]
+        "issues": [
+          115
+        ]
       },
       {
         "text": {
           "sv": "Tillfälliga tidslinjefel ger inga kvarstående timervarningar, nekad åtkomst skiljs från API-gränser och sparade ETags överlever omladdning.",
           "en": "Temporary timeline errors leave no lingering timer warnings, access denials are told apart from API limits, and saved ETags survive reloads."
         },
-        "issues": [106, 107, 108]
+        "issues": [
+          106,
+          107,
+          108
+        ]
       }
     ]
   },
@@ -653,98 +843,168 @@
           "sv": "Projekt har tydligt åtskilda färger som matchar vänstermenyn och korten i separata eller gemensamma tavlor; tilldelningen sparas och följer QR-synken.",
           "en": "Projects have contrasting colors matching the sidebar and cards in separate or combined boards; assignments are saved and carried through QR sync."
         },
-        "issues": [81, 90, 91]
+        "issues": [
+          81,
+          90,
+          91
+        ]
       },
       {
         "text": {
           "sv": "Version, kontrollstatus och korta daggrupperade versionsnyheter finns i vänstermenyn, med issue-länkar för detaljer.",
           "en": "The sidebar shows version information, check status and compact daily release notes, with issue links for details."
         },
-        "issues": [52, 69, 78, 79]
+        "issues": [
+          52,
+          69,
+          78,
+          79
+        ]
       },
       {
         "text": {
           "sv": "Uppdateringsnotisen visar senaste publiceringens korta delta, staplade knappar och nedräkning i knappen; Inte nu skjuter upp till imorgon.",
           "en": "Update prompts show only the latest publication’s brief delta, stacked buttons and a button countdown; Not now defers until tomorrow."
         },
-        "issues": [70, 77, 80, 82, 84]
+        "issues": [
+          70,
+          77,
+          80,
+          82,
+          84
+        ]
       },
       {
         "text": {
           "sv": "Statistik visar valda projekt med egna filter, tydlig laddning och grafer i full bredd; repositorylänkarna går till rätt statistikavsnitt.",
           "en": "Statistics stacks selected projects with independent filters, clear loading and full-width charts; repository links jump to their statistics sections."
         },
-        "issues": [45, 62, 76, 87, 88]
+        "issues": [
+          45,
+          62,
+          76,
+          87,
+          88
+        ]
       },
       {
         "text": {
           "sv": "Krypterad statistik visas direkt vid återbesök; äldre commitdagar och kodmått återanvänds medan föränderliga källor omvalideras.",
           "en": "Encrypted statistics appear immediately on return; historical commit days and code metrics are reused while mutable sources are revalidated."
         },
-        "issues": [75]
+        "issues": [
+          75
+        ]
       },
       {
         "text": {
           "sv": "Översikten visar statusändringar, dagens stängningar och aktiva projekt i centrerade rutor på telefon; nya Backlog-ärenden blir gröna och timeoutvarningar kvitteras direkt även under uppdatering.",
           "en": "Overview highlights status changes, today's closures and active projects in centred phone cards; new Backlog issues turn green, and timeout warnings clear immediately even during refresh."
         },
-        "issues": [48, 64, 55, 56, 94, 95]
+        "issues": [
+          48,
+          64,
+          55,
+          56,
+          94,
+          95
+        ]
       },
       {
         "text": {
           "sv": "Ärendekort visar underärendenas framsteg och parentlänkar; kommentarer visas nyast först med relativa tider i stabila popupfönster, och GitHub-bilder fungerar.",
           "en": "Issue cards show sub-issue progress and parent links; comments appear newest first with relative times in stable dialogs, and GitHub images display correctly."
         },
-        "issues": [66, 67, 65, 49, 61, 42]
+        "issues": [
+          66,
+          67,
+          65,
+          49,
+          61,
+          42
+        ]
       },
       {
         "text": {
           "sv": "Sök per repository och se projektval direkt; notiser ger olika statusljud utan att stängda ljudvarningar återkommer.",
           "en": "Search each repository and see selection changes immediately; notifications play distinct status sounds without repeating dismissed audio warnings."
         },
-        "issues": [43, 44, 59, 73]
+        "issues": [
+          43,
+          44,
+          59,
+          73
+        ]
       },
       {
         "text": {
           "sv": "Inställningar visar GitHub-behörigheter i en tabell med kvitterbara badges; repositoryknappar, hjälptexter och mobilens toppfält med kontot längst till höger har blivit tydligare.",
           "en": "Settings explains GitHub permissions in a table; viewed problems stay acknowledged after reload and signing back in, and repository controls and the phone top bar, with the account at the right edge, are clearer."
         },
-        "issues": [46, 51, 58, 71, 93, 96]
+        "issues": [
+          46,
+          51,
+          58,
+          71,
+          93,
+          96
+        ]
       },
       {
         "text": {
           "sv": "Instruktionerna för issueflödet visas som fullständig Markdown i en liten, scrollningsbar textruta med en kopieringsknapp.",
           "en": "Issue workflow instructions show the complete Markdown in a compact, scrollable textarea with a button to copy all instructions."
         },
-        "issues": [47, 85]
+        "issues": [
+          47,
+          85
+        ]
       },
       {
         "text": {
           "sv": "QR-synk överför kompletta profiler åt båda hållen utan utloggning, i mycket mindre koder som även webbkameror läser; skanningsgenvägar och AI-agentbeskrivningen har förbättrats.",
           "en": "QR sync transfers complete profiles both ways without signing out, in much smaller codes that webcams can read; scan shortcuts and the AI agent intro improved."
         },
-        "issues": [63, 54, 72, 74, 92, 100]
+        "issues": [
+          63,
+          54,
+          72,
+          74,
+          92,
+          100
+        ]
       },
       {
         "text": {
           "sv": "Cachad vy återställs lugnare, uppdateringar aktiveras säkrare och otillgängliga commitdetaljer döljs; Inställningar, språkminne och filtrerade översiktssiffror har rättats.",
           "en": "Cached views restore smoothly, updates activate reliably and unavailable commit details stay hidden; Settings, saved language and filtered Overview counts are fixed."
         },
-        "issues": [53, 57, 60, 68]
+        "issues": [
+          53,
+          57,
+          60,
+          68
+        ]
       },
       {
         "text": {
           "sv": "F5 eller Ctrl+R under en bakgrundsuppdatering hämtar ändå färska data efteråt, och Välj repositories går alltid att nå med tangentbordet.",
           "en": "F5 or Ctrl+R during a background update still fetches fresh data afterwards, and Choose repositories stays reachable by keyboard."
         },
-        "issues": [98]
+        "issues": [
+          98
+        ]
       },
       {
         "text": {
           "sv": "GitHub Actions kontrollerar återstående arbete före publicering; orkestern integrerar isolerade arbetsgrenar och bevakar nya issues i en timme efter verifierad leverans.",
           "en": "GitHub Actions checks remaining work before publishing; orkester integrates isolated branches and watches for new issues for an hour after verified delivery."
         },
-        "issues": [83, 86, 89]
+        "issues": [
+          83,
+          86,
+          89
+        ]
       }
     ]
   },
@@ -760,49 +1020,89 @@
           "sv": "Tavlan samlar prioriterad Backlog, tid i Pågående och senaste 30 dagarnas stängningar; responsiv layout, levande ärendeålder och fungerande översiktsnavigation.",
           "en": "The board combines prioritised Backlog, elapsed work time and 30 days of closures, with responsive layouts, live issue ages and working navigation."
         },
-        "issues": [11, 27, 24, 28, 40]
+        "issues": [
+          11,
+          27,
+          24,
+          28,
+          40
+        ]
       },
       {
         "text": {
           "sv": "Stängningar animeras och kan ge notiser; relativa tider, läsmarkeringar och sidomenyn visar aktivitet medan synkroniseringen anpassas efter arbete och fel.",
           "en": "Closures animate and can trigger notifications; relative times, read markers and sidebar summaries show activity while synchronisation adapts to work and errors."
         },
-        "issues": [2, 17, 22, 14, 13]
+        "issues": [
+          2,
+          17,
+          22,
+          14,
+          13
+        ]
       },
       {
         "text": {
           "sv": "Läs issuebeskrivningar och kommentarer med säker Markdown, och se vilken commit eller sammanslagen pull request som stängde ärendet.",
           "en": "Read issue descriptions and comments with safe Markdown, and see the commit or merged pull request that closed an issue."
         },
-        "issues": [15, 30, 12]
+        "issues": [
+          15,
+          30,
+          12
+        ]
       },
       {
         "text": {
           "sv": "Ordna och fäll ihop projekt, välj kolumngränser och repositories från översiktskortet; F5 eller Ctrl+R uppdaterar data utan omladdning.",
           "en": "Reorder and collapse projects, set column limits and choose repositories from Overview; F5 or Ctrl+R refreshes data without reloading."
         },
-        "issues": [21, 36, 29, 31, 23, 33]
+        "issues": [
+          21,
+          36,
+          29,
+          31,
+          23,
+          33
+        ]
       },
       {
         "text": {
           "sv": "Krypterad inloggning och komprimerad tavlecache återställs utan startnotiser; QR-koder överför inloggningen till mobilen och kan skannas i appen.",
           "en": "Encrypted sign-in and compressed board cache restore without startup notices; QR codes transfer sign-in to your phone and scan inside the app."
         },
-        "issues": [8, 25, 26, 41, 4, 19]
+        "issues": [
+          8,
+          25,
+          26,
+          41,
+          4,
+          19
+        ]
       },
       {
         "text": {
           "sv": "Installera appen och öppna appskalet offline; versionsuppdateringar räknar ned tio sekunder och byggdatum samt commit visas i Inställningar.",
           "en": "Install the app and open its shell offline; updates count down ten seconds, with build date and commit available in Settings."
         },
-        "issues": [3, 7, 37, 35]
+        "issues": [
+          3,
+          7,
+          37,
+          35
+        ]
       },
       {
         "text": {
           "sv": "Välj svenska eller engelska och dela ISSUEFLOW.md med din assistent; kortare dokumentation, upphovsuppgifter och MIT-licens gör projektet lättare att använda.",
           "en": "Choose Swedish or English and share ISSUEFLOW.md with your assistant; shorter documentation, author credits and an MIT license make the project easier to use."
         },
-        "issues": [9, 5, 34, 38]
+        "issues": [
+          9,
+          5,
+          34,
+          38
+        ]
       }
     ]
   }

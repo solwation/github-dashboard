@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
-async function fixture(page: Page) {
+async function fixture(page: Page, longTitle = false) {
   const now = Date.now(), old = new Date(now - 86400000 * 3).toISOString(), recent = new Date(now - 3600000).toISOString();
   // [title, comments, section label, state, extra labels]
   const specs: [string, number, string | null, "open" | "closed", string[]][] = [
@@ -17,7 +17,7 @@ async function fixture(page: Page) {
     ["Closed third", 0, null, "closed", []],
   ];
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
-    id: index + 1, number: index + 1, title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
+    id: index + 1, number: index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
     startedAt: state === "closed" ? new Date(now - 3600000 - 30 * 60000).toISOString() : undefined,
     labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, "ui"].map(name => ({ name, color: "a2eeef" }))],
@@ -147,7 +147,7 @@ for (const combined of [false, true]) {
     const fresh = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "New observed work", exact: true }) });
     const created = fresh.getByRole("button", { name: "Nyligen skapat i Backlog. Markera som läst", exact: true });
     await expect(created).toBeVisible();
-    for (const width of [1600, 1450, 1380, 1100, 800, 320]) {
+    for (const width of [1600, 1450, 1380, 1100, 800]) {
       await page.setViewportSize({ width, height: 1000 });
       const beforeRead = (await fresh.boundingBox())!;
       const badge = (await created.boundingBox())!;
@@ -156,14 +156,14 @@ for (const combined of [false, true]) {
       expect(badge.y + badge.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       // Reading leaves the reserved movement slot in place.
-      if (width === 320) {
+      if (width === 800) {
         await created.click();
         await expect(created).toHaveCount(0);
         expect((await fresh.boundingBox())!.height).toBeCloseTo(beforeRead.height, 0);
       }
     }
     // Activity also leaves geometry stable near the single-line container breakpoints.
-    for (const width of [1600, 1450, 1380, 1100, 800, 320]) {
+    for (const width of [1600, 1450, 1380, 1100, 800]) {
       await page.setViewportSize({ width, height: 1000 });
       api.move(); await page.keyboard.press("Control+r");
       await expect(moved).toBeVisible();
@@ -186,5 +186,43 @@ for (const combined of [false, true]) {
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
+  });
+}
+
+for (const combined of [false, true]) {
+  test(`phone rows stay dense and open full details in ${combined ? "combined" : "split"} mode`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const api = await fixture(page, true);
+    if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
+    for (const width of [320, 375, 430, 650]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const candidate of await page.locator('.issue-row').all()) expect((await candidate.boundingBox())!.height).toBeLessThanOrEqual(60);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect(row.locator('.issue-points')).toBeVisible();
+      await expect(row.locator('.row-time')).toBeVisible();
+      await expect(row.locator('.row-meta')).toHaveCount(0);
+      if (combined) await expect(row.locator('.row-repository')).toBeVisible();
+    }
+    await page.setViewportSize({ width: 320, height: 844 });
+    const before = (await row.boundingBox())!.height;
+    api.move(); await page.keyboard.press('Control+r');
+    const moved = row.getByRole('button', { name: 'Nyligen flyttad. Markera som läst', exact: true });
+    const comments = row.getByRole('button', { name: '2 nya kommentarer. Markera som läst', exact: true });
+    await expect(moved).toBeVisible(); await expect(comments).toBeVisible();
+    expect((await row.boundingBox())!.height).toBe(before);
+    const moveBox = (await moved.boundingBox())!, commentBox = (await comments.boundingBox())!, timeBox = (await row.locator('.row-time').boundingBox())!;
+    expect(moveBox.x + moveBox.width).toBeLessThanOrEqual(commentBox.x);
+    expect(commentBox.x + commentBox.width).toBeLessThanOrEqual(timeBox.x);
+    await page.screenshot({ path: test.info().outputPath('compact-phone-list.png'), fullPage: true });
+    await row.locator('.row-title').click();
+    const popup = page.locator('.row-popup');
+    await expect(popup).toBeVisible();
+    await expect(popup).toContainText('ui');
+    await expect(popup.locator('.issue-time-remaining')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popup).toHaveCount(0);
+    await expect(moved).toHaveCount(0); await expect(comments).toHaveCount(0);
+    expect((await row.boundingBox())!.height).toBe(before);
   });
 }
