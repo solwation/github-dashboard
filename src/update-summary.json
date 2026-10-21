@@ -1,15 +1,16 @@
 {
   "baseCommit": "6e6996981febed332fde9ce08b7da93db529c15c",
   "summary": {
-    "sv": "Publik cache sparar API-anrop. Kompakta mobilrader visar faktisk tid separat; dolda kommentarer döljs och sammanfattningskort radbryts bättre.",
-    "en": "Public cache saves API calls. Compact phone rows show actual time separately; hidden comments stay hidden and summary cards wrap better."
+    "sv": "Publik cache sparar API-anrop. Mobilrader blir kompakta, faktisk tid får egen kolumn och expanderade detaljer visar sub-issues med status.",
+    "en": "Public cache saves API calls. Phone rows stay compact, actual time gets its own column, and expanded details list sub-issue statuses."
   },
   "issues": [
     232,
     234,
     235,
-    238,
     236,
-    237
+    237,
+    238,
+    239
   ]
 }

@@ -1,3 +1,4 @@
+import { SubIssuesCache, parseSubIssues } from "./sub-issues";
 import { publicRepositoryName, publicRepositoryRecord } from "./public-workspace";
 import { permissionDefinitions, permissionEndpoint, permissionForPath, permissionResult, type PermissionObservation, type PermissionReport } from "./permissions";
 import { IssueRelationsCache, issueRelationsQuery, parseIssueRelations } from "./issue-relations";
@@ -108,7 +109,13 @@ export class GitHub {
     return parseIssueRelations(response.data);
   });
   issueRelations(repository: string, issue: Issue) { return this.token ? this.relations.get(repository, issue) : Promise.resolve(null); }
-  invalidateIssueRelations(repositories?: readonly string[]) { this.relations.clear(repositories); }
+  private readonly subIssuesCache = new SubIssuesCache(async (repository, number) => {
+    if (this.retryAfterMs()) return null;
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !Number.isSafeInteger(number) || number < 1) return null;
+    return parseSubIssues(await this.all<unknown>(`/repos/${repository}/issues/${number}/sub_issues?per_page=100`));
+  });
+  subIssues(repository: string, issue: Issue) { return this.subIssuesCache.get(repository, issue); }
+  invalidateIssueRelations(repositories?: readonly string[]) { this.relations.clear(repositories); this.subIssuesCache.clear(repositories); }
   constructor(private token: string = "") {}
   get authenticated() { return Boolean(this.token); }
   async publicRepository(input: string): Promise<Repo> {

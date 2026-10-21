@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from "vue";
 import { ChevronDown, ChevronUp } from "@lucide/vue";
+import IssueSubIssues from "./IssueSubIssues.vue";
 import IssueComments from "./IssueComments.vue";
 import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
@@ -38,6 +39,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
         <p v-else class="empty-description" role="status" aria-busy="true">{{ t("Hämtar beskrivning…") }}</p>
       </template>
       <p v-else class="empty-description">{{ t("Ingen beskrivning har lagts till.") }}</p>
+      <IssueSubIssues v-if="!demo" :issue="issue" :session="commentsSession" />
     </section>
   </div>
 </template>

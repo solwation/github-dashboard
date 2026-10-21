@@ -77,6 +77,8 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await nested.scrollIntoViewIfNeeded();
   await expect(nested.locator(".issue-parent > span")).toHaveText("Parent issue");
   await expect(nested.getByRole("progressbar", { name: "0 of 2 sub-issues closed" })).toBeVisible();
+  // Compact phone rows keep hierarchy in the opened card; desktop rows retain these badges.
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.locator(".board-toolbar").getByRole("button", { name: "List", exact: true }).click();
   const parentRow = page.locator(".issue-row").filter({ hasText: parent.title });
   await expect(parentRow.locator(".row-parent-badge")).toContainText("4/5");

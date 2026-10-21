@@ -124,6 +124,15 @@
         "issues": [
           237
         ]
+      },
+      {
+        "text": {
+          "sv": "Öppna ett parent-ärendes detaljer för att se varje underärende med aktuell status och GitHub-länk.",
+          "en": "Open parent issue details to see every sub-issue with its current status and GitHub link."
+        },
+        "issues": [
+          239
+        ]
       }
     ]
   },

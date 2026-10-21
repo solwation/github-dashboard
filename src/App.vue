@@ -76,6 +76,7 @@ import BoardModeToggle from "./components/BoardModeToggle.vue";
 import ColumnEstimate from "./components/ColumnEstimate.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
+import { provideSubIssues } from "./composables/useSubIssues";
 import { GitHub } from "./lib/github";
 import { callback, login, oauthReady } from "./lib/auth";
 import { demo } from "./lib/demo";
@@ -806,6 +807,19 @@ function loaders(repo: string) {
   loaderCache.set(repo, created);
   return created;
 }
+const subIssueBoardIndex = computed(() => new Map(lanes.value.map(lane =>
+  [lane.repo.full_name.toLowerCase(), new Map(lane.issues.map(issue => [issue.id, issue]))])));
+provideSubIssues({
+  async load(repository, issue) {
+    const client = api, run = generation;
+    if (!client || isDemo.value) return null;
+    const result = await client.subIssues(repository, issue);
+    return client === api && run === generation ? result : null;
+  },
+  rules: repository => rules.value[repository] ?? Object.entries(rules.value).find(([name]) => name.toLowerCase() === repository.toLowerCase())?.[1] ?? {},
+  known: (repository, id) => subIssueBoardIndex.value.get(repository.toLowerCase())?.get(id),
+  revision: repository => relationsRevisions.value[repository] ?? 0,
+});
 const statisticsRepositories = computed(() => orderedLanes.value.map(lane => lane.repo));
 const unreadOverviewCount = computed(() => {
   activityRevision.value;

@@ -118,6 +118,8 @@ export const english: Record<string, string> = {
   "Hämtar issues för {name}…": "Fetching issues for {name}…",
   "Skanna QR-kod från annan enhet": "Scan QR code from another device",
   "Låt den andra enheten skanna koden nedan för att ta emot dina inställningar. För att hämta inställningar hit, välj Skanna QR-kod från annan enhet.": "Let the other device scan the code below to receive your settings. To import settings here, choose Scan QR code from another device.",
+  "Underärenden": "Sub-issues",
+  "Hämtar underärenden…": "Fetching sub-issues…",
   "Överordnat ärende": "Parent issue",
   "{completed} av {total} underärenden stängda": "{completed} of {total} sub-issues closed",
   "Just nu": "Just now",
