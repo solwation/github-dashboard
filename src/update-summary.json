@@ -1,10 +1,11 @@
 {
   "baseCommit": "d2891192d02e6f641c127257e8f5ff23842ab48c",
   "summary": {
-    "sv": "Breda listvyns tidsvärden använder nu enhetlig typografi med Pågående som referens.",
-    "en": "Wide-list time values now share consistent typography, using In-progress as the reference."
+    "sv": "Breda listvyns tidsvärden har enhetlig typografi. Klick på ett barn från en parent navigerar till tavlans issue och markerar det.",
+    "en": "Wide-list time values use consistent typography. Clicking a child from its parent navigates to and highlights the issue on the board."
   },
   "issues": [
-    253
+    253,
+    254
   ]
 }

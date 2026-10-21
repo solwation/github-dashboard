@@ -8,6 +8,15 @@
     "sections": [
       {
         "text": {
+          "sv": "Klick på en child issue i parentens detaljer öppnar ärendet i tavlan och markerar det tillfälligt.",
+          "en": "Clicking a child issue in its parent’s details opens it on the board and highlights it temporarily."
+        },
+        "issues": [
+          254
+        ]
+      },
+      {
+        "text": {
           "sv": "Tidsvärden i breda listor har enhetlig teckenstorlek och stil för uppskattning, övertid och faktisk arbetstid.",
           "en": "Time values in wide lists use consistent font size and style for estimates, overtime and actual duration."
         },
