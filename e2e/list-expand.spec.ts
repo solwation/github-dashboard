@@ -22,7 +22,7 @@ test("desktop expands row details in place with open description while phone ope
         subIssuesSummary: { total: 0, completed: 0 } } } } } });
     }
     if (repo && url.pathname.endsWith("/issues")) {
-      const issues = [1, 2].map(number => ({ id: number, number, title: `${repo.name} task ${number}`, body: number === 1 ? `Description of ${repo.name} task ${number}\n\n${Array.from({ length: 50 }, (_, index) => `Long paragraph ${index + 1} keeps scrolling content below the dialog header.`).join("\n\n")}` : `Description of ${repo.name} task ${number}`, comments: 0,
+      const issues = [1, 2].map(number => ({ id: number, number, title: `${repo.name} task ${number}`, body: number === 1 ? `Description of ${repo.name} task ${number}\n\n${Array.from({ length: 50 }, (_, index) => `Long paragraph ${index + 1} keeps scrolling content below the dialog header.`).join("\n\n")}` : repo.name === "beta" ? "" : `Description of ${repo.name} task ${number}`, comments: 0,
         state: "open", created_at: stamp, updated_at: stamp, closed_at: null, html_url: `${repo.html_url}/issues/${number}`, assignees: [],
         labels: [{ name: "enhancement", color: "a2eeef" }] }));
       return route.fulfill({ json: url.searchParams.get("state") === "closed" ? [] : issues });
@@ -151,6 +151,10 @@ test("desktop expands row details in place with open description while phone ope
       // #197: the enhancement label is shown by the type icon instead of a chip.
       await expect(popupCard.locator(".type-circle.type-feature")).toBeVisible();
       await expect(popupCard.locator(".label")).toHaveCount(0);
+      // Opening a list row is an explicit request for details: Markdown is rendered immediately.
+      await expect(popupCard.locator(".issue-markdown")).toContainText("Description of beta task 1");
+      await expect(popupCard.locator(".issue-markdown")).toContainText("Long paragraph 50 keeps scrolling content below the dialog header.");
+      await expect(popupCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
       expect(await noPageScroll(page)).toBe(true);
 
       // #159: on mobile, close is an X button in the top-right corner inside the card, no separate button below.
@@ -168,8 +172,6 @@ test("desktop expands row details in place with open description while phone ope
       expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
       expect(closeBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
       expect(repoBox!.x + repoBox!.width).toBeLessThanOrEqual(closeBox!.x + 1);
-      await dialog.getByRole("button", { name: "Läs mer" }).click();
-      await expect(dialog.locator(".issue-markdown")).toContainText("Long paragraph 50 keeps scrolling content below the dialog header.");
       await dialog.evaluate(element => { element.scrollTop = element.scrollHeight; });
       await expect(closeBtn).toBeInViewport();
       expect(await dialog.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
@@ -203,6 +205,20 @@ test("desktop expands row details in place with open description while phone ope
       if (width === 390) expect(await page.evaluate(() => window.scrollY)).toBe(listScrollY);
     }
   }
+
+  // Empty descriptions still expose the empty state and the surrounding details only after the row is opened.
+  const emptyTitle = page.getByRole("button", { name: "beta task 2", exact: true });
+  await emptyTitle.click();
+  const emptyDialog = page.getByRole("dialog", { name: "beta task 2", exact: true });
+  await expect(emptyDialog.getByText("Ingen beskrivning har lagts till.", { exact: true })).toBeVisible();
+  await emptyDialog.locator(".row-popup-close").click();
+  await expect(emptyDialog).toHaveCount(0);
+  const shortTitle = page.getByRole("button", { name: "alpha task 2", exact: true });
+  await shortTitle.click();
+  const shortDialog = page.getByRole("dialog", { name: "alpha task 2", exact: true });
+  await expect(shortDialog.locator(".issue-markdown")).toHaveText("Description of alpha task 2");
+  await shortDialog.locator(".row-popup-close").click();
+  await expect(shortDialog).toHaveCount(0);
 
   // Expanded state is in-memory only.
   await page.setViewportSize({ width: 390, height: 844 });

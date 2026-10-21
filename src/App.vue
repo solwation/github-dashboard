@@ -2143,7 +2143,7 @@ onMounted(async () => {
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
@@ -2258,7 +2258,7 @@ onMounted(async () => {
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard

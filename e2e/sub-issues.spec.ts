@@ -55,7 +55,11 @@ for (const device of [
   await section.screenshot({ path: info.outputPath('cards-sub-issues.png') });
   await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Lista', exact: true }).click();
   await page.locator('.issue-row .row-title').filter({ hasText: parent.title }).click();
-  if (await page.locator('.row-popup').count()) await page.locator('.row-popup').getByRole('button', { name: 'Läs mer', exact: true }).click();
+  const listPopup = page.locator('.row-popup');
+  if (await listPopup.count()) {
+    await expect(listPopup.locator('.issue-markdown')).toContainText('A useful description.');
+    expect(await listPopup.evaluate(el => Boolean(el.querySelector('.issue-markdown')!.compareDocumentPosition(el.querySelector('.issue-sub-issues')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  }
   const listSection = page.getByRole('region', { name: 'Underärenden', exact: true });
   await expect(listSection.locator('li')).toHaveCount(3); expect(requests).toBe(2);
   await expect(listSection.locator('.sub-issue-progress')).toHaveCount(1);

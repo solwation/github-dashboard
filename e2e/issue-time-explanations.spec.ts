@@ -48,7 +48,7 @@ async function openDetails(page: Page, number: number, keyboard = false) {
   if (keyboard) { await title.focus(); await page.keyboard.press("Enter"); }
   else await title.click();
   const detailsToggle = page.locator(".row-popup .details-toggle");
-  if (await detailsToggle.count()) await detailsToggle.tap();
+  if (await detailsToggle.count() && await detailsToggle.getAttribute("aria-expanded") === "false") await detailsToggle.tap();
   const explanation = page.locator(".time-explanation");
   await expect(explanation).toBeVisible();
   return explanation;
@@ -90,7 +90,7 @@ for (const [name, width, height, touch] of viewportMatrix) {
       const backlog = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "A backlog issue with a long title for narrow phones", exact: true }) });
       await backlog.getByRole("button", { name: "A backlog issue with a long title for narrow phones", exact: true }).click();
       const detailsToggle = page.locator(".row-popup .details-toggle");
-      if (await detailsToggle.count()) await detailsToggle.tap();
+      if (await detailsToggle.count() && await detailsToggle.getAttribute("aria-expanded") === "false") await detailsToggle.tap();
       const explanation = page.locator(".time-explanation");
       await expect(explanation.locator("summary")).toHaveText("Förklara tid och story points");
       const summaryBox = await explanation.locator("summary").boundingBox();
@@ -144,7 +144,6 @@ test("closed issues keep actual time while omitting unavailable comparison detai
     await prepare(page, true);
     const row = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Timing 2", exact: true }) });
     await row.getByRole("button", { name: "Timing 2", exact: true }).tap();
-    await page.locator(".row-popup .details-toggle").tap();
     const explanation = page.locator(".time-explanation");
     await explanation.locator("summary").tap();
     await expect(explanation).toContainText("Faktisk arbetstid");
