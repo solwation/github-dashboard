@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
-async function fixture(page: Page, longTitle = false, outcomes = false) {
+async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false) {
   const now = Date.now(), old = new Date(now - 86400000 * 3).toISOString(), recent = new Date(now - 3600000).toISOString();
   // [title, comments, section label, state, extra labels]
   const specs: [string, number, string | null, "open" | "closed", string[]][] = [
@@ -17,10 +17,11 @@ async function fixture(page: Page, longTitle = false, outcomes = false) {
     ["Closed third", 0, null, "closed", []],
   ];
   if (outcomes) specs.push(["Closed fourth", 0, null, "closed", []]);
+  const closedMinutes = (index: number) => outcomes === "interrupted" ? [900, 45, 60, 75][index - 6] ?? 30 : outcomes && index === 6 ? 60 : outcomes && index === 7 ? 15 : 30;
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
     id: index + 1, number: index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
-    startedAt: state === "closed" ? new Date(now - 3600000 - (outcomes && index === 6 ? 60 : outcomes && index === 7 ? 15 : 30) * 60000).toISOString() : undefined,
+    startedAt: state === "closed" ? new Date(now - 3600000 - closedMinutes(index) * 60000).toISOString() : undefined,
     labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, "ui"].map(name => ({ name, color: "a2eeef" }))],
   }));
   await page.route("https://api.github.com/**", async route => {
@@ -260,4 +261,18 @@ test("Overview sidebar counts unread events instead of repositories and clears o
   await expect(count).toHaveText('0');
   await page.reload();
   await expect(count).toHaveText('0');
+});
+
+test("interrupted work keeps its actual duration without inflating future issue estimates", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await fixture(page, false, "interrupted");
+  const progress = page.locator('.issue-row.progress').filter({ has: page.getByRole('button', { name: 'Progress one', exact: true }) });
+  await expect(progress.locator('.issue-points')).toHaveAttribute('title', /Uppskattad tid: ≈ 1 h.*från 3 användbara stängningar/);
+  await expect(progress.locator('.issue-time-remaining')).toContainText('≈ 50 min kvar');
+  const closed = page.locator('.issue-row.closed').filter({ has: page.getByRole('button', { name: 'Closed twelve', exact: true }) });
+  await expect(closed.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid: 15 h.*Uppskattad tid: ≈ 1 h.*Längre än uppskattat/);
+  await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Kort', exact: true }).click();
+  const card = page.locator('.issue-card.progress').filter({ hasText: 'Progress one' });
+  await expect(card.locator('.issue-points')).toHaveAttribute('title', /Uppskattad tid: ≈ 1 h.*från 3 användbara stängningar/);
+  await expect(card.locator('.issue-time-remaining')).toContainText('≈ 50 min kvar');
 });

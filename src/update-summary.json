@@ -1,10 +1,10 @@
 {
-  "baseCommit": "4dcbbd4df9802ecff5967253ff7cf6663235e7c8",
+  "baseCommit": "bec5161a70c0bf18eee10e72087278b727180c38",
   "summary": {
-    "sv": "Tidsjämförelsen för stängda ärenden följer även när den extra historikposten lämnar 30-dagarsfönstret.",
-    "en": "Closed-issue estimate comparisons also refresh when the extra history sample leaves the 30-day window."
+    "sv": "Extrema tidsavvikelser räknas bort från repositoryts rullande estimat, så misstänkta avbrott inte blåser upp nya prognoser.",
+    "en": "Extreme durations are excluded from rolling repository estimates so suspected interrupted runs do not inflate future forecasts."
   },
   "issues": [
-    224
+    229
   ]
 }

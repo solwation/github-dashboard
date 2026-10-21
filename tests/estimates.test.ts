@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  calibrationSamples,
   closedIssueOutcome,
   combinedEstimate,
   estimateLabel,
@@ -191,7 +192,7 @@ describe("recent point-calibrated forecasts", () => {
     ];
     const small = repositoryEstimate([...history, issue("backlog", { labels: [sized(1)] })], now);
     const large = repositoryEstimate([...history, issue("backlog", { labels: [sized(8)] })], now);
-    expect(small.basis.typicalMs).toBe(4 * hour);
+    expect(small.basis.typicalMs).toBe(3 * hour);
     expect(small.basis.msPerPoint).toBe(hour);
     expect(large.backlog!.remainingMs / small.backlog!.remainingMs).toBe(8);
     const progress = repositoryEstimate([...history,
@@ -259,4 +260,41 @@ it("includes the extra comparison sample when scheduling rolling-history expiry"
   const oldest = Date.parse(history.at(-1)!.closed_at!);
   expect(nextHistoryExpiry(history, now, { sampleLimit: MAX_HISTORY_SAMPLES + 1 })).toBe(oldest + 30 * day + 1);
   expect(nextHistoryExpiry(history, now)).toBe(oldest + hour + 30 * day + 1);
+});
+
+describe("extreme duration exclusion", () => {
+  const sized = (points: number, duration: number) => ({ ...done(duration), labels: [{ name: `points: ${points}`, color: "" }] });
+  it("excludes a 15-hour interruption from 60-minute history while preserving its observed duration", () => {
+    const normal = [done(45 * min), done(hour), done(75 * min)];
+    const interrupted = done(15 * hour);
+    const expected = repositoryEstimate([...normal, running(10 * min), issue("backlog")], now);
+    const actual = repositoryEstimate([...normal, interrupted, running(10 * min), issue("backlog")], now);
+    expect(actual.basis).toEqual(expected.basis);
+    expect(actual.basis.samples).toBe(3);
+    expect(actual.progress?.remainingMs).toBe(50 * min);
+    expect(actual.backlog).toEqual(expected.backlog);
+    expect(closedIssueOutcome(interrupted, historySamples([...normal, interrupted], now), now))
+      .toEqual({ actualMs: 15 * hour, estimatedMs: hour });
+  });
+  it("excludes multiple extreme runs from rate, typical time and parallelism", () => {
+    const normal = [done(45 * min), done(hour), done(75 * min)];
+    const list = [...normal, done(15 * hour), done(20 * hour)];
+    expect(repositoryEstimate(list, now).basis).toEqual(repositoryEstimate(normal, now).basis);
+    const target = done(2 * hour);
+    expect(closedIssueOutcome(target, historySamples([...list, target], now), now)?.estimatedMs).toBe(hour);
+  });
+  it("normalizes by points and keeps large proportional work, ordinary overruns and the exact threshold", () => {
+    const list = [sized(1, hour), sized(3, 3 * hour), sized(5, 5 * hour), sized(13, 13 * hour), sized(1, 4 * hour), sized(1, 4 * hour + 1)];
+    expect(calibrationSamples(historySamples(list, now)).map(sample => sample.issue.id)).toEqual(historySamples(list.slice(0, -1), now).map(sample => sample.issue.id));
+    expect(repositoryEstimate(list, now).basis).toMatchObject({ samples: 5, msPerPoint: hour });
+  });
+  it("requires three retained samples rather than padding the evidence with an extreme run", () => {
+    const history = [done(hour), done(hour), done(15 * hour)];
+    const estimate = repositoryEstimate([...history, running(10 * min), issue("backlog")], now);
+    expect(estimate.basis).toMatchObject({ samples: 2, msPerPoint: null, typicalMs: null });
+    expect(estimate.progress).toBeNull();
+    expect(estimate.backlog).toBeNull();
+    const target = done(30 * min);
+    expect(closedIssueOutcome(target, historySamples([...history, target], now), now)).toEqual({ actualMs: 30 * min, estimatedMs: null });
+  });
 });

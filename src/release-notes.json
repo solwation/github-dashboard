@@ -59,6 +59,15 @@
         "issues": [
           228
         ]
+      },
+      {
+        "text": {
+          "sv": "Extrema arbetstider filtreras bort från repositoryts nya tidsestimat, medan faktisk tid fortfarande visas på avslutade ärenden.",
+          "en": "Extreme work durations are excluded from new repository time estimates, while completed issues still show their actual duration."
+        },
+        "issues": [
+          229
+        ]
       }
     ]
   },

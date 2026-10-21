@@ -10,7 +10,8 @@ import { column, type Issue, type Rules } from "./model";
  * - History: the most recent 30 positive start → close durations within 30 days, with a known
  *   workStartedAt (falling back to startedAt). Unknown/future/invalid closures never calibrate.
  * - Size: approximatePoints supplies bounded local 1–13 point scores, not measured complexity.
- * - Calibration: median(duration / points) per repository; fewer than MIN_SAMPLES gives no estimate.
+ * - Calibration: discard durations per point above 4× the raw sample median, then use the
+ *   retained median per repository; fewer than MIN_SAMPLES retained gives no estimate.
  * - In progress: max(0, points × calibrated time per point − elapsed). The longest remaining issue
  *   decides. Past-due issues count as zero and unknown starts need their full point-based duration.
  * - Parallelism: the time-weighted average number of issues in progress while at least one was in
@@ -26,6 +27,7 @@ import { column, type Issue, type Rules } from "./model";
 export const ESTIMATE_WINDOW_DAYS = 30;
 export const MIN_SAMPLES = 3;
 export const MAX_HISTORY_SAMPLES = 30;
+export const EXTREME_DURATION_MULTIPLIER = 4;
 const DAY_MS = 86400000;
 
 export interface HistorySample {
@@ -35,9 +37,9 @@ export interface HistorySample {
   durationMs: number;
 }
 export interface EstimateBasis {
-  /** Number of recent eligible closures used, capped at MAX_HISTORY_SAMPLES. */
+  /** Number of retained recent closures after extreme-duration filtering, capped at MAX_HISTORY_SAMPLES. */
   samples: number;
-  /** Raw median duration retained for existing consumers; forecasts use msPerPoint. */
+  /** Median retained duration for existing consumers; forecasts use msPerPoint. */
   typicalMs: number | null;
   /** Median positive duration divided by approximate issue points. */
   msPerPoint: number | null;
@@ -122,6 +124,18 @@ export function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
 
+/**
+ * Suspected interrupted runs must not teach future forecasts or historical concurrency.
+ * Normalize by size before comparing: a large issue taking proportionately longer is valid.
+ * Use one robust median of the raw window; do not iteratively trim legitimate slow work.
+ */
+export function calibrationSamples(samples: HistorySample[]): HistorySample[] {
+  if (samples.length < MIN_SAMPLES) return samples;
+  const rates = samples.map(sample => sample.durationMs / approximatePoints(sample.issue));
+  const center = median(rates)!;
+  return samples.filter((_, index) => rates[index]! <= center * EXTREME_DURATION_MULTIPLIER);
+}
+
 /** Median sample duration, or null with fewer than `MIN_SAMPLES` samples. */
 export function typicalDuration(samples: HistorySample[]): number | null {
   return samples.length < MIN_SAMPLES ? null : median(samples.map((s) => s.durationMs));
@@ -165,7 +179,7 @@ export function repositoryEstimate(
 ): RepositoryEstimate {
   const { rules = {}, windowDays = ESTIMATE_WINDOW_DAYS } = options;
   const list = issuesOf(issues);
-  const samples = historySamples(list, now, options);
+  const samples = calibrationSamples(historySamples(list, now, options));
   const typicalMs = typicalDuration(samples);
   const msPerPoint = samples.length < MIN_SAMPLES ? null : median(samples.map(sample => sample.durationMs / approximatePoints(sample.issue)));
   const active = list.filter((issue) => column(issue, rules) === "progress");
@@ -264,7 +278,7 @@ export function closedIssueOutcome(issue: Issue, history: HistorySample[], now: 
   const start = time(issue.workStartedAt ?? issue.startedAt), end = time(issue.closed_at);
   if (issue.pull_request || issue.state !== "closed" || !Number.isFinite(start) || !Number.isFinite(end) || end > now || end <= start) return null;
   const actualMs = end - start;
-  const others = history.filter(sample => sample.issue.id !== issue.id).slice(0, MAX_HISTORY_SAMPLES);
+  const others = calibrationSamples(history.filter(sample => sample.issue.id !== issue.id).slice(0, MAX_HISTORY_SAMPLES));
   const rate = others.length < MIN_SAMPLES ? null : median(others.map(sample => sample.durationMs / approximatePoints(sample.issue)));
   return { actualMs, estimatedMs: rate === null ? null : rate * approximatePoints(issue) };
 }

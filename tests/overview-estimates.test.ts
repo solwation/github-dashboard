@@ -59,3 +59,11 @@ describe("overview time model", () => {
     expect(overviewTimeEstimate(groups([lane([...history(), issue(10)])]), "open", now + 31 * day).remainingMs).toBeNull();
   });
 });
+
+it("keeps the overview horizon calibrated to normal work despite an interrupted closure", () => {
+  const samples = [20, 30, 40, 450].map((minutes, index) => issue(index + 1, 1, {
+    state: "closed", closed_at: iso(now - day), workStartedAt: iso(now - day - minutes * minute),
+  }));
+  const selection = groups([lane([...samples, progress(10)])]);
+  expect(overviewTimeEstimate(selection, "progress", now)).toMatchObject({ remainingMs: 20 * minute, knownRepositories: 1 });
+});

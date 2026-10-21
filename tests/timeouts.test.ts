@@ -116,3 +116,15 @@ describe('timeouts follow actual continuous work periods', () => {
     expect(nextTimeout([noActive], {}, settings, now)).toBe(Date.parse(history()[0]!.closed_at!) + 30 * 86400000 + 1);
   });
 });
+
+it('uses retained history for warning thresholds instead of learning interrupted-run duration', () => {
+  const samples = [20, 30, 40, 450].map((minutes, index) => {
+    const closed = history()[0]!;
+    return { ...closed, id: 200 + index, number: 200 + index,
+      workStartedAt: new Date(Date.parse(closed.closed_at!) - minutes * 60000).toISOString() };
+  });
+  const work = { ...lane(), issues: [issue(), ...samples] };
+  const scan = new TimeoutTracker().scan([work], {}, settings, now);
+  expect(scan.active).toHaveLength(1);
+  expect(scan.active[0]!.estimatedMs).toBe(30 * 60000);
+});
