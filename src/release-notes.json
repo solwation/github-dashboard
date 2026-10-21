@@ -2,8 +2,8 @@
   {
     "date": "2026-10-21",
     "summary": {
-      "sv": "Kompaktare mobilrader, tidsuppföljning och tydligare laddning i Statistik.",
-      "en": "Compact phone rows, work-duration follow-up and clearer Statistics loading."
+      "sv": "Kompakt mobilnavigering, tillgängligare ärendepopup, tidsuppföljning och tydligare laddning i Statistik.",
+      "en": "Compact mobile navigation, more accessible issue popups, work-duration follow-up and clearer Statistics loading."
     },
     "sections": [
       {
@@ -143,6 +143,15 @@
         },
         "issues": [
           242
+        ]
+      },
+      {
+        "text": {
+          "sv": "Mobilens navigering ryms på en fast rad; sök, inställningar och kontoåtgärder finns kvar i meny och får mer listutrymme.",
+          "en": "Mobile navigation fits one pinned row; search, settings and account actions remain in a menu that frees space for issues."
+        },
+        "issues": [
+          243
         ]
       }
     ]

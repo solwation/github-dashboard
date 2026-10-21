@@ -1,10 +1,10 @@
 {
-  "baseCommit": "35388d6ce03dcda16e658da58c97e1821ba3ad54",
+  "baseCommit": "f507579bbac6c093e2275b5699da159f09ac9a17",
   "summary": {
-    "sv": "Mobilens ärendepopup behåller stängknappen synlig och håller scroll och tangentbordsfokus i dialogen.",
-    "en": "Mobile issue popups keep the close button visible and contain scrolling and keyboard focus."
+    "sv": "Kompakt mobilnavigering ger listan mer plats; ärendepopupen håller stängknapp och fokus tillgängliga.",
+    "en": "Compact mobile navigation frees issue space; issue popups keep close controls and focus accessible."
   },
   "issues": [
-    242
+    243
   ]
 }
