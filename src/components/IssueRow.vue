@@ -151,6 +151,10 @@ const typeTitle = computed(() => {
 const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(col.value === "progress" && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
+const backlogAge = computed(() => {
+  const label = backlogAgeLabel(props.issue.created_at, now.value, locale.value);
+  return label.replace(/^(?:Created|Skapad) /, "");
+});
 const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   () => props.issue,
   () => visible.value,
@@ -185,11 +189,6 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       @click="emit('read')" @auxclick="emit('read')"
       >#{{ issue.number }}<ArrowUpRight :size="11" aria-hidden="true"
     /></a>
-      <span v-if="isPhone && col !== 'closed'" class="row-mobile-priority" :class="['high', 'medium', 'low'][rank]" role="img"
-        :aria-label="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]">
-        <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
-      </span>
-      <IssuePoints v-if="isPhone" :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
     </span>
     <button
       ref="toggle"
@@ -203,6 +202,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     /></button>
     </span>
     <span v-if="isPhone" class="row-mobile-summary">
+      <span v-if="col !== 'closed'" class="row-mobile-priority" :class="['high', 'medium', 'low'][rank]" role="img"
+        :aria-label="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]">
+        <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
+      </span>
+      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
       <button v-if="recentMove" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
@@ -255,7 +259,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     <span class="row-time">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
-        >{{ backlogAgeLabel(issue.created_at, now, locale) }}</time
+        >{{ backlogAge }}</time
       ><span v-else-if="col === 'backlog'" class="backlog-age">{{ t("Okänd ålder") }}</span
       ><span v-else-if="col === 'progress'" class="timer"
         :title="issue.startedAt ? t('Arbetslabel satt ') + new Date(issue.startedAt).toLocaleString(locale) : t('Ingen säker starttid kunde hämtas')"
@@ -336,7 +340,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 }
 @media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
   .issue-row, .issue-row.has-repository {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 4.5rem) auto;
     grid-template-areas: "heading heading heading" "meta time outcome";
     gap: 2px 6px; min-height: 56px; padding: 6px 8px;
   }
@@ -345,14 +349,26 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-heading > .row-title { flex: 1; }
   .row-outcome { grid-area: outcome; }
   .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
-  .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; height: 24px; }
-  .row-mobile-summary > * { flex-shrink: 0; }
-  .row-mobile-summary > .row-repository { grid-area: auto; flex: 0 1 auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
+  .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; min-height: 24px; overflow: hidden; }
+  .row-mobile-summary > * { flex: 0 0 auto; }
+  .row-mobile-summary > .row-repository { order: 4; flex: 1 1 0; }
+  .row-mobile-summary > .row-mobile-priority { order: 2; }
+  .row-mobile-summary > .issue-points { order: 3; }
+  .row-mobile-summary > .row-mobile-activity { order: 1; }
+  .row-mobile-summary > .row-repository { grid-area: auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
   .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: #dcecff; color: #175b96; font-size: 9px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
-  .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 7rem; overflow: hidden; font-size: 10px; }
+  .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
+  .row-time > .timer { flex: 1 1 auto; min-width: 0; }
   .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
+  .issue-row, .issue-row.has-repository {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "heading heading" "meta meta" "time outcome";
+    min-height: 72px;
+  }
 }
 </style>

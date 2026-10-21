@@ -1920,6 +1920,7 @@ button.lane-sync:focus-visible::after {
   .row-meta > .row-marker:not(.row-comment-marker) { order: 6; }
 }
 .row-time { justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; text-align: right; white-space: nowrap; }
+.row-time .backlog-age { color: #87929a; }
 .issue-row.unread-move { border-color: #2875ba; background: #f1f8ff; }
 .issue-row.unread-created { border-color: #39885b; background: #edf8f0; }
 .issue-row.issue-timeout { border-color: #b42332; background: #fff1f2; }

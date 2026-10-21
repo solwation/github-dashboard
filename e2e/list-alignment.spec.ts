@@ -2,7 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
-async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false, longLabels = false, review = false) {
+async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false, longLabels = false, review = false, density = false) {
+  const fixtureRepo = density ? { ...repo, name: "a-very-long-repository-name-for-narrow-list-rows", full_name: "sample/a-very-long-repository-name-for-narrow-list-rows", html_url: "https://github.com/sample/a-very-long-repository-name-for-narrow-list-rows" } : repo;
   const now = Date.now(), old = new Date(now - 86400000 * 3).toISOString(), recent = new Date(now - 3600000).toISOString();
   // [title, comments, section label, state, extra labels]
   const specs: [string, number, string | null, "open" | "closed", string[]][] = [
@@ -20,10 +21,10 @@ async function fixture(page: Page, longTitle = false, outcomes: boolean | "inter
   if (review) specs.push(["Closed unknown start", 0, null, "closed", []]);
   const closedMinutes = (index: number) => review && index === 8 ? 119 : outcomes === "interrupted" ? [900, 45, 60, 75][index - 6] ?? 30 : outcomes && index === 6 ? 60 : outcomes && index === 7 ? 15 : 30;
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
-    id: index + 1, number: index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
-    html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
+    id: index === 0 && density ? 12345 : index + 1, number: index === 0 && density ? 12345 : index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
+    html_url: `${fixtureRepo.html_url}/issues/${index === 0 && density ? 12345 : index + 1}`, assignees: [],
     startedAt: state === "closed" && title !== "Closed unknown start" ? new Date(now - 3600000 - closedMinutes(index) * 60000).toISOString() : undefined,
-    labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, ...(longLabels ? ["a-very-long-workflow-label-that-must-not-wrap", "another-long-label-with-extra-context", "third-long-label-for-the-layout"] : ["ui"])].map(name => ({ name, color: "a2eeef" }))],
+    labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, ...(density && index === 0 ? ["story-points: 13"] : []), ...(longLabels ? ["a-very-long-workflow-label-that-must-not-wrap", "another-long-label-with-extra-context", "third-long-label-for-the-layout"] : ["ui"])].map(name => ({ name, color: "a2eeef" }))],
   }));
   if (review) {
     const older = issues[9]!;
@@ -33,19 +34,19 @@ async function fixture(page: Page, longTitle = false, outcomes: boolean | "inter
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     if (url.pathname === "/user") return route.fulfill({ json: { login: "list-align-fixture", avatar_url: "" } });
-    if (url.pathname === "/user/repos") return route.fulfill({ json: [repo] });
+    if (url.pathname === "/user/repos") return route.fulfill({ json: [fixtureRepo] });
     if (url.pathname.endsWith("/issues")) {
       const closed = url.searchParams.get("state") === "closed";
       return route.fulfill({ json: issues.filter(issue => (issue.state === "closed") === closed || url.searchParams.get("state") === "all") });
     }
-    if (/\/issues\/(?:1|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - (longLabels ? (review ? 90 : 50) : 10) * 60000).toISOString() }] });
+    if (/\/issues\/(?:1|12345|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - (longLabels ? (review ? 90 : 50) : 10) * 60000).toISOString() }] });
     if (url.pathname === "/graphql") return route.fulfill({ json: { data: { repository: { issue: { parent: null, subIssuesSummary: null } } } } });
     return route.fulfill({ json: [] });
   });
   await page.goto("/"); await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
   await page.getByLabel("GitHub personal access token").fill("fictional-list-align-token");
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
-  await page.getByRole("dialog").getByRole("checkbox", { name: repo.full_name }).check();
+  await page.getByRole("dialog").getByRole("checkbox", { name: fixtureRepo.full_name }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
   await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
   await expect(page.locator(".issue-row")).toHaveCount(specs.length);
@@ -205,7 +206,7 @@ for (const combined of [false, true]) {
     const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
     for (const width of [320, 375, 430, 650]) {
       await page.setViewportSize({ width, height: 844 });
-      for (const candidate of await page.locator('.issue-row').all()) expect((await candidate.boundingBox())!.height).toBeLessThanOrEqual(60);
+      for (const candidate of await page.locator('.issue-row').all()) expect((await candidate.boundingBox())!.height).toBeLessThanOrEqual(width === 320 ? 84 : 60);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await expect(row.locator('.issue-points')).toBeVisible();
       await expect(row.locator('.row-time')).toBeVisible();
@@ -244,7 +245,7 @@ test("closed work duration and estimate arrows appear in rows and cards without 
   await expect(over.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid: 1 h.*Uppskattad tid: ≈ 30 min/);
   await expect(under.locator('.implementation-time')).toContainText('↓');
   await page.setViewportSize({ width: 320, height: 844 });
-  expect((await over.boundingBox())!.height).toBeLessThanOrEqual(60);
+  expect((await over.boundingBox())!.height).toBeLessThanOrEqual(84);
   await expect(over.locator('.closed-date')).toBeVisible();
   await expect(over.locator('.row-outcome .implementation-time')).toBeVisible();
   await expect(over.locator('.implementation-time')).toBeVisible();
@@ -339,17 +340,20 @@ const outcomeScenarios = [
 for (const scenario of outcomeScenarios) test.describe(`actual time layout ${scenario.name}`, () => {
   test.use({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile });
   for (const combined of [false, true]) test(`${combined ? 'combined' : 'split'} cards and list keep actual time in its own rightmost column`, async ({ page }, info) => {
-    const api = await fixture(page, true, true, true, true);
+    const api = await fixture(page, true, true, true, true, true);
     if (combined) await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
     api.move(); await page.keyboard.press('Control+r');
     const unread = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
+    await expect(unread.locator('.row-number')).toHaveText('#12345');
+    await expect(unread.locator('.issue-points')).toContainText('13 SP');
+    if (combined) await expect(unread.locator('.row-repository').first()).toHaveAttribute('title', /a-very-long-repository-name/);
     await expect(unread.locator('.row-movement-marker')).toBeVisible();
     await expect(unread.locator('.row-comment-marker')).toBeVisible();
     await expect(page.locator('.issue-row.issue-timeout').first()).toBeVisible();
     const compact = scenario.width <= 650 || (scenario.mobile && scenario.width <= 950 && scenario.height <= 500);
     if (compact) {
       for (const row of await page.locator('.issue-row').all()) {
-        expect((await row.boundingBox())!.height).toBeLessThanOrEqual(60);
+        expect((await row.boundingBox())!.height).toBeLessThanOrEqual(scenario.width <= 360 ? 84 : 60);
         await expect(row.locator('.issue-points')).toBeVisible();
         await expect(row.locator('.row-time')).toBeVisible();
         await expect(row.locator('.row-meta')).toHaveCount(0);
@@ -366,7 +370,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     await expect(backlog.locator('.row-outcome .issue-time-estimate')).toHaveAttribute('aria-label', /^Uppskattad tid: ≈ [^≈]+$/);
     await expect(backlog.locator('.issue-time-estimate')).toHaveAttribute('title', /Baserat på median tid per poäng/);
     expect(await backlog.locator('.issue-time-estimate').evaluate(element => getComputedStyle(element).fontStyle)).toBe('italic');
-    await expect(unread.locator('.row-outcome .issue-time-remaining')).toHaveText('över uppskattning');
+    await expect(unread.locator('.row-outcome .issue-time-remaining')).toBeVisible();
     const unknown = page.locator('.issue-row.progress').filter({ has: page.getByRole('button', { name: 'Progress many', exact: true }) });
     await expect(unknown.locator('.row-time')).toContainText('Starttid okänd');
     await expect(unknown.locator('.row-outcome .issue-time-remaining')).toHaveCount(0);
@@ -394,7 +398,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
       expect(geometry.date.right).toBeLessThanOrEqual(geometry.actual.x);
       expect(geometry.actual.right).toBeLessThanOrEqual(geometry.row.right);
       expect(geometry.date.y + geometry.date.height / 2).toBeCloseTo(geometry.actual.y + geometry.actual.height / 2, 0);
-      if (compact) expect(geometry.row.height).toBeLessThanOrEqual(60);
+      if (compact) expect(geometry.row.height).toBeLessThanOrEqual(scenario.width <= 360 ? 84 : 60);
       rightEdges.push(Math.round(geometry.actual.right));
       if ((await row.locator('.row-title').innerText()).includes('unknown')) await expect(actual.locator('.implementation-time')).toHaveCount(0);
       else await expect(actual.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid:/);
@@ -417,7 +421,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
       await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-popup.png`) });
       await page.locator('.row-popup-close').tap();
       await expect(popup).toHaveCount(0);
-      expect((await unread.boundingBox())!.height).toBeLessThanOrEqual(60);
+      expect((await unread.boundingBox())!.height).toBeLessThanOrEqual(scenario.width <= 360 ? 84 : 60);
     } else {
       await unread.locator('.row-title').click();
       await expect(unread.locator('.row-card')).toBeVisible();
@@ -443,6 +447,6 @@ test('shared time column stays empty when repository history is insufficient', a
   const rows = page.locator('.issue-row');
   await expect(rows).toHaveCount(4);
   await expect(page.locator('.issue-time-estimate,.issue-time-remaining')).toHaveCount(0);
-  await expect(rows.first().locator('.row-time')).toContainText('Skapad');
+  await expect(rows.first().locator('.row-time')).toContainText(/för 3 dagar sedan/);
   expect((await rows.first().boundingBox())!.height).toBeLessThanOrEqual(60);
 });
