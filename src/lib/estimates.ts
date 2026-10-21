@@ -277,7 +277,37 @@ export function estimateLabel(ms: number): string {
 export function closedIssueOutcome(issue: Issue, history: HistorySample[], now: number) {
   const start = time(issue.workStartedAt ?? issue.startedAt), end = time(issue.closed_at);
   if (issue.pull_request || issue.state !== "closed" || !Number.isFinite(start) || !Number.isFinite(end) || end > now || end <= start) return null;
-  const actualMs = end - start;
+  return outcomeForActual(issue, end - start, history);
+}
+
+/** Closed parent duration: sum complete member intervals, otherwise use one complete group span. */
+export function closedIssueGroupOutcome(issue: Issue, children: Issue[], history: HistorySample[], now: number) {
+  if (!children.length) return closedIssueOutcome(issue, history, now);
+  if (issue.pull_request || issue.state !== "closed") return null;
+  const members = [issue, ...children];
+  const intervals = members.map(member => {
+    const start = time(member.workStartedAt ?? member.startedAt), end = time(member.closed_at);
+    return { start, end, validEnd: member.state === "closed" && Number.isFinite(end) && end <= now };
+  });
+  // Every child must be present and closed for either metric to describe the whole group.
+  if (intervals.some(interval => !interval.validEnd)) return null;
+  const knownIntervals = intervals.filter(interval => Number.isFinite(interval.start) && interval.start < interval.end);
+  let actualMs: number, aggregation: "sum" | "span";
+  if (knownIntervals.length === intervals.length) {
+    actualMs = knownIntervals.reduce((sum, interval) => sum + interval.end - interval.start, 0);
+    aggregation = "sum";
+  } else {
+    const starts = intervals.filter(interval => interval.start < interval.end).map(interval => interval.start).filter(Number.isFinite);
+    if (!starts.length) return null;
+    actualMs = Math.max(...intervals.map(interval => interval.end)) - Math.min(...starts);
+    if (!(actualMs > 0)) return null;
+    aggregation = "span";
+  }
+  const outcome = outcomeForActual(issue, actualMs, history);
+  return outcome ? { ...outcome, aggregation } : null;
+}
+
+function outcomeForActual(issue: Issue, actualMs: number, history: HistorySample[]) {
   const others = calibrationSamples(history.filter(sample => sample.issue.id !== issue.id).slice(0, MAX_HISTORY_SAMPLES));
   const rate = others.length < MIN_SAMPLES ? null : median(others.map(sample => sample.durationMs / approximatePoints(sample.issue)));
   return { actualMs, estimatedMs: rate === null ? null : rate * approximatePoints(issue) };

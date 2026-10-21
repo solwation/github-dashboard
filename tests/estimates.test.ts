@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   calibrationSamples,
   closedIssueOutcome,
+  closedIssueGroupOutcome,
   combinedEstimate,
   estimateLabel,
   historySamples,
@@ -296,5 +297,29 @@ describe("extreme duration exclusion", () => {
     expect(estimate.backlog).toBeNull();
     const target = done(30 * min);
     expect(closedIssueOutcome(target, historySamples([...history, target], now), now)).toEqual({ actualMs: 30 * min, estimatedMs: null });
+  });
+});
+
+describe("closed parent group duration", () => {
+  it("sums complete parent and child work intervals, including sequential or overlapping work", () => {
+    const parent = issue("closed", { startedAt: iso(now - 5 * hour), closed_at: iso(now - hour) });
+    const first = issue("closed", { startedAt: iso(now - 4 * hour), closed_at: iso(now - 3 * hour) });
+    const second = issue("closed", { startedAt: iso(now - 3 * hour), closed_at: iso(now - hour) });
+    expect(closedIssueGroupOutcome(parent, [first, second], [], now)).toMatchObject({ actualMs: 7 * hour, aggregation: "sum" });
+    const overlapping = { ...second, startedAt: iso(now - 4 * hour) };
+    expect(closedIssueGroupOutcome(parent, [first, overlapping], [], now)).toMatchObject({ actualMs: 8 * hour, aggregation: "sum" });
+  });
+
+  it("uses the earliest known start to latest close when any member start is missing", () => {
+    const parent = issue("closed", { startedAt: iso(now - 5 * hour), closed_at: iso(now - hour) });
+    const child = issue("closed", { closed_at: iso(now - 2 * hour) });
+    expect(closedIssueGroupOutcome(parent, [child], [], now)).toMatchObject({ actualMs: 4 * hour, aggregation: "span" });
+  });
+
+  it("returns unknown when any member closure is missing and preserves standalone behavior", () => {
+    const parent = done(2 * hour);
+    const child = issue("closed", { startedAt: iso(now - hour) });
+    expect(closedIssueGroupOutcome(parent, [child], [], now)).toBeNull();
+    expect(closedIssueGroupOutcome(parent, [], [], now)).toEqual(closedIssueOutcome(parent, [], now));
   });
 });
