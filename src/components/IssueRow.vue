@@ -227,6 +227,16 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })">
         <MessageCircle :size="12" aria-hidden="true" /><span>{{ newComments }}</span>
       </button>
+      <span v-if="progress" class="row-mobile-relation row-parent-badge"
+        :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
+        :aria-label="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })" role="img">
+        <ListTree :size="11" aria-hidden="true" /><span>{{ progress.completed }}/{{ progress.total }}</span>
+      </span>
+      <span v-else-if="isSubtask && parentIssue" class="row-mobile-relation row-subtask-badge"
+        :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
+        :aria-label="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })" role="img">
+        <CornerDownRight :size="11" aria-hidden="true" /><span aria-hidden="true">#{{ parentIssue.number }}</span>
+      </span>
     </span>
     <span v-else class="row-meta">
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
@@ -364,7 +374,9 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-summary > .row-mobile-priority { order: 2; }
   .row-mobile-summary > .issue-points { order: 3; }
   .row-mobile-summary > .row-mobile-activity { order: 1; }
-  .row-mobile-summary > .row-repository { grid-area: auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
+  .row-mobile-summary > .row-mobile-relation { order: 4; }
+  .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
+  .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 9px; line-height: 1; white-space: nowrap; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
   .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: #dcecff; color: #175b96; font-size: 9px; cursor: pointer; }

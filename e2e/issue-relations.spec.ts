@@ -74,6 +74,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await expect(roadmap.locator(".sub-issue-progress-label")).toContainText("4 av 5");
   await child.scrollIntoViewIfNeeded();
   await expect(child.locator(".issue-parent")).toHaveCount(0);
+  await page.setViewportSize({ width: 1000, height: 900 });
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
@@ -81,7 +82,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await expect(nested.locator(".issue-parent > span")).toHaveText("Parent issue");
   await nested.getByRole("button", { name: "Read more", exact: true }).click();
   await expect(nested.getByRole("progressbar", { name: "0 of 2 sub-issues closed" })).toBeVisible();
-  // Compact phone rows keep hierarchy in the opened card; desktop rows retain these badges.
+  // Phone rows expose only a compact relation marker; full hierarchy remains in details, while desktop keeps descriptive badges.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.locator(".board-toolbar").getByRole("button", { name: "List", exact: true }).click();
   const parentRow = page.locator(".issue-row").filter({ hasText: parent.title });
