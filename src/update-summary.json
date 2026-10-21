@@ -1,10 +1,10 @@
 {
-  "baseCommit": "023447d7e7890d37790dcaff7dd93c30993bb0e1",
+  "baseCommit": "bdaf58ecab8ae84fcd44f4b5c0bcb8c1db6d1e19",
   "summary": {
-    "sv": "Mobila listrader ger titlar mer plats och visar kompakt ålder inom 60 px.",
-    "en": "Mobile list rows give titles more room and show compact ages within 60px."
+    "sv": "Mobilmenyn ger snabbnavigering till filtrerade repository- och statusgrupper.",
+    "en": "The mobile menu provides quick navigation to filtered repository and status groups."
   },
   "issues": [
-    244
+    245
   ]
 }

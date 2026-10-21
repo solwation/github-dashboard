@@ -162,6 +162,15 @@
         "issues": [
           244
         ]
+      },
+      {
+        "text": {
+          "sv": "Mobilmenyn öppnar en tillfällig repository- och statusnavigator med filtrerade antal och tydlig målmarkering.",
+          "en": "The mobile menu opens a temporary repository and status navigator with filtered counts and a clear target highlight."
+        },
+        "issues": [
+          245
+        ]
       }
     ]
   },
