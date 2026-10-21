@@ -253,3 +253,10 @@ describe("closed implementation outcome", () => {
     }
   });
 });
+
+it("includes the extra comparison sample when scheduling rolling-history expiry", () => {
+  const history = Array.from({ length: MAX_HISTORY_SAMPLES + 1 }, (_, index) => done(hour, (index + 1) * hour));
+  const oldest = Date.parse(history.at(-1)!.closed_at!);
+  expect(nextHistoryExpiry(history, now, { sampleLimit: MAX_HISTORY_SAMPLES + 1 })).toBe(oldest + 30 * day + 1);
+  expect(nextHistoryExpiry(history, now)).toBe(oldest + hour + 30 * day + 1);
+});

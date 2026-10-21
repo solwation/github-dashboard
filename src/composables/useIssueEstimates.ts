@@ -11,7 +11,7 @@ const issueEstimatesKey: InjectionKey<ComputedRef<Map<string, EstimateBasis>>> =
 /** Shared repository calibration, refreshed with filtered data or history expiry, never per issue tick. */
 export function provideIssueEstimates(groups: () => Map<string, Group[]>) {
   const now = useNow(at => Math.min(86400000, ...[...groups().values()].flatMap(entries => entries.map(group => {
-    const expiry = nextHistoryExpiry(group.issues, at, { rules: group.rules });
+    const expiry = nextHistoryExpiry(group.issues, at, { rules: group.rules, sampleLimit: MAX_HISTORY_SAMPLES + 1 });
     return expiry === null ? Infinity : expiry - at;
   }))), { board: true });
   const bases = computed(() => new Map([...groups()].flatMap(([repository, entries]) => {
