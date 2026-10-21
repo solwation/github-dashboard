@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, description: "Fictional expand fixture", private: true, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
 const stamp = new Date(Date.now() - 86_400_000).toISOString();
 const noPageScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+test.use({ isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
 
 test("desktop expands row details in place with open description while phone opens the full card in a popup", async ({ page, context }) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
@@ -34,6 +35,18 @@ test("desktop expands row details in place with open description while phone ope
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   for (const repo of repos) await page.getByRole("dialog").getByRole("checkbox", { name: repo.full_name }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
+  const viewMode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
+  for (const [width, height] of [[1600, 1000], [1000, 900], [390, 844], [844, 390], [320, 568]]) {
+    await page.setViewportSize({ width, height });
+    for (const mode of ["Kort", "Lista"] as const) {
+      await viewMode.getByRole("button", { name: mode, exact: true }).click();
+      expect(await noPageScroll(page)).toBe(true);
+      if (mode === "Lista") await expect(page.locator(".issue-row")).toHaveCount(4);
+      else await expect(page.locator(".issue-card").filter({ hasNot: page.locator(".row-details-card") })).toHaveCount(4);
+      await page.screenshot({ path: test.info().outputPath(`${mode}-${width}x${height}.png`) });
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
   const alpha = page.locator("#repo-1");
   await expect(alpha.locator(".issue-row")).toHaveCount(2);
@@ -122,8 +135,8 @@ test("desktop expands row details in place with open description while phone ope
   // #155: on phones (<= 650px), tapping a row opens a popup dialog showing the full card identical to card view.
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
-    for (const width of [320, 390, 430]) {
-      await page.setViewportSize({ width, height: 844 });
+    for (const [width, height] of [[320, 568], [390, 844], [844, 390]]) {
+      await page.setViewportSize({ width, height });
       if (width === 390) await page.evaluate(() => window.scrollTo(0, 400));
       const listScrollY = await page.evaluate(() => window.scrollY);
       await beta.click();
@@ -155,13 +168,22 @@ test("desktop expands row details in place with open description while phone ope
       expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
       expect(closeBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
       expect(repoBox!.x + repoBox!.width).toBeLessThanOrEqual(closeBox!.x + 1);
+      await dialog.getByRole("button", { name: "Läs mer" }).click();
+      await expect(dialog.locator(".issue-markdown")).toContainText("Long paragraph 50 keeps scrolling content below the dialog header.");
+      await dialog.evaluate(element => { element.scrollTop = element.scrollHeight; });
+      await expect(closeBtn).toBeInViewport();
+      expect(await dialog.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+      await page.screenshot({ path: test.info().outputPath(`popup-${width}x${height}.png`) });
       if (width === 390) {
-        await dialog.getByRole("button", { name: "Läs mer" }).click();
-        await expect(dialog.locator(".issue-markdown")).toContainText("Long paragraph 50 keeps scrolling content below the dialog header.");
-        await dialog.evaluate(element => { element.scrollTop = element.scrollHeight; });
-        await expect(closeBtn).toBeInViewport();
-        expect(await dialog.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
         expect(await page.locator("#app").evaluate(element => (element as HTMLElement).inert)).toBe(true);
+        expect(await page.evaluate(() => getComputedStyle(document.body).position)).toBe("fixed");
+        const lockedScrollY = await page.evaluate(() => window.scrollY);
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        expect(await page.evaluate(() => window.scrollY)).toBe(lockedScrollY);
+        await page.setViewportSize({ width: 844, height: 390 });
+        await expect(dialog).toBeVisible();
+        await expect(closeBtn).toBeInViewport();
+        await page.setViewportSize({ width, height });
         await closeBtn.focus(); await page.keyboard.press("Shift+Tab");
         expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
         await closeBtn.focus(); await page.keyboard.press("Tab");
@@ -189,6 +211,7 @@ test("desktop expands row details in place with open description while phone ope
   await page.reload();
   await expect(board.locator(".issue-row")).toHaveCount(4);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await page.evaluate(() => getComputedStyle(document.body).position)).not.toBe("fixed");
   expect(popups).toHaveLength(1);
   expect(errors).toEqual([]);
 });

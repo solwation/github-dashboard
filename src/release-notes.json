@@ -135,6 +135,15 @@
           239,
           240
         ]
+      },
+      {
+        "text": {
+          "sv": "Mobilens ärendepopup behåller stängknappen synlig och låser scroll och tangentbordsfokus tills dialogen stängs.",
+          "en": "Mobile issue popups keep the close button visible and contain scrolling and keyboard focus until the dialog closes."
+        },
+        "issues": [
+          242
+        ]
       }
     ]
   },
