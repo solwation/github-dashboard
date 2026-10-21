@@ -40,4 +40,36 @@ describe("combined issue columns", () => {
     expect(result.every((entry, index) => index === 0 || Date.parse(result[index - 1]!.issue.closed_at!) >= Date.parse(entry.issue.closed_at!))).toBe(true);
     lanes.forEach((lane, index) => expect(lane.issues).toEqual(before[index]));
   });
+  it("orders each column by the requested age and priority keys in single and combined boards", () => {
+    const [first, second] = demo();
+    const make = (lane: typeof first, id: number, labels: string[], dates: { created?: string; started?: string; closed?: string }) => ({
+      ...lane!.issues[0]!,
+      id,
+      number: id,
+      labels: labels.map(name => ({ name, color: "fff" })),
+      state: dates.closed ? "closed" : "open",
+      created_at: dates.created ?? "2026-01-01T00:00:00Z",
+      startedAt: dates.started ?? null,
+      closed_at: dates.closed ?? null,
+    });
+    const oldLow = make(first, 101, ["priority: low"], { created: "2026-01-01T00:00:00Z" });
+    const recentHigh = make(second, 202, ["priority: high"], { created: "2026-01-03T00:00:00Z" });
+    const oldHigh = make(first, 103, ["priority: high"], { created: "2026-01-02T00:00:00Z" });
+    const longRunning = make(first, 104, ["in-progress"], { started: "2026-01-01T00:00:00Z" });
+    const shortRunning = make(second, 205, ["in-progress"], { started: "2026-01-03T00:00:00Z" });
+    const newlyClosed = make(first, 106, [], { closed: "2026-01-03T00:00:00Z" });
+    const longClosed = make(second, 207, [], { closed: "2026-01-01T00:00:00Z" });
+    first!.issues = [oldLow, oldHigh, longRunning, newlyClosed];
+    second!.issues = [recentHigh, shortRunning, longClosed];
+    const lanes = [first!, second!];
+    const cases = [
+      ["backlog", [103, 202, 101]],
+      ["progress", [104, 205]],
+      ["closed", [106, 207]],
+    ] as const;
+    for (const [key, expected] of cases) {
+      expect(sortedIssues(lanes.flatMap(lane => lane.issues), key).map(issue => issue.id)).toEqual(expected);
+      expect(combinedItems(lanes, key, {}, filters).map(entry => entry.issue.id)).toEqual(expected);
+    }
+  });
 });
