@@ -85,6 +85,7 @@ export interface CombinedEstimate {
 export interface EstimateOptions {
   rules?: Rules;
   windowDays?: number;
+  sampleLimit?: number;
 }
 
 const time = (value: string | null | undefined) => (value ? Date.parse(value) : NaN);
@@ -94,7 +95,7 @@ const issuesOf = (issues: Issue[]) => issues.filter((issue) => !issue.pull_reque
 export function historySamples(
   issues: Issue[],
   now: number,
-  { rules = {}, windowDays = ESTIMATE_WINDOW_DAYS }: EstimateOptions = {},
+  { rules = {}, windowDays = ESTIMATE_WINDOW_DAYS, sampleLimit = MAX_HISTORY_SAMPLES }: EstimateOptions = {},
 ): HistorySample[] {
   const cutoff = now - windowDays * DAY_MS;
   const samples: HistorySample[] = [];
@@ -105,7 +106,7 @@ export function historySamples(
     if (closedMs < cutoff || closedMs > now || closedMs <= startedMs) continue;
     samples.push({ issue, startedMs, closedMs, durationMs: closedMs - startedMs });
   }
-  return samples.sort((a, b) => b.closedMs - a.closedMs || b.issue.id - a.issue.id).slice(0, MAX_HISTORY_SAMPLES);
+  return samples.sort((a, b) => b.closedMs - a.closedMs || b.issue.id - a.issue.id).slice(0, sampleLimit);
 }
 
 /** First millisecond after a currently included closure leaves the inclusive rolling window. */
@@ -256,4 +257,14 @@ export function estimateLabel(ms: number): string {
   }
   const days = Math.floor(hours / 24), restHours = hours % 24;
   return restHours ? t("≈ {days} d {hours} h", { days, hours: restHours }) : t("≈ {days} d", { days });
+}
+
+/** Observed work duration, compared with other recent closures rather than calibrating against itself. */
+export function closedIssueOutcome(issue: Issue, history: HistorySample[], now: number) {
+  const start = time(issue.workStartedAt ?? issue.startedAt), end = time(issue.closed_at);
+  if (issue.pull_request || issue.state !== "closed" || !Number.isFinite(start) || !Number.isFinite(end) || end > now || end <= start) return null;
+  const actualMs = end - start;
+  const others = history.filter(sample => sample.issue.id !== issue.id).slice(0, MAX_HISTORY_SAMPLES);
+  const rate = others.length < MIN_SAMPLES ? null : median(others.map(sample => sample.durationMs / approximatePoints(sample.issue)));
+  return { actualMs, estimatedMs: rate === null ? null : rate * approximatePoints(issue) };
 }

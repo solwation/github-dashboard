@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  closedIssueOutcome,
   combinedEstimate,
   estimateLabel,
   historySamples,
@@ -229,5 +230,26 @@ describe("individual issue forecasts", () => {
       .toEqual({ totalMs: hour, remainingMs: 0, overdue: true });
     expect(issueEstimate(running(hour), hour, now, true))
       .toEqual({ totalMs: hour, remainingMs: 0, overdue: false });
+  });
+});
+
+describe("closed implementation outcome", () => {
+  it("compares against other issues only, with over, under and equal durations", () => {
+    const history = [done(hour), done(hour), done(hour)];
+    for (const duration of [hour / 2, hour, hour * 2]) {
+      const target = done(duration);
+      const outcome = closedIssueOutcome(target, historySamples([...history, target], now), now)!;
+      expect(outcome.actualMs).toBe(duration);
+      expect(outcome.estimatedMs).toBe(hour);
+    }
+    expect(closedIssueOutcome(history[0]!, historySamples(history, now), now)?.estimatedMs).toBeNull();
+  });
+  it("uses a safe work start, never creation age, and rejects invalid closures", () => {
+    const target = done(hour);
+    target.workStartedAt = iso(now - 3 * hour);
+    expect(closedIssueOutcome(target, [], now)).toEqual({ actualMs: 2 * hour, estimatedMs: null });
+    for (const extra of [{ startedAt: undefined }, { closed_at: iso(now + hour) }, { startedAt: iso(now) }, { pull_request: {} }]) {
+      expect(closedIssueOutcome({ ...done(hour), ...extra }, [], now)).toBeNull();
+    }
   });
 });

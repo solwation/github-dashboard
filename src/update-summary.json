@@ -1,10 +1,11 @@
 {
   "baseCommit": "8686c538c2d78fd86520342f6ecd5d455e72c630",
   "summary": {
-    "sv": "Kompaktare listvy på telefonen med alla detaljer i kortets popup.",
-    "en": "More compact phone lists with full details in the card popup."
+    "sv": "Kompakta telefonlistor och faktisk arbetstid med estimatjämförelse för stängda ärenden.",
+    "en": "Compact phone lists and actual work duration with estimate comparisons for closed issues."
   },
   "issues": [
-    223
+    223,
+    224
   ]
 }

@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, ArrowUpRight, ArrowRightLeft, Plus, Bug, ChevronDow
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
+import IssueImplementationTime from "./IssueImplementationTime.vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
@@ -216,6 +217,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :title="new Date(issue.closed_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
       >
+      <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
       <IssueTimeRemaining v-if="col === 'progress' && !isPhone" :issue="issue" :repository="repository" :active="visible" />
     </span>
     <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
@@ -282,6 +284,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
   .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: #dcecff; color: #175b96; font-size: 9px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+  .row-time:has(.implementation-time) .closed-date { display: none; }
   .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 7rem; overflow: hidden; font-size: 10px; }
   .row-time > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }

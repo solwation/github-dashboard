@@ -6,6 +6,7 @@ import type { IssueRelations } from "../lib/issue-relations";
 import IssueDetails from "./IssueDetails.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
+import IssueImplementationTime from "./IssueImplementationTime.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
@@ -276,6 +277,7 @@ const visibleLabels = computed(() =>
           width="22"
           height="22"
       /></span>
+      <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
       <IssueTimeRemaining v-if="!rowDetails && col === 'progress'" :issue="issue" :repository="repository" :active="visible" bar />
     </div>
     <div

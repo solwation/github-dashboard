@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
-async function fixture(page: Page, longTitle = false) {
+async function fixture(page: Page, longTitle = false, outcomes = false) {
   const now = Date.now(), old = new Date(now - 86400000 * 3).toISOString(), recent = new Date(now - 3600000).toISOString();
   // [title, comments, section label, state, extra labels]
   const specs: [string, number, string | null, "open" | "closed", string[]][] = [
@@ -16,10 +16,11 @@ async function fixture(page: Page, longTitle = false) {
     ["Closed none", 0, null, "closed", ["enhancement"]],
     ["Closed third", 0, null, "closed", []],
   ];
+  if (outcomes) specs.push(["Closed fourth", 0, null, "closed", []]);
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
     id: index + 1, number: index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
-    startedAt: state === "closed" ? new Date(now - 3600000 - 30 * 60000).toISOString() : undefined,
+    startedAt: state === "closed" ? new Date(now - 3600000 - (outcomes && index === 6 ? 60 : outcomes && index === 7 ? 15 : 30) * 60000).toISOString() : undefined,
     labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, "ui"].map(name => ({ name, color: "a2eeef" }))],
   }));
   await page.route("https://api.github.com/**", async route => {
@@ -226,3 +227,20 @@ for (const combined of [false, true]) {
     expect((await row.boundingBox())!.height).toBe(before);
   });
 }
+
+test("closed work duration and estimate arrows appear in rows and cards without growing phone rows", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await fixture(page, false, true);
+  const over = page.locator('.issue-row.closed').filter({ hasText: 'Closed twelve' });
+  const under = page.locator('.issue-row.closed').filter({ hasText: 'Closed none' });
+  await expect(over.locator('.implementation-time')).toContainText('↑');
+  await expect(over.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid: 1 h.*Uppskattad tid: ≈ 30 min/);
+  await expect(under.locator('.implementation-time')).toContainText('↓');
+  await page.setViewportSize({ width: 320, height: 844 });
+  expect((await over.boundingBox())!.height).toBeLessThanOrEqual(60);
+  await expect(over.locator('.closed-date')).toBeHidden();
+  await expect(over.locator('.implementation-time')).toBeVisible();
+  await over.locator('.row-title').click();
+  await expect(page.locator('.row-popup .implementation-time')).toContainText('↑');
+  await expect(page.locator('.row-popup .closed-date')).toBeVisible();
+});

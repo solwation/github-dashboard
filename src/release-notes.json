@@ -14,6 +14,15 @@
         "issues": [
           223
         ]
+      },
+      {
+        "text": {
+          "sv": "Stängda ärenden visar faktisk arbetstid och en pil när tiden över- eller understiger uppskattningen från andra avslutade ärenden.",
+          "en": "Closed issues show actual work duration and an arrow when it exceeds or beats estimates calibrated from other completed issues."
+        },
+        "issues": [
+          224
+        ]
       }
     ]
   },
