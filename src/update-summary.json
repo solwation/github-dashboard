@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d340c7cce2a3ff273311654309f73f50cc7eebc9",
+  "baseCommit": "d81ef3bac84f00f2731f195b7635e5ff477a19a8",
   "summary": {
-    "sv": "Navigera från ett underärende till parent-ärendet i dashboarden.",
-    "en": "Navigate from a sub-issue to its parent inside the dashboard."
+    "sv": "Visa parentens och underärendenas sammanlagda arbetstid vid stängning.",
+    "en": "Show parent and sub-issue work time together when the group closes."
   },
   "issues": [
-    249
+    251
   ]
 }

@@ -207,6 +207,15 @@
         "issues": [
           249
         ]
+      },
+      {
+        "text": {
+          "sv": "Stängda parent-ärenden visar summerad arbetstid för parent och underärenden, eller gruppens hela tidsspann när starttider saknas.",
+          "en": "Closed parent issues show summed work time across the parent and subtasks, or the full group span when start times are missing."
+        },
+        "issues": [
+          251
+        ]
       }
     ]
   },
