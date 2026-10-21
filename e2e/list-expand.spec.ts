@@ -21,7 +21,7 @@ test("desktop expands row details in place with open description while phone ope
         subIssuesSummary: { total: 0, completed: 0 } } } } } });
     }
     if (repo && url.pathname.endsWith("/issues")) {
-      const issues = [1, 2].map(number => ({ id: number, number, title: `${repo.name} task ${number}`, body: `Description of ${repo.name} task ${number}`, comments: 0,
+      const issues = [1, 2].map(number => ({ id: number, number, title: `${repo.name} task ${number}`, body: number === 1 ? `Description of ${repo.name} task ${number}\n\n${Array.from({ length: 50 }, (_, index) => `Long paragraph ${index + 1} keeps scrolling content below the dialog header.`).join("\n\n")}` : `Description of ${repo.name} task ${number}`, comments: 0,
         state: "open", created_at: stamp, updated_at: stamp, closed_at: null, html_url: `${repo.html_url}/issues/${number}`, assignees: [],
         labels: [{ name: "enhancement", color: "a2eeef" }] }));
       return route.fulfill({ json: url.searchParams.get("state") === "closed" ? [] : issues });
@@ -124,6 +124,8 @@ test("desktop expands row details in place with open description while phone ope
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
+      if (width === 390) await page.evaluate(() => window.scrollTo(0, 400));
+      const listScrollY = await page.evaluate(() => window.scrollY);
       await beta.click();
       await expect(beta).toHaveAttribute("aria-expanded", "true");
       await expect(betaRow.locator(".row-card")).toHaveCount(0);
@@ -153,6 +155,18 @@ test("desktop expands row details in place with open description while phone ope
       expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
       expect(closeBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
       expect(repoBox!.x + repoBox!.width).toBeLessThanOrEqual(closeBox!.x + 1);
+      if (width === 390) {
+        await dialog.getByRole("button", { name: "Läs mer" }).click();
+        await expect(dialog.locator(".issue-markdown")).toContainText("Long paragraph 50 keeps scrolling content below the dialog header.");
+        await dialog.evaluate(element => { element.scrollTop = element.scrollHeight; });
+        await expect(closeBtn).toBeInViewport();
+        expect(await dialog.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+        expect(await page.locator("#app").evaluate(element => (element as HTMLElement).inert)).toBe(true);
+        await closeBtn.focus(); await page.keyboard.press("Shift+Tab");
+        expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
+        await closeBtn.focus(); await page.keyboard.press("Tab");
+        expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
+      }
 
       if (width === 320) {
         await page.keyboard.press("Escape");
@@ -164,6 +178,7 @@ test("desktop expands row details in place with open description while phone ope
       await expect(dialog).toHaveCount(0);
       await expect(beta).toHaveAttribute("aria-expanded", "false");
       await expect(beta).toBeFocused();
+      if (width === 390) expect(await page.evaluate(() => window.scrollY)).toBe(listScrollY);
     }
   }
 

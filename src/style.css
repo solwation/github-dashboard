@@ -1839,15 +1839,17 @@ button.lane-sync:focus-visible::after {
   }
 }
 
-.row-popup-backdrop { padding: 16px; }
-.row-popup { position: relative; width: 100%; max-width: 440px; max-height: calc(100dvh - 32px); overflow-y: auto; display: flex; flex-direction: column; }
+.row-popup-backdrop { padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.row-popup { position: relative; width: 100%; max-width: 440px; max-height: calc(100dvh - max(16px, env(safe-area-inset-top) + env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; scrollbar-gutter: stable; }
 .row-popup > .issue-card { margin: 0; box-shadow: 0 20px 60px #10263138; }
 .row-popup .movement-marker { max-width: calc(100% - 44px); }
 .row-popup .card-top { padding-right: 44px; flex-wrap: wrap; gap: 6px; }
 .row-popup-close {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+  position: sticky;
+  top: 0;
+  align-self: flex-end;
+  flex: 0 0 44px;
+  margin: 0 4px -44px 0;
   z-index: 5;
   display: inline-flex;
   align-items: center;

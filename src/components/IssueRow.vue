@@ -55,20 +55,59 @@ const phoneViewport = typeof window === "undefined" ? null : window.matchMedia(
 );
 const isPhone = ref(phoneViewport?.matches ?? false);
 const panelId = "issue-row-card-" + useId();
+let lockedScrollY = 0;
+let lockedBodyStyle = "";
+let inertElements: Array<{ element: HTMLElement; inert: boolean }> = [];
+function lockPage() {
+  lockedScrollY = window.scrollY;
+  lockedBodyStyle = document.body.getAttribute("style") ?? "";
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${lockedScrollY}px`;
+  document.body.style.width = "100%";
+  inertElements = Array.from(document.body.children)
+    .filter((element): element is HTMLElement => element instanceof HTMLElement && !element.classList.contains("row-popup-backdrop"))
+    .map(element => ({ element, inert: element.inert }));
+  inertElements.forEach(({ element }) => { element.inert = true; });
+}
+function unlockPage() {
+  if (!lockedBodyStyle && !inertElements.length) return;
+  if (lockedBodyStyle) document.body.setAttribute("style", lockedBodyStyle);
+  else document.body.removeAttribute("style");
+  inertElements.forEach(({ element, inert }) => { element.inert = inert; });
+  inertElements = [];
+  window.scrollTo(0, lockedScrollY);
+  lockedBodyStyle = "";
+}
 function syncViewport() {
+  const wasPhone = isPhone.value;
   isPhone.value = phoneViewport?.matches ?? false;
+  if (wasPhone && !isPhone.value && expanded.value) {
+    expanded.value = false;
+    unlockPage();
+    void nextTick(() => toggle.value?.focus({ preventScroll: true }));
+  }
 }
 function setExpanded(value: boolean, refocus = false) {
   syncViewport();
   expanded.value = value;
   if (value) {
     emit("read");
-    if (isPhone.value) void nextTick(() => popupClose.value?.focus());
+    if (isPhone.value) void nextTick(() => { lockPage(); popupClose.value?.focus(); });
+  } else if (isPhone.value) {
+    unlockPage();
   }
-  if (refocus) void nextTick(() => toggle.value?.focus());
+  if (refocus) void nextTick(() => toggle.value?.focus({ preventScroll: true }));
 }
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === "Escape" && !event.defaultPrevented && expanded.value && isPhone.value) {
+  if (!expanded.value || !isPhone.value) return;
+  if (event.key === "Tab") {
+    const popup = document.getElementById(panelId);
+    const controls = popup ? Array.from(popup.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(el => el.offsetParent !== null) : [];
+    if (!controls.length) { event.preventDefault(); popupClose.value?.focus(); return; }
+    if (event.shiftKey && (document.activeElement === controls[0] || !popup?.contains(document.activeElement))) { event.preventDefault(); controls.at(-1)?.focus(); }
+    else if (!event.shiftKey && (document.activeElement === controls.at(-1) || !popup?.contains(document.activeElement))) { event.preventDefault(); controls[0]?.focus(); }
+  }
+  if (event.key === "Escape" && !event.defaultPrevented) {
     event.preventDefault();
     setExpanded(false, true);
   }
@@ -89,6 +128,7 @@ onMounted(() => {
   if (row.value) observer.observe(row.value);
 });
 onBeforeUnmount(() => {
+  unlockPage();
   phoneViewport?.removeEventListener("change", syncViewport);
   window.removeEventListener("keydown", onKeydown);
   observer?.disconnect();
