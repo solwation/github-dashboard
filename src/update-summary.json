@@ -1,10 +1,10 @@
 {
-  "baseCommit": "637ef8fc042d5bb544447d5f8ad235f314a67e9d",
+  "baseCommit": "35388d6ce03dcda16e658da58c97e1821ba3ad54",
   "summary": {
-    "sv": "Listrader samlar Backlog-estimat, pågående prognoser och faktisk arbetstid i samma högerkolumn, även på telefon. Ålder och förfluten tid visas separat.",
-    "en": "List rows share one rightmost column for Backlog estimates, in-progress forecasts and actual duration, including phones. Age and elapsed time stay separate."
+    "sv": "Mobilens ärendepopup behåller stängknappen synlig och håller scroll och tangentbordsfokus i dialogen.",
+    "en": "Mobile issue popups keep the close button visible and contain scrolling and keyboard focus."
   },
   "issues": [
-    241
+    242
   ]
 }
