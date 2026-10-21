@@ -213,6 +213,64 @@ function clearRepositoryHighlight() {
 const focusedSidebarRepository = ref<string | null>(null);
 const statisticsNavigation = ref<{ name: string; toggle: boolean; sequence: number }>();
 let sidebarNavigationSequence = 0;
+const mobileBoardNavigatorOpen = ref(false);
+const mobileNavigationRepository = ref("");
+const mobileNavigationAnnouncement = ref("");
+const mobileBoardNavigatorButton = ref<HTMLButtonElement | null>(null);
+let boardNavigationHighlight: HTMLElement | null = null;
+let boardNavigationTimer: ReturnType<typeof setTimeout> | undefined;
+watch(() => orderedLanes.value.map(lane => lane.repo.full_name).join("\n"), () => {
+  if (!orderedLanes.value.some(lane => lane.repo.full_name === mobileNavigationRepository.value)) {
+    mobileNavigationRepository.value = orderedLanes.value[0]?.repo.full_name ?? "";
+  }
+}, { immediate: true });
+function closeMobileBoardNavigator(returnFocus = false) {
+  mobileBoardNavigatorOpen.value = false;
+  if (returnFocus) void nextTick(() => mobileBoardNavigatorButton.value?.focus());
+}
+function mobileStatusLabel(key: string) {
+  return key === "progress" ? t("Pågående") : key === "closed" ? t("Stängda") : t("Backlog");
+}
+const mobileNavigationStatuses = computed(() => columns.value.map(col => {
+  const lane = orderedLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? orderedLanes.value[0];
+  const count = splitByRepository.value
+    ? (lane ? items(lane, col.key).length : 0)
+    : combinedColumns.value[col.key]?.length ?? 0;
+  return { key: col.key, label: mobileStatusLabel(col.key), count };
+}));
+async function navigateToBoardStatus(key: string) {
+  const lane = orderedLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? orderedLanes.value[0];
+  if (splitByRepository.value && !lane) return;
+  if (splitByRepository.value && lane) {
+    const laneIndex = orderedLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
+    if (laneIndex >= renderedLanes.value) renderedLanes.value = laneIndex + 1;
+  }
+  if (splitByRepository.value && lane && collapsedRepos.value.includes(lane.repo.full_name)) {
+    // Reveal the target without resetting its Show more limit.
+    collapsedRepos.value = collapsedRepos.value.filter(name => name !== lane.repo.full_name);
+    save();
+  }
+  closeMobileBoardNavigator();
+  await nextTick();
+  const targetId = splitByRepository.value
+    ? `board-${lane!.repo.id}-${key}`
+    : `board-combined-${key}`;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  clearTimeout(boardNavigationTimer);
+  boardNavigationHighlight?.classList.remove("board-navigation-highlight");
+  target.scrollIntoView({ block: "start" });
+  target.focus({ preventScroll: true });
+  target.classList.add("board-navigation-highlight");
+  boardNavigationHighlight = target;
+  boardNavigationTimer = setTimeout(() => {
+    boardNavigationHighlight?.classList.remove("board-navigation-highlight");
+    boardNavigationHighlight = null;
+  }, 1400);
+  mobileNavigationAnnouncement.value = splitByRepository.value
+    ? t("Visar {status} i {repository}", { status: mobileStatusLabel(key), repository: lane!.repo.full_name })
+    : t("Visar {status} i alla repositories", { status: mobileStatusLabel(key) });
+}
 function activateSidebarRepository(name: string) {
   const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
   if (!repo) return;
@@ -1685,7 +1743,29 @@ onMounted(async () => {
         <a href="#overview" :aria-label="t('Översikt')" :aria-current="currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
         <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="18" /></a>
         <button type="button" class="mobile-search-link" :aria-label="t('Sök issues')" :title="t('Sök issues')" @click="openIssueSearch"><Search :size="18" /></button>
+        <button v-if="workspaceOpen && currentView === 'overview'" ref="mobileBoardNavigatorButton" type="button" class="mobile-search-link mobile-board-navigator-toggle"
+          :aria-label="t('Hoppa till repository eller status')" :title="t('Hoppa till repository eller status')"
+          aria-controls="mobile-board-navigator" :aria-expanded="mobileBoardNavigatorOpen"
+          @click="mobileBoardNavigatorOpen = !mobileBoardNavigatorOpen" @keydown.esc.prevent="closeMobileBoardNavigator(true)"><ChevronDown :size="18" /></button>
       </nav>
+      <div v-if="workspaceOpen && currentView === 'overview' && mobileBoardNavigatorOpen" id="mobile-board-navigator" class="mobile-board-navigator"
+        role="group" :aria-label="t('Snabbnavigering mellan repositories och status')" @keydown.esc.prevent="closeMobileBoardNavigator(true)">
+        <label v-if="splitByRepository" class="mobile-board-repository">
+          <span>{{ t("Välj repository") }}</span>
+          <select v-model="mobileNavigationRepository" :aria-label="t('Välj repository')">
+            <option v-for="lane in orderedLanes" :key="lane.repo.full_name" :value="lane.repo.full_name">{{ lane.repo.full_name }}</option>
+          </select>
+        </label>
+        <p class="mobile-board-navigator-caption">{{ splitByRepository ? t("Välj status") : t("Status i alla repositories") }}</p>
+        <div class="mobile-board-statuses" role="group" :aria-label="t('Statusgrupper')">
+          <button v-for="status in mobileNavigationStatuses" :key="status.key" type="button" class="mobile-board-status"
+            :disabled="status.count === 0"
+            :aria-label="t(status.count === 1 ? '{status}, {count} ärende' : '{status}, {count} ärenden', { status: status.label, count: status.count })"
+            @click="navigateToBoardStatus(status.key)">
+            <span>{{ status.label }}</span><span class="mobile-board-status-count">{{ status.count }}</span>
+          </button>
+        </div>
+      </div>
       <div class="mobile-tools" :class="{ 'mobile-tools-open': mobileToolsOpen }">
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="19" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
@@ -1920,6 +2000,7 @@ onMounted(async () => {
           </button>
         </div>
         <p class="sr-only" role="status" aria-live="polite">{{ layoutAnnouncement }}</p>
+        <p class="sr-only" role="status" aria-live="polite">{{ mobileNavigationAnnouncement }}</p>
         <template v-if="splitByRepository">
         <section
           v-for="(lane, laneIndex) in orderedLanes"
@@ -2025,6 +2106,9 @@ onMounted(async () => {
             <section
               v-for="col in columns"
               :key="col.key"
+              :id="'board-' + lane.repo.id + '-' + col.key"
+              tabindex="-1"
+              :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
               class="board-column"
               :class="col.key"
             >
@@ -2135,6 +2219,9 @@ onMounted(async () => {
             <section
               v-for="col in columns"
               :key="col.key"
+              :id="'board-combined-' + col.key"
+              tabindex="-1"
+              :aria-label="t('{status} i alla repositories', { status: mobileStatusLabel(col.key) })"
               class="board-column"
               :class="col.key"
             >

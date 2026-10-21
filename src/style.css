@@ -584,7 +584,9 @@ h1 {
 .board-column {
   background: #fcfcfd;
   min-width: 0;
+  scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, 58px) + 8px);
 }
+.board-navigation-highlight { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--green) 68%, transparent); }
 .board-column + .board-column {
   border-left: 1px solid var(--line);
 }
@@ -2284,6 +2286,60 @@ html {
     background: transparent;
     color: var(--muted);
   }
+  .mobile-board-navigator-toggle[aria-expanded="true"] {
+    color: var(--green);
+    background: color-mix(in srgb, var(--green) 12%, transparent);
+  }
+  .mobile-board-navigator {
+    position: fixed;
+    z-index: 31;
+    top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, var(--phone-nav-height)) + 4px);
+    right: max(8px, env(safe-area-inset-right, 0px));
+    width: min(330px, calc(100vw - 16px));
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--topbar-height, var(--phone-nav-height)) - 16px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgb(0 0 0 / .18);
+  }
+  .mobile-board-repository { display: grid; gap: 5px; color: var(--muted); font-size: 11px; }
+  .mobile-board-repository select {
+    width: 100%;
+    min-height: 38px;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+  }
+  .mobile-board-navigator-caption { margin: 10px 0 6px; color: var(--muted); font-size: 11px; }
+  .mobile-board-statuses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .mobile-board-status {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface-sunken);
+    color: var(--text);
+    font: inherit;
+    font-size: 11px;
+  }
+  .mobile-board-status:disabled { opacity: .55; }
+  .mobile-board-status:not(:disabled) { cursor: pointer; }
+  .mobile-board-status:not(:disabled):hover,
+  .mobile-board-status:not(:disabled):focus-visible { border-color: var(--green); }
+  .mobile-board-status-count { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .mobile-board-status:focus-visible,
+  .mobile-board-repository select:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
   .mobile-navigation a[aria-current="page"] {
     background: color-mix(in srgb, var(--green) 12%, transparent);
     color: var(--green);
@@ -2370,6 +2426,9 @@ html {
   .mobile-tools .topbar-right {
     max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--topbar-height, var(--phone-nav-height)) - 8px);
   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-navigation-highlight { transition: none; }
 }
 
 /* Shared hover/focus feedback for interactive chips, badges and icon buttons (#186). */
