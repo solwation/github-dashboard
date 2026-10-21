@@ -35,6 +35,7 @@ import SidebarVersion from "./components/SidebarVersion.vue";
 import ReleaseNotes from "./components/ReleaseNotes.vue";
 import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
+import { PUBLIC_CONTENT_LIFETIME_MS, readPublicContent, writePublicContent, type PublicLaneSnapshot } from "./lib/public-content-cache";
 import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
@@ -315,7 +316,14 @@ function persistContent(changedOnly = false): Promise<void> {
   persistTail = waiting.catch(() => {});
   return waiting;
 }
+let publicSnapshots: PublicLaneSnapshot[] = [];
 async function writeContent(changedOnly: boolean) {
+  if (publicMode.value) {
+    const run = generation;
+    try { await writePublicContent(publicSnapshots); if (run === generation) cacheWarning.value = ""; }
+    catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
+    return;
+  }
   if (!user.value || !sessionToken.value || !api || isDemo.value) return;
   const run = generation;
   const state = { run, token: sessionToken.value, user: user.value, repos: repos.value,
@@ -971,21 +979,39 @@ async function openPublicWorkspace() {
   selectionRevision++; repositoryRequests.clear(); clearClosureFeedback();
   const client = new GitHub();
   try {
-    const settings = await readSettings(PUBLIC_SETTINGS_ACCOUNT);
+    const [settings, snapshots] = await Promise.all([readSettings(PUBLIC_SETTINGS_ACCOUNT), readPublicContent()]);
     const available: Repo[] = Array.isArray(settings.value?.publicRepositories)
       ? settings.value!.publicRepositories.slice(0, 100).map(publicRepositoryRecord).filter((repo: Repo | null): repo is Repo => repo !== null) : [];
     if (run !== generation) return;
     api = client; sessionToken.value = ""; user.value = null;
     isDemo.value = false; publicMode.value = true;
+    publicSnapshots = snapshots.filter(entry => available.some(repo => repo.id === entry.lane.repo.id && repo.full_name === entry.lane.repo.full_name));
+    lastSynced.clear(); lastFullSynced.clear(); repoSyncedAt.value = {}; refreshed.value = null;
     lanes.value = []; repos.value = available; selected.value = []; notificationRepos.value = [];
     restorePreferences(available, settings);
     rememberPublicWorkspace(true);
     reconcileSelection();
     error.value = ""; tokenPanel.value = false; tokenInput.value = "";
-    if (selected.value.length) await refresh(false, true);
+    if (selected.value.length) await refreshPublicSelection();
     else picker.value = true;
   } catch (cause) { error.value = message(cause); }
   finally { authBusy.value = false; }
+}
+/** Restoring or changing public selection only fetches missing/expired whole repositories. */
+async function refreshPublicSelection() {
+  const now = Date.now();
+  publicSnapshots = publicSnapshots.filter(entry => now >= entry.syncedAt && now - entry.syncedAt < PUBLIC_CONTENT_LIFETIME_MS);
+  const usable = new Map(publicSnapshots.map(entry => [entry.lane.repo.full_name, entry]));
+  lanes.value = lanes.value.map(lane => {
+    const cached = usable.get(lane.repo.full_name);
+    if (!cached || cached.lane.repo.id !== lane.repo.id) return lane;
+    markSynced([lane.repo.full_name], cached.syncedAt);
+    return lane.loading ? { ...cached.lane, issues: cached.lane.issues.filter(issue => issue.state !== "closed" || Date.parse(issue.closed_at!) >= now - 30 * 86400000) } : lane;
+  });
+  const missing = selected.value.filter(name => !usable.has(name));
+  const times = selected.value.flatMap(name => usable.has(name) ? [usable.get(name)!.syncedAt] : []);
+  refreshed.value = times.length ? Math.min(...times) : null;
+  if (missing.length) await refresh(false, true, false, false, missing);
 }
 async function addPublicRepository() {
   const client = api, run = generation;
@@ -1173,12 +1199,14 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           });
           if (!current() || !selected.value.includes(repo.full_name)) continue;
           lastSynced.set(repo.full_name, loaded.started);
-          markSynced([repo.full_name], Date.now());
+          const syncedAt = Date.now();
+          markSynced([repo.full_name], syncedAt);
           if (loaded.full) lastFullSynced.set(repo.full_name, loaded.started);
           // An unchanged sync (e.g. all 304) keeps the shown lane object, so nothing re-renders or is rewritten (#122).
           const shown = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           const synced = withWorkStarts(loaded.lane);
           const lane = sameLaneContent(shown, synced) ? shown : synced;
+          if (publicMode.value && !lane.loading && !lane.error) publicSnapshots = [...publicSnapshots.filter(entry => entry.lane.repo.full_name !== repo.full_name), { lane, syncedAt }];
           result.push(lane);
           closureFeedback([lane]);
           if (lane !== shown) lanes.value = lanes.value.map(entry => entry.repo.full_name === repo.full_name ? lane : entry);
@@ -1197,6 +1225,10 @@ async function refresh(incremental = false, replacePending = false, manual = fal
       }
     }));
     if (current()) {
+      if (publicMode.value) {
+        const times = publicSnapshots.filter(entry => selected.value.includes(entry.lane.repo.full_name)).map(entry => entry.syncedAt);
+        refreshed.value = times.length ? Math.min(...times) : null;
+      }
       if (!only && result.every(lane => !lane.error)) {
         refreshed.value = Date.now();
         showingCache.value = false;
@@ -1221,7 +1253,8 @@ async function applyRepos() {
   reconcileSelection();
   picker.value = false;
   save();
-  await refresh(false, true);
+  if (publicMode.value) await refreshPublicSelection();
+  else await refresh(false, true);
 }
 function showDemo() {
   timeoutSettings.value = normalizeTimeoutSettings({});
@@ -1265,7 +1298,7 @@ function logout() {
   rememberPublicWorkspace(false); publicRepoInput.value = ""; publicRepoError.value = ""; publicRepoBusy.value = false;
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
-  settingsAccount = null; publicMode.value = false; // Encrypted settings stay saved for this account's next sign-in.
+  settingsAccount = null; publicMode.value = false; publicSnapshots = []; // Encrypted settings stay saved for this account's next sign-in.
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   showingCache.value = false;

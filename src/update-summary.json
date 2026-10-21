@@ -1,10 +1,11 @@
 {
   "baseCommit": "6e6996981febed332fde9ce08b7da93db529c15c",
   "summary": {
-    "sv": "Kort och listrader granskas i fyra skärmformat med både geometrikontroller och visuell kontroll.",
-    "en": "Cards and list rows are reviewed in four screen scenarios with geometry checks and visual inspection."
+    "sv": "Publika arbetsytor återställs från krypterad cache. Kort och listor granskas i fyra skärmformat.",
+    "en": "Public workspaces restore from encrypted cache. Cards and lists are reviewed in four screen scenarios."
   },
   "issues": [
+    232,
     234
   ]
 }

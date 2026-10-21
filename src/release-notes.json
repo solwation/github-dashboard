@@ -95,6 +95,15 @@
         "issues": [
           234
         ]
+      },
+      {
+        "text": {
+          "sv": "Publika arbetsytor återanvänder krypterade repository-snapshots vid omladdning och hämtar bara saknade val, så den anonyma API-kvoten räcker längre.",
+          "en": "Public workspaces reuse encrypted repository snapshots on reload and fetch only missing selections, preserving the anonymous API quota."
+        },
+        "issues": [
+          232
+        ]
       }
     ]
   },
