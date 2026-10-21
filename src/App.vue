@@ -497,6 +497,52 @@ function issueTimedOut(repo: string, issue: Issue) {
     entry.issue.startedAt === issue.startedAt && Date.now() - started > entry.estimatedMs * (1 + timeoutSettings.value.timeoutOverrunPercent / 100));
 }
 const repositoryColumnLimits = ref<Record<string, number>>({});
+let issueNavigationHighlight: HTMLElement | null = null;
+let issueNavigationTimer: ReturnType<typeof setTimeout> | undefined;
+const parentNavigationRevision = ref(0);
+function issueDomId(repository: string, number: number) { return `issue-${encodeURIComponent(repository.toLowerCase())}-${number}`; }
+async function revealParentIssue(repository: string, number: number) {
+  parentNavigationRevision.value++;
+  const lane = lanes.value.find(item => item.repo.full_name.toLowerCase() === repository.toLowerCase());
+  if (!lane) return;
+  const issue = lane.issues.find(item => item.number === number);
+  if (!issue) return;
+  if (currentView.value !== "overview") {
+    currentView.value = "overview";
+    if (window.location.hash !== "#overview") history.pushState(null, "", "#overview");
+  }
+  const key = column(issue, rules.value[lane.repo.full_name] || {});
+  const repositoryQuery = splitByRepository.value ? repositoryQueries.value[lane.repo.full_name] || "" : "";
+  if (!matchesIssueFilters(issue, query.value, repositoryQuery)) {
+    query.value = "";
+    if (repositoryQueries.value[lane.repo.full_name]) repositoryQueries.value = { ...repositoryQueries.value, [lane.repo.full_name]: "" };
+  }
+  if (splitByRepository.value) {
+    const laneIndex = orderedLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
+    if (laneIndex >= renderedLanes.value) renderedLanes.value = laneIndex + 1;
+    collapsedRepos.value = collapsedRepos.value.filter(name => name !== lane.repo.full_name);
+  }
+  await nextTick();
+  const index = splitByRepository.value
+    ? items(lane, key).findIndex(item => item.number === number)
+    : (combinedColumns.value[key] ?? []).findIndex(item => item.lane.repo.full_name.toLowerCase() === repository.toLowerCase() && item.issue.number === number);
+  if (index < 0) return;
+  if (splitByRepository.value) visibleLimit.value[lane.repo.full_name + key] = Math.max(shownLimit(lane.repo.full_name, key), index + 1);
+  else combinedLimits.value[key] = Math.max(combinedLimit(key), index + 1);
+  await nextTick();
+  const target = document.getElementById(issueDomId(repository, number));
+  if (!target) return;
+  clearTimeout(issueNavigationTimer);
+  issueNavigationHighlight?.classList.remove("issue-navigation-highlight");
+  target.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  target.focus({ preventScroll: true });
+  target.classList.add("issue-navigation-highlight");
+  issueNavigationHighlight = target;
+  issueNavigationTimer = setTimeout(() => {
+    issueNavigationHighlight?.classList.remove("issue-navigation-highlight");
+    issueNavigationHighlight = null;
+  }, 1500);
+}
 function initialLimit(repo: string) {
   return effectiveColumnLimit(columnLimit.value, repositoryColumnLimits.value, repo);
 }
@@ -2127,6 +2173,7 @@ onMounted(async () => {
                   <IssueRow
                     v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
                     :key="boardEntryKey({ lane, issue }, col.key)"
+                    :id="issueDomId(lane.repo.full_name, issue.number)"
                     :issue="issue"
                     :repository="lane.repo.full_name"
                     :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
@@ -2140,18 +2187,21 @@ onMounted(async () => {
                     :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
                     :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
                     :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
+                    :navigation-revision="parentNavigationRevision"
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
                   v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
+                  :id="issueDomId(lane.repo.full_name, issue.number)"
                   v-bind="cardProps(lane, issue)"
                   show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
+                  @parent-select="revealParentIssue"
                 />
                 </template>
                 <div v-if="!items(lane, col.key).length" class="column-empty">
@@ -2241,6 +2291,7 @@ onMounted(async () => {
                   <IssueRow
                     v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                     :key="boardEntryKey({ lane, issue }, col.key)"
+                    :id="issueDomId(lane.repo.full_name, issue.number)"
                     :issue="issue"
                     :repository="lane.repo.full_name"
                     show-repository
@@ -2255,18 +2306,21 @@ onMounted(async () => {
                     :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
                     :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
                     :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
+                    :navigation-revision="parentNavigationRevision"
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
                   v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
+                  :id="issueDomId(lane.repo.full_name, issue.number)"
                   v-bind="cardProps(lane, issue, true)"
                   show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
+                  @parent-select="revealParentIssue"
                 />
                 </template>
                 <div v-if="!combinedColumns[col.key]!.length && !orderedLanes.some(lane => lane.loading || lane.error)" class="column-empty">

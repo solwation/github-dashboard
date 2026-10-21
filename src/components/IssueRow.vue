@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { estimateLabel } from "../lib/estimates";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
 import { ArrowDown, ArrowUp, ArrowUpRight, ArrowRightLeft, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
@@ -41,6 +41,7 @@ const props = defineProps<{
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
   commentsSession?: number;
+  navigationRevision?: number;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
 }>();
 const emit = defineEmits<{ read: [] }>();
@@ -98,6 +99,9 @@ function setExpanded(value: boolean, refocus = false) {
   }
   if (refocus) void nextTick(() => toggle.value?.focus({ preventScroll: true }));
 }
+watch(() => props.navigationRevision, () => {
+  if (expanded.value && isPhone.value) setExpanded(false);
+});
 function onKeydown(event: KeyboardEvent) {
   if (!expanded.value || !isPhone.value) return;
   if (event.key === "Tab") {
@@ -177,6 +181,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   <li
     ref="row"
     class="issue-row"
+    tabindex="-1"
     :style="{ '--repository-color': assignedColor || repositoryColor(repository) }"
     @click="rowClick"
     :class="[col, { expanded, 'has-repository': showRepository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"

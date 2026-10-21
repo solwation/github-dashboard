@@ -51,15 +51,14 @@ test("native sub-issue progress and parent links survive filters, update on sync
   const child = card("Implementation child");
   await child.scrollIntoViewIfNeeded();
   await expect(child.locator(".subtask-badge")).toContainText("Subtask");
-  await expect(child.locator(".issue-parent a")).toHaveText("#1 · Roadmap parent");
-  await expect(child.locator(".issue-parent a")).toHaveAttribute("href", parent.url);
+  await expect(child.locator(".issue-parent button")).toHaveText("#1 · Roadmap parent");
   const nested = card("Nested work");
   await nested.scrollIntoViewIfNeeded();
-  await expect(nested.locator(".issue-parent a")).toContainText("another/planning#42");
+  await expect(nested.locator(".issue-parent button")).toContainText("another/planning#42");
   await nested.getByRole("button", { name: "Läs mer", exact: true }).click();
   await expect(nested.getByRole("progressbar", { name: "0 av 2 underärenden stängda" })).toHaveAttribute("value", "0");
-  await nested.locator(".issue-parent a").focus();
-  await expect(nested.locator(".issue-parent a")).toBeFocused();
+  await nested.locator(".issue-parent button").focus();
+  await expect(nested.locator(".issue-parent button")).toBeFocused();
   for (const title of ["Plain task", "Hidden access"]) {
     await card(title).scrollIntoViewIfNeeded();
     await expect(card(title).locator(".issue-relations")).toHaveCount(0);
