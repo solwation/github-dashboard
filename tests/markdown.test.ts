@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { renderMarkdown } from "../src/lib/markdown";
 describe("safe issue Markdown", () => {
+  it("hides HTML comments without hiding surrounding text or enabling HTML", () => {
+    expect(renderMarkdown("[Visible <!-- hidden --> label](https://example.com)")).not.toContain("hidden");
+    expect(renderMarkdown("Before <!-- hidden --> after")).toBe("<p>Before  after</p>\n");
+    const html = renderMarkdown("<!-- hidden\n\nmore hidden --> visible\n\nNext");
+    expect(html).toBe("<p>visible</p>\n<p>Next</p>\n");
+    expect(renderMarkdown("<!-- hidden -->\n<script>attack</script>")).toContain("&lt;script&gt;");
+    expect(renderMarkdown("<!-- never closed\nsecret")).toBe("");
+    expect(renderMarkdown("`<!-- example -->`\n\n```html\n<!-- example -->\n```\n\n    <!-- indented -->"))
+      .toContain("&lt;!-- example --&gt;");
+    expect(renderMarkdown("    <!-- indented -->")).toContain("&lt;!-- indented --&gt;");
+    expect(renderMarkdown("Before <!-- hidden\nnext line --> after")).not.toContain("hidden");
+  });
   it("loads GitHub blob images as raw files while preserving ordinary links", () => {
     const url = "https://github.com/sample/project/blob/main/docs/report.jpg";
     expect(renderMarkdown(`![Report](${url})`)).toContain(`src="${url}?raw=true"`);

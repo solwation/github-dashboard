@@ -4,7 +4,7 @@ test("shows comment counts and expands safe Markdown inside an issue card", asyn
   const repo = { id: 88, name: "details-project", full_name: "sample/details-project", description: "Issue details fixture", private: true, html_url: "https://github.com/sample/details-project", owner: { login: "sample" } };
   const timestamp = new Date().toISOString();
   const body = [
-    "## Implementation plan", "", "**Important** and [GitHub](https://github.com).", "",
+    "<!-- hidden internal marker\n\nprivate automation marker -->", "", "## Implementation plan", "", "**Important** and [GitHub](https://github.com).", "",
     "- [x] Completed step", "- [ ] Remaining step", "", "```ts", `const longLine = '${"a".repeat(600)}';`, "```", "",
     '<script>window.issueScriptExecuted = true</script>',
     '<img src=x onerror="window.issueScriptExecuted = true">',
@@ -41,6 +41,8 @@ test("shows comment counts and expands safe Markdown inside an issue card", asyn
   await page.keyboard.press("Enter");
   await expect(card.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(card.getByRole("heading", { name: "Implementation plan" })).toBeVisible();
+  await expect(card.locator(".issue-markdown")).not.toContainText("internal marker");
+  await expect(card.locator(".issue-markdown")).not.toContainText("automation marker");
   await expect(card.locator('input[type="checkbox"]')).toHaveCount(2);
   await expect(card.locator('input[type="checkbox"]').first()).toBeChecked();
   await expect(card.locator('input[type="checkbox"]').first()).toBeDisabled();

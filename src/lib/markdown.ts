@@ -3,6 +3,38 @@ import { t } from "./i18n";
 
 // Only Markdown produces HTML: source HTML is always escaped, including inside code fences.
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
+// Recognize comments without enabling source HTML. Code rules still own code spans/fences.
+markdown.inline.ruler.before("html_inline", "hidden_comment", (state) => {
+  if (!state.src.startsWith("<!--", state.pos)) return false;
+  const end = state.src.indexOf("-->", state.pos + 4);
+  if (end < 0) return false;
+  state.pos = end + 3;
+  return true;
+});
+markdown.block.ruler.before("html_block", "hidden_comment", (state, start, end, silent) => {
+  const offset = state.bMarks[start]! + state.tShift[start]!;
+  if (state.sCount[start]! - state.blkIndent >= 4 || !state.src.startsWith("<!--", offset)) return false;
+  if (silent) return true;
+  let line = start;
+  let close = -1;
+  for (; line < end; line++) {
+    const begin = line === start ? offset + 4 : state.bMarks[line]!;
+    const found = state.src.slice(begin, state.eMarks[line]!).indexOf("-->");
+    if (found >= 0) { close = begin + found; break; }
+  }
+  if (line < end) {
+    const tail = state.src.slice(close + 3, state.eMarks[line]!).trim();
+    if (tail) {
+      state.push("paragraph_open", "p", 1);
+      const token = state.push("inline", "", 0);
+      token.content = tail;
+      token.children = [];
+      state.push("paragraph_close", "p", -1);
+    }
+  }
+  state.line = Math.min(line + 1, end);
+  return true;
+}, { alt: ["paragraph", "reference", "blockquote"] });
 const defaultImage = markdown.renderer.rules.image!;
 markdown.renderer.rules.image = (tokens, index, options, env, self) => {
   const token = tokens[index]!;

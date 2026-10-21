@@ -104,6 +104,15 @@
         "issues": [
           232
         ]
+      },
+      {
+        "text": {
+          "sv": "Dolda HTML-kommentarer visas inte längre i beskrivningar och kommentarer; kodexempel och säker HTML-hantering bevaras.",
+          "en": "Hidden HTML comments no longer appear in descriptions or comments; code examples and safe HTML handling are preserved."
+        },
+        "issues": [
+          238
+        ]
       }
     ]
   },

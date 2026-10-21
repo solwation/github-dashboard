@@ -1,11 +1,12 @@
 {
   "baseCommit": "6e6996981febed332fde9ce08b7da93db529c15c",
   "summary": {
-    "sv": "Publika arbetsytor återställs från krypterad cache. Kort och listor granskas i fyra skärmformat.",
-    "en": "Public workspaces restore from encrypted cache. Cards and lists are reviewed in four screen scenarios."
+    "sv": "Publika arbetsytor återställs från krypterad cache. Dolda HTML-kommentarer rensas och kort/listor granskas i fyra skärmformat.",
+    "en": "Public workspaces restore from encrypted cache. Hidden HTML comments stay hidden, and cards/lists are reviewed in four screen scenarios."
   },
   "issues": [
     232,
-    234
+    234,
+    238
   ]
 }
