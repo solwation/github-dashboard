@@ -20,9 +20,9 @@ const { t, locale } = useLanguage();
 
 /**
  * One compact list row per issue (#127): the card's markers and time label without its details.
- * On desktop/tablet (> 650px), tapping the row expands its details in place with the description
- * already open (#154, #155). On phones (<= 650px), tapping opens a modal popup showing the full
- * IssueCard identical to card view (#155). The state is in-memory only.
+ * Desktop/tablet rows expand details in place (#154, #155). Narrow viewports and short touch
+ * viewports use compact phone rows and open the full IssueCard in a popup (#155, #236).
+ * The media query below matches the compact CSS rules, including landscape phones.
  */
 const props = defineProps<{
   issue: Issue;
@@ -49,10 +49,13 @@ const visible = ref(false);
 const toggle = ref<HTMLButtonElement>();
 const popupClose = ref<HTMLButtonElement>();
 const expanded = ref(false);
-const isPhone = ref(typeof window !== "undefined" && window.innerWidth <= 650);
+const phoneViewport = typeof window === "undefined" ? null : window.matchMedia(
+  "(max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px)",
+);
+const isPhone = ref(phoneViewport?.matches ?? false);
 const panelId = "issue-row-card-" + useId();
 function syncViewport() {
-  if (typeof window !== "undefined") isPhone.value = window.innerWidth <= 650;
+  isPhone.value = phoneViewport?.matches ?? false;
 }
 function setExpanded(value: boolean, refocus = false) {
   syncViewport();
@@ -78,14 +81,14 @@ function rowClick(event: MouseEvent) {
 let observer: IntersectionObserver | undefined;
 onMounted(() => {
   syncViewport();
-  window.addEventListener("resize", syncViewport);
+  phoneViewport?.addEventListener("change", syncViewport);
   window.addEventListener("keydown", onKeydown);
   if (!("IntersectionObserver" in window)) { visible.value = true; return; }
   observer = new IntersectionObserver(([entry]) => { visible.value = Boolean(entry?.isIntersecting); });
   if (row.value) observer.observe(row.value);
 });
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", syncViewport);
+  phoneViewport?.removeEventListener("change", syncViewport);
   window.removeEventListener("keydown", onKeydown);
   observer?.disconnect();
 });
@@ -287,7 +290,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .issue-row.closed.has-repository { grid-template-areas: "repo repo repo repo" "number title title title" "meta meta meta meta" "time time time outcome"; }
   .row-outcome { grid-area: outcome; }
 }
-@media (max-width: 650px) {
+@media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
   .issue-row, .issue-row.has-repository {
     grid-template-columns: 4.3rem minmax(0, 1fr) auto;
     grid-template-areas: "number title title" "meta meta time";

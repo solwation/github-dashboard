@@ -333,6 +333,8 @@ const outcomeScenarios = [
   { name: 'portrait-phone', width: 390, height: 844, mobile: true },
   { name: 'landscape-phone', width: 844, height: 390, mobile: true },
   { name: 'narrow-phone', width: 320, height: 568, mobile: true },
+  { name: 'short-desktop', width: 844, height: 390, mobile: false },
+  { name: 'portrait-tablet', width: 768, height: 1024, mobile: true },
 ];
 for (const scenario of outcomeScenarios) test.describe(`actual time layout ${scenario.name}`, () => {
   test.use({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile });
@@ -344,6 +346,15 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     await expect(unread.locator('.row-movement-marker')).toBeVisible();
     await expect(unread.locator('.row-comment-marker')).toBeVisible();
     await expect(page.locator('.issue-row.issue-timeout').first()).toBeVisible();
+    const compact = scenario.width <= 650 || (scenario.mobile && scenario.width <= 950 && scenario.height <= 500);
+    if (compact) {
+      for (const row of await page.locator('.issue-row').all()) {
+        expect((await row.boundingBox())!.height).toBeLessThanOrEqual(60);
+        await expect(row.locator('.issue-points')).toBeVisible();
+        await expect(row.locator('.row-time')).toBeVisible();
+        await expect(row.locator('.row-meta')).toHaveCount(0);
+      }
+    } else await expect(unread.locator('.row-meta')).toBeVisible();
     const closed = page.locator('.issue-row.closed');
     const rightEdges: number[] = [];
     for (const row of await closed.all()) {
@@ -356,21 +367,43 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
       expect(geometry.date.right).toBeLessThanOrEqual(geometry.actual.x);
       expect(geometry.actual.right).toBeLessThanOrEqual(geometry.row.right);
       expect(geometry.date.y + geometry.date.height / 2).toBeCloseTo(geometry.actual.y + geometry.actual.height / 2, 0);
-      if (scenario.width <= 650) expect(geometry.row.height).toBeLessThanOrEqual(60);
+      if (compact) expect(geometry.row.height).toBeLessThanOrEqual(60);
       rightEdges.push(Math.round(geometry.actual.right));
       if ((await row.locator('.row-title').innerText()).includes('unknown')) await expect(actual.locator('.implementation-time')).toHaveCount(0);
       else await expect(actual.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid:/);
     }
     expect(new Set(rightEdges).size).toBe(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-list.png`), fullPage: true });
+    // Full-page capture changes the height media query; keep landscape snapshots at the real viewport.
+    if (scenario.name === 'landscape-phone') await unread.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-list.png`), fullPage: scenario.name !== 'landscape-phone' });
     await closed.first().locator('..').screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-closed.png`) });
+    if (compact) {
+      await unread.locator('.row-title').tap();
+      const popup = page.locator('.row-popup');
+      await expect(popup).toBeVisible();
+      await expect(popup.locator('.issue-time-remaining')).toBeVisible();
+      await expect(popup).toContainText('a-very-long-workflow-label-that-must-not-wrap');
+      const bounds = (await popup.boundingBox())!;
+      expect(bounds.y).toBeGreaterThanOrEqual(0);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(scenario.height);
+      await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-popup.png`) });
+      await page.locator('.row-popup-close').tap();
+      await expect(popup).toHaveCount(0);
+      expect((await unread.boundingBox())!.height).toBeLessThanOrEqual(60);
+    } else {
+      await unread.locator('.row-title').click();
+      await expect(unread.locator('.row-card')).toBeVisible();
+      await expect(page.locator('.row-popup')).toHaveCount(0);
+      await unread.locator('.row-title').click();
+    }
     await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Kort', exact: true }).click();
     await expect(page.locator('.issue-card.closed .implementation-time')).toHaveCount(4);
     await expect(page.locator('.issue-card.closed').filter({ hasText: 'Closed twelve' }).locator('.implementation-time')).toContainText('↑');
     await expect(page.locator('.issue-card.closed').filter({ hasText: 'Closed none' }).locator('.implementation-time')).toContainText('↓');
     await expect(page.locator('.issue-card.closed').filter({ hasText: 'Closed unknown start' }).locator('.implementation-time')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-cards.png`), fullPage: true });
+    if (scenario.name === 'landscape-phone') await page.locator('.issue-card.closed').first().scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-cards.png`), fullPage: scenario.name !== 'landscape-phone' });
   });
 });

@@ -8,11 +8,12 @@
     "sections": [
       {
         "text": {
-          "sv": "Telefonens listrader visar det viktigaste på två kompakta rader; tryck på titeln för kortets alla detaljer.",
-          "en": "Phone list rows show essentials on two compact lines; tap the title for full card details."
+          "sv": "Telefonens listrader håller två kompakta rader även i liggande läge; tryck för kortets fullständiga detaljer.",
+          "en": "Phone list rows stay on two compact lines in portrait and landscape; tap for full card details."
         },
         "issues": [
-          223
+          223,
+          236
         ]
       },
       {
