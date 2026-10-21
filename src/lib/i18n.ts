@@ -169,6 +169,8 @@ export const english: Record<string, string> = {
   "Commitdetaljer och tillagd eller borttagen kod. Statistik över commits och kodändringar.": "Commit details and added or deleted code. Commit and code change statistics.",
   "Information om sammanslagna pull requests och deras koppling till stängda issues. Statistik över pull requests.": "Merged pull request information and links to closed issues. Pull request statistics.",
   "Statistik": "Statistics",
+  "Meny": "Menu",
+  "Navigering": "Navigation",
   "DITT ARBETE I SIFFROR": "YOUR WORK IN NUMBERS",
   "Uppdatera statistik": "Refresh statistics",
   // #169: statistics time controls and period label.

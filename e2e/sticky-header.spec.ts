@@ -10,12 +10,13 @@ async function openDemo(page: Page, width: number) {
 }
 
 async function expectHeaderPinned(page: Page) {
-  const brand = (await page.locator(".sidebar").boundingBox())!;
   const bar = (await page.locator(".topbar").boundingBox())!;
-  expect(Math.abs(brand.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(bar.y - (brand.y + brand.height))).toBeLessThanOrEqual(1);
-  await expect(page.locator(".topbar").getByRole("button", { name: "Inställningar", exact: true })).toBeInViewport();
-  await expect(page.locator(".sidebar .brand")).toBeInViewport();
+  expect(Math.abs(bar.y)).toBeLessThanOrEqual(1);
+  expect(bar.height).toBeLessThanOrEqual(80);
+  await expect(page.locator(".topbar .breadcrumb strong")).toBeInViewport();
+  await expect(page.locator(".mobile-navigation")).toBeInViewport();
+  await expect(page.locator(".mobile-menu-button")).toBeInViewport();
+  await expect(page.locator(".sidebar")).toBeHidden();
   return bar.y + bar.height;
 }
 
@@ -23,7 +24,7 @@ const noSideScroll = (page: Page) => page.evaluate(() => document.documentElemen
 
 test("phone header rows stay pinned while scrolling overview and statistics", async ({ page }) => {
   await openDemo(page, 390);
-  // At the start the header sits above the content instead of covering it.
+  // A single compact navigation row sits above content instead of covering it.
   const headerBottom = await expectHeaderPinned(page);
   expect((await page.locator("main").boundingBox())!.y).toBeGreaterThanOrEqual(headerBottom - 1);
 
@@ -49,7 +50,9 @@ test("phone header rows stay pinned while scrolling overview and statistics", as
   await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
   await expectHeaderPinned(page);
 
-  // Dialogs still open above the header.
+  // Secondary actions stay easy to reach in the menu and dialogs open above it.
+  await page.getByRole("button", { name: "Meny" }).click();
+  await expect(page.locator(".topbar-right").getByRole("button", { name: "Inställningar", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
@@ -60,8 +63,7 @@ test("phone header stays pinned in dark theme without sideways scrolling at 320 
   expect(await noSideScroll(page)).toBe(true);
   await page.evaluate(() => scrollTo(0, 1500));
   const bottom = await expectHeaderPinned(page);
-  // Both rows together stay a reasonable part of a small screen.
-  expect(bottom).toBeLessThanOrEqual(200);
+  expect(bottom).toBeLessThanOrEqual(80);
   expect(await noSideScroll(page)).toBe(true);
   await page.setViewportSize({ width: 390, height: 700 });
   await page.evaluate(() => scrollTo(0, 1500));

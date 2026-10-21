@@ -18,6 +18,7 @@ import {
   Layers3,
   LayoutDashboard,
   LogOut,
+  Menu,
   QrCode,
   Plus,
   RefreshCw,
@@ -389,6 +390,16 @@ function refreshStaleRepository(name: string) {
   void refresh(false, false, true, false, [name]).catch(() => {});
 }
 const query = ref("");
+const issueSearch = ref<HTMLInputElement | null>(null);
+const mobileToolsOpen = ref(false);
+function openIssueSearch() {
+  mobileToolsOpen.value = false;
+  const focusSearch = () => nextTick(() => issueSearch.value?.focus());
+  if (currentView.value !== "overview") {
+    window.addEventListener("hashchange", focusSearch, { once: true });
+    window.location.hash = "#overview";
+  } else focusSearch();
+}
 const repositoryQueries = ref<Record<string, string>>({});
 const repoQuery = ref("");
 const picker = ref(false);
@@ -1309,6 +1320,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  mobileToolsOpen.value = false;
   rememberPublicWorkspace(false); publicRepoInput.value = ""; publicRepoError.value = ""; publicRepoBusy.value = false;
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
@@ -1667,9 +1679,16 @@ onMounted(async () => {
   <div class="workspace">
     <header ref="topbar" class="topbar">
       <div class="breadcrumb">
-        Workspace <span>/</span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
+        <span class="breadcrumb-context">Workspace <i>/</i></span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
       </div>
-      <div class="topbar-right">
+      <nav class="mobile-navigation" :aria-label="t('Navigering')">
+        <a href="#overview" :aria-label="t('Översikt')" :aria-current="currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
+        <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="18" /></a>
+        <button type="button" class="mobile-search-link" :aria-label="t('Sök issues')" :title="t('Sök issues')" @click="openIssueSearch"><Search :size="18" /></button>
+      </nav>
+      <div class="mobile-tools" :class="{ 'mobile-tools-open': mobileToolsOpen }">
+      <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="19" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
+      <div id="mobile-tools-menu" class="topbar-right">
         <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
@@ -1680,7 +1699,7 @@ onMounted(async () => {
           :title="t('Öppna på mobilen')"
           @click="handoffOpen = true"
         >
-          <QrCode :size="16" /><span>{{ t("Mobil") }}</span>
+          <QrCode :size="16" /><span>{{ t("Öppna på mobilen") }}</span>
         </button>
         <span class="connection" :class="{ connected: loggedIn }" :title="connectionLabel"
           ><i :class="{ connected: loggedIn }" aria-hidden="true" /><span class="connection-label">{{ connectionLabel }}</span></span
@@ -1693,11 +1712,12 @@ onMounted(async () => {
             :aria-label="t('Logga ut')"
             :title="t('Logga ut')"
           >
-            <LogOut :size="17" /></button></template
+            <LogOut :size="17" /><span class="mobile-account-label">{{ t("Logga ut") }}</span></button></template
         ><template v-else-if="publicMode"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">{{ t("Lämna publik vy") }}</button></template
         ><template v-else-if="isDemo"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">
           {{ t("Till inloggning") }}
         </button></template>
+      </div>
       </div>
     </header>
     <main :id="currentView === 'statistics' && workspaceOpen ? 'statistics' : 'overview'" tabindex="-1">
@@ -1870,8 +1890,8 @@ onMounted(async () => {
           @choose-repositories="picker = true" />
         <!-- data-busy (#151): non-visual "sync finished" signal for tests; per-repository and combined headers show status. -->
         <div class="board-toolbar" :data-busy="busy ? 'true' : 'false'">
-          <label class="search"
-            ><Search :size="17" /><input
+          <label id="issue-search" class="search"
+            ><Search :size="17" /><input ref="issueSearch"
               v-model="query"
               :aria-label="t('Sök issues')"
               :placeholder="t('Sök issues, labels eller nummer…')" /></label

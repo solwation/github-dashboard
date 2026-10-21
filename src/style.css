@@ -1253,7 +1253,7 @@ h1 {
     padding: 15px;
   }
 }
-@media (max-width: 650px) {
+@media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
   .sidebar {
     position: static;
     width: 100%;
@@ -2236,25 +2236,138 @@ html {
   top: env(safe-area-inset-top, 0px);
   z-index: 10;
 }
-/* On phones the brand row is sticky as well and the topbar pins directly beneath it. */
-@media (max-width: 650px) {
+/* Phones use one sticky navigation row; secondary account tools open below it. */
+@media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
   :root {
-    --phone-brand-height: calc(64px + env(safe-area-inset-top, 0px));
+    --phone-nav-height: 58px;
   }
   html {
-    scroll-padding-top: calc(var(--phone-brand-height) + var(--topbar-height, 58px));
+    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, var(--phone-nav-height)));
   }
   .sidebar {
-    position: sticky;
-    top: 0;
-    height: var(--phone-brand-height);
-    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    display: none;
   }
   .workspace {
+    margin-left: 0;
     padding-top: 0;
   }
   .topbar {
-    top: var(--phone-brand-height);
+    top: env(safe-area-inset-top, 0px);
+    min-height: var(--phone-nav-height);
+    height: auto;
+    padding: 7px 12px;
+    gap: 8px;
+  }
+  .breadcrumb {
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 12px;
+    gap: 0;
+  }
+  .breadcrumb-context { display: none; }
+  .breadcrumb strong { overflow: hidden; text-overflow: ellipsis; }
+  .mobile-navigation {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .mobile-navigation a,
+  .mobile-search-link {
+    width: 36px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+  }
+  .mobile-navigation a[aria-current="page"] {
+    background: color-mix(in srgb, var(--green) 12%, transparent);
+    color: var(--green);
+  }
+  .mobile-navigation a:focus-visible,
+  .mobile-search-link:focus-visible,
+  .mobile-menu-button:focus-visible { outline-offset: 0; }
+  .mobile-tools { display: contents; }
+  .mobile-menu-button {
+    display: inline-flex;
+    min-width: 40px;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .mobile-menu-label { font-size: 12px; }
+  .mobile-tools .topbar-right {
+    display: none;
+    position: fixed;
+    z-index: 30;
+    top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, var(--phone-nav-height)) + 4px);
+    right: max(8px, env(safe-area-inset-right, 0px));
+    width: min(330px, calc(100vw - 16px));
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--topbar-height, var(--phone-nav-height)) - 16px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgb(0 0 0 / .18);
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .mobile-tools-open .topbar-right { display: flex; }
+  .mobile-tools .account-context { display: grid; order: 5; max-width: none; }
+  .mobile-tools .account-timezone { text-align: left; }
+  .mobile-tools .username { display: block; overflow-wrap: anywhere; }
+  .mobile-tools .avatar { order: 4; }
+  .mobile-tools .connection { order: 3; }
+  .mobile-tools .handoff-button span { display: inline; }
+  .mobile-tools .icon-button {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line);
+  }
+  .mobile-account-label { display: inline; }
+  .mobile-tools .topbar-right > * { flex-shrink: 0; }
+  .mobile-tools .topbar-right > .account-context { flex-shrink: 1; }
+  .mobile-tools .topbar-right > .button,
+  .mobile-tools .topbar-right > .install-button { width: 100%; }
+  .mobile-tools .install-button span {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+  .mobile-navigation + .mobile-tools { margin-left: 0; }
+  .topbar-right { gap: 8px; }
+  .mobile-tools-open .mobile-menu-button { color: var(--green); border-color: var(--green); }
+}
+@media (min-width: 651px) and (min-height: 501px) {
+  .mobile-navigation,
+  .mobile-menu-button { display: none; }
+  .mobile-tools { display: contents; }
+  .mobile-tools .topbar-right { display: flex; }
+  .mobile-account-label { display: none; }
+}
+@media (max-width: 950px) and (max-height: 500px) {
+  .mobile-tools .topbar-right {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--topbar-height, var(--phone-nav-height)) - 8px);
   }
 }
 
