@@ -1,10 +1,10 @@
 {
-  "baseCommit": "5c54a905701ca8a600e6d3d7b1948c9dbe2b66f5",
+  "baseCommit": "d2891192d02e6f641c127257e8f5ff23842ab48c",
   "summary": {
-    "sv": "Pågående visar faktisk övertid kompakt när den uppskattade arbetstiden passerats.",
-    "en": "In-progress issues show compact actual overtime after the work estimate is exceeded."
+    "sv": "Breda listvyns tidsvärden använder nu enhetlig typografi med Pågående som referens.",
+    "en": "Wide-list time values now share consistent typography, using In-progress as the reference."
   },
   "issues": [
-    250
+    253
   ]
 }

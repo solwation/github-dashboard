@@ -8,6 +8,15 @@
     "sections": [
       {
         "text": {
+          "sv": "Tidsvärden i breda listor har enhetlig teckenstorlek och stil för uppskattning, övertid och faktisk arbetstid.",
+          "en": "Time values in wide lists use consistent font size and style for estimates, overtime and actual duration."
+        },
+        "issues": [
+          253
+        ]
+      },
+      {
+        "text": {
           "sv": "Telefonens listrader håller två kompakta rader även i liggande läge; tryck för kortets fullständiga detaljer.",
           "en": "Phone list rows stay on two compact lines in portrait and landscape; tap for full card details."
         },
