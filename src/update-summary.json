@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d81ef3bac84f00f2731f195b7635e5ff477a19a8",
+  "baseCommit": "5c54a905701ca8a600e6d3d7b1948c9dbe2b66f5",
   "summary": {
-    "sv": "Visa parentens och underärendenas sammanlagda arbetstid vid stängning.",
-    "en": "Show parent and sub-issue work time together when the group closes."
+    "sv": "Pågående visar faktisk övertid kompakt när den uppskattade arbetstiden passerats.",
+    "en": "In-progress issues show compact actual overtime after the work estimate is exceeded."
   },
   "issues": [
-    251
+    250
   ]
 }

@@ -216,6 +216,15 @@
         "issues": [
           251
         ]
+      },
+      {
+        "text": {
+          "sv": "Pågående visar klocka, övertid och uppåtpil när uppskattningen passerats; före gränsen visas återstående tid.",
+          "en": "In-progress issues show a clock, overtime and up arrow after exceeding the estimate; before then, remaining time stays visible."
+        },
+        "issues": [
+          250
+        ]
       }
     ]
   },
