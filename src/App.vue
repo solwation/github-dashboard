@@ -2143,13 +2143,14 @@ onMounted(async () => {
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
                   v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
                   v-bind="cardProps(lane, issue)"
+                  show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
                 />
                 </template>
@@ -2257,13 +2258,14 @@ onMounted(async () => {
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="!inPopup" @read="readIssue(lane.repo.full_name, issue)" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
                   v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
                   v-bind="cardProps(lane, issue, true)"
+                  show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
                 />
                 </template>

@@ -7,6 +7,7 @@ import IssueDetails from "./IssueDetails.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
 import IssueImplementationTime from "./IssueImplementationTime.vue";
+import IssueTimeExplanation from "./IssueTimeExplanation.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
@@ -54,6 +55,7 @@ const props = defineProps<{
   assignedColor?: string;
   defaultExpanded?: boolean;
   rowDetails?: boolean;
+  showTimeExplanation?: boolean;
   loadRelations?: (issue: Issue) => Promise<IssueRelations | null>;
   relationsRevision?: number;
   loadCommit?: (issue: Issue) => Promise<ClosingCommit | null>;
@@ -233,7 +235,11 @@ const visibleLabels = computed(() =>
     /></a>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" />
-    <IssueDetails :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" />
+    <IssueDetails :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')">
+      <template v-if="showTimeExplanation && !demo" #additional>
+        <IssueTimeExplanation :issue="issue" :repository="repository" :column="col" />
+      </template>
+    </IssueDetails>
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
       <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
     </div>

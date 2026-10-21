@@ -41,6 +41,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
       </template>
       <p v-else class="empty-description">{{ t("Ingen beskrivning har lagts till.") }}</p>
       <IssueSubIssues v-if="!demo" :progress="subIssueProgress" :issue="issue" :session="commentsSession" />
+      <slot name="additional" />
     </section>
   </div>
 </template>
