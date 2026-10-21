@@ -1,11 +1,12 @@
 {
   "baseCommit": "8686c538c2d78fd86520342f6ecd5d455e72c630",
   "summary": {
-    "sv": "Kompakta telefonlistor och faktisk arbetstid med estimatjämförelse för stängda ärenden.",
-    "en": "Compact phone lists and actual work duration with estimate comparisons for closed issues."
+    "sv": "Kompakta telefonlistor, faktisk arbetstid med estimatjämförelse för stängda ärenden och olästa händelser vid Översikt.",
+    "en": "Compact phone lists, actual closed-issue duration with estimate comparisons and an unread event count beside Overview."
   },
   "issues": [
     223,
-    224
+    224,
+    225
   ]
 }

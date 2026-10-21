@@ -23,6 +23,15 @@
         "issues": [
           224
         ]
+      },
+      {
+        "text": {
+          "sv": "Siffran vid Översikt räknar olästa händelser och nya kommentarer i valda repositories, och minskar när de läses.",
+          "en": "The Overview sidebar count tracks unread events and new comments in selected repositories, decreasing when read."
+        },
+        "issues": [
+          225
+        ]
       }
     ]
   },

@@ -96,6 +96,12 @@ export class ActivityTracker {
     }
     return 0;
   }
+  /** Comment updates count once per new comment; movement/creation is a separate event. */
+  unreadCount(repo: string, issue: Issue, now: number): number {
+    const activity = this.activity(repo, issue, now);
+    const comments = this.newComments(repo, issue, now);
+    return comments + (activity && (activity.kind !== "updated" || !comments) ? 1 : 0);
+  }
   /** When a marker next appears or expires, so callers can re-evaluate without a per-second clock. */
   nextChange(now: number): number | null {
     let next = Infinity;
@@ -131,4 +137,17 @@ export class ActivityTracker {
     }
   }
   clear() { this.snapshots.clear(); this.unread.clear(); this.acknowledged.clear(); }
+}
+
+/** Counts the selected repositories independently of search or collapsed/limited board rows. */
+export function countUnreadActivity(tracker: ActivityTracker, lanes: Lane[], now: number, include: (issue: Issue) => boolean = () => true): number {
+  const seen = new Set<string>();
+  let count = 0;
+  for (const lane of lanes) for (const issue of lane.issues) {
+    const key = JSON.stringify([lane.repo.full_name, issue.id]);
+    if (seen.has(key) || issue.pull_request || !include(issue)) continue;
+    seen.add(key);
+    count += tracker.unreadCount(lane.repo.full_name, issue, now);
+  }
+  return count;
 }

@@ -244,3 +244,20 @@ test("closed work duration and estimate arrows appear in rows and cards without 
   await expect(page.locator('.row-popup .implementation-time')).toContainText('↑');
   await expect(page.locator('.row-popup .closed-date')).toBeVisible();
 });
+
+test("Overview sidebar counts unread events instead of repositories and clears on read", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  const api = await fixture(page);
+  const count = page.locator('#overview-unread-count');
+  await expect(count).toHaveText('0');
+  api.move(); await page.keyboard.press('Control+r');
+  await expect(count).toHaveText('3');
+  await expect(count).toHaveAttribute('aria-label', '3 olästa händelser');
+  await page.getByRole('textbox', { name: 'Sök issues', exact: true }).fill('Closed');
+  await expect(count).toHaveText('3');
+  await page.getByRole('textbox', { name: 'Sök issues', exact: true }).fill('');
+  await page.getByRole('button', { name: '2 nya kommentarer. Markera som läst', exact: true }).click();
+  await expect(count).toHaveText('0');
+  await page.reload();
+  await expect(count).toHaveText('0');
+});

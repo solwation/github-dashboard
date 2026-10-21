@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ActivityTracker, ACTIVITY_LIFETIME_MS } from "../src/lib/activity";
+import { countUnreadActivity, ActivityTracker, ACTIVITY_LIFETIME_MS } from "../src/lib/activity";
 import type { Issue, Lane } from "../src/lib/model";
 const now = Date.parse("2026-10-15T12:00:00Z");
 const repo = "sample/project";
@@ -201,5 +201,39 @@ describe("readable activity", () => {
     const deletedComment = { ...commented, comments: 0, updated_at: new Date(now + 5000).toISOString() };
     tracker.update([lane([twoMore, deletedComment])], {}, now + 5000);
     expect(tracker.newComments(repo, deletedComment, now + 5000)).toBe(0);
+  });
+});
+
+describe("overview unread event count", () => {
+  it("counts comments once, plus movement, then acknowledges and expires independently", () => {
+    const tracker = new ActivityTracker();
+    const original = { ...issue(1, "backlog", now - 600000), comments: 0 };
+    tracker.update([lane([original])], {}, now);
+    expect(countUnreadActivity(tracker, [lane([original])], now)).toBe(0);
+    const comment = { ...original, comments: 2, updated_at: new Date(now + 1000).toISOString() };
+    tracker.update([lane([comment])], {}, now + 1000);
+    expect(countUnreadActivity(tracker, [lane([comment])], now + 1000)).toBe(2);
+    const moved = { ...comment, labels: [{ name: 'in-progress', color: '' }], updated_at: new Date(now + 2000).toISOString() };
+    tracker.update([lane([moved])], {}, now + 2000);
+    expect(countUnreadActivity(tracker, [lane([moved])], now + 2000)).toBe(3);
+    expect(countUnreadActivity(tracker, [lane([moved])], now + 1000 + ACTIVITY_LIFETIME_MS)).toBe(1);
+    expect(countUnreadActivity(tracker, [lane([moved])], now + 2000 + ACTIVITY_LIFETIME_MS)).toBe(0);
+    tracker.read(repo, moved);
+    expect(countUnreadActivity(tracker, [lane([moved])], now + 3000)).toBe(0);
+    const restored = new ActivityTracker(); restored.restore(tracker.acknowledgements());
+    restored.update([lane([moved])], {}, now + 3000);
+    expect(countUnreadActivity(restored, [lane([moved])], now + 3000)).toBe(0);
+  });
+  it("deduplicates issues, excludes PRs and optional hidden issues, and respects selected repos and clear", () => {
+    const tracker = new ActivityTracker();
+    const items = [issue(1), issue(2), { ...issue(3), pull_request: {} }];
+    tracker.update([lane(items)], {}, now);
+    expect(countUnreadActivity(tracker, [lane(items), lane(items)], now)).toBe(2);
+    expect(countUnreadActivity(tracker, [lane(items)], now, item => item.id !== 2)).toBe(1);
+    expect(countUnreadActivity(tracker, [], now)).toBe(0);
+    tracker.retain([]);
+    expect(countUnreadActivity(tracker, [lane(items)], now)).toBe(0);
+    tracker.clear();
+    expect(countUnreadActivity(tracker, [lane(items)], now)).toBe(0);
   });
 });

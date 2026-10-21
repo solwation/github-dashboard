@@ -42,7 +42,7 @@ import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
-import { ActivityTracker } from "./lib/activity";
+import { countUnreadActivity, ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync } from "./lib/sync";
 import { createBackgroundCheckScheduler } from "./lib/background-sync";
@@ -793,6 +793,11 @@ function loaders(repo: string) {
   return created;
 }
 const statisticsRepositories = computed(() => orderedLanes.value.map(lane => lane.repo));
+const unreadOverviewCount = computed(() => {
+  activityRevision.value;
+  return countUnreadActivity(activity, lanes.value, activityNow.value,
+    issue => !hideCoordination.value || !isCoordination(issue));
+});
 const sidebarRepos = computed(() => {
   activityRevision.value;
   return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
@@ -1528,10 +1533,10 @@ onMounted(async () => {
       ></a
     ><span class="nav-caption">WORKSPACE</span>
     <nav class="workspace-navigation">
-    <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')"
+    <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')" aria-describedby="overview-unread-count"
       :aria-current="(loggedIn || isDemo) && currentView === 'overview' ? 'page' : undefined">
       <LayoutDashboard :size="18" /> {{ t("Översikt") }}
-      <span class="nav-count">{{ lanes.length }}</span>
+      <span id="overview-unread-count" class="nav-count" :title="t('{count} olästa händelser', { count: unreadOverviewCount })" :aria-label="t('{count} olästa händelser', { count: unreadOverviewCount })">{{ unreadOverviewCount }}</span>
     </a>
     <a v-if="loggedIn || isDemo" class="nav-item statistics-nav" :class="{ active: currentView === 'statistics' }" href="#statistics"
       :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined">

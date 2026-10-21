@@ -58,6 +58,7 @@ export const english: Record<string, string> = {
   "{count} s": "{count} s",
   "{count} min": "{count} min",
   "{count} h": "{count} h",
+  "{count} olästa händelser": "{count} unread events",
   "Faktisk arbetstid: {time}": "Actual work time: {time}",
   "Längre än uppskattat": "Longer than estimated",
   "Kortare än uppskattat": "Shorter than estimated",
