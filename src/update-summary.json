@@ -1,10 +1,10 @@
 {
-  "baseCommit": "f507579bbac6c093e2275b5699da159f09ac9a17",
+  "baseCommit": "023447d7e7890d37790dcaff7dd93c30993bb0e1",
   "summary": {
-    "sv": "Kompakt mobilnavigering ger listan mer plats; ärendepopupen håller stängknapp och fokus tillgängliga.",
-    "en": "Compact mobile navigation frees issue space; issue popups keep close controls and focus accessible."
+    "sv": "Mobila listrader ger titlar mer plats och visar kompakt ålder inom 60 px.",
+    "en": "Mobile list rows give titles more room and show compact ages within 60px."
   },
   "issues": [
-    243
+    244
   ]
 }

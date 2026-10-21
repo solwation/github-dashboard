@@ -153,6 +153,15 @@
         "issues": [
           243
         ]
+      },
+      {
+        "text": {
+          "sv": "Mobila listrader ger titlar mer plats och visar kompakt ålder utan att överstiga 60 px.",
+          "en": "Mobile list rows give titles more room and show compact ages while staying within 60px."
+        },
+        "issues": [
+          244
+        ]
       }
     ]
   },
