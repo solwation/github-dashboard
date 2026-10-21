@@ -1,10 +1,10 @@
 {
-  "baseCommit": "840b8996e298cfab356d1d1dd5bb516f6702dcf9",
+  "baseCommit": "1244fc9875ab5314c25553435538bf61dabc5a23",
   "summary": {
-    "sv": "Öppna Läs mer för förklaringar av uppskattad, förfluten och faktisk arbetstid.",
-    "en": "Open Read more for explanations of estimated, elapsed and actual work."
+    "sv": "Mobila listrader visar kompakt parent-progress eller barnreferens när relationsdata finns.",
+    "en": "Mobile list rows show compact parent progress or a child reference when relationship data exists."
   },
   "issues": [
-    246
+    248
   ]
 }

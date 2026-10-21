@@ -180,6 +180,15 @@
         "issues": [
           246
         ]
+      },
+      {
+        "text": {
+          "sv": "Mobila listrader visar tillgänglig parent-progress eller kompakt barnreferens utan extra höjd.",
+          "en": "Mobile list rows show available parent progress or a compact child reference without added height."
+        },
+        "issues": [
+          248
+        ]
       }
     ]
   },
