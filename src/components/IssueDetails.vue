@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from "vue";
 import { ChevronDown, ChevronUp } from "@lucide/vue";
+import type { SubIssueProgress } from "../lib/issue-relations";
 import IssueSubIssues from "./IssueSubIssues.vue";
 import IssueComments from "./IssueComments.vue";
 import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: [] }>();
 function toggle() {
   expanded.value = !expanded.value;
@@ -39,7 +40,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
         <p v-else class="empty-description" role="status" aria-busy="true">{{ t("Hämtar beskrivning…") }}</p>
       </template>
       <p v-else class="empty-description">{{ t("Ingen beskrivning har lagts till.") }}</p>
-      <IssueSubIssues v-if="!demo" :issue="issue" :session="commentsSession" />
+      <IssueSubIssues v-if="!demo" :progress="subIssueProgress" :issue="issue" :session="commentsSession" />
     </section>
   </div>
 </template>

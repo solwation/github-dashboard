@@ -31,6 +31,7 @@ for (const device of [
   await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
   await expect(page.locator('.repository-loading')).toHaveCount(0);
   expect(requests).toBe(0);
+  await expect(page.locator(".sub-issue-progress")).toHaveCount(0);
   await page.getByRole('button', { name: 'Repositoryegenskaper för child', exact: true }).click();
   await page.getByLabel('Pågående arbete', { exact: true }).fill('shipping');
   await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
@@ -38,6 +39,11 @@ for (const device of [
   await card.getByRole('button', { name: 'Läs mer', exact: true }).click();
   const section = card.getByRole('region', { name: 'Underärenden', exact: true });
   await expect(section.locator('li')).toHaveCount(3);
+  await expect(section.getByRole('progressbar', { name: '1 av 3 underärenden stängda' })).toHaveCount(1);
+  await expect(card.locator('.sub-issue-progress')).toHaveCount(1);
+  await expect(card.locator('.issue-relations .sub-issue-progress')).toHaveCount(0);
+  await expect(card.locator('.parent-task-badge')).toContainText('1/3');
+  expect(await card.evaluate(el => Boolean(el.querySelector('.issue-markdown')!.compareDocumentPosition(el.querySelector('.issue-sub-issues')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await expect(section.locator('li').nth(0)).toContainText('Backlog');
   await expect(section.locator('li').nth(1)).toContainText('In progress');
   await expect(section.locator('li').nth(1).getByRole('link')).toHaveAttribute('href', active.html_url);
@@ -52,8 +58,11 @@ for (const device of [
   if (await page.locator('.row-popup').count()) await page.locator('.row-popup').getByRole('button', { name: 'Läs mer', exact: true }).click();
   const listSection = page.getByRole('region', { name: 'Underärenden', exact: true });
   await expect(listSection.locator('li')).toHaveCount(3); expect(requests).toBe(2);
+  await expect(listSection.locator('.sub-issue-progress')).toHaveCount(1);
+  await expect(page.locator('.issue-relations .sub-issue-progress')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(await listSection.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await listSection.screenshot({ path: info.outputPath('list-sub-issues.png') });
+  await page.screenshot({ path: info.outputPath('grouped-details-viewport.png'), fullPage: false });
   await context.close();
 });

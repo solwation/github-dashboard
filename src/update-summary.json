@@ -1,16 +1,10 @@
 {
-  "baseCommit": "6e6996981febed332fde9ce08b7da93db529c15c",
+  "baseCommit": "e4271b60b1749f2375a747248972540cd1e2fa04",
   "summary": {
-    "sv": "Publik cache sparar API-anrop. Mobilrader blir kompakta, faktisk tid får egen kolumn och expanderade detaljer visar sub-issues med status.",
-    "en": "Public cache saves API calls. Phone rows stay compact, actual time gets its own column, and expanded details list sub-issue statuses."
+    "sv": "Underärendenas antal, progress och statuslista samlas längst ner i expanderade detaljer.",
+    "en": "Sub-issue counts, progress and status lists are grouped at the bottom of expanded details."
   },
   "issues": [
-    232,
-    234,
-    235,
-    236,
-    237,
-    238,
-    239
+    240
   ]
 }
