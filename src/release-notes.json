@@ -189,6 +189,15 @@
         "issues": [
           248
         ]
+      },
+      {
+        "text": {
+          "sv": "Öppnade listdetaljer visar beskrivningen direkt; vanliga kort behåller sitt frivilliga Läs mer.",
+          "en": "Opened list details show the description immediately; regular cards keep optional Read more."
+        },
+        "issues": [
+          247
+        ]
       }
     ]
   },

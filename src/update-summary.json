@@ -1,10 +1,10 @@
 {
-  "baseCommit": "1244fc9875ab5314c25553435538bf61dabc5a23",
+  "baseCommit": "1b649c7d9da64d48a262588d1c137ce945c64d82",
   "summary": {
-    "sv": "Mobila listrader visar kompakt parent-progress eller barnreferens när relationsdata finns.",
-    "en": "Mobile list rows show compact parent progress or a child reference when relationship data exists."
+    "sv": "Öppna en mobil listrad för att läsa beskrivningen direkt.",
+    "en": "Open a mobile list row to read the description immediately."
   },
   "issues": [
-    248
+    247
   ]
 }
