@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
-async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false, longLabels = false) {
+async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false, longLabels = false, review = false) {
   const now = Date.now(), old = new Date(now - 86400000 * 3).toISOString(), recent = new Date(now - 3600000).toISOString();
   // [title, comments, section label, state, extra labels]
   const specs: [string, number, string | null, "open" | "closed", string[]][] = [
@@ -17,13 +17,19 @@ async function fixture(page: Page, longTitle = false, outcomes: boolean | "inter
     ["Closed third", 0, null, "closed", []],
   ];
   if (outcomes) specs.push(["Closed fourth", 0, null, "closed", []]);
-  const closedMinutes = (index: number) => outcomes === "interrupted" ? [900, 45, 60, 75][index - 6] ?? 30 : outcomes && index === 6 ? 60 : outcomes && index === 7 ? 15 : 30;
+  if (review) specs.push(["Closed unknown start", 0, null, "closed", []]);
+  const closedMinutes = (index: number) => review && index === 8 ? 119 : outcomes === "interrupted" ? [900, 45, 60, 75][index - 6] ?? 30 : outcomes && index === 6 ? 60 : outcomes && index === 7 ? 15 : 30;
   const issues = specs.map(([title, comments, status, state, labels], index) => ({
     id: index + 1, number: index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
-    startedAt: state === "closed" ? new Date(now - 3600000 - closedMinutes(index) * 60000).toISOString() : undefined,
+    startedAt: state === "closed" && title !== "Closed unknown start" ? new Date(now - 3600000 - closedMinutes(index) * 60000).toISOString() : undefined,
     labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, ...(longLabels ? ["a-very-long-workflow-label-that-must-not-wrap", "another-long-label-with-extra-context", "third-long-label-for-the-layout"] : ["ui"])].map(name => ({ name, color: "a2eeef" }))],
   }));
+  if (review) {
+    const older = issues[9]!;
+    older.closed_at = new Date(now - 10 * 86400000).toISOString();
+    older.startedAt = new Date(now - 10 * 86400000 - 30 * 60000).toISOString();
+  }
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     if (url.pathname === "/user") return route.fulfill({ json: { login: "list-align-fixture", avatar_url: "" } });
@@ -32,7 +38,7 @@ async function fixture(page: Page, longTitle = false, outcomes: boolean | "inter
       const closed = url.searchParams.get("state") === "closed";
       return route.fulfill({ json: issues.filter(issue => (issue.state === "closed") === closed || url.searchParams.get("state") === "all") });
     }
-    if (/\/issues\/(?:1|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - (longLabels ? 50 : 10) * 60000).toISOString() }] });
+    if (/\/issues\/(?:1|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - (longLabels ? (review ? 90 : 50) : 10) * 60000).toISOString() }] });
     if (url.pathname === "/graphql") return route.fulfill({ json: { data: { repository: { issue: { parent: null, subIssuesSummary: null } } } } });
     return route.fulfill({ json: [] });
   });
@@ -239,7 +245,8 @@ test("closed work duration and estimate arrows appear in rows and cards without 
   await expect(under.locator('.implementation-time')).toContainText('↓');
   await page.setViewportSize({ width: 320, height: 844 });
   expect((await over.boundingBox())!.height).toBeLessThanOrEqual(60);
-  await expect(over.locator('.closed-date')).toBeHidden();
+  await expect(over.locator('.closed-date')).toBeVisible();
+  await expect(over.locator('.row-outcome .implementation-time')).toBeVisible();
   await expect(over.locator('.implementation-time')).toBeVisible();
   await over.locator('.row-title').click();
   await expect(page.locator('.row-popup .implementation-time')).toContainText('↑');
@@ -317,4 +324,53 @@ for (const combined of [false, true]) test(`timeout keeps its own slot with long
   const cleared = await snapshot();
   expect(cleared.height).toBe(active.height);
   for (let index = 0; index < active.slots.length; index++) expect(cleared.slots[index]!.x).toBeCloseTo(active.slots[index]!.x, 0);
+});
+
+
+const outcomeScenarios = [
+  { name: 'wide-desktop', width: 1600, height: 1000, mobile: false },
+  { name: 'narrow-desktop', width: 1000, height: 900, mobile: false },
+  { name: 'portrait-phone', width: 390, height: 844, mobile: true },
+  { name: 'landscape-phone', width: 844, height: 390, mobile: true },
+  { name: 'narrow-phone', width: 320, height: 568, mobile: true },
+];
+for (const scenario of outcomeScenarios) test.describe(`actual time layout ${scenario.name}`, () => {
+  test.use({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile });
+  for (const combined of [false, true]) test(`${combined ? 'combined' : 'split'} cards and list keep actual time in its own rightmost column`, async ({ page }, info) => {
+    const api = await fixture(page, true, true, true, true);
+    if (combined) await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+    api.move(); await page.keyboard.press('Control+r');
+    const unread = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
+    await expect(unread.locator('.row-movement-marker')).toBeVisible();
+    await expect(unread.locator('.row-comment-marker')).toBeVisible();
+    await expect(page.locator('.issue-row.issue-timeout').first()).toBeVisible();
+    const closed = page.locator('.issue-row.closed');
+    const rightEdges: number[] = [];
+    for (const row of await closed.all()) {
+      const actual = row.locator('.row-outcome');
+      await expect(row.locator('.closed-date')).toBeVisible();
+      const geometry = await row.evaluate(element => {
+        const bounds = element.getBoundingClientRect(), date = element.querySelector('.row-time')!.getBoundingClientRect(), actual = element.querySelector('.row-outcome')!.getBoundingClientRect();
+        return { row: { x: bounds.x, right: bounds.right, height: bounds.height }, date: { right: date.right, y: date.y, height: date.height }, actual: { x: actual.x, right: actual.right, y: actual.y, height: actual.height } };
+      });
+      expect(geometry.date.right).toBeLessThanOrEqual(geometry.actual.x);
+      expect(geometry.actual.right).toBeLessThanOrEqual(geometry.row.right);
+      expect(geometry.date.y + geometry.date.height / 2).toBeCloseTo(geometry.actual.y + geometry.actual.height / 2, 0);
+      if (scenario.width <= 650) expect(geometry.row.height).toBeLessThanOrEqual(60);
+      rightEdges.push(Math.round(geometry.actual.right));
+      if ((await row.locator('.row-title').innerText()).includes('unknown')) await expect(actual.locator('.implementation-time')).toHaveCount(0);
+      else await expect(actual.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid:/);
+    }
+    expect(new Set(rightEdges).size).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-list.png`), fullPage: true });
+    await closed.first().locator('..').screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-closed.png`) });
+    await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Kort', exact: true }).click();
+    await expect(page.locator('.issue-card.closed .implementation-time')).toHaveCount(4);
+    await expect(page.locator('.issue-card.closed').filter({ hasText: 'Closed twelve' }).locator('.implementation-time')).toContainText('↑');
+    await expect(page.locator('.issue-card.closed').filter({ hasText: 'Closed none' }).locator('.implementation-time')).toContainText('↓');
+    await expect(page.locator('.issue-card.closed').filter({ hasText: 'Closed unknown start' }).locator('.implementation-time')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-cards.png`), fullPage: true });
+  });
 });
