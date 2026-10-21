@@ -69,7 +69,7 @@ const props = defineProps<{
   timeoutEstimateMs?: number;
 }>();
 const repositoryLabel = useRepositoryDisplayName(() => props.repository);
-const emit = defineEmits<{ read: []; parentSelect: [repository: string, number: number] }>();
+const emit = defineEmits<{ read: []; parentSelect: [repository: string, number: number]; childSelect: [repository: string, number: number] }>();
 const card = ref<HTMLElement>();
 const visible = ref(false);
 const { progress, isSubtask, parent } = useIssueRelations(
@@ -236,7 +236,7 @@ const visibleLabels = computed(() =>
     /></a>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" @parent-select="(repo, number) => emit('parentSelect', repo, number)" />
-    <IssueDetails :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')">
+    <IssueDetails :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" @child-select="(repo, number) => emit('childSelect', repo, number)">
       <template v-if="showTimeExplanation && !demo" #additional>
         <IssueTimeExplanation :issue="issue" :repository="repository" :column="col" />
       </template>

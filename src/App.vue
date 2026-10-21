@@ -2191,7 +2191,7 @@ onMounted(async () => {
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" @child-select="revealParentIssue" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
@@ -2202,6 +2202,7 @@ onMounted(async () => {
                   show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
                   @parent-select="revealParentIssue"
+                  @child-select="revealParentIssue"
                 />
                 </template>
                 <div v-if="!items(lane, col.key).length" class="column-empty">
@@ -2310,7 +2311,7 @@ onMounted(async () => {
                     :comments-session="generation"
                     @read="readIssue(lane.repo.full_name, issue)"
                     v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" /></IssueRow>
+                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" @child-select="revealParentIssue" /></IssueRow>
                 </ul>
                 <template v-else-if="!listMode">
                 <IssueCard
@@ -2321,6 +2322,7 @@ onMounted(async () => {
                   show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
                   @parent-select="revealParentIssue"
+                  @child-select="revealParentIssue"
                 />
                 </template>
                 <div v-if="!combinedColumns[col.key]!.length && !orderedLanes.some(lane => lane.loading || lane.error)" class="column-empty">

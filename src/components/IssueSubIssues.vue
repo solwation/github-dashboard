@@ -6,6 +6,7 @@ import { issueRepository, type SubIssue } from '../lib/sub-issues';
 import { useSubIssues } from '../composables/useSubIssues';
 import { useLanguage } from '../lib/i18n';
 const props = defineProps<{ issue: Issue; session?: number; progress?: SubIssueProgress | null }>();
+const emit = defineEmits<{ childSelect: [repository: string, number: number] }>();
 const context = useSubIssues(), { t } = useLanguage();
 const summary = computed(() => subIssueProgress(props.progress) ?? subIssueProgress(props.issue.sub_issues_summary));
 const percent = computed(() => summary.value ? Math.round(summary.value.completed / summary.value.total * 100) : 0);
@@ -40,7 +41,7 @@ const items = computed(() => (entries.value ?? []).map(entry => {
     <p v-if="pending" class="sub-issues-loading" role="status">{{ t('Hämtar underärenden…') }}</p>
     <ul v-if="items.length">
       <li v-for="entry in items" :key="entry.issue.id">
-        <a :href="entry.issue.html_url" target="_blank" rel="noopener noreferrer">{{ entry.repository.toLowerCase() === repository?.toLowerCase() ? '' : entry.repository }}#{{ entry.issue.number }} · {{ entry.issue.title }}</a>
+        <button type="button" @click="emit('childSelect', entry.repository, entry.issue.number)">{{ entry.repository.toLowerCase() === repository?.toLowerCase() ? '' : entry.repository }}#{{ entry.issue.number }} · {{ entry.issue.title }}</button>
         <span class="sub-issue-status" :class="entry.status">{{ entry.status === 'closed' ? 'Closed' : entry.status === 'progress' ? 'In progress' : 'Backlog' }}</span>
       </li>
     </ul>
@@ -51,8 +52,8 @@ const items = computed(() => (entries.value ?? []).map(entry => {
 h4 { margin: 0 0 .4rem; font-size: inherit; }
 ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .4rem; }
 li { display: flex; align-items: flex-start; gap: .5rem; min-width: 0; }
-a { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--green); line-height: 1.5; }
-a:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+button { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--green); font: inherit; line-height: 1.5; text-align: left; text-decoration: underline; overflow-wrap: anywhere; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .sub-issue-status { flex: 0 0 auto; font-size: .65rem; border-radius: 4px; padding: 2px 5px; background: var(--line); white-space: nowrap; }
 .sub-issue-status.progress { background: #fff1d7; color: #805000; }
 .sub-issue-status.closed { background: #e1f3eb; color: #17664d; }

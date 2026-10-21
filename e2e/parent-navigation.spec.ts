@@ -22,13 +22,14 @@ async function fixture(page: Page) {
       const repo = repos.find(item => item.owner.login === owner && item.name === name)!;
       if (url.searchParams.get("state") === "closed") return route.fulfill({ json: [] });
       if (repo === repos[0]) return route.fulfill({ json: [issue(repo, 2, "Child task", ["in-progress"])] });
-      return route.fulfill({ json: [issue(repo, 42, "Parent target", ["in-progress"])] });
+      return route.fulfill({ json: [{ ...issue(repo, 42, "Parent target", ["in-progress"]), sub_issues_summary: { total: 1, completed: 0 } }, issue(repo, 43, "Child target", ["in-progress"])] });
     }
+    if (url.pathname === "/repos/sample/parent/issues/42/sub_issues") return route.fulfill({ json: [issue(repos[1]!, 43, "Child target", ["in-progress"])] });
     if (url.pathname === "/graphql") {
       const { variables } = route.request().postDataJSON();
       return route.fulfill({ json: { data: { repository: { issue: {
         parent: variables.number === 2 ? { number: 42, title: "Parent target", url: "https://github.com/sample/parent/issues/42" } : null,
-        subIssuesSummary: null,
+        subIssuesSummary: variables.number === 42 ? { total: 1, completed: 0 } : null,
       } } } } });
     }
     return route.fulfill({ json: [] });
@@ -118,6 +119,66 @@ test("parent navigation works on touch phones in portrait, landscape and 320px l
         await expect(target).toBeFocused();
         if (mode === "List") await expect(child.locator(".row-title")).toHaveAttribute("aria-expanded", "false");
         await target.screenshot({ path: info.outputPath(`${size.width}x${size.height}-${mode.toLowerCase()}-${combined ? "combined" : "split"}.png`) });
+      }
+    }
+  } finally { await context.close(); }
+});
+
+test("child selection from a parent navigates and highlights the board issue without opening GitHub", async ({ page }, info) => {
+  const popup = await fixture(page);
+  for (const viewport of [{ width: 1600, height: 1000 }, { width: 1000, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    for (const mode of ["Cards", "List"] as const) {
+      for (const combined of [false, true]) {
+      const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+      if (combined) await split.uncheck(); else await split.check();
+      await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
+      const parent = page.locator('[id="issue-sample%2Fparent-42"]');
+      if (mode === "List") await parent.locator(".row-title").click();
+      else await parent.getByRole("button", { name: "Läs mer", exact: true }).click();
+      const details = parent;
+      if (mode === "Cards") await expect(parent.locator(".details-toggle")).toHaveAttribute("aria-expanded", "true");
+      const childLink = details.locator(".issue-sub-issues button");
+      await expect(childLink).toContainText("Child target");
+      const popupsBefore = popup.popupCount();
+      await childLink.click();
+      const target = page.locator('[id="issue-sample%2Fparent-43"]');
+      await expect(target).toBeVisible();
+      await expect(target).toHaveClass(/issue-navigation-highlight/);
+      await expect(target).toBeFocused();
+      await expect(target.locator(".issue-title, .row-title").first()).toContainText("Child target");
+      expect(popup.popupCount()).toBe(popupsBefore);
+      await target.screenshot({ path: info.outputPath(`${viewport.width}-${mode.toLowerCase()}-${combined ? "combined" : "split"}-child-highlight.png`) });
+      }
+    }
+  }
+});
+
+test("child navigation fits touch phones in portrait, landscape and narrow layouts", async ({ browser }, info) => {
+  const context = await browser.newContext({ baseURL: "http://127.0.0.1:5173", isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 }, locale: "sv-SE" });
+  try {
+    const page = await context.newPage();
+    const popup = await fixture(page);
+    for (const size of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }]) {
+      await page.setViewportSize(size);
+      for (const mode of ["Cards", "List"] as const) {
+        const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+        if (mode === "Cards") await split.check(); else await split.uncheck();
+        await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
+        const parent = page.locator('[id="issue-sample%2Fparent-42"]');
+        if (mode === "List") await parent.locator(".row-title").click();
+        else await parent.getByRole("button", { name: "Läs mer", exact: true }).click();
+        const details = mode === "List" ? page.getByRole("dialog", { name: "Parent target" }) : parent;
+        const childLink = details.locator(".issue-sub-issues button");
+        await expect(childLink).toContainText("Child target");
+        const popupsBefore = popup.popupCount();
+        await childLink.click();
+        const target = page.locator('[id="issue-sample%2Fparent-43"]');
+        await expect(target).toBeVisible();
+        await expect(target).toHaveClass(/issue-navigation-highlight/);
+        await expect(target).toBeFocused();
+        expect(popup.popupCount()).toBe(popupsBefore);
+        await target.screenshot({ path: info.outputPath(`${size.width}x${size.height}-${mode.toLowerCase()}-child-highlight.png`) });
       }
     }
   } finally { await context.close(); }

@@ -9,7 +9,7 @@ import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
 
 const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
-const emit = defineEmits<{ read: [] }>();
+const emit = defineEmits<{ read: []; childSelect: [repository: string, number: number] }>();
 function toggle() {
   expanded.value = !expanded.value;
   if (!expanded.value) return;
@@ -40,7 +40,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
         <p v-else class="empty-description" role="status" aria-busy="true">{{ t("Hämtar beskrivning…") }}</p>
       </template>
       <p v-else class="empty-description">{{ t("Ingen beskrivning har lagts till.") }}</p>
-      <IssueSubIssues v-if="!demo" :progress="subIssueProgress" :issue="issue" :session="commentsSession" />
+      <IssueSubIssues v-if="!demo" :progress="subIssueProgress" :issue="issue" :session="commentsSession" @child-select="(repo, number) => emit('childSelect', repo, number)" />
       <slot name="additional" />
     </section>
   </div>
