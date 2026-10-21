@@ -171,6 +171,15 @@
         "issues": [
           245
         ]
+      },
+      {
+        "text": {
+          "sv": "Ärendedetaljerna förklarar uppskattningar, förfluten och faktisk arbetstid, inklusive underlag för pilar.",
+          "en": "Issue details explain estimates, elapsed and actual work, including the basis for comparison arrows."
+        },
+        "issues": [
+          246
+        ]
       }
     ]
   },
