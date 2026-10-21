@@ -1,10 +1,10 @@
 {
-  "baseCommit": "1b649c7d9da64d48a262588d1c137ce945c64d82",
+  "baseCommit": "d340c7cce2a3ff273311654309f73f50cc7eebc9",
   "summary": {
-    "sv": "Öppna en mobil listrad för att läsa beskrivningen direkt.",
-    "en": "Open a mobile list row to read the description immediately."
+    "sv": "Navigera från ett underärende till parent-ärendet i dashboarden.",
+    "en": "Navigate from a sub-issue to its parent inside the dashboard."
   },
   "issues": [
-    247
+    249
   ]
 }

@@ -198,6 +198,15 @@
         "issues": [
           247
         ]
+      },
+      {
+        "text": {
+          "sv": "Välj en parent-länk från ett underärende för att hitta och markera parent-ärendet direkt i dashboarden.",
+          "en": "Choose a parent link from a sub-issue to find and highlight the parent directly in the dashboard."
+        },
+        "issues": [
+          249
+        ]
       }
     ]
   },
