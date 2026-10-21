@@ -89,6 +89,19 @@ test("individual timing follows repository history in cards, rows, combined view
     expect(remaining!.x).toBeGreaterThan(spent!.x + spent!.width);
     expect(Math.abs(remaining!.y - spent!.y)).toBeLessThan(5);
     await expect(row.locator(".issue-time-remaining-label")).toHaveText("≈ 15 min kvar");
+    if (split) {
+      const reference = await row.locator(".issue-time-remaining-label").evaluate(element => {
+        const style = getComputedStyle(element);
+        return { fontSize: style.fontSize, fontFamily: style.fontFamily, fontWeight: style.fontWeight, fontStyle: style.fontStyle, lineHeight: style.lineHeight };
+      });
+      for (const selector of [".issue-time-estimate", ".implementation-time"]) {
+        const actual = await page.locator(`.issue-row ${selector}`).first().evaluate(element => {
+          const style = getComputedStyle(element);
+          return { fontSize: style.fontSize, fontFamily: style.fontFamily, fontWeight: style.fontWeight, fontStyle: style.fontStyle, lineHeight: style.lineHeight };
+        });
+        expect(actual).toEqual(reference);
+      }
+    }
     await expect(row.getByRole("progressbar")).toHaveCount(0);
     await row.screenshot({ path: testInfo.outputPath("list-desktop.png") });
     await row.locator(".row-title").click();

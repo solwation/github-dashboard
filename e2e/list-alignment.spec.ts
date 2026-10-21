@@ -369,7 +369,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     await expect(backlog.locator('.row-outcome .issue-time-estimate')).toContainText(/^≈ /);
     await expect(backlog.locator('.row-outcome .issue-time-estimate')).toHaveAttribute('aria-label', /^Uppskattad tid: ≈ [^≈]+$/);
     await expect(backlog.locator('.issue-time-estimate')).toHaveAttribute('title', /Baserat på median tid per poäng/);
-    expect(await backlog.locator('.issue-time-estimate').evaluate(element => getComputedStyle(element).fontStyle)).toBe('italic');
+    expect(await backlog.locator('.issue-time-estimate').evaluate(element => getComputedStyle(element).fontStyle)).toBe(scenario.width >= 951 ? 'normal' : 'italic');
     await expect(unread.locator('.row-outcome .issue-time-remaining')).toBeVisible();
     const unknown = page.locator('.issue-row.progress').filter({ has: page.getByRole('button', { name: 'Progress many', exact: true }) });
     await expect(unknown.locator('.row-time')).toContainText('Starttid okänd');

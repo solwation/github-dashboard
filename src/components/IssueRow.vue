@@ -331,6 +331,13 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-mobile-summary { display: none; }
 .row-outcome { display: flex; align-items: center; justify-content: flex-end; min-width: 0; grid-column: -2 / -1; }
 @media (min-width: 951px) {
+  .row-outcome :deep(.issue-time-estimate),
+  .row-outcome :deep(.implementation-time),
+  .row-outcome :deep(.issue-time-remaining-label) {
+    font-size: 10px; font-family: inherit; font-weight: inherit; font-style: normal; line-height: inherit;
+  }
+}
+@media (min-width: 951px) {
   .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
   .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
 }
