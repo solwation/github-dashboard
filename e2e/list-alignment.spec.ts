@@ -206,7 +206,7 @@ for (const combined of [false, true]) {
     const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
     for (const width of [320, 375, 430, 650]) {
       await page.setViewportSize({ width, height: 844 });
-      for (const candidate of await page.locator('.issue-row').all()) expect((await candidate.boundingBox())!.height).toBeLessThanOrEqual(width === 320 ? 84 : 60);
+      for (const candidate of await page.locator('.issue-row').all()) expect((await candidate.boundingBox())!.height).toBeLessThanOrEqual(60);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await expect(row.locator('.issue-points')).toBeVisible();
       await expect(row.locator('.row-time')).toBeVisible();
@@ -245,7 +245,7 @@ test("closed work duration and estimate arrows appear in rows and cards without 
   await expect(over.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid: 1 h.*Uppskattad tid: ≈ 30 min/);
   await expect(under.locator('.implementation-time')).toContainText('↓');
   await page.setViewportSize({ width: 320, height: 844 });
-  expect((await over.boundingBox())!.height).toBeLessThanOrEqual(84);
+  expect((await over.boundingBox())!.height).toBeLessThanOrEqual(60);
   await expect(over.locator('.closed-date')).toBeVisible();
   await expect(over.locator('.row-outcome .implementation-time')).toBeVisible();
   await expect(over.locator('.implementation-time')).toBeVisible();
@@ -353,7 +353,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     const compact = scenario.width <= 650 || (scenario.mobile && scenario.width <= 950 && scenario.height <= 500);
     if (compact) {
       for (const row of await page.locator('.issue-row').all()) {
-        expect((await row.boundingBox())!.height).toBeLessThanOrEqual(scenario.width <= 360 ? 84 : 60);
+        expect((await row.boundingBox())!.height).toBeLessThanOrEqual(60);
         await expect(row.locator('.issue-points')).toBeVisible();
         await expect(row.locator('.row-time')).toBeVisible();
         await expect(row.locator('.row-meta')).toHaveCount(0);
@@ -398,7 +398,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
       expect(geometry.date.right).toBeLessThanOrEqual(geometry.actual.x);
       expect(geometry.actual.right).toBeLessThanOrEqual(geometry.row.right);
       expect(geometry.date.y + geometry.date.height / 2).toBeCloseTo(geometry.actual.y + geometry.actual.height / 2, 0);
-      if (compact) expect(geometry.row.height).toBeLessThanOrEqual(scenario.width <= 360 ? 84 : 60);
+      if (compact) expect(geometry.row.height).toBeLessThanOrEqual(60);
       rightEdges.push(Math.round(geometry.actual.right));
       if ((await row.locator('.row-title').innerText()).includes('unknown')) await expect(actual.locator('.implementation-time')).toHaveCount(0);
       else await expect(actual.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid:/);
@@ -421,7 +421,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
       await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-popup.png`) });
       await page.locator('.row-popup-close').tap();
       await expect(popup).toHaveCount(0);
-      expect((await unread.boundingBox())!.height).toBeLessThanOrEqual(scenario.width <= 360 ? 84 : 60);
+      expect((await unread.boundingBox())!.height).toBeLessThanOrEqual(60);
     } else {
       await unread.locator('.row-title').click();
       await expect(unread.locator('.row-card')).toBeVisible();
@@ -447,6 +447,6 @@ test('shared time column stays empty when repository history is insufficient', a
   const rows = page.locator('.issue-row');
   await expect(rows).toHaveCount(4);
   await expect(page.locator('.issue-time-estimate,.issue-time-remaining')).toHaveCount(0);
-  await expect(rows.first().locator('.row-time')).toContainText(/för 3 dagar sedan/);
+  await expect(rows.first().locator('.row-time')).toContainText(/−3 d/);
   expect((await rows.first().boundingBox())!.height).toBeLessThanOrEqual(60);
 });

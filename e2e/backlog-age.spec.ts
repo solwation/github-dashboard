@@ -9,8 +9,8 @@ const issues = [
 ];
 
 for (const language of [
-  { locale: "en-US", age: /^.+ ago$/, redundant: "Created ", connect: "Connect GitHub", account: "Connect account", overview: "Show overview", group: "Board view mode", list: "List" },
-  { locale: "sv-SE", age: /^.+ sedan$/, redundant: "Skapad ", connect: "Anslut GitHub", account: "Anslut konto", overview: "Visa översikt", group: "Visningsläge för boarden", list: "Lista" },
+  { locale: "en-US", age: /^3(?:d| days) ago$/, redundant: "Created ", connect: "Connect GitHub", account: "Connect account", overview: "Show overview", group: "Board view mode", list: "List" },
+  { locale: "sv-SE", age: /−3 d$/, redundant: "Skapad ", connect: "Anslut GitHub", account: "Anslut konto", overview: "Visa översikt", group: "Visningsläge för boarden", list: "Lista" },
 ]) {
   test.describe(language.locale, () => {
     test.use({ locale: language.locale });

@@ -8,7 +8,7 @@ import IssueTimeRemaining from "./IssueTimeRemaining.vue";
 import IssueTimeEstimate from "./IssueTimeEstimate.vue";
 import IssueImplementationTime from "./IssueImplementationTime.vue";
 import { useLanguage } from "../lib/i18n";
-import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
+import { closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
@@ -152,8 +152,17 @@ const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 const backlogAge = computed(() => {
-  const label = backlogAgeLabel(props.issue.created_at, now.value, locale.value);
-  return label.replace(/^(?:Created|Skapad) /, "");
+  const created = Date.parse(props.issue.created_at);
+  if (!Number.isFinite(created) || !Number.isFinite(now.value)) return t("Okänd ålder");
+  const seconds = Math.floor(Math.abs(now.value - created) / 1000);
+  const [amount, unit]: [number, Intl.RelativeTimeFormatUnit] = seconds < 60 ? [seconds, "second"]
+    : seconds < 3600 ? [Math.floor(seconds / 60), "minute"]
+    : seconds < 86400 ? [Math.floor(seconds / 3600), "hour"]
+    : seconds < 30 * 86400 ? [Math.floor(seconds / 86400), "day"]
+    : seconds < 365 * 86400 ? [Math.floor(seconds / (30 * 86400)), "month"]
+    : [Math.floor(seconds / (365 * 86400)), "year"];
+  return new Intl.RelativeTimeFormat(locale.value, { numeric: "always", style: "narrow" })
+    .format(created <= now.value ? -amount : amount, unit);
 });
 const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   () => props.issue,
@@ -366,9 +375,19 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
   .issue-row, .issue-row.has-repository {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "heading heading" "meta meta" "time outcome";
-    min-height: 72px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2.75rem) auto;
+    grid-template-areas: "heading heading heading" "meta time outcome";
+    min-height: 56px;
   }
+  .row-mobile-summary { gap: 1px; }
+  .row-mobile-summary > .row-repository { flex: 0 0 auto; padding: 1px; }
+  .row-mobile-summary .row-repository-name { display: none; }
+  .row-mobile-summary > .issue-points { padding: 1px; font-size: 7px; }
+  .row-mobile-priority svg { width: 9px; height: 9px; }
+  .row-mobile-activity { padding: 0; }
+  .row-time { max-width: 2.75rem; }
+  .row-outcome { width: 5rem; max-width: 5rem; overflow: hidden; font-size: 8px; }
+  .row-outcome .issue-time-estimate,
+  .row-outcome :deep(.issue-time-remaining-label) { font-size: 8px; }
 }
 </style>
