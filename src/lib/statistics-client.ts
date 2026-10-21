@@ -185,7 +185,7 @@ export class StatisticsCollector {
           }
         }
       }
-      tracker?.sourceDone(name, successful && result?.complete === true);
+      tracker?.sourceDone(name, successful && result?.complete === true && (name !== "changes" || (result as StatisticsSource<StatisticsChange>).data.every(change => change.filesComplete)));
       update(name, result);
       return result;
     };
@@ -204,6 +204,7 @@ export class StatisticsCollector {
         const board = force ? null : this.client.boardIssues?.(repository, since, cacheDuration, now);
         if (board) { for (const issue of board) if (!issue.pull_request) tracker?.observe(issue.created_at); return { data: board, complete: true, fetchedAt: now }; }
         return cleanIssues(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now, undefined, (source, page) => {
+          tracker?.updatedPage("issues", page.map(issue => issue.updated_at));
           for (const issue of page) if (!issue.pull_request) tracker?.observe(issue.created_at);
           progress("issues", () => cleanIssues(source));
         }, signal));
@@ -249,6 +250,7 @@ export class StatisticsCollector {
       }),
       attempt("pulls", async () => unique(await this.pages<StatisticsPull>(`${root}/pulls?state=all&sort=updated&direction=desc&per_page=100`, statisticsLimits.pulls, now,
         page => page.length > 0 && page[page.length - 1]!.updated_at < since, (source, page) => {
+          tracker?.updatedPage("pulls", page.map(pull => pull.updated_at));
           for (const pull of page) { tracker?.observe(pull.created_at); tracker?.observe(pull.closed_at); tracker?.observe(pull.merged_at); }
           progress("pulls", () => unique(source));
         }, signal))),
@@ -260,6 +262,7 @@ export class StatisticsCollector {
       // Every collected commit needs its diff, including reused historical commits;
       // taking only the newest 60 silently lost older days within a selected period.
       const queue = nonMerge.slice(0, statisticsLimits.changes);
+      tracker?.startChangeCoverage(nonMerge.map(commit => ({ sha: commit.sha, date: commitDate(commit) })), commits.complete && nonMerge.length <= statisticsLimits.changes);
       tracker?.startChanges(queue.length, queue.filter(commit => old.has(commit.sha)).length);
       // Three workers, never one promise per item or repository-sized fan-out.
       const previewChanges = () => progress("changes", () => ({ data: records, complete: false, fetchedAt: now }));
@@ -270,7 +273,7 @@ export class StatisticsCollector {
           try {
           if (signal?.aborted) throw new StatisticsCancelledError();
           const commit = queue.shift()!;
-          if (old.has(commit.sha)) { records.push(old.get(commit.sha)!); tracker?.diffDone(false); previewChanges(); continue; }
+          if (old.has(commit.sha)) { records.push(old.get(commit.sha)!); tracker?.diffDone(false); if (old.get(commit.sha)!.filesComplete) tracker?.changeCovered(commit.sha); previewChanges(); continue; }
           let next: string | null = `${root}/commits/${encodeURIComponent(commit.sha)}?per_page=100`;
           let additions: number | undefined, deletions: number | undefined;
           const files = new Set<string>();
@@ -286,6 +289,7 @@ export class StatisticsCollector {
           if (!Number.isFinite(additions) || !Number.isFinite(deletions)) throw new Error("Missing commit statistics");
           records.push({ sha: commit.sha, date: commitDate(commit), contributor: commitContributor(commit), additions: additions!, deletions: deletions!, files: files.size, filesComplete: !next });
           tracker?.diffDone(true);
+          if (!next) tracker?.changeCovered(commit.sha);
           previewChanges();
           } catch (error) { stopped = true; throw error; }
         }

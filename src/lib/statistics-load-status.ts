@@ -1,7 +1,8 @@
-import type { StatisticsSourceName } from './statistics';
+import { statisticsWindowMs, type StatisticsMetric, type StatisticsSourceName } from './statistics';
 
 /** Ephemeral collection feedback; never part of StatisticsData or the encrypted cache. */
 export interface StatisticsLoadStatus {
+  coveredFrom?: Partial<Record<StatisticsSourceName, number>>;
   phase: 'lists' | 'changes';
   collectionFrom: string;
   collectionTo: string;
@@ -18,6 +19,8 @@ export interface StatisticsLoadStatus {
 
 export class StatisticsLoadTracker {
   private sources = new Map<StatisticsSourceName, boolean>();
+  private coverage: Partial<Record<StatisticsSourceName, number>> = {};
+  private pendingChanges?: Map<string, number>;
   private oldest?: number;
   private changes?: { total: number; done: number; freshTotal: number; freshDone: number; startedAt: number };
   private readonly from: number;
@@ -26,6 +29,22 @@ export class StatisticsLoadTracker {
   }
   sourceDone(source: StatisticsSourceName, complete: boolean) {
     if (source !== 'changes') this.sources.set(source, complete);
+    if (complete) this.coverage[source] = this.from;
+  }
+  /** Sorted updated lists prove only the suffix after their oldest updated record. */
+  updatedPage(source: 'issues' | 'pulls', dates: string[]) {
+    const times = dates.map(Date.parse);
+    if (times.length && times.every(Number.isFinite)) this.coverage[source] = Math.max(this.from, Math.min(this.until, Math.min(...times) + 1));
+  }
+  startChangeCoverage(commits: { sha: string; date: string }[], complete: boolean) {
+    if (!complete || commits.some(commit => !Number.isFinite(Date.parse(commit.date)))) return;
+    this.pendingChanges = new Map(commits.map(commit => [commit.sha, Date.parse(commit.date)]));
+    this.updateChangeCoverage();
+  }
+  changeCovered(sha: string) { this.pendingChanges?.delete(sha); this.updateChangeCoverage(); }
+  private updateChangeCoverage() {
+    if (!this.pendingChanges) return;
+    this.coverage.changes = Math.max(this.from, Math.min(this.until, this.pendingChanges.size ? Math.max(...this.pendingChanges.values()) + 1 : this.from));
   }
   /** An old record is evidence of reached activity, never evidence of continuous coverage. */
   observe(date: string | null | undefined) {
@@ -44,6 +63,7 @@ export class StatisticsLoadTracker {
   snapshot(): StatisticsLoadStatus {
     const status: StatisticsLoadStatus = {
       phase: this.changes ? 'changes' : 'lists', collectionFrom: `${this.window.from}T00:00:00Z`, collectionTo: new Date(this.until).toISOString(),
+      coveredFrom: { ...this.coverage },
       sourcesDone: this.sources.size, sourcesTotal: 4, completeSources: [...this.sources.values()].filter(Boolean).length,
     };
     if (this.oldest !== undefined) {
@@ -61,4 +81,18 @@ export class StatisticsLoadTracker {
     }
     return status;
   }
+}
+
+/** Intersection of confirmed source suffixes, clipped to the displayed absolute time window. */
+export function statisticsChartCoverage(status: StatisticsLoadStatus | undefined, metrics: StatisticsMetric[], from: string, to: string) {
+  const { start, end } = statisticsWindowMs({ from, to });
+  if (!status || !metrics.length || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+  const requirements: Record<StatisticsMetric, StatisticsSourceName[]> = {
+    created: ['issues'], closed: ['events'], reopened: ['events'], netIssues: ['issues', 'events'], commits: ['commits'],
+    additions: ['changes'], deletions: ['changes'], netLines: ['changes'], files: ['changes'], prsOpened: ['pulls'], prsMerged: ['pulls'], prsClosed: ['pulls'],
+  };
+  const confirmedEnd = Math.max(start, Math.min(end, Date.parse(status.collectionTo)));
+  const boundary = Math.max(start, Date.parse(status.collectionFrom), ...metrics.flatMap(metric => requirements[metric]).map(source => status.coveredFrom?.[source] ?? confirmedEnd));
+  const coveredFrom = Math.min(confirmedEnd, boundary), percent = (confirmedEnd - coveredFrom) / (end - start) * 100;
+  return { from: coveredFrom, to: confirmedEnd, percent, startPercent: (coveredFrom - start) / (end - start) * 100 };
 }

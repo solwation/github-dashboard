@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { StatisticsLoadTracker } from '../src/lib/statistics-load-status';
+import { statisticsChartCoverage, StatisticsLoadTracker } from '../src/lib/statistics-load-status';
 import { StatisticsCollector, type StatisticsClient } from '../src/lib/statistics-client';
 import { StatisticsPreviewBatch } from '../src/lib/statistics-progress';
 import type { StatisticsData } from '../src/lib/statistics';
@@ -141,4 +141,38 @@ it('retains old complete chart data after a failed refresh without claiming it w
   expect(listener.mock.calls[0]![1]).toMatchObject({ phase: 'lists', sourcesDone: 3, completeSources: 2 });
   expect(collector.export()).toEqual([original]);
   release(); await work;
+});
+
+describe('confirmed chart coverage', () => {
+  const from = '2026-10-17T12:00', to = '2026-10-20T12:00';
+  it('does not infer coverage from sparse old activity or incomplete unordered event lists', () => {
+    const tracker = new StatisticsLoadTracker(window, until);
+    tracker.observe(from); tracker.sourceDone('events', false);
+    expect(statisticsChartCoverage(tracker.snapshot(), ['closed'], from, to)?.percent).toBe(0);
+    tracker.sourceDone('events', true);
+    expect(statisticsChartCoverage(tracker.snapshot(), ['closed'], from, to)?.percent).toBe(100);
+  });
+  it('grows from sorted updated pages and intersects sources for selected metrics', () => {
+    const tracker = new StatisticsLoadTracker(window, until);
+    tracker.updatedPage('issues', ['2026-10-19T00:00:00Z']);
+    expect(statisticsChartCoverage(tracker.snapshot(), ['created'], from, to)?.percent).toBeCloseTo(50);
+    expect(statisticsChartCoverage(tracker.snapshot(), ['netIssues'], from, to)?.percent).toBe(0);
+    tracker.updatedPage('issues', [from]); tracker.sourceDone('events', true);
+    expect(statisticsChartCoverage(tracker.snapshot(), ['netIssues'], from, to)?.percent).toBeCloseTo(100);
+  });
+  it('advances only beyond all unfinished diffs, including tied dates and out-of-order workers', () => {
+    const tracker = new StatisticsLoadTracker(window, until);
+    tracker.startChangeCoverage([{ sha: 'one', date: '2026-10-19T00:00:00Z' }, { sha: 'two', date: from }, { sha: 'tie', date: '2026-10-19T00:00:00Z' }], true);
+    const before = statisticsChartCoverage(tracker.snapshot(), ['additions'], from, to)!.percent;
+    tracker.changeCovered('one');
+    expect(statisticsChartCoverage(tracker.snapshot(), ['additions'], from, to)!.percent).toBe(before);
+    tracker.changeCovered('tie');
+    expect(statisticsChartCoverage(tracker.snapshot(), ['additions'], from, to)!.percent).toBeGreaterThan(before);
+    tracker.changeCovered('two');
+    expect(statisticsChartCoverage(tracker.snapshot(), ['files'], from, to)!.percent).toBe(100);
+    const incomplete = new StatisticsLoadTracker(window, until);
+    incomplete.startChangeCoverage([], false);
+    expect(statisticsChartCoverage(incomplete.snapshot(), ['additions'], from, to)!.percent).toBe(0);
+    expect(statisticsChartCoverage(undefined, ['closed'], from, to)).toBeNull();
+  });
 });

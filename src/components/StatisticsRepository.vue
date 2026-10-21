@@ -10,7 +10,7 @@ import {
   type StatisticsData, type StatisticsFilter, type StatisticsMetric, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
 } from "../lib/statistics";
 import StatisticsLoadingProgress from "./StatisticsLoadingProgress.vue";
-import type { StatisticsLoadStatus } from "../lib/statistics-load-status";
+import { statisticsChartCoverage, type StatisticsLoadStatus } from "../lib/statistics-load-status";
 import StatisticsChart from "./StatisticsChart.vue";
 import { browserTimeZone } from "../lib/browser-time";
 import { activityHeadings, seriesColor, seriesDash } from "../lib/statistics-chart";
@@ -112,6 +112,7 @@ const chartSeries = computed(() => {
   }));
 });
 const incompleteMetrics = computed(() => selectedMetrics.value.filter(metric => summary.value.complete[metric] === false).map(metric => t(metricNames[metric])).join(", "));
+const chartCoverage = computed(() => props.loading ? statisticsChartCoverage(props.loadStatus, selectedMetrics.value, props.timeSpan.from, props.timeSpan.to) : null);
 const chartTitle = computed(() =>
   selectedMetrics.value.map(metric => t(metricNames[metric])).join(", ") || t(metricNames[state.value.metric]),
 );
@@ -219,7 +220,7 @@ function clearFilters() {
           <h3>{{ t(activityHeadings[timeSpan.resolution]) }}</h3>
         </div>
         <p v-if="incompleteMetrics" role="status" class="statistics-message">{{ t("Delvis underlag för {metrics}. Aktivitet i den valda perioden kan saknas.", { metrics: incompleteMetrics }) }}</p>
-        <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" :resolution="timeSpan.resolution" />
+        <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" :resolution="timeSpan.resolution" :coverage="chartCoverage" />
       </section>
       <div class="statistics-breakdowns"><details v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.contributors" @toggle="syncOpen('contributors', $event)"><summary><h3>{{ t("Bidragsgivare") }}</h3></summary><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></details><details v-if="summary.labels.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.labels" @toggle="syncOpen('labels', $event)"><summary><h3>{{ t("Labels på skapade issues") }}</h3></summary><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></details></div>
       <p v-if="lastFetched" class="statistics-source-time">{{ t("Äldsta underlaget hämtat {time}", { time: new Date(lastFetched).toLocaleString(locale) }) }}.</p>

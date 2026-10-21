@@ -2,8 +2,8 @@
   {
     "date": "2026-10-21",
     "summary": {
-      "sv": "Kompaktare listvy på telefonen.",
-      "en": "More compact lists on phones."
+      "sv": "Kompaktare mobilrader, tidsuppföljning och tydligare laddning i Statistik.",
+      "en": "Compact phone rows, work-duration follow-up and clearer Statistics loading."
     },
     "sections": [
       {
@@ -31,6 +31,15 @@
         },
         "issues": [
           225
+        ]
+      },
+      {
+        "text": {
+          "sv": "Ett diskret streck under statistikgrafen visar bekräftat hämtat tidsspann under laddningen och försvinner när hämtningen är klar.",
+          "en": "A subtle track below statistics charts shows the confirmed loaded time span during collection and disappears when loading finishes."
+        },
+        "issues": [
+          227
         ]
       }
     ]

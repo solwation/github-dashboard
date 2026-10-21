@@ -17,7 +17,7 @@ test('statistics displays batched real pages and diffs, preserves refresh data a
       if (url.searchParams.get('page') === '2') { await eventPage.promise; data = refreshed ? [event(2), event(3)] : [event(2)]; }
       else { data = [event(1)]; headers = { 'Access-Control-Expose-Headers': 'Link', Link: `<https://api.github.com${url.pathname}?per_page=100&page=2>; rel="next"` }; }
     } else if (url.pathname.endsWith('/issues') && url.searchParams.get('state') !== 'closed') data = [issue];
-    else if (url.pathname.endsWith('/commits')) data = [1, 2, 3].map(id => ({ sha: `progress-${id}`, parents: [{ sha: 'parent' }], author: { login: 'sample' }, commit: { committer: { date } } }));
+    else if (url.pathname.endsWith('/commits')) data = [1, 2, 3].map(id => ({ sha: `progress-${id}`, parents: [{ sha: 'parent' }], author: { login: 'sample' }, commit: { committer: { date: new Date(Date.now() - id * 6 * 3600000).toISOString() } } }));
     else if (url.pathname.includes('/commits/')) {
       details++;
       if (!url.pathname.endsWith('/progress-1')) await detailPage.promise;
@@ -43,6 +43,7 @@ test('statistics displays batched real pages and diffs, preserves refresh data a
   await expect(page.locator('.statistics-refreshing')).toContainText('Värden och diagram uppdateras löpande.');
   await expect(refresh).toBeDisabled();
   await expect(page.locator('.statistics-chart')).toBeVisible();
+  await expect(page.locator('.chart-coverage')).toHaveAttribute('aria-label', 'Tidsspannet är ännu inte bekräftat hämtat');
   const hasSavedStatistics = () => page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>(resolve => { const request = indexedDB.open('issueflow-vault', 1); request.onsuccess = () => resolve(request.result); });
     try { return await new Promise<boolean>(resolve => { const request = db.transaction('credentials').objectStore('credentials').get('statistics'); request.onsuccess = () => resolve(!!request.result); }); }
@@ -56,12 +57,17 @@ test('statistics displays batched real pages and diffs, preserves refresh data a
   await expect(refresh).toBeDisabled();
   await additions.click(); await closed.click();
   await expect(additions).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.chart-coverage')).toHaveAttribute('aria-label', /^Färdighämtat tidsspann:/);
+  const filled = page.locator('.chart-coverage-loaded');
+  expect(Number(await filled.getAttribute('x2'))).toBeGreaterThan(Number(await filled.getAttribute('x1')));
+  expect(Number(await filled.getAttribute('x1'))).toBeGreaterThan(Number(await page.locator('.chart-coverage-track').getAttribute('x1')));
   await page.screenshot({ path: test.info().outputPath('partial-diffs.png'), fullPage: true });
   expect(await hasSavedStatistics()).toBe(false);
   detailPage.resolve();
   await expect(additions.locator('strong')).toHaveText('30');
   await expect(additions.locator('.statistics-partial')).toHaveCount(0);
   await expect(refresh).toBeEnabled();
+  await expect(page.locator('.chart-coverage')).toHaveCount(0);
   expect(await hasSavedStatistics()).toBe(true);
   expect(details).toBe(3);
   eventPage = gate(); refreshed = true;

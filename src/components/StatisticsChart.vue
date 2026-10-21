@@ -10,6 +10,7 @@ const props = defineProps<{
   metric: StatisticsMetric;
   title: string;
   resolution?: StatisticsResolution;
+  coverage?: { from: number; to: number; percent: number; startPercent: number } | null;
 }>();
 const selected = ref(0);
 const chart = ref<SVGSVGElement | null>(null);
@@ -104,7 +105,7 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
 </script>
 <template>
   <div class="statistics-chart">
-    <svg ref="chart" :viewBox="`0 0 ${chartWidth} 255`" role="img" :aria-label="title" @pointermove="selectFromPointer" @pointerdown="selectFromPointer" @pointerleave="hidePointer" @click="selectFromPointer">
+    <svg ref="chart" :viewBox="`0 0 ${chartWidth} ${coverage ? 277 : 255}`" role="img" :aria-label="title" @pointermove="selectFromPointer" @pointerdown="selectFromPointer" @pointerleave="hidePointer" @click="selectFromPointer">
       <title>{{ title }}</title>
       <g v-for="tick in yTicks" :key="tick">
         <line :class="tick === 0 ? 'chart-axis' : 'chart-grid'" :x1="plotStart" :y1="y(tick)" :x2="plotEnd" :y2="y(tick)" />
@@ -119,6 +120,10 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
         <polyline :points="points(series)" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
         <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(valueOf(series, day))" :r="showPopover && selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ number(valueOf(series, day)) }}</title></circle>
       </g>
+      <g v-if="coverage" class="chart-coverage" role="img" :aria-label="coverage.percent > 0 ? t('Färdighämtat tidsspann: {from} – {to}', { from: new Date(coverage.from).toLocaleString(locale), to: new Date(coverage.to).toLocaleString(locale) }) : t('Tidsspannet är ännu inte bekräftat hämtat')">
+        <line :x1="plotStart" :x2="plotEnd" y1="268" y2="268" class="chart-coverage-track" />
+        <line :x1="plotStart + (plotEnd - plotStart) * coverage.startPercent / 100" :x2="plotStart + (plotEnd - plotStart) * (coverage.startPercent + coverage.percent) / 100" y1="268" y2="268" class="chart-coverage-loaded" />
+      </g>
     </svg>
     <div v-if="showPopover" class="chart-popover" role="tooltip" :style="{ left: `${popoverLeft}px` }">
       <strong class="chart-selection-time">{{ fullTime(selectedDate) }}</strong>
@@ -131,6 +136,8 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
   </div>
 </template>
 <style scoped>
+.chart-coverage-track { stroke: var(--line); stroke-width: 4; }
+.chart-coverage-loaded { stroke: var(--green); stroke-width: 4; }
 .statistics-chart { min-width: 0; position: relative; }
 svg { width: 100%; height: 255px; display: block; overflow: hidden; touch-action: pan-y; }
 svg line { vector-effect: non-scaling-stroke; }

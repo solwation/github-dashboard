@@ -58,6 +58,8 @@ export const english: Record<string, string> = {
   "{count} s": "{count} s",
   "{count} min": "{count} min",
   "{count} h": "{count} h",
+  "Färdighämtat tidsspann: {from} – {to}": "Loaded time span: {from} – {to}",
+  "Tidsspannet är ännu inte bekräftat hämtat": "Time span not yet confirmed as loaded",
   "{count} olästa händelser": "{count} unread events",
   "Faktisk arbetstid: {time}": "Actual work time: {time}",
   "Längre än uppskattat": "Longer than estimated",

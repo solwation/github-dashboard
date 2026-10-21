@@ -1,12 +1,13 @@
 {
   "baseCommit": "8686c538c2d78fd86520342f6ecd5d455e72c630",
   "summary": {
-    "sv": "Kompakta telefonlistor, faktisk arbetstid med estimatjämförelse för stängda ärenden och olästa händelser vid Översikt.",
-    "en": "Compact phone lists, actual closed-issue duration with estimate comparisons and an unread event count beside Overview."
+    "sv": "Kompakta mobilrader, faktisk arbetstid för stängda ärenden, olästa händelser vid Översikt och bekräftat tidsspann i statistikgrafer.",
+    "en": "Compact phone rows, actual closed-issue duration, unread events beside Overview and confirmed loaded spans in Statistics charts."
   },
   "issues": [
     223,
     224,
-    225
+    225,
+    227
   ]
 }
