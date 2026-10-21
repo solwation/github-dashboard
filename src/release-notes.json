@@ -68,6 +68,15 @@
         "issues": [
           229
         ]
+      },
+      {
+        "text": {
+          "sv": "Timeout har en egen plats före status i datorns listvy; långa labels förkortas utan att rubba radens linjering.",
+          "en": "Timeout has its own position before status in desktop lists; long labels truncate without disturbing row alignment."
+        },
+        "issues": [
+          230
+        ]
       }
     ]
   },

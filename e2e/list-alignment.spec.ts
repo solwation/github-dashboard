@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
-async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false) {
+async function fixture(page: Page, longTitle = false, outcomes: boolean | "interrupted" = false, longLabels = false) {
   const now = Date.now(), old = new Date(now - 86400000 * 3).toISOString(), recent = new Date(now - 3600000).toISOString();
   // [title, comments, section label, state, extra labels]
   const specs: [string, number, string | null, "open" | "closed", string[]][] = [
@@ -22,7 +22,7 @@ async function fixture(page: Page, longTitle = false, outcomes: boolean | "inter
     id: index + 1, number: index + 1, title: longTitle && index === 0 ? "A very long issue title that must remain on one compact line while the full title stays available in the card" : title, comments, body: "", state, created_at: old, updated_at: recent, closed_at: state === "closed" ? recent : null,
     html_url: `${repo.html_url}/issues/${index + 1}`, assignees: [],
     startedAt: state === "closed" ? new Date(now - 3600000 - closedMinutes(index) * 60000).toISOString() : undefined,
-    labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, "ui"].map(name => ({ name, color: "a2eeef" }))],
+    labels: [...(status ? [{ name: status, color: "fbca04" }] : []), ...[...labels, ...(longLabels ? ["a-very-long-workflow-label-that-must-not-wrap", "another-long-label-with-extra-context", "third-long-label-for-the-layout"] : ["ui"])].map(name => ({ name, color: "a2eeef" }))],
   }));
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
@@ -32,7 +32,7 @@ async function fixture(page: Page, longTitle = false, outcomes: boolean | "inter
       const closed = url.searchParams.get("state") === "closed";
       return route.fulfill({ json: issues.filter(issue => (issue.state === "closed") === closed || url.searchParams.get("state") === "all") });
     }
-    if (/\/issues\/(?:1|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - 10 * 60000).toISOString() }] });
+    if (/\/issues\/(?:1|5)\/events$/.test(url.pathname)) return route.fulfill({ json: [{ id: 1, event: "labeled", label: { name: "in progress" }, created_at: new Date(now - (longLabels ? 50 : 10) * 60000).toISOString() }] });
     if (url.pathname === "/graphql") return route.fulfill({ json: { data: { repository: { issue: { parent: null, subIssuesSummary: null } } } } });
     return route.fulfill({ json: [] });
   });
@@ -275,4 +275,46 @@ test("interrupted work keeps its actual duration without inflating future issue 
   const card = page.locator('.issue-card.progress').filter({ hasText: 'Progress one' });
   await expect(card.locator('.issue-points')).toHaveAttribute('title', /Uppskattad tid: ≈ 1 h.*från 3 användbara stängningar/);
   await expect(card.locator('.issue-time-remaining')).toContainText('≈ 50 min kvar');
+});
+
+for (const combined of [false, true]) test(`timeout keeps its own slot with long labels in ${combined ? 'combined' : 'split'} rows`, async ({ page }) => {
+  await page.setViewportSize({ width: 1800, height: 1000 });
+  const api = await fixture(page, false, false, true);
+  if (combined) await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+  const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: 'Backlog one', exact: true }) });
+  const snapshot = () => row.evaluate(element => {
+    const row = element.getBoundingClientRect();
+    return { height: row.height, slots: ['.row-slot-timeout', '.row-status', '.row-slot-priority', '.row-labels'].map(selector => {
+      const box = element.querySelector(selector)!.getBoundingClientRect(); return { x: box.x, y: box.y, width: box.width, height: box.height };
+    }) };
+  });
+  const empty = await snapshot();
+  api.move(); await page.keyboard.press('Control+r');
+  await expect(row.locator('.row-timeout')).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Nyligen flyttad. Markera som läst', exact: true })).toBeVisible();
+  await expect(row.getByRole('button', { name: '2 nya kommentarer. Markera som läst', exact: true })).toBeVisible();
+  const active = await snapshot();
+  expect(active.height).toBe(empty.height);
+  for (let index = 0; index < active.slots.length; index++) expect(active.slots[index]!.x).toBeCloseTo(empty.slots[index]!.x, 0);
+  for (const width of [1800, 1600, 1450, 1380, 1100, 800]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const geometry = await snapshot();
+    const timeout = (await row.locator('.row-timeout').boundingBox())!;
+    const status = (await row.locator('.row-status').boundingBox())!;
+    const moved = (await row.locator('.row-movement-marker').boundingBox())!;
+    expect(timeout.x + timeout.width).toBeLessThanOrEqual(status.x);
+    expect(moved.x + moved.width).toBeLessThanOrEqual(timeout.x);
+    expect(timeout.y + timeout.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
+    const labels = await row.locator('.row-labels .label').all();
+    for (const label of labels) expect((await label.boundingBox())!.y).toBeCloseTo(geometry.slots[3]!.y, 0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.setViewportSize({ width: 1800, height: 1000 });
+  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await page.getByLabel('Varna när pågående arbete överskrider estimatet', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Klart', exact: true }).click();
+  await expect(row.locator('.row-timeout')).toHaveCount(0);
+  const cleared = await snapshot();
+  expect(cleared.height).toBe(active.height);
+  for (let index = 0; index < active.slots.length; index++) expect(cleared.slots[index]!.x).toBeCloseTo(active.slots[index]!.x, 0);
 });

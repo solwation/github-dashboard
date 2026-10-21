@@ -1,10 +1,10 @@
 {
-  "baseCommit": "bec5161a70c0bf18eee10e72087278b727180c38",
+  "baseCommit": "2d8782b37b713597856d1ee48ba886743571d29b",
   "summary": {
-    "sv": "Extrema tidsavvikelser räknas bort från repositoryts rullande estimat, så misstänkta avbrott inte blåser upp nya prognoser.",
-    "en": "Extreme durations are excluded from rolling repository estimates so suspected interrupted runs do not inflate future forecasts."
+    "sv": "Timeout visas i en egen plats före status i datorns listvy, så långa labels inte bryter rad eller förskjuter metadata.",
+    "en": "Timeout has a dedicated slot before status in desktop lists, so long labels do not wrap it or shift metadata."
   },
   "issues": [
-    229
+    230
   ]
 }

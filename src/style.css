@@ -1880,6 +1880,8 @@ button.lane-sync:focus-visible::after {
 .row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
 .row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: #edf0f4; color: #5b6b75; }
 .row-meta .label i { width: 9px; height: 9px; }
+.row-meta > .row-labels { display: flex; align-items: center; gap: 5px; flex: 1 1 0; min-width: 0; overflow: hidden; }
+.row-labels .label { flex: 0 1 auto; }
 .row-status { background: #edf0f4; color: #5b6b75; }
 .row-status.progress { background: #fbf1dd; color: #81621f; }
 .row-status.closed { background: #e8f3ee; color: #2b6d5c; }
@@ -1899,6 +1901,7 @@ button.lane-sync:focus-visible::after {
 .row-slot { display: contents; }
 .row-status-group { display: inline-flex; align-items: center; gap: 5px; }
 .row-slot-comment { display: flex; min-height: 16.6px; align-items: center; flex: 0 0 5.4rem; width: 5.4rem; }
+.row-slot-timeout { display: flex; align-items: center; flex: 0 0 4.7rem; width: 4.7rem; min-height: 16.6px; }
 .row-slot-movement { display: flex; align-items: center; flex: 0 0 5.4rem; width: 5.4rem; }
 .row-comments .comment-count { justify-content: flex-start; }
 .row-comments .comment-count-value { min-width: 3ch; font-variant-numeric: tabular-nums; text-align: left; }
@@ -1907,11 +1910,12 @@ button.lane-sync:focus-visible::after {
   .row-slot { display: flex; align-items: center; flex: 0 0 auto; overflow: hidden; }
   .row-slot-comment { order: 1; width: 5.4rem; }
   .row-status-group { order: 2; }
+  .row-meta { flex-wrap: nowrap; }
   .row-slot-status { order: 3; width: 5.6rem; }
   .row-slot-priority { order: 4; width: 4.8rem; }
   .issue-row .row-time { justify-self: stretch; text-align: left; }
-  .row-meta > .label { order: 5; }
-  .row-meta > .row-marker:not(.row-comment-marker), .row-meta > .row-timeout { order: 6; }
+  .row-meta > .row-labels { order: 5; }
+  .row-meta > .row-marker:not(.row-comment-marker) { order: 6; }
 }
 .row-time { justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; text-align: right; white-space: nowrap; }
 .issue-row.unread-move { border-color: #2875ba; background: #f1f8ff; }
