@@ -35,6 +35,7 @@ import SidebarVersion from "./components/SidebarVersion.vue";
 import ReleaseNotes from "./components/ReleaseNotes.vue";
 import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
+import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
 import { setBoardVisible } from "./composables/useNow";
@@ -244,6 +245,10 @@ async function revealRepository(name: string, toggle = false) {
 const rules = ref<Record<string, Rules>>({});
 const editing = ref<string | null>(null);
 const isDemo = ref(false);
+const publicMode = ref(false);
+const publicRepoInput = ref("");
+const publicRepoBusy = ref(false);
+const publicRepoError = ref("");
 const isStatisticsHash = () => /^#statistics(?:-repo-\d+)?$/.test(window.location.hash);
 const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
 // Board time labels keep their own clocks and stop while Statistics is shown.
@@ -355,7 +360,7 @@ const combinedSyncing = computed(() => lanes.value.some(lane => syncingRepos.val
  * shows the spinner is ignored, and refresh() itself never starts a second parallel run.
  */
 function refreshFromStatus(name?: string) {
-  if (!loggedIn.value || isDemo.value || authBusy.value) return;
+  if ((!loggedIn.value && !publicMode.value) || isDemo.value || authBusy.value) return;
   if (name ? syncingRepos.value.has(name) : combinedSyncing.value) return;
   void refresh(false, false, true, false, name ? [name] : undefined);
 }
@@ -697,8 +702,9 @@ let repositoryRequestClient: GitHub | null = null;
 const timeoutCheck = ref(0);
 let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
 const loggedIn = computed(() => Boolean(user.value));
+const workspaceOpen = computed(() => loggedIn.value || isDemo.value || publicMode.value);
 const connectionLabel = computed(() =>
-  loggedIn.value ? t("GitHub anslutet") : isDemo.value ? t("Demoläge") : t("Ej ansluten"),
+  loggedIn.value ? t("GitHub anslutet") : publicMode.value ? t("Publik vy") : isDemo.value ? t("Demoläge") : t("Ej ansluten"),
 );
 const filteredRepos = computed(() =>
   repos.value.filter((r) =>
@@ -882,10 +888,12 @@ async function readSettings(login: string): Promise<LoadedSettings> {
 }
 /** Resolves once the encrypted write settles; failures never reject. */
 function save(): Promise<void> {
-  if (!user.value || settingsAccount !== user.value.login) return Promise.resolve();
+  const account = publicMode.value ? PUBLIC_SETTINGS_ACCOUNT : user.value?.login;
+  if (!account || settingsAccount !== account) return Promise.resolve();
   repositoryColors.value = workspaceRepositoryColors.value;
   try {
-    return saveSettings(user.value.login, {
+    return saveSettings(account, {
+        ...(publicMode.value ? { publicRepositories: repos.value } : {}),
         preferences: transferablePreferences.value,
         selected: selected.value,
         projectOrder: projectOrder.value,
@@ -955,6 +963,44 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
       /* Ignore invalid preferences. */
     }
 }
+/** Anonymous workspaces never create, replace or delete a credential. */
+async function openPublicWorkspace() {
+  if (authBusy.value) return;
+  authBusy.value = true;
+  const run = ++generation;
+  selectionRevision++; repositoryRequests.clear(); clearClosureFeedback();
+  const client = new GitHub();
+  try {
+    const settings = await readSettings(PUBLIC_SETTINGS_ACCOUNT);
+    const available: Repo[] = Array.isArray(settings.value?.publicRepositories)
+      ? settings.value!.publicRepositories.slice(0, 100).map(publicRepositoryRecord).filter((repo: Repo | null): repo is Repo => repo !== null) : [];
+    if (run !== generation) return;
+    api = client; sessionToken.value = ""; user.value = null;
+    isDemo.value = false; publicMode.value = true;
+    lanes.value = []; repos.value = available; selected.value = []; notificationRepos.value = [];
+    restorePreferences(available, settings);
+    rememberPublicWorkspace(true);
+    reconcileSelection();
+    error.value = ""; tokenPanel.value = false; tokenInput.value = "";
+    if (selected.value.length) await refresh(false, true);
+    else picker.value = true;
+  } catch (cause) { error.value = message(cause); }
+  finally { authBusy.value = false; }
+}
+async function addPublicRepository() {
+  const client = api, run = generation;
+  if (!publicMode.value || !client || publicRepoBusy.value) return;
+  publicRepoBusy.value = true; publicRepoError.value = "";
+  try {
+    const repo = await client.publicRepository(publicRepoInput.value);
+    if (client !== api || run !== generation || !publicMode.value) return;
+    if (!repos.value.some(entry => entry.id === repo.id)) repos.value = [...repos.value, repo];
+    if (!pendingSelected.value.includes(repo.full_name)) pendingSelected.value = [...pendingSelected.value, repo.full_name];
+    publicRepoInput.value = "";
+    await save();
+  } catch (cause) { if (run === generation) publicRepoError.value = message(cause); }
+  finally { if (run === generation) publicRepoBusy.value = false; }
+}
 /** Resolves true when the account connected live; failures are shown in `error` instead of thrown. */
 async function connect(token: string, imported?: HandoffSettings, cached?: ContentSnapshot | null): Promise<boolean> {
   if (authBusy.value) return false;
@@ -1009,6 +1055,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     lastFullSynced.clear();
     sessionToken.value = token;
     api = next;
+    publicMode.value = false; rememberPublicWorkspace(false);
     user.value = identity;
     repos.value = available;
     const sameCachedIdentity = cached?.user.login === identity.login;
@@ -1215,9 +1262,10 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  rememberPublicWorkspace(false); publicRepoInput.value = ""; publicRepoError.value = ""; publicRepoBusy.value = false;
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
-  settingsAccount = null; // Encrypted settings stay saved for this account's next sign-in.
+  settingsAccount = null; publicMode.value = false; // Encrypted settings stay saved for this account's next sign-in.
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   showingCache.value = false;
@@ -1424,7 +1472,7 @@ watch([sessionToken, () => user.value?.login, isDemo], restartStatisticsBackgrou
 // Statistics the view collected reach the board's work starts as soon as the board is back (#148).
 watch(currentView, (view, previous) => { if (previous === "statistics" && view !== "statistics") statisticsBackground?.wake(); });
 function handleRefreshShortcut(event: KeyboardEvent) {
-  if (!loggedIn.value || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
+  if ((!loggedIn.value && !publicMode.value) || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
   // Prevent document reload even while a fetch is already running.
   event.preventDefault();
   if (!event.repeat && !authBusy.value) void refresh(false, false, true);
@@ -1508,10 +1556,13 @@ onMounted(async () => {
       if (await connect(oauthToken)) return;
       linkError = error.value;
     }
-    const remembered = await loadToken();
-    if (remembered) {
-      savedSession.value = true;
-      await connect(remembered, undefined, await readSnapshot(remembered));
+    if (publicWorkspaceRemembered()) await openPublicWorkspace();
+    else {
+      const remembered = await loadToken();
+      if (remembered) {
+        savedSession.value = true;
+        await connect(remembered, undefined, await readSnapshot(remembered));
+      }
     }
   } catch (e) {
     if (e instanceof VaultError) savedSession.value = true;
@@ -1534,11 +1585,11 @@ onMounted(async () => {
     ><span class="nav-caption">WORKSPACE</span>
     <nav class="workspace-navigation">
     <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')" aria-describedby="overview-unread-count"
-      :aria-current="(loggedIn || isDemo) && currentView === 'overview' ? 'page' : undefined">
+      :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined">
       <LayoutDashboard :size="18" /> {{ t("Översikt") }}
       <span id="overview-unread-count" class="nav-count" :title="t('{count} olästa händelser', { count: unreadOverviewCount })" :aria-label="t('{count} olästa händelser', { count: unreadOverviewCount })">{{ unreadOverviewCount }}</span>
     </a>
-    <a v-if="loggedIn || isDemo" class="nav-item statistics-nav" :class="{ active: currentView === 'statistics' }" href="#statistics"
+    <a v-if="workspaceOpen" class="nav-item statistics-nav" :class="{ active: currentView === 'statistics' }" href="#statistics"
       :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined">
       <Activity :size="18" /><span>{{ t("Statistik") }}</span>
     </a>
@@ -1547,8 +1598,8 @@ onMounted(async () => {
       :statistics="currentView === 'statistics'"
       :repos="sidebarRepos"
       :repository-colors="workspaceRepositoryColors"
-      :can-select="loggedIn"
-      :restoring="restoring && !loggedIn && !isDemo"
+      :can-select="loggedIn || publicMode"
+      :restoring="restoring && !workspaceOpen"
       @select="picker = true"
       @move="moveRepository"
       @reorder="reorderProject"
@@ -1569,10 +1620,10 @@ onMounted(async () => {
   <div class="workspace">
     <header ref="topbar" class="topbar">
       <div class="breadcrumb">
-        Workspace <span>/</span><strong>{{ currentView === "statistics" && (loggedIn || isDemo) ? t("Statistik") : t("Översikt") }}</strong>
+        Workspace <span>/</span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <div class="topbar-right">
-        <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="loggedIn || isDemo" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -1586,7 +1637,7 @@ onMounted(async () => {
         </button>
         <span class="connection" :class="{ connected: loggedIn }" :title="connectionLabel"
           ><i :class="{ connected: loggedIn }" aria-hidden="true" /><span class="connection-label">{{ connectionLabel }}</span></span
-        ><template v-if="user || savedSession"
+        ><template v-if="!publicMode && (user || savedSession)"
           ><img v-if="user" :src="user.avatar_url" alt="" class="avatar" :title="`${user.login} · ${connectionLabel}`" /><span class="account-context"><span class="username" v-if="user">{{ user.login }}</span><span class="account-timezone">{{ accountTimeZone }}</span></span
           ><button
             class="icon-button"
@@ -1596,12 +1647,13 @@ onMounted(async () => {
             :title="t('Logga ut')"
           >
             <LogOut :size="17" /></button></template
+        ><template v-else-if="publicMode"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">{{ t("Lämna publik vy") }}</button></template
         ><template v-else-if="isDemo"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">
           {{ t("Till inloggning") }}
         </button></template>
       </div>
     </header>
-    <main :id="currentView === 'statistics' && (loggedIn || isDemo) ? 'statistics' : 'overview'" tabindex="-1">
+    <main :id="currentView === 'statistics' && workspaceOpen ? 'statistics' : 'overview'" tabindex="-1">
       <div v-if="cacheWarning" class="notice" role="status">{{ t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") }} {{ t(cacheWarning) }}</div>
       <div
         v-if="notificationNotice && !editing"
@@ -1627,8 +1679,8 @@ onMounted(async () => {
           <X :size="16" />
         </button>
       </div>
-      <div v-if="restoring && !loggedIn && !isDemo" class="startup-placeholder" aria-hidden="true"><span class="skeleton short" /><span class="skeleton" /><span class="skeleton" /></div>
-      <template v-else-if="!loggedIn && !isDemo"
+      <div v-if="restoring && !workspaceOpen" class="startup-placeholder" aria-hidden="true"><span class="skeleton short" /><span class="skeleton" /><span class="skeleton" /></div>
+      <template v-else-if="!workspaceOpen"
         ><div class="welcome">
           <span class="eyebrow"
             ><span class="repo-dot" />
@@ -1655,7 +1707,7 @@ onMounted(async () => {
               <ArrowRight :size="17" /></button
             ><button class="button" :disabled="authBusy || restoring" @click="scannerOpen = true">
               <QrCode :size="19" />{{ t("Logga in med QR-kod") }}
-            </button><button class="button" @click="showDemo">
+            </button><button class="button" :disabled="authBusy || restoring" @click="openPublicWorkspace">{{ t("Följ publika repositories") }}</button><button class="button" @click="showDemo">
               {{ t("Utforska en demo") }} <ArrowRight :size="16" />
             </button>
           </div>
@@ -1755,6 +1807,7 @@ onMounted(async () => {
             </p>
           </div>
         </section>
+        <p v-if="publicMode" class="notice">{{ t("Publik vy · Uppdateras manuellt") }}</p>
         <div v-if="isDemo" class="notice demo-notice">
           <span>{{
             t(
@@ -1766,7 +1819,7 @@ onMounted(async () => {
           </button>
         </div>
         <OverviewSummary :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
-          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn"
+          :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn || publicMode"
           @choose-repositories="picker = true" />
         <!-- data-busy (#151): non-visual "sync finished" signal for tests; per-repository and combined headers show status. -->
         <div class="board-toolbar" :data-busy="busy ? 'true' : 'false'">
@@ -2127,6 +2180,12 @@ onMounted(async () => {
       <p>
         {{ t("En swimlane per projekt. Ditt val sparas på den här enheten.") }}
       </p>
+      <form v-if="publicMode" class="token-form" @submit.prevent="addPublicRepository">
+        <label for="public-repository">{{ t("Publikt repository") }}</label>
+        <input id="public-repository" v-model="publicRepoInput" :placeholder="t('ägare/repo eller https://github.com/ägare/repo')" required autocomplete="off" spellcheck="false" :disabled="publicRepoBusy" />
+        <button class="button" :disabled="publicRepoBusy || !publicRepoInput.trim()">{{ publicRepoBusy ? t("Hämtar repository…") : t("Lägg till repository") }}</button>
+        <p v-if="publicRepoError" class="error" role="alert">{{ publicRepoError }}</p>
+      </form>
       <label class="search"
         ><Search :size="17" /><input
           v-model="repoQuery"

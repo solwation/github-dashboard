@@ -1,10 +1,10 @@
 {
-  "baseCommit": "2d8782b37b713597856d1ee48ba886743571d29b",
+  "baseCommit": "ceeb4a6def9e691082cc8225b642795ecf1ea5e6",
   "summary": {
-    "sv": "Timeout visas i en egen plats före status i datorns listvy, så långa labels inte bryter rad eller förskjuter metadata.",
-    "en": "Timeout has a dedicated slot before status in desktop lists, so long labels do not wrap it or shift metadata."
+    "sv": "Följ publika GitHub-repositories utan nyckel. Repo-val och inställningar sparas separat, med kort, listor och estimat från tillgänglig historik.",
+    "en": "Follow public GitHub repositories without a key. Repository choices and settings save separately, with cards, lists and estimates from available history."
   },
   "issues": [
-    230
+    231
   ]
 }

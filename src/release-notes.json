@@ -77,6 +77,15 @@
         "issues": [
           230
         ]
+      },
+      {
+        "text": {
+          "sv": "Följ publika repositories utan GitHub-nyckel, med separat sparad arbetsyta, manuella uppdateringar och tidsestimat från tillgänglig historik.",
+          "en": "Follow public repositories without a GitHub key, with a separately saved workspace, manual refresh and estimates from available history."
+        },
+        "issues": [
+          231
+        ]
       }
     ]
   },

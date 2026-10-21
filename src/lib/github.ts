@@ -1,3 +1,4 @@
+import { publicRepositoryName, publicRepositoryRecord } from "./public-workspace";
 import { permissionDefinitions, permissionEndpoint, permissionForPath, permissionResult, type PermissionObservation, type PermissionReport } from "./permissions";
 import { IssueRelationsCache, issueRelationsQuery, parseIssueRelations } from "./issue-relations";
 import { t, locale } from "./i18n";
@@ -9,6 +10,8 @@ import {
 } from "./commits";
 import {
   carriedWorkStart,
+  deriveWorkStarts,
+  type RepositoryIssueEvent,
   column,
   progressStart,
   type Event,
@@ -104,9 +107,18 @@ export class GitHub {
     });
     return parseIssueRelations(response.data);
   });
-  issueRelations(repository: string, issue: Issue) { return this.relations.get(repository, issue); }
+  issueRelations(repository: string, issue: Issue) { return this.token ? this.relations.get(repository, issue) : Promise.resolve(null); }
   invalidateIssueRelations(repositories?: readonly string[]) { this.relations.clear(repositories); }
-  constructor(private token: string) {}
+  constructor(private token: string = "") {}
+  get authenticated() { return Boolean(this.token); }
+  async publicRepository(input: string): Promise<Repo> {
+    const name = publicRepositoryName(input);
+    if (!name) throw new Error(t("Ange ägare/repo eller en GitHub-adress till repot."));
+    const { data } = await this.request<Repo>(`/repos/${name}`);
+    const repo = publicRepositoryRecord(data);
+    if (!repo) throw new Error(t("Endast publika repositories kan läggas till här."));
+    return repo;
+  }
   exportResponses() {
     return [...this.responses.entries()].slice(-100);
   }
@@ -124,7 +136,7 @@ export class GitHub {
     }
   }
   closingCommit(repoFullName: string, issue: Issue) {
-    return this.commits.get(repoFullName, issue);
+    return this.token ? this.commits.get(repoFullName, issue) : Promise.resolve(null);
   }
   async request<T>(
     path: string,
@@ -143,7 +155,7 @@ export class GitHub {
       headers: {
         Accept: "application/vnd.github+json",
         ...(cached ? { "If-None-Match": cached.etag } : {}),
-        Authorization: `Bearer ${this.token}`,
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
         "X-GitHub-Api-Version": "2022-11-28",
         ...(init.body ? { "Content-Type": "application/json" } : {}),
       },
@@ -180,7 +192,7 @@ export class GitHub {
       this.observePermission(url.pathname, false, permissionDenied);
       throw new GitHubApiError(
         response.status === 401
-          ? t("Sessionen har gått ut. Logga in igen.")
+          ? this.token ? t("Sessionen har gått ut. Logga in igen.") : t("Åtkomst nekad.")
           : response.status === 403 || response.status === 429
             ? rateLimited
               ? t("GitHubs API-gräns är nådd.") +
@@ -189,7 +201,7 @@ export class GitHub {
                       time: new Date(retryAt).toLocaleTimeString(locale.value),
                     })
                   : t(" Försök igen senare."))
-              : t("Åtkomst nekad.") + t(" Kontrollera tokenens behörigheter.")
+              : t("Åtkomst nekad.") + (this.token ? t(" Kontrollera tokenens behörigheter.") : "")
             : t(
                 "GitHub svarade {status}. Kontrollera att du har åtkomst till repot.",
                 { status: response.status },
@@ -427,6 +439,22 @@ export class GitHub {
     if (known) for (const issue of issues) {
       const workStartedAt = carriedWorkStart(issue, known.get(issue.id), rules);
       if (workStartedAt) issue.workStartedAt = workStartedAt;
+    }
+    if (!this.token) {
+      // One shared, bounded history read replaces per-active-issue fan-out in public mode.
+      // Missing history stays unknown; closure time is never substituted for a work start.
+      const events: RepositoryIssueEvent[] = [];
+      let next: string | null = `${root}/issues/events?per_page=100`;
+      try {
+        for (let page = 0; next && page < 2 && !this.retryAfterMs(); page++) {
+          const response: { data: RepositoryIssueEvent[]; next: string | null } = await this.request(next);
+          events.push(...response.data); next = response.next;
+        }
+      } catch { /* Optional timeline data can be absent while the public board remains usable. */ }
+      const enriched = deriveWorkStarts({ repo, issues, labels }, events, rules);
+      return { ...enriched, issues: enriched.issues.map(issue => column(issue, rules) === "progress"
+        ? { ...issue, startedAt: progressStart(events.filter(event => event.issue?.id === issue.id), rules) ?? (known?.get(issue.id)?.updated_at === issue.updated_at ? known?.get(issue.id)?.startedAt : null) ?? null }
+        : issue) };
     }
     const active = issues.filter((i) => column(i, rules) === "progress");
     // Limit simultaneous timeline requests; each timeline is fully paginated.

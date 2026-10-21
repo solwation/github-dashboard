@@ -65,7 +65,7 @@ test("selection updates every view immediately, keeps retained layout, publishes
   await expect(page.locator("#repo-2 .swimlane, #repo-2 .column-empty")).toHaveCount(0);
   await expect(page.locator('.sidebar-repository-row[data-repository="sample/beta"] .repository-counts')).toHaveText("Hämtar…");
   await page.getByRole("link", { name: "Statistik", exact: true }).click();
-  await expect(page.locator(".statistics-repository-heading a")).toHaveText(["sample/alpha", "sample/beta"]);
+  await expect(page.locator(".statistics-repository-heading a")).toHaveText(["alpha", "beta"]);
   releaseBeta();
   await expect(page.locator("#repo-2 .issue-card")).toHaveCount(1);
   await expect(page.locator(".stat-delta")).toHaveCount(0);
