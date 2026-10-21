@@ -41,6 +41,15 @@
         "issues": [
           227
         ]
+      },
+      {
+        "text": {
+          "sv": "Statistik använder progressrutan för laddningsinformation utan att upprepa samma laddningstext under varje repository.",
+          "en": "Statistics uses the progress panel for loading feedback without repeating a loading sentence under every repository."
+        },
+        "issues": [
+          226
+        ]
       }
     ]
   },

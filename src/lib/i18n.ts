@@ -66,7 +66,6 @@ export const english: Record<string, string> = {
   "Kortare än uppskattat": "Shorter than estimated",
   "Enligt uppskattning": "As estimated",
   "Jämförelse med andra nyligen stängda ärenden": "Compared with other recently closed issues",
-  "Hämtar statistik. Värden och diagram uppdateras löpande.": "Fetching statistics. Values and charts update gradually.",
   "Vi hämtar underlaget från GitHub. Tillgängliga värden visas löpande under hämtningen.": "We are fetching data from GitHub. Available values appear gradually while loading.",
   "Förfluten andel av uppskattad tid": "Elapsed share of estimated time",
   "Uppskattad tid: {time}": "Estimated time: {time}",

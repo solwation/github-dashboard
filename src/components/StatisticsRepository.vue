@@ -195,7 +195,6 @@ function clearFilters() {
       <RefreshCw class="statistics-loading-spinner" :size="26" aria-hidden="true" />
       <div><strong>{{ t("Hämtar och sammanställer statistik") }}</strong><p>{{ t("Vänta medan underlaget för {name} hämtas.", { name: repository.full_name }) }}</p></div>
     </div>
-    <p v-else-if="loading" class="statistics-refreshing" role="status" aria-live="polite"><RefreshCw class="statistics-loading-spinner" :size="15" aria-hidden="true" />{{ t("Hämtar statistik. Värden och diagram uppdateras löpande.") }}</p>
     <div class="statistics-repository-content" :aria-busy="loading">
     <p v-if="temporary && !loading" role="status" class="notice">{{ anyData ? t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") : t("Statistiken kunde inte hämtas just nu. Försök igen senare.") }}</p>
     <template v-if="anyData">
@@ -293,7 +292,6 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
 .statistics-repository-loading { display: flex; align-items: center; gap: 16px; min-height: 150px; padding: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .statistics-repository-loading strong { display: block; font-size: 15px; }
 .statistics-repository-loading p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.statistics-refreshing { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin: 0 0 15px; }
 .statistics-loading-spinner { flex-shrink: 0; color: var(--green); animation: statistics-spin 1s linear infinite; }
 @keyframes statistics-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }

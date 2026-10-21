@@ -40,7 +40,8 @@ test('statistics displays batched real pages and diffs, preserves refresh data a
   await expect(page.locator('[data-metric="created"] strong')).toHaveText('1');
   await expect(page.locator('[data-metric="commits"] strong')).toHaveText('3');
   await expect(page.locator('[data-metric="prsOpened"], [data-metric="additions"]')).toHaveCount(0);
-  await expect(page.locator('.statistics-refreshing')).toContainText('Värden och diagram uppdateras löpande.');
+  await expect(page.getByText('Hämtar statistik. Värden och diagram uppdateras löpande.', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.statistics-load-progress')).toBeVisible();
   await expect(refresh).toBeDisabled();
   await expect(page.locator('.statistics-chart')).toBeVisible();
   await expect(page.locator('.chart-coverage')).toHaveAttribute('aria-label', 'Tidsspannet är ännu inte bekräftat hämtat');
