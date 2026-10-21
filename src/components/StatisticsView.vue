@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { normalizeStatisticsPreference, statisticsRepositoryCollapsed } from "../lib/statistics-preferences";
+import { provideRepositoryDisplayNames } from "../composables/useRepositoryDisplayName";
 import { StatisticsPreviewBatch } from "../lib/statistics-progress";
 import type { StatisticsLoadStatus } from "../lib/statistics-load-status";
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
@@ -19,6 +20,7 @@ import { formatBrowserDateTime, parseBrowserDateTime, isAmbiguousBrowserTime } f
 import StatisticsRepository from "./StatisticsRepository.vue";
 const { t, locale } = useLanguage();
 const props = defineProps<{ navigation?: { name: string; toggle: boolean; sequence: number }; client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
+provideRepositoryDisplayNames(() => props.repositories.map(repo => repo.full_name), () => true);
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsCalendarWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });

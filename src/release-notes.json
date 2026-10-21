@@ -50,6 +50,15 @@
         "issues": [
           226
         ]
+      },
+      {
+        "text": {
+          "sv": "Statistikens repo-filter har enhetliga bredder och sektionsrubriker utelämnar gemensam ägare för att spara plats.",
+          "en": "Statistics repository filters use consistent widths, and section headings omit the shared owner to save space."
+        },
+        "issues": [
+          228
+        ]
       }
     ]
   },

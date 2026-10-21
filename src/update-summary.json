@@ -1,14 +1,15 @@
 {
   "baseCommit": "8686c538c2d78fd86520342f6ecd5d455e72c630",
   "summary": {
-    "sv": "Kompakta mobilrader, faktisk arbetstid för stängda ärenden, olästa händelser vid Översikt och bekräftat tidsspann i statistikgrafer.",
-    "en": "Compact phone rows, actual closed-issue duration, unread events beside Overview and confirmed loaded spans in Statistics charts."
+    "sv": "Kompakta mobilrader, arbetstid för stängda ärenden, olästa händelser vid Översikt och tydligare statistik med laddningsspann och linjerade filter.",
+    "en": "Compact phone rows, closed-issue duration, unread events beside Overview and clearer Statistics with loaded spans and aligned filters."
   },
   "issues": [
     223,
     224,
     225,
     227,
-    226
+    226,
+    228
   ]
 }
