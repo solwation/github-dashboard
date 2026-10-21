@@ -115,6 +115,15 @@
         "issues": [
           238
         ]
+      },
+      {
+        "text": {
+          "sv": "Overviews sammanfattningskort låter statistikfält byta rad utan att bryta korta ord på smala skärmar.",
+          "en": "Overview summary cards wrap statistic fields without breaking short words on narrow screens."
+        },
+        "issues": [
+          237
+        ]
       }
     ]
   },

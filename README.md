@@ -92,3 +92,5 @@ The live check reads `solwation/lunden-3d-apartment`, `solwation/kvarteret-lunde
 Card and list UI changes follow the [four-scenario verification requirement in AI.md](AI.md): wide/narrow desktop and portrait/landscape phone, with mobile/touch contexts, geometry checks and visual screenshot review.
 
 Issue descriptions and comments hide HTML comments as GitHub does, while code examples remain visible and source HTML stays escaped.
+
+Overview summary footer values wrap as whole fields when space is limited, keeping short words readable on narrow screens.

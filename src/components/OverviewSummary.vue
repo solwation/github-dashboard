@@ -146,8 +146,9 @@ const announcement = computed(() => [
 .stat strong { flex-wrap: wrap; row-gap: 6px; margin-bottom: .55rem; }
 .stat strong small { white-space: normal; }
 .stat-cells {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .9rem;
   margin-top: auto;
   padding-top: .45rem;
   border-top: 1px solid var(--line);
@@ -156,7 +157,7 @@ const announcement = computed(() => [
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.stat-cell { min-width: 0; overflow-wrap: anywhere; position: relative; }
+.stat-cell { flex: 1 1 max-content; min-width: 0; max-width: 100%; overflow-wrap: normal; position: relative; }
 /* Floats over the cell (absolute) so it never shifts layout (#188). */
 .cell-delta { position: absolute; top: 0; right: .2rem; font-size: .7rem; font-weight: 700; pointer-events: none; animation: cell-delta-float 2s ease-out forwards; }
 .cell-delta.up { color: #19643c; }
@@ -164,12 +165,6 @@ const announcement = computed(() => [
 :root[data-theme="dark"] .cell-delta.up { color: #8fd5ae; }
 :root[data-theme="dark"] .cell-delta.down { color: #f0a58f; }
 @keyframes cell-delta-float { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-.9rem); } }
-.stat-cell:first-child { padding-right: .45rem; border-right: 1px solid var(--line); }
-.stat-cell:last-child { padding-left: .45rem; }
-@media (max-width: 650px) {
-  .stat-cell:first-child,
-  .stat-cell:last-child { padding-inline: .25rem; }
-}
 .stat-positive { background-color: #eaf6ef; border-color: #65a781; }
 .stat-negative { background-color: #fff0ec; border-color: #c8826c; }
 .stat-delta { font-size: .75rem; font-weight: 600; color: #53636d; }

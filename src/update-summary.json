@@ -1,14 +1,15 @@
 {
   "baseCommit": "6e6996981febed332fde9ce08b7da93db529c15c",
   "summary": {
-    "sv": "Publik cache sparar API-anrop. Listor håller liggande telefoner kompakta och tidsuppföljning i egen kolumn; dolda kommentarer visas inte.",
-    "en": "Public cache saves API calls. Lists stay compact on landscape phones and show actual duration in its own column; hidden comments stay hidden."
+    "sv": "Publik cache sparar API-anrop. Kompakta mobilrader visar faktisk tid separat; dolda kommentarer döljs och sammanfattningskort radbryts bättre.",
+    "en": "Public cache saves API calls. Compact phone rows show actual time separately; hidden comments stay hidden and summary cards wrap better."
   },
   "issues": [
     232,
     234,
     235,
     238,
-    236
+    236,
+    237
   ]
 }
