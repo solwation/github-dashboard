@@ -1,10 +1,10 @@
 {
-  "baseCommit": "e4271b60b1749f2375a747248972540cd1e2fa04",
+  "baseCommit": "637ef8fc042d5bb544447d5f8ad235f314a67e9d",
   "summary": {
-    "sv": "Underärendenas antal, progress och statuslista samlas längst ner i expanderade detaljer.",
-    "en": "Sub-issue counts, progress and status lists are grouped at the bottom of expanded details."
+    "sv": "Listrader samlar Backlog-estimat, pågående prognoser och faktisk arbetstid i samma högerkolumn, även på telefon. Ålder och förfluten tid visas separat.",
+    "en": "List rows share one rightmost column for Backlog estimates, in-progress forecasts and actual duration, including phones. Age and elapsed time stay separate."
   },
   "issues": [
-    240
+    241
   ]
 }

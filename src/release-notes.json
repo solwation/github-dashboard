@@ -18,12 +18,13 @@
       },
       {
         "text": {
-          "sv": "Stängda ärenden visar faktisk arbetstid och jämförelse mot estimat; listrader håller tidsuppföljningen i en egen högerkolumn.",
-          "en": "Closed issues show actual work duration against estimates; list rows keep this follow-up in a dedicated rightmost column."
+          "sv": "Listans högerkolumn samlar kursiva Backlog-estimat, pågående prognoser och stängda ärendens faktiska arbetstid; ålder och förfluten tid hålls separat.",
+          "en": "The list’s rightmost column groups italic Backlog estimates, in-progress forecasts and closed issues’ actual duration, separate from age and elapsed time."
         },
         "issues": [
           224,
-          235
+          235,
+          241
         ]
       },
       {

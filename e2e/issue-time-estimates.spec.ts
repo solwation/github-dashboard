@@ -81,7 +81,7 @@ test("individual timing follows repository history in cards, rows, combined view
     await expect(badge(page, ".issue-row", 5)).toHaveAttribute("title", /Uppskattad tid kvar: ≈ 15 min/);
     const row = page.locator(".issue-row").filter({ hasText: "Timing 5" });
     const spent = await row.locator(".row-time > .timer").boundingBox();
-    const remaining = await row.locator(".row-time > .issue-time-remaining").boundingBox();
+    const remaining = await row.locator(".row-outcome > .issue-time-remaining").boundingBox();
     expect(remaining!.x).toBeGreaterThan(spent!.x + spent!.width);
     expect(Math.abs(remaining!.y - spent!.y)).toBeLessThan(5);
     await expect(row.locator(".issue-time-remaining-label")).toHaveText("≈ 15 min kvar");
@@ -100,7 +100,7 @@ test("individual timing follows repository history in cards, rows, combined view
     expect(await row.locator(".row-title").evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(100);
     expect(await row.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     const spent = await row.locator(".row-time > .timer").boundingBox();
-    const left = await row.locator(".row-time > .issue-time-remaining").boundingBox();
+    const left = await row.locator(".row-outcome > .issue-time-remaining").boundingBox();
     expect(left!.x).toBeGreaterThan(spent!.x + spent!.width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }

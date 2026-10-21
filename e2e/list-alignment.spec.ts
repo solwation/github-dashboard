@@ -353,8 +353,35 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
         await expect(row.locator('.issue-points')).toBeVisible();
         await expect(row.locator('.row-time')).toBeVisible();
         await expect(row.locator('.row-meta')).toHaveCount(0);
+        const overlapping = await row.evaluate(element => {
+          const boxes = [...element.querySelectorAll('.row-number,.row-title,.issue-points,.row-mobile-priority,.row-mobile-summary > .row-repository,.row-movement-marker,.row-comment-marker,.row-time,.row-outcome > *')]
+            .map(item => ({ name: item.className, box: item.getBoundingClientRect() })).filter(item => item.box.width && item.box.height);
+          return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left) > 1 && Math.min(a.box.bottom, b.box.bottom) - Math.max(a.box.top, b.box.top) > 1).map(b => `${a.name}/${b.name}`));
+        });
+        expect(overlapping).toEqual([]);
       }
     } else await expect(unread.locator('.row-meta')).toBeVisible();
+    const backlog = page.locator('.issue-row.backlog').first();
+    await expect(backlog.locator('.row-outcome .issue-time-estimate')).toContainText(/^≈ /);
+    await expect(backlog.locator('.row-outcome .issue-time-estimate')).toHaveAttribute('aria-label', /^Uppskattad tid: ≈ [^≈]+$/);
+    await expect(backlog.locator('.issue-time-estimate')).toHaveAttribute('title', /Baserat på median tid per poäng/);
+    expect(await backlog.locator('.issue-time-estimate').evaluate(element => getComputedStyle(element).fontStyle)).toBe('italic');
+    await expect(unread.locator('.row-outcome .issue-time-remaining')).toHaveText('över uppskattning');
+    const unknown = page.locator('.issue-row.progress').filter({ has: page.getByRole('button', { name: 'Progress many', exact: true }) });
+    await expect(unknown.locator('.row-time')).toContainText('Starttid okänd');
+    await expect(unknown.locator('.row-outcome .issue-time-remaining')).toHaveCount(0);
+    for (const row of await page.locator('.issue-row').all()) {
+      const geometry = await row.evaluate(element => {
+        const time = element.querySelector('.row-time')!.getBoundingClientRect(), forecast = element.querySelector('.row-outcome')!.getBoundingClientRect();
+        return { timeRight: time.right, forecastX: forecast.x, forecastRight: forecast.right, rowRight: element.getBoundingClientRect().right,
+          clipped: [...element.querySelectorAll('.row-outcome > *')].some(item => item.scrollWidth > item.clientWidth + 1),
+          forecastClashes: [...element.querySelectorAll('.row-outcome > *')].some(item => item.getBoundingClientRect().left < time.right - 1 || item.getBoundingClientRect().right > element.getBoundingClientRect().right + 1) };
+      });
+      expect(geometry.timeRight).toBeLessThanOrEqual(geometry.forecastX);
+      expect(geometry.forecastRight).toBeLessThanOrEqual(geometry.rowRight);
+      expect(geometry.clipped).toBe(false);
+      expect(geometry.forecastClashes).toBe(false);
+    }
     const closed = page.locator('.issue-row.closed');
     const rightEdges: number[] = [];
     for (const row of await closed.all()) {
@@ -406,4 +433,16 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     if (scenario.name === 'landscape-phone') await page.locator('.issue-card.closed').first().scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`${scenario.name}-${combined ? 'combined' : 'split'}-cards.png`), fullPage: scenario.name !== 'landscape-phone' });
   });
+});
+
+
+test('shared time column stays empty when repository history is insufficient', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fixture(page);
+  await page.getByRole('textbox', { name: `Filtrera issues i ${repo.full_name}`, exact: true }).fill('Backlog');
+  const rows = page.locator('.issue-row');
+  await expect(rows).toHaveCount(4);
+  await expect(page.locator('.issue-time-estimate,.issue-time-remaining')).toHaveCount(0);
+  await expect(rows.first().locator('.row-time')).toContainText('Skapad');
+  expect((await rows.first().boundingBox())!.height).toBeLessThanOrEqual(60);
 });

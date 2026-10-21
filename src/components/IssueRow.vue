@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, ArrowUpRight, ArrowRightLeft, Plus, Bug, ChevronDow
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
+import IssueTimeEstimate from "./IssueTimeEstimate.vue";
 import IssueImplementationTime from "./IssueImplementationTime.vue";
 import { useLanguage } from "../lib/i18n";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
@@ -128,6 +129,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     :class="[col, { expanded, 'has-repository': showRepository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
   >
     <span v-if="showRepository && !isPhone" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
+    <span class="row-heading">
     <span class="row-id"
       ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
         ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"
@@ -142,7 +144,13 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       :title="t('Öppna #{number} på GitHub', { number: issue.number })"
       @click="emit('read')" @auxclick="emit('read')"
       >#{{ issue.number }}<ArrowUpRight :size="11" aria-hidden="true"
-    /></a></span>
+    /></a>
+      <span v-if="isPhone && col !== 'closed'" class="row-mobile-priority" :class="['high', 'medium', 'low'][rank]" role="img"
+        :aria-label="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]">
+        <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
+      </span>
+      <IssuePoints v-if="isPhone" :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
+    </span>
     <button
       ref="toggle"
       type="button"
@@ -153,13 +161,9 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       @click="setExpanded(!expanded)"
       ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
+    </span>
     <span v-if="isPhone" class="row-mobile-summary">
       <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
-      <span v-if="col !== 'closed'" class="row-mobile-priority" :class="['high', 'medium', 'low'][rank]" role="img"
-        :aria-label="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]">
-        <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
-      </span>
-      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <button v-if="recentMove" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })">
@@ -215,14 +219,17 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span v-else-if="col === 'backlog'" class="backlog-age">{{ t("Okänd ålder") }}</span
       ><span v-else-if="col === 'progress'" class="timer"
         :title="issue.startedAt ? t('Arbetslabel satt ') + new Date(issue.startedAt).toLocaleString(locale) : t('Ingen säker starttid kunde hämtas')"
-        ><Clock3 :size="12" aria-hidden="true" />{{ issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd") }}</span
+        ><Clock3 :size="12" aria-hidden="true" /><span class="row-elapsed-label">{{ issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd") }}</span></span
       ><time v-else-if="issue.closed_at" class="closed-date" :datetime="issue.closed_at"
         :title="new Date(issue.closed_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
       >
-      <IssueTimeRemaining v-if="col === 'progress' && !isPhone" :issue="issue" :repository="repository" :active="visible" />
     </span>
-    <span v-if="col === 'closed'" class="row-outcome"><IssueImplementationTime :issue="issue" :repository="repository" /></span>
+    <span class="row-outcome">
+      <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
+      <IssueTimeRemaining v-else-if="col === 'progress'" :issue="issue" :repository="repository" :active="visible" />
+      <IssueTimeEstimate v-else :issue="issue" :repository="repository" :active="visible" />
+    </span>
     <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
       <slot :in-popup="false" />
       <button type="button" class="row-close" @click="setExpanded(false, true)"><X :size="13" aria-hidden="true" />{{ t("Stäng") }}</button>
@@ -248,58 +255,54 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 </template>
 
 <style scoped>
+.row-heading { display: contents; }
+.row-time { flex-wrap: nowrap; overflow: hidden; }
+.row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-elapsed-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .row-comments { display: none; min-width: 0; }
 .row-mobile-summary { display: none; }
 .row-outcome { display: flex; align-items: center; justify-content: flex-end; min-width: 0; grid-column: -2 / -1; }
 @media (min-width: 951px) {
-  .issue-row.closed { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 7rem 6.25rem; }
-  .issue-row.closed.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 7rem 6.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
 }
 /* Keep title and both time values readable; metadata gets its own line until all columns fit. */
 @media (min-width: 951px) {
   @container issue-list (max-width: 849px) {
-    .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 14rem; }
-    .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 14rem; }
-    .issue-row.closed { grid-template-columns: 4.6rem minmax(0, 1fr) 7rem 6.25rem; }
-    .issue-row.closed.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 7rem 6.25rem; }
+    .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 6rem 7.25rem; }
+    .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 6rem 7.25rem; }
     .row-meta { grid-column: 1 / -1; grid-row: 2; }
   }
 }
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 5.4rem 14rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 14rem; }
-  .issue-row.closed { grid-template-columns: 4.6rem minmax(0, 1fr) 5.4rem 7rem 6.25rem; }
-  .issue-row.closed.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 7rem 6.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 5.4rem 6rem 7.25rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 6rem 7.25rem; }
   .row-meta { grid-column: 1 / -1; grid-row: 2; }
   .row-comments { display: block; }
 }
 @container issue-list (min-width: 1100px) {
-  .issue-row:not(.has-repository) { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 14rem; }
-  .issue-row.closed:not(.has-repository) { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 7rem 6.25rem; }
+  .issue-row:not(.has-repository) { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
   .issue-row:not(.has-repository) .row-meta { grid-column: auto; grid-row: auto; }
 }
 @container issue-list (min-width: 1250px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 14rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 14rem; }
-  .issue-row.closed { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 7rem 6.25rem; }
-  .issue-row.closed.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 7rem 6.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
+  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
   .row-meta { grid-column: auto; grid-row: auto; }
 }
 @media (min-width: 651px) and (max-width: 950px) {
-  .issue-row.closed { grid-template-columns: auto minmax(0, 1fr) auto 6.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; }
-  .issue-row.closed.has-repository { grid-template-areas: "repo repo repo repo" "number title title title" "meta meta meta meta" "time time time outcome"; }
+  .issue-row { grid-template-columns: auto minmax(0, 1fr) auto 7.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; }
+  .issue-row.has-repository { grid-template-areas: "repo repo repo repo" "number title title title" "meta meta meta meta" "time time time outcome"; }
   .row-outcome { grid-area: outcome; }
 }
 @media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
   .issue-row, .issue-row.has-repository {
-    grid-template-columns: 4.3rem minmax(0, 1fr) auto;
-    grid-template-areas: "number title title" "meta meta time";
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "heading heading heading" "meta time outcome";
     gap: 2px 6px; min-height: 56px; padding: 6px 8px;
   }
-  .issue-row.closed, .issue-row.closed.has-repository {
-    grid-template-columns: 4.3rem minmax(0, 1fr) auto auto;
-    grid-template-areas: "number title title title" "meta meta time outcome";
-  }
+  .row-heading { grid-area: heading; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .row-heading > .row-id { flex-shrink: 0; }
+  .row-heading > .row-title { flex: 1; }
   .row-outcome { grid-area: outcome; }
   .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
   .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; height: 24px; }
@@ -310,6 +313,6 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: #dcecff; color: #175b96; font-size: 9px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
   .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 7rem; overflow: hidden; font-size: 10px; }
-  .row-time > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 </style>
