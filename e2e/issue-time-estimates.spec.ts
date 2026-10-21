@@ -67,6 +67,10 @@ test("individual timing follows repository history in cards, rows, combined view
   await expect(badge(page, ".issue-card", 5)).toHaveAttribute("title", expected);
   await expect(badge(page, ".issue-card", 5)).toHaveAttribute("aria-label", expected);
   await expect(badge(page, ".issue-card", 6)).toHaveAttribute("title", /Uppskattad tid kvar: över uppskattning/);
+  const overdueCard = page.locator(".issue-card").filter({ hasText: "Timing 6" });
+  await expect(overdueCard.locator(".issue-time-remaining")).toHaveAttribute("title", /Övertid: 10 min över uppskattningen på ≈ 30 min/);
+  await expect(overdueCard.locator(".issue-time-remaining-label"))
+    .toHaveText("10 min ↑");
   for (const number of [4, 7, 8]) {
     await expect(badge(page, ".issue-card", number)).toHaveAttribute("title", /Uppskattad tid: ≈ 30 min/);
     await expect(badge(page, ".issue-card", number)).not.toHaveAttribute("title", /Uppskattad tid kvar/);
@@ -113,19 +117,28 @@ test("individual timing follows repository history in cards, rows, combined view
   await expect(page.getByRole("dialog").locator(".assignees img")).toHaveCount(3);
   expect(await page.getByRole("dialog").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await page.getByRole("dialog").locator(".issue-card").screenshot({ path: testInfo.outputPath("card-mobile320.png") });
-  await page.clock.fastForward(16 * minute);
-  await expect(page.getByRole("dialog").locator(".issue-points")).toHaveAttribute("title", /Uppskattad tid kvar: över uppskattning/);
-  await expect(page.getByRole("dialog").locator(".issue-time-remaining-label")).toHaveText("över uppskattning");
+  await page.clock.fastForward(14 * minute);
+  await expect(page.getByRole("dialog").locator(".issue-time-remaining-label")).toHaveText("≈ 1 min kvar");
+  await expect(page.getByRole("dialog").locator(".issue-time-remaining-label")).not.toContainText("↑");
+  await page.clock.fastForward(2 * minute);
+  await expect(page.getByRole("dialog").locator(".issue-time-remaining")).toHaveAttribute("title", /Övertid: 1 min över uppskattningen på ≈ 30 min/);
+  await expect(page.getByRole("dialog").locator(".issue-time-remaining-label")).toHaveText("1 min ↑");
+  await expect(page.getByRole("dialog").locator(".issue-time-remaining-label")).toHaveAttribute("aria-label", /Faktisk arbetstid hittills: ≈ 31 min.*Övertid: 1 min över uppskattningen/);
+  expect(await page.getByRole("dialog").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await page.getByRole("dialog").locator(".issue-card").screenshot({ path: testInfo.outputPath("card-mobile320-overtime.png") });
   await expect(page.getByRole("dialog").getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
   await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Inställningar", exact: true }).click();
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(badge(page, ".issue-row", 5)).toHaveAttribute("aria-label", /Estimated time: ≈ 30 min[.] Estimated time remaining: over estimate[.] Based on median time per point from 3 usable closures/);
-  await expect(page.locator(".issue-row").filter({ hasText: "Timing 5" }).locator(".issue-time-remaining-label")).toHaveText("over estimate");
+  await expect(page.locator(".issue-row").filter({ hasText: "Timing 5" }).locator(".issue-time-remaining-label")).toHaveText("1 min ↑");
+  await expect(page.locator(".issue-row").filter({ hasText: "Timing 5" }).locator(".issue-time-remaining-label"))
+    .toHaveAttribute("aria-label", /Actual work time so far: ≈ 31 min.*Overtime: 1 min beyond the estimate/);
   await page.getByRole("group", { name: "Board view mode", exact: true }).getByRole("button", { name: "Cards", exact: true }).click();
   await expect(page.locator(".issue-card").filter({ hasText: "Timing 5" }).getByRole("progressbar", { name: "Elapsed share of estimated time" }))
-    .toHaveAttribute("aria-valuetext", /Estimated time: ≈ 30 min.*Estimated time remaining: over estimate/);
+    .toHaveAttribute("aria-valuetext", /Actual work time so far: ≈ 31 min.*Overtime: 1 min beyond the estimate/);
 });
 
 test("individual tooltip loses its duration when history expires without new data", async ({ page }) => {

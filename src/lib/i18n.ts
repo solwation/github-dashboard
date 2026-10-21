@@ -72,6 +72,8 @@ export const english: Record<string, string> = {
   "Tidsspannet är ännu inte bekräftat hämtat": "Time span not yet confirmed as loaded",
   "{count} olästa händelser": "{count} unread events",
   "Faktisk arbetstid: {time}": "Actual work time: {time}",
+  "Faktisk arbetstid hittills: {time}": "Actual work time so far: {time}",
+  "Övertid: {time} över uppskattningen på {estimate}": "Overtime: {time} beyond the estimate of {estimate}",
   "Faktisk arbetstid": "Actual work time",
   "Längre än uppskattat": "Longer than estimated",
   "Kortare än uppskattat": "Shorter than estimated",
