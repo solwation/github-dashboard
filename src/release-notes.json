@@ -86,6 +86,15 @@
         "issues": [
           231
         ]
+      },
+      {
+        "text": {
+          "sv": "UI-granskning av kort och listor omfattar nu bred och smal desktop samt stående och liggande telefon.",
+          "en": "Card and list UI reviews now cover wide and narrow desktop plus portrait and landscape phone layouts."
+        },
+        "issues": [
+          234
+        ]
       }
     ]
   },

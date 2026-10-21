@@ -88,3 +88,5 @@ PUBLIC_GITHUB_LIVE=1 npm run test:e2e -- public-repositories-live.spec.ts
 ```
 
 The live check reads `solwation/lunden-3d-apartment`, `solwation/kvarteret-lunden` and `solwation/github-dashboard` without credentials and reviews cards, estimates and phone lists. Set `PUBLIC_GITHUB_REPOSITORIES` to a comma-separated subset for a smaller check. Screenshots and a small data-review report go to Playwright's output directory; repository responses are not committed as fixtures.
+
+Card and list UI changes follow the [four-scenario verification requirement in AI.md](AI.md): wide/narrow desktop and portrait/landscape phone, with mobile/touch contexts, geometry checks and visual screenshot review.

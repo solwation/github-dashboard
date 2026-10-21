@@ -1,10 +1,10 @@
 {
-  "baseCommit": "ceeb4a6def9e691082cc8225b642795ecf1ea5e6",
+  "baseCommit": "6e6996981febed332fde9ce08b7da93db529c15c",
   "summary": {
-    "sv": "Följ publika GitHub-repositories utan nyckel. Repo-val och inställningar sparas separat, med kort, listor och estimat från tillgänglig historik.",
-    "en": "Follow public GitHub repositories without a key. Repository choices and settings save separately, with cards, lists and estimates from available history."
+    "sv": "Kort och listrader granskas i fyra skärmformat med både geometrikontroller och visuell kontroll.",
+    "en": "Cards and list rows are reviewed in four screen scenarios with geometry checks and visual inspection."
   },
   "issues": [
-    231
+    234
   ]
 }
