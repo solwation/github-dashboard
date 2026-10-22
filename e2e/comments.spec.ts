@@ -260,3 +260,87 @@ test("newest comments lead across API pages with stable ties and invalid timesta
   await expect(discussion.locator(".comments-body")).toHaveJSProperty("scrollTop", 0);
   await expect(discussion.locator("time").first()).toHaveAttribute("datetime", "2026-10-16T12:00:00Z");
 });
+
+for (const scenario of [
+  { name: "wide", width: 1600, height: 1000, mobile: false },
+  { name: "narrow", width: 1000, height: 900, mobile: false },
+  { name: "phone", width: 390, height: 844, mobile: true },
+  { name: "landscape", width: 844, height: 390, mobile: true },
+]) for (const mode of ["Kort", "Lista"]) {
+  test(`comment image viewer ${scenario.name} ${mode}`, async ({ browser }, testInfo) => {
+    const context = await browser.newContext({ viewport: scenario, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE" });
+    const page = await context.newPage();
+    await page.route("https://images.example/**", route => route.request().url().includes("broken")
+      ? route.fulfill({ status: 404, body: "missing" })
+      : route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200"><rect width="1800" height="1200" fill="#287f83"/><circle cx="900" cy="600" r="400" fill="#edbf58"/><text x="700" y="600" font-size="90">Preview</text></svg>' }));
+    await page.route("https://github.com/user-attachments/assets/fictional-image", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"/>' }));
+    await page.route("https://github.com/sample/comment-project/blob/main/diagram.png*", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"/>' }));
+    await connect(page, route => route.fulfill({ json: [comment(1, [
+      "![Diagram](https://images.example/embedded.png)",
+      "https://images.example/direct.jpg?size=large&v=2",
+      "[Named image](https://images.example/named.webp)",
+      "[Broken image](https://images.example/broken.png)",
+      "https://github.com/user-attachments/assets/fictional-image",
+      "https://github.com/sample/comment-project/blob/main/diagram.png",
+      "`https://images.example/code.png`",
+      "[Ordinary link](https://example.com/page)",
+      "[![Linked diagram](https://images.example/linked.png)](https://example.com/original)",
+    ].join("\n\n"))] }));
+    await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: mode, exact: true }).click();
+    if (mode === "Lista") {
+      const row = page.locator(".issue-row").first();
+      if (!await row.locator(".row-comments").isVisible()) await row.locator(".row-title").click();
+    }
+    await page.getByRole("button", { name: "102 kommentarer", exact: true }).filter({ visible: true }).first().click();
+    const commentsDialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+    const thumbnail = commentsDialog.getByRole("button", { name: "Öppna bild: Diagram", exact: true });
+    await expect(thumbnail).toBeVisible();
+    await expect(commentsDialog.locator("img.comment-thumbnail")).toHaveCount(7);
+    await expect(commentsDialog.locator(".preview-failed")).toHaveCount(1);
+    await expect(commentsDialog.locator('img[src*="/blob/"]')).toHaveAttribute("src", /raw=true/);
+    await expect(commentsDialog.getByRole("link", { name: "Broken image", exact: true })).toBeVisible();
+    const bounds = await thumbnail.boundingBox();
+    expect(bounds!.width).toBeLessThanOrEqual(240);
+    expect(bounds!.height).toBeLessThanOrEqual(160);
+    await thumbnail.focus(); await page.keyboard.press("Enter");
+    const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
+    await expect(viewer).toBeVisible();
+    await expect(viewer.locator("img")).toHaveJSProperty("naturalWidth", 1800);
+    await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
+    await expect(viewer.locator("img")).toHaveCSS("width", "1800px");
+    await viewer.getByRole("button", { name: "Zooma in", exact: true }).click();
+    expect((await viewer.locator("img").boundingBox())!.width).toBeGreaterThan(1800);
+    await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+    await expect(viewer.getByRole("button", { name: "Zooma ut", exact: true })).toBeDisabled();
+    if (scenario.mobile) {
+      const client = await context.newCDPSession(page);
+      const area = (await viewer.locator(".image-viewport").boundingBox())!;
+      const x = area.x + area.width / 2, y = area.y + area.height / 2;
+      const touches = (distance: number) => [{ x: x - distance, y, id: 1 }, { x: x + distance, y, id: 2 }];
+      const before = (await viewer.locator("img").boundingBox())!.width;
+      await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: touches(25) });
+      await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: touches(65) });
+      await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await expect.poll(async () => (await viewer.locator("img").boundingBox())!.width).toBeGreaterThan(before);
+      await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+    }
+    await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
+    const area = (await viewer.locator(".image-viewport").boundingBox())!;
+    await page.mouse.move(area.x + 120, area.y + 80);
+    await page.mouse.down(); await page.mouse.move(area.x + 40, area.y + 40, { steps: 5 }); await page.mouse.up();
+    expect(await viewer.locator(".image-viewport").evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+    await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+    await page.screenshot({ path: testInfo.outputPath("viewer.png") });
+    expect(await viewer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(viewer).not.toBeVisible();
+    await expect(commentsDialog).toBeVisible();
+    await expect(thumbnail).toBeFocused();
+    await commentsDialog.getByRole("button", { name: "Öppna bild: Named image", exact: true }).click();
+    await expect(viewer.locator("img")).toHaveAttribute("src", "https://images.example/named.webp");
+    await viewer.getByRole("button", { name: "Stäng bild", exact: true }).click();
+    await page.screenshot({ path: testInfo.outputPath("thumbnails.png") });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await context.close();
+  });
+}

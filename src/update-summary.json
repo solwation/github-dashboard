@@ -1,11 +1,10 @@
 {
-  "baseCommit": "d2891192d02e6f641c127257e8f5ff23842ab48c",
+  "baseCommit": "83256206b2d1a59fbde894fd198eefb774ab1194",
   "summary": {
-    "sv": "Breda listvyns tidsvärden har enhetlig typografi. Klick på ett barn från en parent navigerar till tavlans issue och markerar det.",
-    "en": "Wide-list time values use consistent typography. Clicking a child from its parent navigates to and highlights the issue on the board."
+    "sv": "Bilder i kommentarer kan öppnas och zoomas direkt i dashboarden.",
+    "en": "Images in comments can be opened and zoomed directly in the dashboard."
   },
   "issues": [
-    253,
-    254
+    255
   ]
 }

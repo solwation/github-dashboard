@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-22",
+    "summary": {
+      "sv": "Bilder i kommentarer kan öppnas och zoomas direkt i dashboarden.",
+      "en": "Images in comments can be opened and zoomed directly in the dashboard."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Kommentarer visar klickbara bildminiatyrer, även för direkta bildlänkar, med zoom, originalstorlek och panorering på dator och mobil.",
+          "en": "Comments show clickable image thumbnails, including direct image links, with zoom, original size and panning on desktop and mobile."
+        },
+        "issues": [
+          255
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-21",
     "summary": {
       "sv": "Kompakt mobilnavigering, tillgängligare ärendepopup, tidsuppföljning och tydligare laddning i Statistik.",

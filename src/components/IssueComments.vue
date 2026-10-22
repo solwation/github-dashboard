@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
 import { MessageCircle, X } from "@lucide/vue";
+import CommentImages from "./CommentImages.vue";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
 import { commentTimeLabel } from "../lib/time";
@@ -120,7 +121,7 @@ onBeforeUnmount(clear);
                   :title="dateLabel(comment.created_at)" :aria-label="dateLabel(comment.created_at)" aria-live="off">{{ commentTimeLabel(comment.created_at, now, locale) }}</time>
                 <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
               </div>
-              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown" v-html="comment.markdown" />
+              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown"><CommentImages :html="comment.markdown" /></div>
               <p v-else-if="comment.body?.trim()" class="comment-markdown plain-comment">{{ comment.body }}</p>
               <p v-else class="comments-status">{{ t('Kommentaren saknar text.') }}</p>
             </article>
@@ -187,7 +188,6 @@ h2 { overflow-wrap: anywhere; min-width: 0; font-size: 1rem; line-height: 1.5; m
 .comment-markdown :deep(h4), .comment-markdown :deep(h5), .comment-markdown :deep(h6) { font-size: .9rem; }
 .comment-markdown :deep(pre) { box-sizing: border-box; max-width: 100%; overflow-x: auto; padding: .7rem; background: var(--code-bg); white-space: pre; overflow-wrap: normal; border-radius: .4rem; }
 .comment-markdown :deep(code) { font-size: .78rem; background: var(--code-bg); }
-.comment-markdown :deep(img) { max-width: 100%; height: auto; }
 .comment-markdown :deep(table) { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
 .comment-markdown :deep(th), .comment-markdown :deep(td) { border: 1px solid var(--line); padding: .3rem; }
 .comment-markdown :deep(blockquote) { margin-left: 0; padding-left: .7rem; border-left: 3px solid var(--line); color: var(--muted); }

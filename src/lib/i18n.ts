@@ -35,6 +35,16 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Bild": "Image",
+  "Öppna bild: {name}": "Open image: {name}",
+  "Bildvisare": "Image viewer",
+  "Zooma ut": "Zoom out",
+  "Zooma in": "Zoom in",
+  "Zoomnivå": "Zoom level",
+  "Anpassa": "Fit",
+  "Originalstorlek": "Original size",
+  "Stäng bild": "Close image",
+  "Bild, dra för att panorera": "Image, drag to pan",
   "Varna när pågående arbete överskrider estimatet": "Warn when ongoing work exceeds its estimate",
   "Tillåten överskridning (%)": "Allowed overrun (%)",
   "Ange ett heltal mellan 0 och 1000 procent.": "Enter a whole number between 0 and 1000 percent.",
