@@ -1,10 +1,10 @@
 {
-  "baseCommit": "83256206b2d1a59fbde894fd198eefb774ab1194",
+  "baseCommit": "a192b1f94ee53bc88b143433d488cfff8ce8257c",
   "summary": {
-    "sv": "Bilder i kommentarer kan öppnas och zoomas direkt i dashboarden.",
-    "en": "Images in comments can be opened and zoomed directly in the dashboard."
+    "sv": "Anpassa i bildvisaren skalar nu både små och stora bilder till fönstret och återställer vyn efter zoom och panorering.",
+    "en": "Fit in the image viewer now scales both small and large images to the window and resets the view after zooming and panning."
   },
   "issues": [
-    255
+    256
   ]
 }

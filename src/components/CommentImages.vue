@@ -9,11 +9,27 @@ const viewport = ref<HTMLElement>();
 const selected = ref<{ src: string; alt: string }>();
 const natural = ref({ width: 0, height: 0 });
 const zoom = ref(1);
+const fitted = ref(true);
 const size = ref({ width: 1, height: 1 });
 let opener: HTMLElement | undefined;
 let observer: ResizeObserver | undefined;
-const fit = computed(() => Math.min(1, size.value.width / (natural.value.width || 1), size.value.height / (natural.value.height || 1)));
-const imageWidth = computed(() => natural.value.width * fit.value * zoom.value);
+const fit = computed(() => Math.min(size.value.width / (natural.value.width || 1), size.value.height / (natural.value.height || 1)));
+const scale = computed(() => fitted.value ? fit.value : zoom.value);
+const minimumScale = computed(() => Math.min(.1, fit.value));
+const imageSize = computed(() => natural.value.width && natural.value.height ? {
+  width: `${natural.value.width * scale.value}px`,
+  height: `${natural.value.height * scale.value}px`,
+} : undefined);
+function measureViewport() {
+  if (viewport.value) size.value = { width: viewport.value.clientWidth, height: viewport.value.clientHeight };
+}
+async function fitImage() {
+  measureViewport();
+  fitted.value = true;
+  await nextTick();
+  viewport.value?.scrollTo(0, 0);
+}
+function originalSize() { fitted.value = false; zoom.value = 1; }
 const html = computed(() => {
   const document = new DOMParser().parseFromString(props.html, "text/html");
   for (const link of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
@@ -49,13 +65,13 @@ async function activate(event: MouseEvent | KeyboardEvent) {
   opener = event.target;
   selected.value = { src: event.target.src, alt: event.target.alt };
   natural.value = { width: event.target.naturalWidth, height: event.target.naturalHeight };
+  fitted.value = true;
   zoom.value = 1;
   await nextTick();
   viewer.value?.showModal();
   observer?.disconnect();
-  observer = new ResizeObserver(() => {
-    if (viewport.value) size.value = { width: viewport.value.clientWidth, height: viewport.value.clientHeight };
-  });
+  measureViewport();
+  observer = new ResizeObserver(measureViewport);
   if (viewport.value) observer.observe(viewport.value);
 }
 function clear() {
@@ -65,7 +81,10 @@ function clear() {
   opener?.focus();
 }
 function close() { viewer.value?.close(); clear(); }
-function changeZoom(value: number) { zoom.value = Math.max(1, Math.min(Math.max(8, 1 / fit.value), value)); }
+function changeZoom(value: number) {
+  zoom.value = Math.max(minimumScale.value, Math.min(Math.max(8, fit.value), value));
+  fitted.value = false;
+}
 const pointers = new Map<number, { x: number; y: number }>();
 function pointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -78,7 +97,7 @@ function pointerMove(event: PointerEvent) {
   const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)?.[1];
   if (other) {
     const before = Math.hypot(previous.x - other.x, previous.y - other.y);
-    if (before > 0) changeZoom(zoom.value * Math.hypot(event.clientX - other.x, event.clientY - other.y) / before);
+    if (before > 0) changeZoom(scale.value * Math.hypot(event.clientX - other.x, event.clientY - other.y) / before);
   } else {
     viewport.value.scrollLeft -= event.clientX - previous.x;
     viewport.value.scrollTop -= event.clientY - previous.y;
@@ -92,18 +111,18 @@ onBeforeUnmount(() => observer?.disconnect());
   <dialog ref="viewer" class="comment-image-viewer" :aria-label="t('Bildvisare')" @close="clear" @keydown.esc.stop.prevent="close">
     <template v-if="selected">
       <div class="image-toolbar">
-        <button type="button" :aria-label="t('Zooma ut')" :disabled="zoom <= 1" @click="changeZoom(zoom / 1.5)">−</button>
-        <output :aria-label="t('Zoomnivå')">{{ Math.round(fit * zoom * 100) }}%</output>
-        <button type="button" :aria-label="t('Zooma in')" @click="changeZoom(zoom * 1.5)">+</button>
-        <button type="button" @click="zoom = 1">{{ t('Anpassa') }}</button>
-        <button type="button" @click="zoom = 1 / fit">{{ t('Originalstorlek') }}</button>
+        <button type="button" :aria-label="t('Zooma ut')" :disabled="scale <= minimumScale" @click="changeZoom(scale / 1.5)">−</button>
+        <output :aria-label="t('Zoomnivå')">{{ Math.round(scale * 100) }}%</output>
+        <button type="button" :aria-label="t('Zooma in')" @click="changeZoom(scale * 1.5)">+</button>
+        <button type="button" @click="fitImage">{{ t('Anpassa') }}</button>
+        <button type="button" @click="originalSize">{{ t('Originalstorlek') }}</button>
         <button type="button" class="close-image" autofocus @click="close">{{ t('Stäng bild') }}</button>
       </div>
       <div ref="viewport" class="image-viewport" tabindex="0" :aria-label="t('Bild, dra för att panorera')"
         @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointers.delete($event.pointerId)" @pointercancel="pointers.delete($event.pointerId)"
-        @wheel.ctrl.prevent="changeZoom(zoom * ($event.deltaY < 0 ? 1.15 : 1 / 1.15))">
+        @wheel.ctrl.prevent="changeZoom(scale * ($event.deltaY < 0 ? 1.15 : 1 / 1.15))">
         <div class="image-canvas">
-          <img :src="selected.src" :alt="selected.alt" :style="{ width: imageWidth ? `${imageWidth}px` : undefined }" draggable="false" referrerpolicy="no-referrer"
+          <img :src="selected.src" :alt="selected.alt" :style="imageSize" draggable="false" referrerpolicy="no-referrer"
             @load="natural = { width: ($event.target as HTMLImageElement).naturalWidth, height: ($event.target as HTMLImageElement).naturalHeight }" />
         </div>
       </div>
@@ -122,7 +141,7 @@ onBeforeUnmount(() => observer?.disconnect());
 .image-toolbar button { min-height: 44px; min-width: 44px; padding: .4rem .6rem; border: 1px solid var(--line); border-radius: .4rem; color: var(--text); background: var(--surface); cursor: pointer; }
 .image-toolbar output { min-width: 3rem; text-align: center; font-variant-numeric: tabular-nums; }
 .close-image { margin-left: auto; }
-.image-viewport { min-height: 0; flex: 1; overflow: auto; touch-action: none; cursor: grab; }
+.image-viewport { min-height: 0; flex: 1; overflow: auto; scrollbar-gutter: stable both-edges; touch-action: none; cursor: grab; }
 .image-viewport:active { cursor: grabbing; }
 .image-canvas { display: flex; align-items: center; justify-content: center; width: max-content; min-width: 100%; min-height: 100%; }
 .image-canvas img { display: block; max-width: none; flex-shrink: 0; user-select: none; }

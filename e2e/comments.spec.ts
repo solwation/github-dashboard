@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route, type Locator } from "@playwright/test";
 
 const repo = { id: 89, name: "comment-project", full_name: "sample/comment-project", description: "Comments fixture", private: true, html_url: "https://github.com/sample/comment-project", owner: { login: "sample" } };
 const timestamp = "2026-10-15T12:00:00Z";
@@ -270,15 +270,30 @@ for (const scenario of [
   test(`comment image viewer ${scenario.name} ${mode}`, async ({ browser }, testInfo) => {
     const context = await browser.newContext({ viewport: scenario, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE" });
     const page = await context.newPage();
+    const rasters = await page.evaluate(() => {
+      function image(width: number, height: number) {
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#287f83"; ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "#edbf58"; ctx.fillRect(width / 4, height / 4, width / 2, height / 2);
+        return canvas.toDataURL("image/png").split(",")[1]!;
+      }
+      return { small: image(160, 100), tall: image(240, 1600), large: image(1800, 1200) };
+    });
     await page.route("https://images.example/**", route => route.request().url().includes("broken")
       ? route.fulfill({ status: 404, body: "missing" })
       : route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200"><rect width="1800" height="1200" fill="#287f83"/><circle cx="900" cy="600" r="400" fill="#edbf58"/><text x="700" y="600" font-size="90">Preview</text></svg>' }));
+    await page.route("https://images.example/embedded.png", route => route.fulfill({ contentType: "image/png", body: Buffer.from(rasters.large, "base64") }));
+    await page.route("https://images.example/named.webp", route => route.fulfill({ contentType: "image/png", body: Buffer.from(rasters.small, "base64") }));
+    await page.route("https://images.example/tall.png", route => route.fulfill({ contentType: "image/png", body: Buffer.from(rasters.tall, "base64") }));
     await page.route("https://github.com/user-attachments/assets/fictional-image", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"/>' }));
     await page.route("https://github.com/sample/comment-project/blob/main/diagram.png*", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"/>' }));
     await connect(page, route => route.fulfill({ json: [comment(1, [
       "![Diagram](https://images.example/embedded.png)",
       "https://images.example/direct.jpg?size=large&v=2",
       "[Named image](https://images.example/named.webp)",
+      "![Tall image](https://images.example/tall.png)",
       "[Broken image](https://images.example/broken.png)",
       "https://github.com/user-attachments/assets/fictional-image",
       "https://github.com/sample/comment-project/blob/main/diagram.png",
@@ -295,7 +310,7 @@ for (const scenario of [
     const commentsDialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
     const thumbnail = commentsDialog.getByRole("button", { name: "Öppna bild: Diagram", exact: true });
     await expect(thumbnail).toBeVisible();
-    await expect(commentsDialog.locator("img.comment-thumbnail")).toHaveCount(7);
+    await expect(commentsDialog.locator("img.comment-thumbnail")).toHaveCount(8);
     await expect(commentsDialog.locator(".preview-failed")).toHaveCount(1);
     await expect(commentsDialog.locator('img[src*="/blob/"]')).toHaveAttribute("src", /raw=true/);
     await expect(commentsDialog.getByRole("link", { name: "Broken image", exact: true })).toBeVisible();
@@ -311,7 +326,7 @@ for (const scenario of [
     await viewer.getByRole("button", { name: "Zooma in", exact: true }).click();
     expect((await viewer.locator("img").boundingBox())!.width).toBeGreaterThan(1800);
     await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
-    await expect(viewer.getByRole("button", { name: "Zooma ut", exact: true })).toBeDisabled();
+    await assertImageFits(viewer, 1800, 1200);
     if (scenario.mobile) {
       const client = await context.newCDPSession(page);
       const area = (await viewer.locator(".image-viewport").boundingBox())!;
@@ -330,6 +345,7 @@ for (const scenario of [
     await page.mouse.down(); await page.mouse.move(area.x + 40, area.y + 40, { steps: 5 }); await page.mouse.up();
     expect(await viewer.locator(".image-viewport").evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
     await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+    await assertImageFits(viewer, 1800, 1200);
     await page.screenshot({ path: testInfo.outputPath("viewer.png") });
     expect(await viewer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     await page.keyboard.press("Escape");
@@ -338,9 +354,45 @@ for (const scenario of [
     await expect(thumbnail).toBeFocused();
     await commentsDialog.getByRole("button", { name: "Öppna bild: Named image", exact: true }).click();
     await expect(viewer.locator("img")).toHaveAttribute("src", "https://images.example/named.webp");
+    await expect(viewer.locator("img")).toHaveJSProperty("naturalWidth", 160);
+    await assertImageFits(viewer, 160, 100);
+    await page.screenshot({ path: testInfo.outputPath("small-fit.png") });
+    expect((await viewer.locator("img").boundingBox())!.width).toBeGreaterThan(160);
+    await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
+    await expect(viewer.locator("img")).toHaveCSS("width", "160px");
+    await expect(viewer.locator("img")).toHaveCSS("height", "100px");
+    await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+    await assertImageFits(viewer, 160, 100);
+    await viewer.getByRole("button", { name: "Stäng bild", exact: true }).click();
+    await commentsDialog.getByRole("button", { name: "Öppna bild: Tall image", exact: true }).click();
+    await expect(viewer.locator("img")).toHaveJSProperty("naturalHeight", 1600);
+    await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
+    await viewer.getByRole("button", { name: "Zooma in", exact: true }).click();
+    await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+    await assertImageFits(viewer, 240, 1600);
+    await page.screenshot({ path: testInfo.outputPath("tall-fit.png") });
+    if (!scenario.mobile) {
+      await page.setViewportSize({ width: scenario.width - 100, height: scenario.height - 150 });
+      await assertImageFits(viewer, 240, 1600);
+      await page.setViewportSize(scenario);
+    }
     await viewer.getByRole("button", { name: "Stäng bild", exact: true }).click();
     await page.screenshot({ path: testInfo.outputPath("thumbnails.png") });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await context.close();
   });
+}
+
+// Check visible dimensions and centering: a disabled button alone cannot prove Fit worked.
+async function assertImageFits(viewer: Locator, width: number, height: number) {
+  await expect.poll(() => viewer.evaluate((dialog, natural) => {
+    const viewport = dialog.querySelector<HTMLElement>(".image-viewport")!;
+    const image = dialog.querySelector("img")!.getBoundingClientRect();
+    const expectedScale = Math.min(viewport.clientWidth / natural.width, viewport.clientHeight / natural.height);
+    const area = viewport.getBoundingClientRect();
+    return Math.abs(image.width - natural.width * expectedScale) < 2 &&
+      Math.abs(image.height - natural.height * expectedScale) < 2 &&
+      image.x >= area.x - 1 && image.right <= area.right + 1 &&
+      image.y >= area.y - 1 && image.bottom <= area.bottom + 1;
+  }, { width, height })).toBe(true);
 }

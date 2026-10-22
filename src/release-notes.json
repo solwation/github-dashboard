@@ -8,11 +8,12 @@
     "sections": [
       {
         "text": {
-          "sv": "Kommentarer visar klickbara bildminiatyrer, även för direkta bildlänkar, med zoom, originalstorlek och panorering på dator och mobil.",
-          "en": "Comments show clickable image thumbnails, including direct image links, with zoom, original size and panning on desktop and mobile."
+          "sv": "Kommentarer visar bildminiatyrer med zoom, originalstorlek och panorering; Anpassa skalar både små och stora bilder till fönstret.",
+          "en": "Comments show image thumbnails with zoom, original size and panning; Fit scales both small and large images to the window."
         },
         "issues": [
-          255
+          255,
+          256
         ]
       }
     ]
