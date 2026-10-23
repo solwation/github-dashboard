@@ -2,8 +2,8 @@
   {
     "date": "2026-10-23",
     "summary": {
-      "sv": "Statistik får tydligare laddning och samma repositorysektioner som Översikt.",
-      "en": "Statistics gains clearer loading feedback and the same repository sections as Overview."
+      "sv": "Statistik får tydligare laddning och samma repositorysektioner som Översikt; stängkrysset i dialoger är kompakt igen på mobil.",
+      "en": "Statistics gains clearer loading feedback and the same repository sections as Overview; dialog close buttons are compact again on phones."
     },
     "sections": [
       {
@@ -14,6 +14,15 @@
         "issues": [
           257,
           258
+        ]
+      },
+      {
+        "text": {
+          "sv": "Stängkrysset i Inställningar och andra dialoger från mobilmenyn är en kompakt knapp uppe till höger i stället för en bred rad.",
+          "en": "The close button in Settings and other dialogs opened from the phone menu is a compact top-right button instead of a wide row."
+        },
+        "issues": [
+          260
         ]
       }
     ]

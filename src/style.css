@@ -2392,12 +2392,18 @@ html {
   .mobile-tools .avatar { order: 4; }
   .mobile-tools .connection { order: 3; }
   .mobile-tools .handoff-button span { display: inline; }
-  .mobile-tools .icon-button {
+  /* Menu rows only; dialogs rendered inside the menu keep their compact icon buttons. */
+  .mobile-tools .icon-button:not(dialog *) {
     width: 100%;
     justify-content: flex-start;
     gap: 8px;
     padding: 10px;
     border: 1px solid var(--line);
+  }
+  .modal-heading > .icon-button {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
   }
   .mobile-account-label { display: inline; }
   .mobile-tools .topbar-right > * { flex-shrink: 0; }
