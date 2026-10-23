@@ -2,8 +2,8 @@
   {
     "date": "2026-10-23",
     "summary": {
-      "sv": "Statistik laddar tydligare och kortare och får samma repositorysektioner som Översikt; stängkrysset är kompakt på mobil och stängda issues visar inte in-progress.",
-      "en": "Statistics loads with clearer, shorter feedback and shares Overview’s sections; close buttons are compact on phones and closed issues hide in-progress."
+      "sv": "Statistik laddar tydligare och kortare och delar Översikts sektioner; mobilen får kompakta stängkryss och färre sökrutor, och stängda issues visar inte in-progress.",
+      "en": "Statistics loads with clearer, shorter feedback and shares Overview’s sections; phones get compact close buttons and fewer search fields, and closed issues hide in-progress."
     },
     "sections": [
       {
@@ -19,11 +19,12 @@
       },
       {
         "text": {
-          "sv": "Stängkrysset i Inställningar och andra dialoger från mobilmenyn är en kompakt knapp uppe till höger i stället för en bred rad.",
-          "en": "The close button in Settings and other dialogs opened from the phone menu is a compact top-right button instead of a wide row."
+          "sv": "På mobil är stängkrysset i dialoger från menyn en kompakt knapp uppe till höger, och ihopfällda repositories döljer sin sökruta.",
+          "en": "On phones, dialog close buttons from the menu are compact top-right buttons, and collapsed repositories hide their search field."
         },
         "issues": [
-          260
+          260,
+          265
         ]
       },
       {

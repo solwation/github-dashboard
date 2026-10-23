@@ -47,7 +47,8 @@ test("repository controls work with keyboard on mobile and translate into Englis
   const header = page.locator('#repo-1 .lane-header');
   await expect(header.getByRole('textbox', { name: 'Filtrera issues i demo/design-system', exact: true })).toBeVisible();
   await header.getByRole('button', { name: 'Kollapsa design-system', exact: true }).click();
-  await expect(filter).toBeVisible();
+  // Collapsed repositories show no issues on phones, so their search is hidden (#265).
+  await expect(filter).toBeHidden();
   await expect(header.getByRole('button', { name: 'Expandera design-system', exact: true })).toBeVisible();
   await header.getByRole('button', { name: 'Expandera design-system', exact: true }).click();
   await filter.focus();
