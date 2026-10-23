@@ -1,24 +1,10 @@
 {
-  "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
+  "baseCommit": "caaa0b9a68effc491986d413a98162a9a559f2bf",
   "summary": {
-    "sv": "Välj sortering per kolumn, notiser leder till issuet, tid kvar räknar av underärenden, Statistik visar tid per SP och avvikelse, och mobilen blir kompaktare.",
-    "en": "Choose a sort order per column, notifications lead to their issue, remaining time deducts sub-issues, Statistics shows time per SP and deviation, and phones get compact."
+    "sv": "Estimatens antal och story points följer grupperingen av underärenden, och samma underärende räknas inte två gånger över flera repositories.",
+    "en": "Estimate counts and story points follow sub-issue grouping, and the same sub-issue is no longer counted twice across repositories."
   },
   "issues": [
-    267,
-    268,
-    269,
-    270,
-    271,
-    274,
-    275,
-    277,
-    279,
-    278,
-    280,
-    285,
-    281,
-    283,
-    286
+    287
   ]
 }
