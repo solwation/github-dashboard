@@ -20,3 +20,20 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }
     await context.close();
   });
 }
+
+// Settings opened in a wide landscape layout lives inside the phone menu; rotating to portrait must not hide the open modal (#269).
+test("open Settings stays visible after rotating a large phone to portrait", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 956, height: 440 }, isMobile: true, hasTouch: true, locale: "sv-SE" });
+  const page = await context.newPage();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
+  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Inställningar" });
+  await expect(dialog).toBeVisible();
+  await page.setViewportSize({ width: 440, height: 956 });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Stäng", exact: true })).toBeInViewport();
+  await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await context.close();
+});

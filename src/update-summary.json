@@ -1,10 +1,11 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Ihopfällda repositories på mobil blir lägre: inställningsknappen delar rad med sammanfattningen i stället för att lämna en tom rad.",
-    "en": "Collapsed repositories on phones are shorter: the settings button shares the summary row instead of leaving an empty row."
+    "sv": "Ihopfällda repositories på mobil blir lägre, och Inställningar förblir synliga när telefonen vrids medan dialogen är öppen.",
+    "en": "Collapsed repositories on phones are shorter, and Settings stays visible when the phone is rotated while the dialog is open."
   },
   "issues": [
-    267
+    267,
+    269
   ]
 }

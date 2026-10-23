@@ -2394,6 +2394,8 @@ html {
     gap: 8px;
   }
   .mobile-tools-open .topbar-right { display: flex; }
+  /* Dialogs opened from the menu (Settings, permissions) must stay visible when the layout switches to phones. */
+  .mobile-tools .topbar-right:has(dialog[open]) { display: flex; }
   .mobile-tools .account-context { display: grid; order: 5; max-width: none; }
   .mobile-tools .account-timezone { text-align: left; }
   .mobile-tools .username { display: block; overflow-wrap: anywhere; }
