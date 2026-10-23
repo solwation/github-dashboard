@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 async function connect(page: Page) {
   let requests = 0;
@@ -65,7 +66,8 @@ for (const width of [390, 1440]) {
       - (await page.evaluate(() => innerWidth <= 650 ? document.querySelector(".sidebar")!.getBoundingClientRect().bottom : 0)))).toBeLessThanOrEqual(1);
     await expect(search).toHaveValue("Keep");
     await expect(page.locator(".issue-title")).toHaveCount(6);
-    await expect(page.getByRole("button", { name: "Logga ut", exact: true })).toBeVisible();
+    // Still signed in; on phones Logga ut lives in the collapsed menu (#266).
+    await expect(page.locator("#mobile-tools-menu").getByRole("button", { name: "Logga ut", exact: true, includeHidden: true })).toHaveCount(1);
     expect(await page.evaluate(() => (window as unknown as { documentMarker: string }).documentMarker)).toBe("same-document");
     // Timers started by navigation still run; the scheduler's next reconcile is minutes away.
     await page.clock.runFor(5000);
@@ -92,7 +94,7 @@ test("overview keeps the welcome screen available and follows the selected langu
   await overview.click();
   await expect(page.getByRole("heading", { name: /Följ dina AI-agenter/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Anslut GitHub", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible();

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { encodeHandoff } from "../src/lib/handoff";
+import { openSettings } from "./support/phone-menu";
 
 async function matchingColors(page: Page) {
   const colors = await page.locator(".sidebar-repository-row").evaluateAll(rows => Object.fromEntries(rows.map(row => [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".repo-dot")!).backgroundColor])));
@@ -23,7 +24,7 @@ test("split defaults on; combined columns use only the main search, keep colors,
   const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
   await expect(split).toBeChecked(); await expect(page.locator(".repo-lane")).toHaveCount(3);
   const colors = await matchingColors(page);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("5");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   const openStat = page.locator('[data-stat="open"] strong');
@@ -70,7 +71,7 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await expect(page.locator(".repo-lane")).toHaveCount(3);
   await expect(page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true })).toHaveValue("missing");
   await matchingColors(page);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("combobox", { name: "Språk", exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("checkbox", { name: "Split by repository", exact: true })).toBeChecked();

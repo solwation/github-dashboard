@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
@@ -318,7 +319,7 @@ for (const combined of [false, true]) test(`timeout keeps its own slot with long
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.setViewportSize({ width: 1800, height: 1000 });
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await page.getByLabel('Varna när pågående arbete överskrider estimatet', { exact: true }).uncheck();
   await page.getByRole('button', { name: 'Klart', exact: true }).click();
   await expect(row.locator('.row-timeout')).toHaveCount(0);

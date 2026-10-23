@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 test.use({ timezoneId: "UTC" });
 async function openStatistics(page: Page) {
   await page.getByRole('link', { name: /^(Statistics|Statistik)$/, exact: true }).click();
@@ -19,7 +20,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await openStatistics(page);
   const sections = page.locator(".statistics-repository");
   await expect(sections).toHaveCount(3);
-  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/design-system", "demo/personal-website", "demo/weekend-project"]);
+  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["design-system", "personal-website", "weekend-project"]); // one shared owner shortens names (#258)
   await expect(page.locator(".statistics-view input[type=checkbox], .statistics-view .repository-selection, .statistics-active-filters")).toHaveCount(0);
   const design = sections.filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
   const weekend = sections.filter({ has: page.getByRole("heading", { name: "demo/weekend-project", exact: true }) });
@@ -202,7 +203,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(weekend.locator(".statistics-filter-chip")).toHaveText(["Bidragsgivare: demo-alex"]);
   const reorder = page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna weekend-project med/ });
   await reorder.focus(); await page.keyboard.press("ArrowUp");
-  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["demo/design-system", "demo/weekend-project", "demo/personal-website"]);
+  await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["design-system", "weekend-project", "personal-website"]);
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
   for (const width of [320, 390, 650]) {
     await page.setViewportSize({ width, height: 844 });
@@ -218,7 +219,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
       expect(box!.x + box!.width).toBeLessThanOrEqual(controlsBox!.x + controlsBox!.width);
     }
   }
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
@@ -286,7 +287,7 @@ test("Statistics hides inaccessible metrics silently and retains issue values af
   await page.getByRole("dialog").getByLabel(repo.full_name).check();
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await openStatistics(page);
-  await expect(page.locator(".statistics-repository .statistics-repository-heading a")).toHaveText([repo.full_name]);
+  await expect(page.locator(".statistics-repository .statistics-repository-heading a")).toHaveText([repo.name]);
   const footnote = page.locator(".statistics-view > footer > .statistics-coverage");
   await expect(footnote).toContainText("Delvis data:");
   expect(await footnote.evaluate(element => element.parentElement?.lastElementChild === element)).toBe(true);

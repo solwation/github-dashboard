@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 test("new Backlog issues are green, persist through sync and comments, and acknowledge separately from returns", async ({ page }) => {
   await page.clock.install();
@@ -57,7 +58,7 @@ test("new Backlog issues are green, persist through sync and comments, and ackno
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(fresh.getByRole("button", { name: "Recently created in Backlog. Mark as read", exact: true })).toContainText("Created in backlog");

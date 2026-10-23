@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
 import { createHandoffUrl, parseHandoffUrl, type HandoffPayload, type HandoffPreferences } from "../src/lib/handoff";
+import { openSettings, revealPhoneMenu } from "./support/phone-menu";
 
 const base = process.env.ISSUEFLOW_E2E_BASE_URL || "http://127.0.0.1:5173/";
 const token = "fictional-optical-sync-token";
@@ -53,6 +54,7 @@ async function exportCode(page: Page): Promise<{ payload: HandoffPayload; image:
   return { payload, image };
 }
 async function scanCode(page: Page, image: string) {
+  await revealPhoneMenu(page);
   await page.getByRole("button", { name: "Öppna på mobilen", exact: true }).click();
   await page.getByRole("button", { name: "Skanna QR-kod från annan enhet", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Synka med QR-kod", exact: true })).toHaveCount(0);
@@ -103,7 +105,7 @@ test("desktop and mobile optically sync all preferences repeatedly without logou
   await expect(page.getByRole("textbox", { name: "Sök issues", exact: true })).toHaveValue("return to desktop");
   await expectTransferredColors(page);
   // A language-only edit must replace the account preference restored on reload.
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.reload();

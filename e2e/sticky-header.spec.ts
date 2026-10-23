@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 const shots = process.env.STICKY_SCREENSHOT_DIR;
 
@@ -53,7 +54,7 @@ test("phone header rows stay pinned while scrolling overview and statistics", as
   // Secondary actions stay easy to reach in the menu and dialogs open above it.
   await page.getByRole("button", { name: "Meny" }).click();
   await expect(page.locator(".topbar-right").getByRole("button", { name: "Inställningar", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 

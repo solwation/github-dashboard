@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import QRCode from "qrcode";
 import { createHandoffUrl } from "../src/lib/handoff";
+import { openSettings } from "./support/phone-menu";
+import { revealPhoneMenu } from "./support/phone-menu";
 
 const settings = { token: "fixture-scanned-token", selected: ["sample/test"], rules: { "sample/test": { progress: "Building" } } };
 async function fixture(page: Page) {
@@ -123,6 +125,7 @@ test('signed-in QR popup opens the camera only on scan and stops it on cancel', 
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto(createHandoffUrl('http://127.0.0.1:5173/', settings).url);
   await expect(page.locator('.repo-lane')).toHaveCount(1);
+  await revealPhoneMenu(page);
   await page.getByRole('button', { name: 'Öppna på mobilen', exact: true }).click();
   const popup = page.getByRole('dialog', { name: 'Synka med QR-kod', exact: true });
   const scan = popup.getByRole('button', { name: 'Skanna QR-kod från annan enhet', exact: true });
@@ -139,7 +142,7 @@ test('signed-in QR popup opens the camera only on scan and stops it on cancel', 
   await expect(scanner).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => (window as any).signedInCameraStops)).toBe(1);
   await expect(page.getByRole('button', { name: 'Logga ut', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await page.getByLabel('Språk', { exact: true }).selectOption('en');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Open on mobile', exact: true }).click();

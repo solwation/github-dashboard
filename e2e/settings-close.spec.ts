@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 // The settings dialog lives inside the phone menu, whose full-width row styling must not reach its close button (#260).
 for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
@@ -8,7 +9,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }
     await page.goto("/");
     await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
     await page.locator(".mobile-menu-button").click();
-    await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+    await openSettings(page);
     const dialog = page.getByRole("dialog", { name: "Inställningar" });
     const heading = await dialog.getByRole("heading", { name: "Inställningar" }).boundingBox();
     const close = await dialog.getByRole("button", { name: "Stäng", exact: true }).boundingBox();
@@ -27,7 +28,7 @@ test("open Settings stays visible after rotating a large phone to portrait", asy
   const page = await context.newPage();
   await page.goto("/");
   await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   const dialog = page.getByRole("dialog", { name: "Inställningar" });
   await expect(dialog).toBeVisible();
   await page.setViewportSize({ width: 440, height: 956 });

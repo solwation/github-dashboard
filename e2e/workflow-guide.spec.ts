@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 test.use({ baseURL: "http://127.0.0.1:4173", locale: "sv-SE" });
 const base = "/github-dashboard/";
@@ -15,7 +16,7 @@ test("production popup shows and copies the complete raw Markdown with no refere
     } });
   });
   await page.goto(base);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   const trigger = page.getByRole("button", { name: "Instruktioner för issueflödet", exact: true });
   await trigger.focus(); await trigger.press("Enter");
   const guide = page.getByRole("dialog", { name: "Instruktioner för issueflödet", exact: true });
@@ -42,7 +43,7 @@ test("denied clipboard selects all Markdown and the compact textarea scrolls on 
     } });
   });
   await page.goto(base);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Instruktioner för issueflödet", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Instruktioner för issueflödet", exact: true });
   const field = dialog.getByLabel("Instruktioner (Markdown)", { exact: true });

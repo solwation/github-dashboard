@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
+import { openSettings } from "./support/phone-menu";
 
 async function fixture(page: Page) {
   let account = "layout-alpha";
@@ -152,7 +153,7 @@ test.describe("phone layout controls", () => {
     await expect(page.locator("#repo-3 h2")).toContainText("charlie-with-a-long-unbroken-repository-name");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // Translate the same accessible controls without changing the stored layout.
-    await page.getByRole("button", { name: "Inställningar", exact: true }).tap();
+    await openSettings(page, "Inställningar", true);
     await page.getByLabel("Språk", { exact: true }).selectOption("en");
     await page.getByRole("button", { name: "Done", exact: true }).tap();
     await page.reload();
@@ -168,7 +169,7 @@ test.describe("mobile repository ordering in Settings", () => {
     api.longTitle();
     await page.goto("/");
     await connect(page);
-    await page.getByRole("button", { name: "Inställningar", exact: true }).tap();
+    await openSettings(page, "Inställningar", true);
     const settings = page.locator('dialog[aria-labelledby="language-settings-title"]');
     const open = settings.getByRole("button", { name: "Ordna repositories", exact: true });
     await open.tap();

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openSettings } from "./support/phone-menu";
 
 test('repository summary counts active projects independently of text search and follows visibility and project selection', async ({ page }) => {
   const repositories = ['empty', 'backlog', 'progress', 'recent', 'old', 'mixed', 'coordination'].map((name, index) => ({
@@ -55,7 +56,7 @@ test('repository summary counts active projects independently of text search and
   await expect(card.locator('strong')).toContainText('6');
   await expect(active).toHaveText('4 aktiva');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await page.getByLabel('Språk', { exact: true }).selectOption('en');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(active).toHaveText('4 active');

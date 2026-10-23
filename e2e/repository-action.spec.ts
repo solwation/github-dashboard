@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 async function connect(page: Page) {
   let gate: Promise<void> | undefined;
@@ -56,7 +57,7 @@ for (const width of [1440, 320]) {
     await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     await expect(action).toBeEnabled();
     await expect(card.locator("strong")).toHaveText("20 aktiva");
-    await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+    await openSettings(page);
     await page.getByLabel("Språk", { exact: true }).selectOption("en");
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(card.getByRole("button", { name: "Choose repositories", exact: true })).toBeVisible();

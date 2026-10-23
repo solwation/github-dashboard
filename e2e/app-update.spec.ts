@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { resolve, extname, join } from "node:path";
+import { openSettings } from "./support/phone-menu";
 
 let server: Server, base: string, directory: string;
 let version = 0;
@@ -135,7 +136,7 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(badge).toBeFocused();
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Automatiska uppdateringar", exact: true }).click();
   await expect(dialog).toContainText("Ny uppdatering tillgänglig");
   await dialog.getByRole("button", { name: "Installera uppdateringen", exact: true }).click();

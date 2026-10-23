@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 async function connect(page: Page) {
   const repo = { id: 1, name: "alpha", full_name: "sample/alpha", private: false, html_url: "https://github.com/sample/alpha", owner: { login: "sample" } };
@@ -89,7 +90,7 @@ test("summary cards centre icon, label, number and notes on phones in both langu
   await action.focus();
   await expect(action).toBeFocused();
 
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator('.stats [data-stat="closed"] .stat-today')).toContainText("+1 today");

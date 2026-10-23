@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 const minute = 60000, day = 86400000, base = Date.parse("2026-10-20T12:00:00Z");
 const iso = (at: number) => new Date(at).toISOString();
 const repos = ["calibrated", "sparse"].map((name, i) => ({ id: 2190 + i, name, full_name: `sample/${name}`, private: true, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
@@ -78,7 +79,7 @@ test("summary estimates share the count scope, disclose partial time coverage, u
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.locator(".stats").screenshot({ path: testInfo.outputPath("overview-mobile320.png") });
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(open.locator(".overview-coverage")).toHaveText("Time for 1 of 2 repos");

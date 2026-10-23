@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
+import { openSettings } from "./support/phone-menu";
 
 // A dedicated production build on a free port: identity is checked against a known commit.
 const commit = "3".repeat(40);
@@ -70,7 +71,7 @@ test("the sidebar identifies the running build above the footer, in both languag
   expect(versionBox!.x).toBeGreaterThanOrEqual(0);
 
   // Settings no longer carries build details, but opens the separate update view.
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   const settings = page.getByRole("dialog", { name: "Inställningar", exact: true });
   await expect(settings.locator("time, code")).toHaveCount(0);
   const opener = settings.getByRole("button", { name: "Automatiska uppdateringar", exact: true });
@@ -109,7 +110,8 @@ test("collapsed and phone sidebars hide the version text without horizontal scro
   for (const width of [900, 375]) {
     await page.setViewportSize({ width, height: 812 });
     await page.goto(base);
-    await expect(page.locator(".sidebar")).toBeVisible();
+    // Phones navigate from the topbar and hide the sidebar entirely (#266).
+    await expect(page.locator(".sidebar")).toBeVisible({ visible: width > 650 });
     await expect(page.getByRole("region", { name: "Version", exact: true })).toBeHidden();
     expect(await noHorizontalScroll(page)).toBe(true);
   }

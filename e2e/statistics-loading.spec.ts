@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 function gate() {
   let resolve!: () => void;
@@ -50,11 +51,11 @@ test("Statistics waits clearly, completes repositories independently and retains
   expect(await splash.locator(".statistics-loading-spinner").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
   expect(await splash.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
 
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(splash.getByRole("heading")).toHaveText("Fetching and preparing statistics");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   await page.getByLabel("Language", { exact: true }).selectOption("sv");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
 

@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 test("sidebar activation toggles the focused repository independently in Overview and Statistics", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("1");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   const designLink = page.locator('.sidebar-repository-row[data-repository="demo/design-system"] .sidebar-repository');

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 test("repository filters stay independent and combine with the global filter in every column", async ({ page }) => {
   await page.goto("/");
@@ -64,7 +65,7 @@ test("repository controls work with keyboard on mobile and translate into Englis
   expect(filterBox!.x).toBeGreaterThanOrEqual(headerBox!.x);
   expect(filterBox!.x + filterBox!.width).toBeLessThanOrEqual(headerBox!.x + headerBox!.width);
   expect(filterBox!.y + filterBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Filter issues in demo/design-system", exact: true })).toBeVisible();

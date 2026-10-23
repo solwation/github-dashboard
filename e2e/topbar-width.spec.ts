@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSettings } from "./support/phone-menu";
 
 // A long IANA timezone must remain readable even alongside a long account name.
 test.use({ timezoneId: 'America/North_Dakota/New_Salem' });
@@ -50,6 +51,8 @@ async function expectFits(page: Page, width: number) {
   await page.setViewportSize({ width, height: 900 });
   const m = await measure(page);
   expect(m.overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+  // Phone layouts move account tools into the menu; topbar-layout.spec.ts covers them (#266).
+  if (await page.locator('.mobile-menu-button').isVisible()) return;
   const timezone = page.locator('.topbar .account-timezone');
   await expect(timezone).toHaveCount(1);
   await expect(timezone).toBeVisible();
@@ -91,7 +94,7 @@ test('signed-in topbar never overflows horizontally in Swedish and English', asy
   await expect(page.getByRole('button', { name: 'Öppna på mobilen', exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('topbar-700-sv.png'), clip: { x: 0, y: 0, width: 700, height: 160 } });
 
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await page.locator('#language-preference').selectOption('en');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   for (const width of widths) await expectFits(page, width);

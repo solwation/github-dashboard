@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 const repo = { id: 210, name: "points-fixture", full_name: "sample/points-fixture", private: true, description: "", html_url: "https://github.com/sample/points-fixture", owner: { login: "sample" } };
 const specs = [
@@ -62,7 +63,7 @@ test("cards and rows show explicit and heuristic sizes without timing history in
     await expect(row.locator(".issue-points")).toHaveCount(1);
     await row.locator(".row-title").click();
   }
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   const badge = page.locator(".issue-row").filter({ hasText: specs[0]!.title }).locator(".issue-points");

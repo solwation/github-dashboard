@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readSettings } from "./support/settings";
+import { openSettings } from "./support/phone-menu";
 async function setup(page: Page, isPublic = false) {
   let healthy = false, deniedPulls = false, login = 'permissions-test';
   const repos = ['first', 'second'].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: !isPublic,
@@ -25,7 +26,7 @@ async function setup(page: Page, isPublic = false) {
 test('Settings counts unique missing permissions, explains repository differences and refreshes recovered access', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   const state = await setup(page);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   const settings = page.getByRole('dialog', { name: 'Inställningar', exact: true });
   await expect(settings.getByRole('button', { name: 'GitHub permissions', exact: true })).toHaveCount(1);
   await expect(settings).not.toContainText(/<{7}|={7}|>{7}/);
@@ -78,7 +79,7 @@ test('Settings counts unique missing permissions, explains repository difference
 });
 test('public API readability stays neutral and produces no missing-permission badge', async ({ page }) => {
   await setup(page, true);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });
   await expect(dialog.locator('.permission-status.public-read')).toHaveCount(8);
@@ -107,7 +108,7 @@ async function signInAgain(page: Page) {
   await expect(page.locator('.repo-lane')).toHaveCount(2);
 }
 async function openSettingsWithMissing(page: Page) {
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await expect(page.locator('.permission-status.missing')).toHaveCount(2);
 }
 
@@ -154,7 +155,7 @@ test('new denials and a denial after confirmed recovery can notify without reviv
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   state.revokeContents();
   await page.reload(); await expect(page.locator('.repo-lane')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await expect(page.locator('.permission-status.missing')).toHaveCount(4);
   await expect(page.locator('#settings-notices')).toHaveText('1');
 });

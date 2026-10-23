@@ -1,6 +1,7 @@
 import { readSettings } from "./support/settings";
 import { repositoryNotification } from "./support/repository-properties";
 import { expect, test } from '@playwright/test';
+import { openSettings } from "./support/phone-menu";
 
 test('timeout uses actual work start, responds to Settings and stays marked on the card without a top list or ignore button', async ({ page }) => {
   let startedAt = new Date(Date.now() - 31 * 60000).toISOString();
@@ -44,14 +45,14 @@ test('timeout uses actual work start, responds to Settings and stays marked on t
   await expect(slow).toHaveClass(/issue-timeout/);
   await expect(slow.locator('.timeout-warning')).toContainText('över estimatet ≈ 20 min plus 25 %');
   await expect(unknown).not.toHaveClass(/issue-timeout/);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   const threshold = page.getByLabel('Tillåten överskridning (%)', { exact: true });
   await expect(threshold).toHaveValue('25');
   await threshold.fill('100');
   await threshold.press('Tab');
   await page.getByRole('button', { name: 'Klart', exact: true }).click();
   await expect(slow).not.toHaveClass(/issue-timeout/);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await threshold.fill('25');
   await threshold.press('Tab');
   await page.getByRole('button', { name: 'Klart', exact: true }).click();
@@ -60,7 +61,7 @@ test('timeout uses actual work start, responds to Settings and stays marked on t
   holdRefresh = true;
   await page.keyboard.press('Control+r');
   await expect(page.locator('.board-toolbar')).toHaveAttribute('data-busy', 'true');
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   const enabled = page.getByLabel('Varna när pågående arbete överskrider estimatet', { exact: true });
   await enabled.uncheck();
   await expect(threshold).toBeDisabled();
@@ -114,7 +115,7 @@ test('timeout uses actual work start, responds to Settings and stays marked on t
   await expect(slow).toHaveClass(/issue-timeout/);
   await expect.poll(() => page.evaluate(() => (window as unknown as { timeoutNotices: unknown[] }).timeoutNotices.length)).toBe(1);
   expect(await page.evaluate(() => (window as unknown as { timeoutNotices: [string, { body: string }][] }).timeoutNotices[0]?.[1].body)).toContain('över estimatet ≈ 20 min plus 25 %');
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await threshold.fill('100'); await threshold.press('Tab');
   await expect(slow).not.toHaveClass(/issue-timeout/);
   await threshold.fill('25'); await threshold.press('Tab');
@@ -163,7 +164,7 @@ test('narrow phones show timeouts only as red cards', async ({ page }) => {
   await expect(page.locator('.timeout-notices')).toHaveCount(0);
   await expect(page.getByText(/Timeout för sample\/narrow-timeout/)).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Ignorera timeout/ })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   const control = page.getByLabel('Varna när pågående arbete överskrider estimatet', { exact: true });
   await expect(control).toBeVisible();
   expect((await control.boundingBox())!.width).toBe(20);

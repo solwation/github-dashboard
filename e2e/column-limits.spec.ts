@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
+import { openSettings } from "./support/phone-menu";
 
 async function fixture(page: Page, allColumns = false) {
   let account = "limits-alpha";
@@ -87,7 +88,7 @@ async function connect(page: Page) {
 }
 const cards = (page: Page, id: number) => page.locator(`#repo-${id} .backlog .issue-card`);
 async function globalLimit(page: Page, value: string) {
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.locator("#global-column-limit").fill(value);
   await page.getByRole("button", { name: "Klart", exact: true }).click();
 }
@@ -115,7 +116,7 @@ test("global batches, repository inheritance, validation, reload and account iso
   await page.reload();
   await expect(cards(page, 1)).toHaveCount(3);
   await expect(cards(page, 2)).toHaveCount(1);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   const input = page.locator("#global-column-limit");
   for (const value of ["0", "1.5", "101", ""]) {
     await input.fill(value);
@@ -146,7 +147,7 @@ test("phone settings work with keyboard and translate to English", async ({ page
   await fixture(page);
   await page.goto("/");
   await connect(page);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   const input = page.getByRole("spinbutton", { name: "Maximum work items shown per column" });
   await input.fill("2");

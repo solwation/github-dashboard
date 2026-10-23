@@ -1,6 +1,7 @@
 import { repositoryNotification } from "./support/repository-properties";
 import { expect, test } from "@playwright/test";
 import { readSettings } from "./support/settings";
+import { openSettings } from "./support/phone-menu";
 
 test("status sounds follow repository opt-in and live transitions without replay", async ({ page }) => {
   await page.addInitScript(() => {
@@ -72,7 +73,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   await expect.poll(notes).toEqual([440, 554, 330, 247, 196, 523, 659, 784]);
   // Global mute preserves subscriptions, browser notices and live visual feedback.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   const soundChoice = page.getByLabel("Notification sounds", { exact: true });
   await expect(soundChoice).toHaveValue("true");
@@ -91,14 +92,14 @@ test("status sounds follow repository opt-in and live transitions without replay
   expect(await notes()).toHaveLength(8);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   await expect(soundChoice).toHaveValue("false");
   expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("notificationSounds");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   states.alpha = { state: "open", labels: [] };
   await refreshWhenIdle();
   await expect(page.locator("#repo-1 .backlog .issue-card")).toHaveCount(1);
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   await soundChoice.focus(); await page.keyboard.press("Home"); await page.keyboard.press("Tab");
   await expect(soundChoice).toHaveValue("true");
   await page.getByRole("button", { name: "Done", exact: true }).click();
@@ -108,7 +109,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   await refreshWhenIdle();
   await expect.poll(notes).toEqual([440, 554]);
   // Restore Swedish for the existing per-repository opt-out checks.
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   await page.getByLabel("Language", { exact: true }).selectOption("sv");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await repositoryNotification(page, "alpha", toggle => toggle.click());
@@ -120,7 +121,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   expect(await notes()).toEqual([]);
   // Muting belongs to the signed-in account and survives explicit logout.
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Notifikationsljud", { exact: true }).selectOption("false");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await expect.poll(() => readSettings(page, "sound-test").then(saved => saved?.preferences?.notificationSounds)).toBe(false);
@@ -136,12 +137,12 @@ test("status sounds follow repository opt-in and live transitions without replay
   await signOut(); login = "sound-other"; await signIn();
   await page.getByRole("checkbox", { name: "sample/alpha" }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await expect(page.getByLabel("Notifikationsljud", { exact: true })).toHaveValue("true");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await signOut(); login = "sound-test"; await signIn();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await expect(page.getByLabel("Notifikationsljud", { exact: true })).toHaveValue("false");
 });
 

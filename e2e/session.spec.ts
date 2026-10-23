@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { createHandoffUrl } from "../src/lib/handoff";
+import { openSettings } from "./support/phone-menu";
 async function fixture(page: Page) {
   const repo = {
     id: 1,
@@ -112,7 +113,7 @@ for (const fragment of ["#statistics", "#statistics-repo-1"]) {
     await page.getByRole("checkbox", { name: "sample/test" }).check();
     await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
     await expect(page.locator(".repo-lane")).toHaveCount(1);
-    await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+    await openSettings(page);
     await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("6");
     await page.getByLabel("Visa max work items per kolumn", { exact: true }).press("Tab");
     await page.getByRole("button", { name: "Klart", exact: true }).click();
@@ -131,7 +132,7 @@ for (const fragment of ["#statistics", "#statistics-repo-1"]) {
     await signIn();
     await expect(page.locator(".repo-lane")).toHaveCount(1);
     await expect(page.locator("main#overview")).toBeVisible();
-    await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+    await openSettings(page);
     await expect(page.getByLabel("Visa max work items per kolumn", { exact: true })).toHaveValue("6");
     await page.getByRole("button", { name: "Klart", exact: true }).click();
     await page.getByRole("link", { name: "Statistik", exact: true }).click();

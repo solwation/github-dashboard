@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 test("repository settings stay at the right end of one compact action row", async ({ page }) => {
   const name = "a-repository-with-a-long-project-name";
@@ -62,7 +63,7 @@ test("repository settings stay at the right end of one compact action row", asyn
   await subscription.focus(); await page.keyboard.press("Space");
   await expect(subscription).not.toBeChecked();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await controls.getByRole("button", { name: `Repository properties for ${name}`, exact: true }).click();

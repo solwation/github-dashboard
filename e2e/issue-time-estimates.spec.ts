@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 const minute = 60000, day = 86400000;
 const base = Date.parse("2026-10-15T10:00:00Z");
@@ -142,7 +143,7 @@ test("individual timing follows repository history in cards, rows, combined view
   await expect(page.getByRole("dialog").getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(badge(page, ".issue-row", 5)).toHaveAttribute("aria-label", /Estimated time: ≈ 30 min[.] Estimated time remaining: over estimate[.] Based on median time per point from 3 usable closures/);

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 test.use({ locale: "en-US" });
 
 const background = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor === "rgba(0, 0, 0, 0)"
@@ -27,7 +28,7 @@ test("Auto follows the emulated color scheme live and a manual choice overrides 
   expect(await background(page)).toBe("rgb(246, 247, 249)");
   expect(await themeColor(page)).toBe("#147d69");
 
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   const theme = page.getByLabel("Theme", { exact: true });
   await expect(theme).toHaveValue("auto");
   await theme.selectOption("dark");
@@ -40,7 +41,7 @@ test("Auto follows the emulated color scheme live and a manual choice overrides 
   expect(await page.evaluate(() => (window as unknown as { firstPaintTheme?: string }).firstPaintTheme)).toBe("dark");
 
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   await theme.selectOption("light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await theme.selectOption("auto");

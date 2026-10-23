@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { encodeHandoff } from "../src/lib/handoff";
+import { openSettings } from "./support/phone-menu";
 
 const noPageScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
@@ -43,7 +44,7 @@ test("one global list mode for every repository and the combined board keeps fil
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("tangentbord");
   await expect(design.locator(".issue-row")).toHaveCount(1);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("2");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await expect(design.locator(".closed .issue-row")).toHaveCount(2);

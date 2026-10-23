@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { openSettings } from "./support/phone-menu";
 
 // Column estimates (#140): median of closed issues' in-progress time, counted down by a local clock.
 // Closed fixture issues carry `startedAt` directly, the form estimates.ts reads (#141 will fill it from timelines).
@@ -127,7 +128,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await expect(backlog).toHaveAttribute('title', /Median 25 min per poäng från de senaste 4 användbara stängningarna/);
 
   // English uses the same compact format.
-  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await openSettings(page);
   await page.getByLabel('Språk', { exact: true }).selectOption('en');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(backlog).toHaveAttribute('title', /^Rough size: 2 points.*not measured complexity.*Median 25 min per point.*4 usable closures within 30 days.*Backlog is divided by 1\.0/);

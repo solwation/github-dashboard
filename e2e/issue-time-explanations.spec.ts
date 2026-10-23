@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 const base = Date.parse("2026-10-15T10:00:00Z"), minute = 60_000, day = 86_400_000;
 const repository = { id: 246, name: "very-long-project-repository-name", full_name: "sample/very-long-project-repository-name", private: true,
@@ -155,7 +156,7 @@ test("closed issues keep actual time while omitting unavailable comparison detai
 test("time explanation is clear in English as well as Swedish", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 900 });
   await prepare(page);
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByRole("group", { name: "Board view mode", exact: true }).getByRole("button", { name: "List", exact: true }).click();

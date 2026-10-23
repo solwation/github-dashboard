@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 const repo = { id: 66, name: "relations", full_name: "sample/relations", private: true, description: "Fictional relations", html_url: "https://github.com/sample/relations", owner: { login: "sample" } };
 const stamp = "2026-10-15T12:00:00Z";
 function issue(number: number, title: string) {
@@ -74,7 +75,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await child.scrollIntoViewIfNeeded();
   await expect(child.locator(".issue-parent")).toHaveCount(0);
   await page.setViewportSize({ width: 1000, height: 900 });
-  await page.getByRole("button", { name: "Inställningar", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await nested.scrollIntoViewIfNeeded();

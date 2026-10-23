@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 test.use({ locale: "en-US" });
 test("follows browser language, switches live in settings and remembers choice", async ({
   page,
@@ -8,7 +9,7 @@ test("follows browser language, switches live in settings and remembers choice",
   await expect(
     page.getByRole("heading", { name: /Track your AI agents/ }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page, "Settings");
   await page.getByLabel("Language", { exact: true }).selectOption("sv");
   await expect(
     page.getByRole("heading", { name: "Inställningar", exact: true }),
