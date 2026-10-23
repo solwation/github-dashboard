@@ -23,7 +23,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
   Preserve its measured capacity (including conductor work), fresh queue checks before
   assignment/resume/integration, and release of inactive claims during integration waits.
 - When scope expands, create or update the relevant issues. Keep unfinished work tracked and explain any actual blocker on its issue.
-- Questions for the user never pause unattended work. Make routine decisions yourself from sensible defaults and record the reasoning on the issue. When a decision genuinely needs the user, post one issue comment with concrete options and a recommendation, add the `user question` label, release your claim and continue with other work. Skip `user question` issues when selecting work until the user has answered; whoever resumes removes the label. `user question` does not block publication; reserve `blocked` for real technical blockers, because it stops the Action gate.
+- Questions for the user follow the guide's [user questions](public/ISSUEFLOW.md#user-questions) rule: they never pause unattended work, and a genuine user decision goes on the issue with the `user question` label. In this project `user question` does not block publication; reserve `blocked` for real technical blockers, because it stops the Action gate.
 
 ## Implementation and Git
 

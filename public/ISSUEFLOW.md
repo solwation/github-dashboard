@@ -26,6 +26,15 @@ Issueflow places each issue by its own state and labels: a sub-issue in progress
 - Close the parent only when all its sub-issues are closed or deliberately split out and the parent's own acceptance criteria are satisfied; remove its work labels when closing. Closing every sub-issue does not close the parent automatically.
 - A parent's priority stays its own. Sub-issues normally follow the same priority rules as any other issue.
 
+## User questions
+
+Use the `user question` label when unattended work needs a decision that only the user can make.
+
+- Questions never pause unattended work. Make routine decisions yourself from sensible defaults and record the reasoning on the issue.
+- When a decision genuinely needs the user, post one issue comment with concrete options and a recommendation, add `user question`, remove your work labels and claim, and continue with other work.
+- Skip `user question` issues when selecting work until the user has answered. Whoever resumes the work removes the label. A new comment alone is not an answer.
+- `user question` is not a work label: the issue stays in **Backlog**, and the dashboard does not display the label specially. It is not `blocked` either; reserve `blocked` for real technical blockers.
+
 ## Labels understood by the default detection
 
 Matching is case-insensitive. Except for a custom work label described below, leading/trailing whitespace is ignored and runs of spaces, underscores, colons and hyphens are treated as spaces. For example, `in-progress`, `in_progress` and `IN PROGRESS` match the same built-in work label.
