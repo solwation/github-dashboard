@@ -129,7 +129,8 @@ describe("column sort orders (#286)", () => {
   it("backlog keeps priority-first as default and offers the reverse, oldest and newest", () => {
     expect(nums(sortedIssues(backlog, "backlog"))).toEqual(nums(sortedIssues(backlog, "backlog", {}, "default")));
     expect(nums(sortedIssues(backlog, "backlog", {}, "default"))).toEqual([3, 2, 4, 1]);
-    expect(nums(sortedIssues(backlog, "backlog", {}, "lowest"))).toEqual([1, 4, 3, 2]);
+    expect(nums(sortedIssues(backlog, "backlog", {}, "lowest"))).toEqual([1, 4, 2, 3]);
+    expect(nums(sortedIssues(backlog, "backlog", {}, "lowest"))).toEqual(nums(sortedIssues(backlog, "backlog")).reverse());
     expect(nums(sortedIssues(backlog, "backlog", {}, "oldest"))).toEqual([3, 2, 1, 4]);
     expect(nums(sortedIssues(backlog, "backlog", {}, "newest"))).toEqual([4, 1, 2, 3]);
   });

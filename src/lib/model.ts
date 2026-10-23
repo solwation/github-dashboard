@@ -155,7 +155,8 @@ export function compareColumnIssues(col: string, sort: ColumnSort, a: Issue, b: 
   if (col === "closed")
     return sort === "oldest" ? -closed : sort === "priority" ? prio || closed : closed;
   if (col === "backlog")
-    return sort === "lowest" ? -prio || created : sort === "oldest" ? created : sort === "newest" ? -created : prio || created;
+    // Lowest first is the exact reverse of the default, so the bottom of the Backlog comes first.
+    return sort === "lowest" ? -(prio || created) : sort === "oldest" ? created : sort === "newest" ? -created : prio || created;
   return sort === "recent" ? -started : sort === "priority" ? prio || started : started;
 }
 export function sortedIssues(issues: Issue[], col: string, rules: Rules = {}, sort: ColumnSort = "default") {
