@@ -59,11 +59,11 @@ test('encrypted statistics restore before revalidation, extend two days with ove
   await page.reload();
   await expect(total.locator('strong')).toHaveText('2');
   await expect(page.locator('.statistics-loading-splash')).toHaveCount(0);
-  await expect(page.locator('.statistics-refreshing')).toBeVisible();
+  await expect(page.locator('.statistics-load-progress')).toBeVisible();
   await expect(total.getByText('Delvis data', { exact: true })).toBeVisible();
   blocked = false; gates.splice(0).forEach(resolve => resolve());
   await expect(total.locator('strong')).toHaveText('3');
-  await expect(page.locator('.statistics-refreshing')).toHaveCount(0);
+  await expect(page.locator('.statistics-load-progress')).toHaveCount(0);
   expect(requests.find(url => url.pathname.endsWith('/commits'))?.searchParams.get('since')).toBe('2026-10-16T00:00:00Z');
   expect(detailCount).toBe(2);
   expect(requests.filter(url => url.pathname.includes('/commits/')).map(url => url.pathname)).toEqual(['/repos/sample/private-stats/commits/private-new-sha']);

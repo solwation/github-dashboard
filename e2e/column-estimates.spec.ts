@@ -142,7 +142,9 @@ test('column estimates show the basis, count down, follow a sync and fit every b
 });
 
 test('backlog-only forecast expires at its evidence window boundary without new issue data', async ({ page }) => {
-  const at = base + 28 * day + 30 * minute - 1000;
+  // Leave room for start-up: the clock keeps running while the app loads.
+  const margin = 20_000;
+  const at = base + 28 * day + 30 * minute - margin;
   await fixture(page, { closedActive: true, closedAt: base + 5 * minute, largeBacklog: false });
   let issueResponses = 0;
   page.on('response', response => { if (response.ok() && /\/issues\?/.test(response.url())) issueResponses++; });
@@ -160,7 +162,7 @@ test('backlog-only forecast expires at its evidence window boundary without new 
   const before = issueResponses;
   // An incidental background refresh cannot supply a changed snapshot in this check.
   await page.route(url => url.hostname === 'api.github.com' && url.pathname.endsWith('/issues'), route => route.abort());
-  await page.clock.fastForward(2000);
+  await page.clock.fastForward(margin + 1000);
   await expect(estimate).toHaveCount(0);
   expect(issueResponses).toBe(before);
 });

@@ -14,3 +14,10 @@ export async function openSettings(page: Page, name = "Inställningar", tap = fa
   const settings = page.getByRole("button", { name, exact: true });
   await (tap ? settings.tap() : settings.click());
 }
+
+/** The menu stays open after its dialogs close; close it before using the board underneath. */
+export async function closePhoneMenu(page: Page) {
+  const tools = page.locator(".mobile-tools");
+  if (/mobile-tools-open/.test((await tools.getAttribute("class")) ?? "")) await page.locator(".mobile-menu-button").click();
+  await expect(tools).not.toHaveClass(/mobile-tools-open/);
+}

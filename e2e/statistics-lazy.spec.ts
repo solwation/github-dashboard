@@ -64,7 +64,7 @@ test('statistics defaults to first only, cancels collapse work, lazily expands a
   expect(state.requests.some(url => url.pathname.includes('/three/'))).toBe(false);
   await page.locator('#statistics-repo-1 .statistics-repository-toggle').click(); await page.locator('#statistics-repo-2 .statistics-repository-toggle').click();
   await expect(refresh).toBeDisabled();
-  await expect(page.locator('.statistics-loading-splash, .statistics-refreshing:visible')).toHaveCount(0);
+  await expect(page.locator('.statistics-loading-splash, .statistics-load-progress:visible')).toHaveCount(0);
   await expect.poll(async () => Object.values((await readSettings(page, 'lazy-first'))?.preferences?.statistics ?? {}).map((value: any) => value.collapsed)).toEqual([true, true, true]);
   await page.getByRole('link', { name: 'Översikt', exact: true }).click(); await stats();
   await expect(page.locator('#statistics-repo-1 .statistics-repository-toggle')).toHaveAttribute('aria-expanded', 'false');

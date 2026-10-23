@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openSettings } from "./support/phone-menu";
+import { closePhoneMenu, openSettings } from "./support/phone-menu";
 
 function gate() {
   let resolve!: () => void;
@@ -58,6 +58,7 @@ test("Statistics waits clearly, completes repositories independently and retains
   await openSettings(page, "Settings");
   await page.getByLabel("Language", { exact: true }).selectOption("sv");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
+  await closePhoneMenu(page);
 
   waits.alpha.resolve();
   const alpha = page.locator('.statistics-repository[data-repository="sample/alpha"]');
@@ -65,25 +66,28 @@ test("Statistics waits clearly, completes repositories independently and retains
   await expect(splash).toHaveCount(0);
   await expect(alpha.locator(".statistics-total").filter({ hasText: "Stängda issues" }).locator("strong")).toHaveText("1");
   await expect(alpha.locator(".statistics-repository-content")).toHaveAttribute("aria-busy", "false");
-  await expect(bravo.locator(".statistics-repository-loading")).toBeVisible();
+  // The waiting repository shows its loading progress (#257/#263); reduced motion stops the spinner.
+  const bravoProgress = bravo.getByRole("region", { name: "Statistikhämtning", exact: true });
+  await expect(bravoProgress).toBeVisible();
   await expect(bravo.locator(".statistics-repository-content")).toHaveAttribute("aria-busy", "true");
   await expect(bravo.locator(".statistics-total, .statistics-empty")).toHaveCount(0);
-  expect(await bravo.locator(".statistics-loading-spinner").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
+  expect(await bravoProgress.locator(".statistics-load-spinner").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
   waits.bravo.resolve();
-  await expect(bravo.locator(".statistics-repository-loading")).toHaveCount(0);
+  await expect(bravoProgress).toHaveCount(0);
   const refresh = page.getByRole("button", { name: "Uppdatera statistik", exact: true });
   await expect(refresh).toBeEnabled();
 
   waits = { alpha: gate(), bravo: gate() };
   await refresh.click();
   await expect(splash).toHaveCount(0);
-  await expect(alpha.locator(".statistics-refreshing")).toContainText("Värden och diagram uppdateras löpande.");
+  // A refresh keeps the values and shows the loading progress instead of a separate refreshing note (#263).
+  await expect(alpha.getByRole("region", { name: "Statistikhämtning", exact: true })).toBeVisible();
   await expect(alpha.locator(".statistics-total").filter({ hasText: "Stängda issues" }).locator("strong")).toHaveText("1");
   await expect(bravo.locator(".statistics-total").filter({ hasText: "Stängda issues" }).locator("strong")).toHaveText("1");
   await expect(alpha.locator(".statistics-repository-content")).toHaveAttribute("aria-busy", "true");
   waits.alpha.resolve(); waits.bravo.resolve();
   await expect(refresh).toBeEnabled();
-  await expect(page.locator(".statistics-refreshing")).toHaveCount(0);
+  await expect(page.locator(".statistics-load-progress")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

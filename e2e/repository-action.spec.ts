@@ -36,7 +36,9 @@ for (const width of [1440, 320]) {
     const action = card.getByRole("button", { name: "Välj repositories", exact: true });
     await expect(page.locator(".page-heading button")).toHaveCount(0);
     await expect(page.locator(".sidebar-add")).toBeAttached();
-    await expect(card.locator("strong")).toHaveText("10 aktiva");
+    // The total sits in <strong>; the active count has its own cell (OverviewSummary).
+    await expect(card.locator("strong")).toHaveText("1");
+    await expect(card.locator(".repository-active")).toHaveText("0 aktiva");
     await expect(action).toBeVisible();
     const cardBox = (await card.boundingBox())!;
     const actionBox = (await action.boundingBox())!;
@@ -56,7 +58,8 @@ for (const width of [1440, 320]) {
     api.release();
     await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
     await expect(action).toBeEnabled();
-    await expect(card.locator("strong")).toHaveText("20 aktiva");
+    await expect(card.locator("strong")).toHaveText("2");
+    await expect(card.locator(".repository-active")).toHaveText("0 aktiva");
     await openSettings(page);
     await page.getByLabel("Språk", { exact: true }).selectOption("en");
     await page.getByRole("button", { name: "Done", exact: true }).click();
