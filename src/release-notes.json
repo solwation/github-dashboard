@@ -76,6 +76,15 @@
         "issues": [
           279
         ]
+      },
+      {
+        "text": {
+          "sv": "Ett klick på en notis öppnar översikten och markerar issuet med en blinkande ram, även i ihopfällda projekt eller bakom Visa fler.",
+          "en": "Clicking a notification opens Overview and highlights the issue with a pulsing frame, even in collapsed projects or behind Show more."
+        },
+        "issues": [
+          278
+        ]
       }
     ]
   },

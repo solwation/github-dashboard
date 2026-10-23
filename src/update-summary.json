@@ -1,8 +1,8 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Tid kvar räknar av arbete på underärenden, mobilen får lägre repositories, uppdateringsbadge och kompakt bildvisare, och End i kommentarer når sista kommentaren.",
-    "en": "Remaining time deducts sub-issue work, phones get shorter repositories, an update badge and a compact image viewer, and End in comments reaches the last comment."
+    "sv": "Notiser leder till issuet, tid kvar räknar av underärenden, och mobilen får lägre repositories, uppdateringsbadge och kompakt bildvisare.",
+    "en": "Notifications lead to their issue, remaining time deducts sub-issue work, and phones get shorter repositories, an update badge and a compact image viewer."
   },
   "issues": [
     267,
@@ -13,6 +13,7 @@
     274,
     275,
     277,
-    279
+    279,
+    278
   ]
 }
