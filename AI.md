@@ -15,6 +15,9 @@ This file applies to all work in this repository, regardless of which AI tool pe
   Add `in-progress` immediately before actual work; remove all recognized work labels
   when paused, awaiting integration, handed back, finished, closed or reopened. Owner
   labels are separate from work status and priority. Share one resolved guide per session.
+  When the first sub-issue starts, also mark its parent `in-progress`, and keep the parent's
+  label only while a sub-issue or the parent itself is being worked on (see the guide's
+  [parent issues and sub-issues](public/ISSUEFLOW.md#parent-issues-and-sub-issues)).
 - Orchestration capacity, active-claim accounting, file ownership and handoff rules are
   defined once in [.orchestra/project.md](.orchestra/project.md#capacity-ownership-and-progress).
   Preserve its measured capacity (including conductor work), fresh queue checks before

@@ -21,6 +21,9 @@ applicable [phase hooks](#project-phase-hooks) and the
   instructions maintained by this project. Follow its current revision under the shared
   authority procedure. Share the resolved guide/revision with workers. The imported
   offline copy never replaces or becomes a second edited source for this public guide.
+  Parent issues follow its sub-issue rule: a worker starting the first sub-issue also marks
+  the parent `in-progress`; the conductor removes the parent's label when no sub-issue or
+  parent work remains active, and closes the parent only after its own acceptance.
 - Create/reuse issues with acceptance, exactly one canonical priority and impact/urgency
   rationale under AI.md. Do not change existing priorities without user direction.
   Default missing priority to medium when ordering; high → medium → low, oldest first,

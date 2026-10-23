@@ -58,6 +58,15 @@
           268,
           274
         ]
+      },
+      {
+        "text": {
+          "sv": "Issue workflow-guiden beskriver hur föräldraärenden får in-progress när första underärendet påbörjas och när labeln tas bort.",
+          "en": "The Issue workflow guide explains how parent issues get in-progress when the first sub-issue starts, and when the label is removed."
+        },
+        "issues": [
+          277
+        ]
       }
     ]
   },
