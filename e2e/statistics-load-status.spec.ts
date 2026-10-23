@@ -37,14 +37,25 @@ test('loading status separates sparse history from coverage and estimates discov
   await expect(status).toContainText('cirka 20 dagar bakåt');
   await expect(status).toContainText('Insamlingsperiod:');
   await expect(status).toContainText('Visad period:');
+  const spinner = status.locator('.statistics-load-spinner');
+  await expect(spinner).toBeVisible();
+  await expect(spinner).toHaveCSS('animation-name', 'statistics-load-spin');
+  await expect(status.locator('.statistics-load-activity')).toHaveAttribute('aria-hidden', 'true');
   await expect(status.getByRole('progressbar')).toHaveCount(0);
   await expect(status).not.toContainText('Ungefär');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(spinner).toHaveCSS('animation-name', 'none');
+  await page.setViewportSize({ width: 320, height: 568 });
+  expect(await status.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('load-status-sources-mobile.png'), fullPage: true });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   lists.resolve();
   await expect.poll(async () => { await page.clock.runFor(500); return status.textContent(); }).toContain('Kodändringar: 0 av 6 commits (0 %).');
   // Let three actual HTTP detail results finish; elapsed browser time supplies
   // a measured sample, while the next three requests remain blocked.
   await expect.poll(async () => { await page.clock.runFor(500); return status.textContent(); }, { timeout: 10000 }).toContain('Kodändringar: 3 av 6 commits (50 %).');
   await expect(status).toContainText('Ungefär');
+  await expect(spinner).toBeVisible();
   await expect(status.getByRole('progressbar')).toHaveAttribute('value', '50');
   await page.setViewportSize({ width: 320, height: 844 });
   expect(await status.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
