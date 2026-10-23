@@ -1,7 +1,7 @@
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
 import { approximatePoints } from "./story-points";
-import { repositoryEstimate } from "./estimates";
+import { repositoryEstimate, type SubIssueWork } from "./estimates";
 
 export interface OverviewEstimateGroup { repository: string; issues: Issue[]; rules: Rules }
 export type OverviewEstimateColumn = "open" | "progress";
@@ -31,13 +31,14 @@ export function overviewPoints(groups: OverviewEstimateGroup[], key: OverviewEst
 }
 
 /** Repositories run in parallel; open work includes the backlog horizon after current work. */
-export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn, now: number) {
+export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn, now: number,
+  children?: ReadonlyMap<number, readonly SubIssueWork[]>) {
   let repositories = 0, knownRepositories = 0, remainingMs = 0, overdue = 0, unknownStart = 0, counting = false;
   let nextStartMs = Infinity;
   for (const group of groups) {
     if (!selected(group, key).length) continue;
     repositories++;
-    const estimate = repositoryEstimate(group.issues, now, { rules: group.rules });
+    const estimate = repositoryEstimate(group.issues, now, { rules: group.rules, children });
     if (estimate.basis.msPerPoint === null) continue;
     knownRepositories++;
     remainingMs = Math.max(remainingMs, estimate.progress?.remainingMs ?? 0, key === "open" ? estimate.backlog?.remainingMs ?? 0 : 0);
@@ -47,7 +48,7 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
       if (start > now) nextStartMs = Math.min(nextStartMs, start);
     }
     unknownStart += estimate.progress?.items.filter(item => item.unknownStart || Date.parse(item.issue.startedAt || "") > now).length ?? 0;
-    counting ||= !!estimate.progress?.items.some(item => !item.unknownStart && !item.overdue && Date.parse(item.issue.startedAt || "") <= now);
+    counting ||= !!estimate.progress?.items.some(item => item.counting);
   }
   return { repositories, knownRepositories, remainingMs: knownRepositories ? remainingMs : null, overdue, unknownStart, counting, nextStartMs };
 }

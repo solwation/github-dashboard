@@ -12,8 +12,20 @@ import { column, type Issue, type Rules } from "./model";
  * - Size: approximatePoints supplies bounded local 1–13 point scores, not measured complexity.
  * - Calibration: discard durations per point above 4× the raw sample median, then use the
  *   retained median per repository; fewer than MIN_SAMPLES retained gives no estimate.
- * - In progress: max(0, points × calibrated time per point − elapsed). The longest remaining issue
- *   decides. Past-due issues count as zero and unknown starts need their full point-based duration.
+ * - In progress: max(0, points × calibrated time per point − spent). The longest remaining item
+ *   decides. Past-due items count as zero (never negative) and unknown starts need their full
+ *   point-based duration.
+ * - Sub-issues (#279): an open parent in the estimated issues forms a group with its sub-issues
+ *   (recursively, when `children` is supplied). The group is one item sized by the parent's points:
+ *   spent = the parent's own in-progress time + Σ each descendant's spent time, where a running
+ *   descendant counts now − its start and a closed descendant counts its positive start → close
+ *   interval when closed within the window; backlog or unknown descendants count zero. So
+ *   remaining = max(0, parent estimate − parent elapsed − Σ descendant spent). Descendants that
+ *   are themselves open estimated issues are absorbed into the group and never count as separate
+ *   items or backlog points, so neither their remaining nor their spent time is counted twice.
+ *   A group is in progress when the parent or any open descendant is in progress; otherwise it
+ *   stays in the backlog with its spent time deducted from its backlog points. History calibration is
+ *   unchanged.
  * - Parallelism: the time-weighted average number of issues in progress while at least one was in
  *   progress, over the window: sum of in-progress durations (history plus current in-progress
  *   issues, clipped to the window) divided by the length of their union. Idle periods such as
@@ -54,6 +66,12 @@ export interface ProgressItemEstimate {
   overdue: boolean;
   /** Start time was unknown; the full point-based duration is assumed. */
   unknownStart: boolean;
+  /** Time already spent on the parent's sub-issues and deducted from this item (#279). */
+  subIssueSpentMs: number;
+  /** Sub-issues whose spent time was examined for this item. */
+  subIssues: number;
+  /** Whether the remaining time is currently decreasing with the clock. */
+  counting: boolean;
 }
 export interface ColumnEstimate {
   /** Issues in the column. */
@@ -84,8 +102,12 @@ export interface CombinedEstimate {
   progress: (ColumnEstimate & { overdue: number }) | null;
   backlog: ColumnEstimate | null;
 }
+/** A direct sub-issue, with its own repository's rules for column classification. */
+export interface SubIssueWork { issue: Issue; rules?: Rules }
 export interface EstimateOptions {
   rules?: Rules;
+  /** Direct sub-issues per parent issue id, for deducting sub-issue time from the parent (#279). */
+  children?: ReadonlyMap<number, readonly SubIssueWork[]>;
   windowDays?: number;
   sampleLimit?: number;
 }
@@ -184,7 +206,6 @@ export function repositoryEstimate(
   const msPerPoint = samples.length < MIN_SAMPLES ? null : median(samples.map(sample => sample.durationMs / approximatePoints(sample.issue)));
   const active = list.filter((issue) => column(issue, rules) === "progress");
   const waiting = list.filter((issue) => column(issue, rules) === "backlog");
-  const waitingPoints = waiting.reduce((sum, issue) => sum + approximatePoints(issue), 0);
   const basis: EstimateBasis = {
     samples: samples.length,
     typicalMs,
@@ -193,13 +214,19 @@ export function repositoryEstimate(
     parallelism: parallelism(samples, active, now, windowDays),
   };
   if (msPerPoint === null) return { basis, progress: null, backlog: null };
-  const items = active.map((issue): ProgressItemEstimate => {
+  const groups = subIssueGroups([...active, ...waiting], now, rules, windowDays, options.children);
+  const items = groups.filter(group => group.inProgress).map(({ root: issue, ownProgress, spentMs, running, descendants }): ProgressItemEstimate => {
     const points = approximatePoints(issue), durationMs = points * msPerPoint;
     const started = time(issue.startedAt);
-    if (!Number.isFinite(started)) return { issue, points, remainingMs: durationMs, overdue: false, unknownStart: true };
-    const left = durationMs - Math.max(0, now - started);
-    return { issue, points, remainingMs: Math.max(0, left), overdue: left < 0, unknownStart: false };
+    const unknownStart = ownProgress && !Number.isFinite(started);
+    const ownMs = ownProgress && Number.isFinite(started) ? Math.max(0, now - started) : 0;
+    const left = durationMs - ownMs - spentMs;
+    const ownRunning = ownProgress && Number.isFinite(started) && started <= now;
+    return { issue, points, remainingMs: Math.max(0, left), overdue: left < 0, unknownStart,
+      subIssueSpentMs: spentMs, subIssues: descendants, counting: left > 0 && (ownRunning || running) };
   });
+  const backlogGroups = groups.filter(group => !group.inProgress);
+  const waitingPoints = backlogGroups.reduce((sum, group) => sum + Math.max(0, approximatePoints(group.root) - group.spentMs / msPerPoint), 0);
   const progressMs = items.reduce((longest, item) => Math.max(longest, item.remainingMs), 0);
   return {
     basis,
@@ -213,10 +240,71 @@ export function repositoryEstimate(
           items,
         }
       : null,
+    // The Backlog column is done when its own remaining roots and any promoted parent groups are done.
     backlog: waiting.length
-      ? { count: waiting.length, points: waitingPoints, remainingMs: progressMs + (waitingPoints * msPerPoint) / basis.parallelism }
+      ? { count: waiting.length, points: backlogGroups.reduce((sum, group) => sum + approximatePoints(group.root), 0),
+          remainingMs: progressMs + (waitingPoints * msPerPoint) / basis.parallelism }
       : null,
   };
+}
+
+/** Time already spent on one sub-issue: running time, or a closed interval inside the window. */
+export function subIssueSpentMs(child: SubIssueWork, fallbackRules: Rules, now: number, windowDays = ESTIMATE_WINDOW_DAYS) {
+  const { issue } = child, state = column(issue, child.rules ?? fallbackRules);
+  if (issue.pull_request) return { spentMs: 0, running: false, open: false };
+  if (state === "progress") {
+    const start = time(issue.startedAt);
+    const running = Number.isFinite(start) && start <= now;
+    return { spentMs: running ? now - start : 0, running, open: true };
+  }
+  if (state === "closed") {
+    const start = time(issue.workStartedAt ?? issue.startedAt), end = time(issue.closed_at);
+    const valid = Number.isFinite(start) && Number.isFinite(end) && end > start && end <= now && end >= now - windowDays * DAY_MS;
+    return { spentMs: valid ? end - start : 0, running: false, open: false };
+  }
+  return { spentMs: 0, running: false, open: issue.state === "open" };
+}
+
+interface SubIssueGroup { root: Issue; ownProgress: boolean; inProgress: boolean; spentMs: number; running: boolean; descendants: number }
+
+/**
+ * Groups open estimated issues under their topmost open estimated ancestor. Each descendant
+ * (deduplicated by id, cycle-safe) adds its spent time exactly once to that root.
+ */
+function subIssueGroups(open: Issue[], now: number, rules: Rules, windowDays: number,
+  children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined): SubIssueGroup[] {
+  const members = new Map(open.map(issue => [issue.id, issue]));
+  const absorbed = new Set<number>();
+  if (children) for (const issue of open) for (const child of children.get(issue.id) ?? [])
+    if (child.issue.id !== issue.id && members.has(child.issue.id)) absorbed.add(child.issue.id);
+  // A (malformed) cycle of absorbed members would lose them all; keep such issues as their own roots.
+  const reachable = new Set<number>();
+  const visit = (id: number, seen: Set<number>) => {
+    for (const child of children?.get(id) ?? []) if (!seen.has(child.issue.id)) { seen.add(child.issue.id); visit(child.issue.id, seen); }
+  };
+  for (const issue of open) if (!absorbed.has(issue.id)) visit(issue.id, reachable);
+  return open.filter(issue => !absorbed.has(issue.id) || !reachable.has(issue.id)).map(root => {
+    const ownProgress = column(root, rules) === "progress";
+    const group: SubIssueGroup = { root, ownProgress, inProgress: ownProgress, spentMs: 0, running: false, descendants: 0 };
+    const seen = new Set([root.id]);
+    const walk = (id: number) => {
+      for (const child of children?.get(id) ?? []) {
+        if (seen.has(child.issue.id)) continue;
+        seen.add(child.issue.id);
+        // Prefer the estimated board copy, which carries start times and the group's rules.
+        const member = members.get(child.issue.id);
+        const work = member ? { issue: member, rules: child.rules ?? rules } : child;
+        const spent = subIssueSpentMs(work, rules, now, windowDays);
+        group.descendants++;
+        group.spentMs += spent.spentMs;
+        group.running ||= spent.running;
+        if (spent.open && column(work.issue, work.rules ?? rules) === "progress") group.inProgress = true;
+        walk(child.issue.id);
+      }
+    };
+    walk(root.id);
+    return group;
+  });
 }
 
 /** Individual forecast uses the same calibrated rate and size as column estimates. */

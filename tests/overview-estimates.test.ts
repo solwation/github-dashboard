@@ -67,3 +67,12 @@ it("keeps the overview horizon calibrated to normal work despite an interrupted 
   const selection = groups([lane([...samples, progress(10)])]);
   expect(overviewTimeEstimate(selection, "progress", now)).toMatchObject({ remainingMs: 20 * minute, knownRepositories: 1 });
 });
+
+it("deducts sub-issue time from the parent in the overview badge without counting the child twice (#279)", () => {
+  const parent = issue(20, 3), child = progress(21, 20 * minute);
+  const selection = groups([lane([...history(), parent, child])]);
+  expect(overviewTimeEstimate(selection, "progress", now)).toMatchObject({ remainingMs: 10 * minute });
+  const children = new Map([[parent.id, [{ issue: child }]]]);
+  expect(overviewTimeEstimate(selection, "progress", now, children)).toMatchObject({ remainingMs: 70 * minute, counting: true });
+  expect(overviewTimeEstimate(selection, "open", now, children)).toMatchObject({ remainingMs: 70 * minute });
+});

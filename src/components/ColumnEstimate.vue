@@ -4,6 +4,7 @@ import { useLanguage } from "../lib/i18n";
 import type { Issue, Rules } from "../lib/model";
 import { combinedEstimate, estimateLabel, MAX_HISTORY_SAMPLES, nextHistoryExpiry, repositoryEstimate } from "../lib/estimates";
 import { useNow } from "../composables/useNow";
+import { useSubIssueWork } from "../composables/useSubIssueWork";
 
 /**
  * Time estimate in the Backlog and In progress column headers (#138, #140). `groups` holds the
@@ -14,9 +15,10 @@ import { useNow } from "../composables/useNow";
 const props = defineProps<{ groups: { issues: Issue[]; rules?: Rules }[]; column: "progress" | "backlog" }>();
 const { t } = useLanguage();
 const MINUTE = 60000;
+const children = useSubIssueWork(() => props.groups);
 
 function estimateAt(at: number) {
-  const repositories = props.groups.map((group) => repositoryEstimate(group.issues, at, { rules: group.rules }));
+  const repositories = props.groups.map((group) => repositoryEstimate(group.issues, at, { rules: group.rules, children: children.value }));
   if (props.groups.length === 1) {
     const [only] = repositories;
     const value = only && (props.column === "progress" ? only.progress : only.backlog);
@@ -35,11 +37,14 @@ function estimateAt(at: number) {
   }) };
 }
 function pointBasis(points: number) {
-  return t("Grov storlek: {points} poäng från poänglabels eller rensad titel/beskrivning, delmål och risksignaler (1–13 per ärende, inte uppmätt komplexitet).", { points });
+  return t("Grov storlek: {points} poäng från poänglabels eller rensad titel/beskrivning, delmål och risksignaler (1–13 per ärende, inte uppmätt komplexitet).", { points }) + " " + spentBasis();
+}
+function spentBasis() {
+  return t("Tid som redan lagts på pågående arbete och på underärenden (pågående eller stängda inom fönstret) dras av från huvudärendets uppskattning; underärenden räknas inte en gång till.");
 }
 /** Whether some issue is still counting down; otherwise the value only changes with new data. */
 function counting(progress: ReturnType<typeof repositoryEstimate>["progress"]) {
-  return !!progress?.items.some((item) => !item.unknownStart && !item.overdue);
+  return !!progress?.items.some((item) => item.counting);
 }
 
 // Wake at a rounded countdown change or the next sample expiry, including backlog-only boards.

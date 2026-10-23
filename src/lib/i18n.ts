@@ -775,6 +775,8 @@ export const english: Record<string, string> = {
     "Backlog is divided by {parallel} issues in progress at a time on average.",
   "Median per repository från {count} stängda ärenden i {repositories} repositories senaste {days} dagarna. Långsammaste repository avgör.":
     "Median per repository from {count} closed issues in {repositories} repositories in the last {days} days. The slowest repository decides.",
+  "Tid som redan lagts på pågående arbete och på underärenden (pågående eller stängda inom fönstret) dras av från huvudärendets uppskattning; underärenden räknas inte en gång till.":
+    "Time already spent on work in progress and on sub-issues (running or closed within the window) is deducted from the parent's estimate; sub-issues are not counted again.",
 };
 export function t(
   source: string,

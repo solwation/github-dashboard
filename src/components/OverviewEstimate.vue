@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useNow } from "../composables/useNow";
+import { useSubIssueWork } from "../composables/useSubIssueWork";
 import { estimateLabel, nextHistoryExpiry } from "../lib/estimates";
 import { overviewPoints, overviewTimeEstimate, type OverviewEstimateColumn, type OverviewEstimateGroup } from "../lib/overview-estimates";
 import { useLanguage } from "../lib/i18n";
 const props = defineProps<{ groups: OverviewEstimateGroup[]; column: OverviewEstimateColumn }>();
 const { t } = useLanguage();
+const children = useSubIssueWork(() => props.groups);
 const points = computed(() => overviewPoints(props.groups, props.column));
 const now = useNow(at => {
-  const current = overviewTimeEstimate(props.groups, props.column, at);
+  const current = overviewTimeEstimate(props.groups, props.column, at, children.value);
   if (current.remainingMs === null) return Infinity;
   const countdown = current.counting ? ((current.remainingMs - 30000) % 60000 + 60000) % 60000 || 60000 : Infinity;
   const expiry = Math.min(...props.groups.map(group => {
@@ -17,7 +19,7 @@ const now = useNow(at => {
   }));
   return Math.min(countdown, expiry, current.nextStartMs - at, 86400000);
 }, { board: true });
-const estimate = computed(() => overviewTimeEstimate(props.groups, props.column, now.value));
+const estimate = computed(() => overviewTimeEstimate(props.groups, props.column, now.value, children.value));
 const time = computed(() => estimate.value.remainingMs === null ? "" : estimate.value.remainingMs === 0 && estimate.value.overdue
   ? t("över uppskattning") : t("{time} kvar", { time: estimateLabel(estimate.value.remainingMs) }));
 const partial = computed(() => estimate.value.knownRepositories > 0 && estimate.value.knownRepositories < estimate.value.repositories);
@@ -30,6 +32,7 @@ const description = computed(() => [
       : t("Uppskattad tid kvar: {time}", { time: estimateLabel(estimate.value.remainingMs!) }),
     ...(partial.value ? [coverage.value] : []),
     t("Tiden bygger på historisk tid per poäng och parallellitet inom varje repository. Långsammaste repository avgör."),
+    t("Tid som redan lagts på pågående arbete och på underärenden (pågående eller stängda inom fönstret) dras av från huvudärendets uppskattning; underärenden räknas inte en gång till."),
     ...(estimate.value.unknownStart ? [t("{count} pågående saknar säker starttid och räknas med sin fulla uppskattade tid.", { count: estimate.value.unknownStart })] : []),
     ...(estimate.value.overdue ? [t("{count} pågående har passerat sin uppskattade tid.", { count: estimate.value.overdue })] : []),
   ] : []),

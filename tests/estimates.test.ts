@@ -323,3 +323,65 @@ describe("closed parent group duration", () => {
     expect(closedIssueGroupOutcome(parent, [], [], now)).toEqual(closedIssueOutcome(parent, [], now));
   });
 });
+
+describe("sub-issue time deduction (#279)", () => {
+  const history = () => [done(hour, 20 * day), done(hour, 10 * day), done(hour, 5 * day)];
+  const sized = (state: "backlog" | "progress", points: number, extra: Partial<Issue> = {}) => issue(state, {
+    labels: [...(state === "progress" ? [{ name: "in progress", color: "" }] : []), { name: `points: ${points}`, color: "" }], ...extra,
+  });
+  const offBoardClosed = (duration: number, ago = hour) => issue("closed", { startedAt: iso(now - ago - duration), closed_at: iso(now - ago) });
+  const tree = (entries: [Issue, Issue[]][]) => new Map(entries.map(([parent, children]) => [parent.id, children.map(child => ({ issue: child }))]));
+
+  it("deducts the parent's own elapsed time and never goes negative", () => {
+    const parent = sized("progress", 2, { startedAt: iso(now - 30 * min) });
+    expect(repositoryEstimate([...history(), parent], now).progress).toMatchObject({ remainingMs: 90 * min, overdue: 0 });
+    const late = sized("progress", 1, { startedAt: iso(now - 3 * hour) });
+    expect(repositoryEstimate([...history(), late], now).progress).toMatchObject({ remainingMs: 0, overdue: 1 });
+  });
+
+  it("deducts a running child and a closed child from an in-progress parent", () => {
+    const parent = sized("progress", 5, { startedAt: iso(now - hour) });
+    const child = running(30 * min), closed = offBoardClosed(45 * min);
+    const estimate = repositoryEstimate([...history(), parent, child], now, { children: tree([[parent, [child, closed]]]) });
+    expect(estimate.progress).toMatchObject({ count: 1, points: 5, remainingMs: 5 * hour - hour - 30 * min - 45 * min, overdue: 0 });
+    expect(estimate.progress!.items[0]).toMatchObject({ issue: parent, subIssueSpentMs: 75 * min, subIssues: 2, counting: true });
+  });
+
+  it("deducts closed and running children from a backlog parent and moves the group into progress while work runs", () => {
+    const parent = sized("backlog", 5), child = running(30 * min), closed = offBoardClosed(hour);
+    const other = sized("backlog", 1);
+    const estimate = repositoryEstimate([...history(), parent, child, other], now, { children: tree([[parent, [child, closed]]]) });
+    expect(estimate.progress).toMatchObject({ count: 1, remainingMs: 5 * hour - hour - 30 * min, unknownStart: 0 });
+    expect(estimate.progress!.items[0]).toMatchObject({ issue: parent, counting: true });
+    expect(estimate.backlog).toMatchObject({ count: 2, points: 1, remainingMs: 3.5 * hour + hour });
+    const waiting = repositoryEstimate([...history(), parent], now, { children: tree([[parent, [closed]]]) });
+    expect(waiting.progress).toBeNull();
+    expect(waiting.backlog).toMatchObject({ count: 1, points: 5, remainingMs: 4 * hour });
+  });
+
+  it("counts each child once: absorbed, deduplicated and nested children do not reduce twice", () => {
+    const parent = sized("progress", 5, { startedAt: iso(now - hour) });
+    const child = sized("progress", 3, { startedAt: iso(now - 20 * min) });
+    const grandchild = running(10 * min);
+    const without = repositoryEstimate([...history(), parent, child, grandchild], now);
+    expect(without.progress).toMatchObject({ count: 3, remainingMs: 4 * hour });
+    const children = tree([[parent, [child, child]], [child, [grandchild]]]);
+    const estimate = repositoryEstimate([...history(), parent, child, grandchild], now, { children });
+    expect(estimate.progress).toMatchObject({ count: 1, points: 5, remainingMs: 5 * hour - hour - 20 * min - 10 * min });
+    expect(estimate.progress!.items[0]).toMatchObject({ subIssueSpentMs: 30 * min, subIssues: 2 });
+    // Sub-issue time beyond the parent estimate is overdue, not negative.
+    const big = repositoryEstimate([...history(), parent], now, { children: tree([[parent, [offBoardClosed(5 * hour)]]]) });
+    expect(big.progress).toMatchObject({ remainingMs: 0, overdue: 1 });
+  });
+
+  it("ignores backlog children, closures outside the window and closed parents", () => {
+    const parent = sized("progress", 2, { startedAt: iso(now - 30 * min) });
+    const old = offBoardClosed(hour, 40 * day), idle = issue("backlog");
+    const estimate = repositoryEstimate([...history(), parent, idle], now, { children: tree([[parent, [old, idle]]]) });
+    expect(estimate.progress).toMatchObject({ count: 1, remainingMs: 90 * min });
+    expect(estimate.backlog).toMatchObject({ count: 1, points: 0, remainingMs: 90 * min });
+    const closedParent = done(hour), child = running(10 * min);
+    expect(repositoryEstimate([...history(), closedParent, child], now, { children: tree([[closedParent, [child]]]) }).progress)
+      .toMatchObject({ count: 1, remainingMs: 50 * min });
+  });
+});
