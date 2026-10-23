@@ -72,7 +72,8 @@ test("desktop expands row details in place with open description while phone ope
   const detailsCard = panel.locator(".issue-card.row-details-card");
   await expect(detailsCard).toBeVisible();
   await expect(detailsCard.locator(".card-top")).toHaveCount(0);
-  await expect(detailsCard.getByRole("link", { name: /Parent plan/ })).toBeVisible();
+  // The parent opens inside the dashboard (parent navigation), so it is a button rather than a GitHub link.
+  await expect(detailsCard.getByRole("button", { name: /Parent plan/ })).toBeVisible();
   await expect(detailsCard.getByText("Description of alpha task 2")).toBeVisible();
   // #163: on desktop, expanded list rows hide the redundant "Visa mindre" toggle button while keeping comments visible
   await expect(detailsCard.locator(".details-toggle")).toHaveCount(0);
