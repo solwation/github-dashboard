@@ -124,12 +124,25 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
   await expect(prompt).toHaveCount(0);
 
   // The badge (also on phones) and Settings open the same update dialog, returning focus.
-  await page.setViewportSize({ width: 375, height: 812 });
-  await expect(badge).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const dialog = page.getByRole("dialog", { name: "Automatiska uppdateringar", exact: true });
+  for (const viewport of [{ width: 375, height: 812 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
+    await page.setViewportSize(viewport);
+    await expect(badge).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Phones show the badge beside the menu, with a full touch target inside the topbar (#270).
+    const [badgeBox, topbarBox] = [(await badge.boundingBox())!, (await page.locator(".topbar").boundingBox())!];
+    expect(badgeBox.width).toBeGreaterThanOrEqual(44);
+    expect(badgeBox.height).toBeGreaterThanOrEqual(44);
+    expect(badgeBox.x + badgeBox.width).toBeLessThanOrEqual(viewport.width);
+    expect(badgeBox.y + badgeBox.height).toBeLessThanOrEqual(topbarBox.y + topbarBox.height);
+    if (process.env.EVIDENCE_DIR) await page.screenshot({ path: `${process.env.EVIDENCE_DIR}/update-badge-${viewport.width}.png`, clip: { x: 0, y: 0, width: viewport.width, height: 120 } });
+  }
+  await badge.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(badge).toBeFocused();
   await page.setViewportSize({ width: 1280, height: 720 });
   await badge.click();
-  const dialog = page.getByRole("dialog", { name: "Automatiska uppdateringar", exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Stäng", exact: true })).toBeFocused();
   await expect(dialog).toContainText("Ny uppdatering tillgänglig");

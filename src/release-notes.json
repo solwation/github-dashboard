@@ -19,13 +19,14 @@
       },
       {
         "text": {
-          "sv": "På mobil är stängkrysset i dialoger från menyn en kompakt knapp uppe till höger, och ihopfällda repositories blir lägre utan sökruta.",
-          "en": "On phones, dialog close buttons from the menu are compact top-right buttons, and collapsed repositories are shorter without a search field."
+          "sv": "På mobil är stängkrysset i dialoger kompakt, ihopfällda repositories blir lägre utan sökruta, och en röd (!) bredvid Meny visar en väntande uppdatering.",
+          "en": "On phones, dialog close buttons are compact, collapsed repositories are shorter without a search field, and a red (!) beside Menu shows a waiting update."
         },
         "issues": [
           260,
           265,
-          267
+          267,
+          270
         ]
       },
       {

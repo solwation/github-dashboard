@@ -128,6 +128,7 @@ const newNoteDays = computed(() =>
 const updateSummary = computed(() => summarizeUpdate(newerBuild.value ? publishedNotes.value?.delta : null, noteLanguage(locale.value)));
 const availableBuild = computed(() => (updateAvailable.value ? newerBuild.value : null));
 const sidebarVersion = ref<InstanceType<typeof SidebarVersion> | null>(null);
+const mobileUpdateBadge = ref<HTMLButtonElement | null>(null);
 function openUpdateDialog() {
   updateDialogOpen.value = true;
   void appUpdate.check();
@@ -143,7 +144,7 @@ function openReleaseNotes(days?: ReleaseNoteDay[]) {
 function deferUpdate() {
   appUpdate.defer();
   // The prompt disappears; keep keyboard focus on the remaining update badge.
-  void nextTick(() => sidebarVersion.value?.focusBadge());
+  void nextTick(() => sidebarVersion.value?.focusBadge() || mobileUpdateBadge.value?.focus());
 }
 const user = ref<{ login: string; avatar_url: string } | null>(null);
 // Lanes and their issues are always replaced, never mutated in place, so a shallow ref avoids
@@ -1814,6 +1815,9 @@ onMounted(async () => {
         </div>
       </div>
       <div class="mobile-tools" :class="{ 'mobile-tools-open': mobileToolsOpen }">
+      <!-- Phones hide the sidebar, so its update badge is repeated beside the menu (#270). -->
+      <button v-if="updateAvailable" ref="mobileUpdateBadge" type="button" class="mobile-update-badge" aria-haspopup="dialog"
+        :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="19" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
         <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"

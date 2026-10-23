@@ -1,13 +1,14 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Ihopfällda repositories på mobil blir lägre, Inställningar syns när telefonen vrids, och End i kommentarer når alltid sista kommentaren.",
-    "en": "Collapsed repositories on phones are shorter, Settings stays visible on rotation, and End in comments always reaches the last comment."
+    "sv": "Mobilen får lägre ihopfällda repositories, synlig uppdateringsbadge och Inställningar som tål vridning; End i kommentarer når alltid sista kommentaren.",
+    "en": "Phones get shorter collapsed repositories, a visible update badge and Settings that survive rotation; End in comments always reaches the last comment."
   },
   "issues": [
     267,
     268,
     269,
+    270,
     271
   ]
 }
