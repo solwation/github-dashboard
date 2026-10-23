@@ -8,6 +8,14 @@ shared method; repository names, issue systems, permissions, release rules and t
 belong in the host policy. User instructions and platform restrictions take precedence.
 Reading or maintaining these files does not start an unattended queue session.
 
+## Check the installed workflow
+
+At conductor startup/resume, follow the host's upstream/version settings and
+[update-discovery procedure](README.md#check-for-upstream-updates). Reuse a successful
+check for up to 24 hours by default. Always propose relevant published bug fixes;
+other upgrades are optional. Keep the installed workflow pinned until a reviewed
+update is authorized; discovery does not enable unattended work or automatic imports.
+
 ## Start with a short delivery plan
 
 Before implementation, write at most a few lines in the assignment or issue:
@@ -16,11 +24,101 @@ Before implementation, write at most a few lines in the assignment or issue:
 - Critical path: what must happen in order; which independent work can overlap.
 - Checks: normally 2–3 checks tied to specific failure risks, plus mandatory gates.
 - Ownership and done: worker, checkout, integration owner and release/closure evidence.
+- Follow-up: owner, evidence format, destination and timing, chosen for the acceptance.
+- Project hooks: applicable phase activities and their required evidence.
 
 Spend minutes, not a planning phase, on an ordinary issue. Read relevant modules and
 topic docs; do not inventory the entire application by default. Resolve a material
 unknown with one focused investigation, then update the plan. A file count or elapsed
 time alone is a signal to reassess, not a reason to manufacture child issues.
+
+## Apply project hooks at each phase
+
+Projects can extend the workflow with activities documented in their host policy or
+linked topic documents. These hooks are instructions for the agent, including manual
+steps or existing commands; this package installs no hook runner. The shared phase
+names and boundaries are:
+
+| Phase | Boundary for project activities |
+| --- | --- |
+| `planning` | Read relevant context and finalize the short delivery plan before implementation |
+| `implementation` | Make the scoped change before handing it to verification |
+| `verification` | Collect evidence for the affected behavior before review |
+| `review` | Review the combined diff and evidence before authorizing delivery |
+| `delivery` | Integrate/publish under host rules and verify the delivered revision |
+| `follow-up` | Publish results and required evidence before issue closure or final handoff |
+
+For each hook, the project defines a stable name, phase, trigger and timing (entry,
+exit or a specific event within that phase), practical procedure or document link,
+owner, expected evidence/destination and whether it is required or optional. List
+multiple hooks in execution order within a phase. Use
+[PROJECT.example.md](PROJECT.example.md) as the configuration template.
+
+During planning, resolve applicable hooks and put their owners and evidence needs in
+the existing plan/worker brief. Read the linked procedure before executing a hook.
+At each phase boundary, the conductor checks the relevant hook outcomes before moving
+on. A hook with a false trigger is not applicable; record that briefly when it affects
+expected evidence. Without configured hooks, follow the core workflow normally.
+
+A failed or unavailable required hook blocks the dependent phase transition or
+closure; preserve evidence, report the next action and continue only independent work.
+Report skipped or failed optional hooks without treating them as required acceptance.
+Record outcomes in existing check/result notes, bound to the revision and environment.
+Reuse valid evidence; repeat a hook only when its trigger recurs and evidence is no
+longer valid, its procedure explicitly requires repetition, or a relevant failure needs
+rechecking. Reassess a failed approach rather than retrying it blindly.
+
+Hooks add project activities without weakening core checks, acceptance or permission
+boundaries. They do not grant deployment/messaging permissions or enable unattended
+monitoring. Queue intake hooks remain governed by [COORDINATION.md](COORDINATION.md);
+reuse their outcomes when valid rather than running the same activity twice.
+
+## Spend resources deliberately
+
+Minimize the total work needed for an accepted result: model effort, context, tool
+calls, setup and coordination as well as elapsed time. Apply this on every platform,
+even when only one model is available. Quality, authorization, required evidence and
+host queue/timer rules remain gates; do not save resources by silently weakening them.
+
+Before assigning work, choose the smallest sufficient capability and effort:
+
+| Task and risk | Starting choice |
+| --- | --- |
+| Clear implementation following an established pattern, bounded edits or routine checks | Lower-cost capable worker and low/moderate reasoning where selectable |
+| Uncertain diagnosis, coupled design, unfamiliar boundaries or high-impact failure | Stronger reasoning for the uncertain part; delegate resolved implementation economically |
+| Conductor planning and review | Enough reasoning for dependencies and risk; routine queue/status work does not automatically need maximum effort |
+
+Use actual available capabilities and known cost information; do not assume a provider's
+model names imply price or invent savings. The host adapter supplies concrete model
+identifiers and supported effort settings. When selection is supported and authorized,
+set these explicitly for the assignment rather than blindly inheriting the conductor's
+strongest setting. When selection is unavailable or locked, state that limitation once
+and conserve effort through scope, context, tools and verification. Never claim a model
+was selected unless the tool actually used it. Do not ask the user to choose routine
+resource settings unless their input is required.
+
+Keep the decision to a line in the existing plan/brief: capability/effort, why it fits,
+and a task-specific stop/reassessment condition. This is not a new reporting phase.
+Choose direct work when a handoff would cost more than it saves. A helper must save
+expected total work or materially shorten the critical path; idle capacity alone is
+not a reason to spawn one or duplicate an investigation.
+
+Give workers a compact brief, acceptance, relevant paths and the current findings.
+Keep mandatory host rules accessible, but do not copy the entire conversation, queue
+or repository into every assignment. Prefer targeted searches, bounded output and
+independent batched reads. Reuse valid setup, fetched data and source-bound evidence
+within their freshness requirements; do not replay startup on every poll or continue
+exploring alternatives once acceptance is met.
+
+Escalate for a concrete capability gap, unresolved ambiguity, high-impact risk or a
+failed bounded approach, not merely because a tool/check failed. Inspect the failure:
+fix a command/environment issue directly, make a scoped correction for a known defect,
+and use stronger reasoning/model only where it addresses the remaining difficulty.
+Starting stronger immediately is appropriate for demonstrated risk. If the same
+approach fails again without new evidence, stop repeating it and reassess. Preserve
+the checkout, patch, evidence and diagnosis for a handoff; do not restart the task
+blindly. Record the reason and changed capability/scope in the existing brief/status.
+Return routine follow-on work to the economical setting when the uncertainty is resolved.
 
 ## Choose the smallest useful team
 
@@ -92,6 +190,31 @@ Unrelated defects become separately scoped issues, not opportunistic fixes.
 Record a short result: outcome, revision, checks and limitations, deployment when
 applicable, remaining work. Attribution must name the actual tool if required; never
 pretend another provider generated the work.
+
+## Follow up with evidence that fits the change
+
+The conductor owns follow-up unless a named owner is assigned in the short plan.
+Choose the smallest useful evidence and an accessible destination under host rules:
+
+| Delivered change | Useful follow-up |
+| --- | --- |
+| Visible UI or rendered content | Screenshot of the affected state, with revision and environment; before/after when comparison helps |
+| Behavior or bug fix | Relevant test result or reproduction outcome tied to the delivered revision |
+| Documentation or policy | Link to the published change and a short explanation of what was checked |
+| Deployment | Target environment, deployed revision and outcome of the relevant post-deployment check |
+
+For issue work, post a completion comment before closure: outcome, delivered revision,
+checks, links or attachments to relevant evidence, limitations and remaining acceptance.
+A screenshot supports visual acceptance; it does not replace functional checks. Inspect
+captured images before posting and use an authorized destination without exposing
+private data. If attachments cannot be posted, provide an accessible artifact link or
+report the limitation; never claim an upload that did not happen.
+
+Perform required post-publication checks before declaring their acceptance complete.
+If required evidence or user validation is unavailable, keep the relevant acceptance
+open and name the next action and owner. Only schedule later monitoring when authorized;
+follow-up does not itself enable unattended polling. Reuse the existing result note
+and evidence rather than adding a separate reporting phase.
 
 ## Keep progress observable
 
