@@ -1,8 +1,8 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Notiser leder till issuet, tid kvar räknar av underärenden, Statistik följer tid per SP och avvikelse, och mobilen blir kompaktare.",
-    "en": "Notifications lead to their issue, remaining time deducts sub-issue work, Statistics tracks time per SP and deviation, and phones get more compact."
+    "sv": "Välj sortering per kolumn, notiser leder till issuet, tid kvar räknar av underärenden, Statistik visar tid per SP och avvikelse, och mobilen blir kompaktare.",
+    "en": "Choose a sort order per column, notifications lead to their issue, remaining time deducts sub-issues, Statistics shows time per SP and deviation, and phones get compact."
   },
   "issues": [
     267,
@@ -18,6 +18,7 @@
     280,
     285,
     281,
-    283
+    283,
+    286
   ]
 }
