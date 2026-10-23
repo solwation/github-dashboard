@@ -81,10 +81,10 @@ Run affected tests locally before pushing; use `npm run build` for code changes.
 - [Shared orchestra and this project's policy](.orchestra/project.md)
 
 `/orkester` uses [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern)
-**v0.1.0**, pinned as a squashed Git subtree in `.orchestra/shared`. Ordinary cloning
+**v0.1.2**, pinned as a squashed Git subtree in `.orchestra/shared`. Ordinary cloning
 includes the instructions; no package install or submodule initialization is needed.
 Existing skill/command adapters and other file-reading agents use the same core.
-Project capacity, release gates and final-review/watch rules stay in the local policy.
+Project capacity, release gates, phase hooks and final-review/watch rules stay in the local policy.
 Generic improvements are made in the shared repository and adopted here through an
 explicit reviewed update; see its [maintenance guide](.orchestra/shared/README.md).
 

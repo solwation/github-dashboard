@@ -9,7 +9,9 @@ and overrides; explicit user instructions and platform limits take precedence.
 `/orkester`, `$orkester` or a plain-language request to run orchestration invokes this
 workflow. Reading, updating or installing these instructions does not start the queue.
 Keep explicit user scope; without it, work the repository's startable issue backlog.
-Use [the compact worker brief](shared/WORKER.md) for each assignment.
+Use [the compact worker brief](shared/WORKER.md) for each assignment, including the
+applicable [phase hooks](#project-phase-hooks) and the
+[resource choice](shared/ORCHESTRA.md#spend-resources-deliberately) for the worker.
 
 ## Issueflow and queue
 
@@ -99,6 +101,39 @@ questions go on the issue with concrete options and a recommendation, labelled
 after an actual user answer and remove the question label. `user question` does not
 block publication; reserve `blocked` for real technical blockers, which do stop the gate.
 
+## Project phase hooks
+
+Apply [the shared hook contract](shared/ORCHESTRA.md#apply-project-hooks-at-each-phase).
+These are agent instructions, not a hook runner. They restate where this project's
+existing rules apply; [AI.md](../AI.md) and the sections above remain the detailed
+source. The conductor owns every hook unless the short plan names a worker for a scoped
+activity, and checks outcomes at each phase boundary. All hooks are required when
+triggered; a false trigger is noted briefly where it changes expected evidence (for
+example "instruction-only: no screenshots, release notes or `needs-deploy`").
+Listed order is execution order.
+
+| Hook | Phase and trigger/timing | Procedure | Requirement and completion evidence |
+| --- | --- | --- | --- |
+| Issue and priority | `planning`: every change, entry | Create/reuse an issue with acceptance, one canonical priority and impact/urgency rationale ([AI.md](../AI.md#issues-and-priority)); never change an existing priority without user direction | Issue linked in the plan before implementation |
+| Read context | `planning`: every change, before the plan is final | Use `rg` for relevant code and instructions; read the AI.md project rules the change touches (optional-data visibility, encrypted storage, accessibility, mobile layouts) | Plan names the 2–3 risk-based checks, UI matrix need and follow-up destination |
+| Isolated checkout | `implementation`: every assignment, entry | Committed common baseline, own worktree (ext4 under WSL), explicit file ownership, own port/evidence folder ([capacity](#capacity-ownership-and-progress)) | Worktree and owned files recorded in the #97 status |
+| Preserve and resolve | `implementation`: every change, exit | Preserve others' work; resolve conflicts completely, including Vue template markers; serialize package/lockfile changes | No unrelated edits or conflict markers; out-of-scope findings filed as issues |
+| Release notes | `implementation`: published user-facing changes, exit | Update the day's bilingual entry in `src/release-notes.json` ([AI.md](../AI.md#project-and-verification)); run `npx vitest run tests/release-notes.test.ts` | Entry in the same commit; none for instruction-only work |
+| README | `implementation`: behavior or setup changes, exit | Update `README.md`; update AI.md when the workflow changes | Docs match the delivered behavior |
+| Targeted tests | `verification`: every code change | `npx vitest run <affected>` / `npx playwright test <affected>`; no routine full suite | Revision-bound results; untested behavior is never claimed |
+| UI matrix | `verification`: changes affecting issue cards or list rows | Playwright Cards and List at 1600×1000, 1000×900, mobile 390×844 and 844×390 (plus 320×568 for density/truncation), relevant states, one reused public-data snapshot | Screenshots inspected for overlap, overflow and row height; no real issue fixtures committed |
+| Build | `verification`: every change, before review | `npm run build` (conflict-marker scan, types, production output) | Green build at the reviewed revision |
+| Integration review | `review`: every change, before delivery | Conductor reads the combined diff and evidence, inspects screenshots against acceptance, rechecks conflict markers | Defects corrected and affected checks refreshed |
+| Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
+| Prepare publication | `delivery`: app changes, after integration | Mark `needs-deploy` without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta; never bypass the Actions gate |
+| Check Action | `delivery`: every push to `main` | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
+| Complete issue | `follow-up`: every tracked change, before closure | [Completion comment](shared/ORCHESTRA.md#follow-up-with-evidence-that-fits-the-change) with outcome, revision, checks, evidence and limits; app work closes only after verified Pages publication and `needs-deploy` removal | All work and own owner labels removed; unmet acceptance stays open with next action and owner |
+
+## Queue intake hooks
+
+None configured. Queue sessions follow [COORDINATION.md](shared/COORDINATION.md) with
+the complete paginated open-issue fetch described [above](#issueflow-and-queue).
+
 ## Final review and watch
 
 When the actionable queue is empty and the latest app batch is published and verified,
@@ -121,11 +156,37 @@ successful times or prove an empty queue. Finish after the hour and a successful
 complete queue check without startable work, or promptly on explicit user stop/pause.
 Report real remaining blockers; do not close unfinished work.
 
-## Shared version
+## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.1.0**,
-commit **67507ef71c4979d8340e03e84072719651ada7df** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.1.2**,
+commit **ce0d93613be74c0bf653377629500b404fb8b966** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [update/contribution guide](shared/README.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and explicitly adopt
 reviewed releases here. Do not subtree-push this project's files/history upstream.
+The subtree also carries the shared repository's own maintainer files (`AGENTS.md`,
+`AI.md`, `docs/`); they govern upstream maintenance only, not this project.
+
+### Upstream update discovery
+
+At conductor startup/resume, apply the core
+[update-discovery procedure](shared/README.md#check-for-upstream-updates): check stable
+releases **and version tags** of the official upstream
+`solwation/dirigenten-och-orkestern` against the pin above. Reuse a successful check
+for the same upstream/pin for up to 24 hours; an explicit update request or suspected
+orchestra bug requires a fresh check. The conductor owns this check; workers and queue
+polls do not repeat it. Ignore drafts/prereleases, compare version numbers, and read
+changelogs plus the full instruction diff at exact resolved commits.
+
+Relevant bug/regression fixes always get a proposal issue in this repository (or an
+update to an existing one), with installed/target versions and SHAs, source links,
+applicability, host-policy effects, checks and next action, prioritized under AI.md.
+Other upgrades are optional and proposed only for a clear project benefit. Reuse
+existing proposals or recorded deferrals; unreleased main changes are pending, not
+targets. Never import automatically or interrupt current work: an import is an ordinary
+issue through the reviewed subtree update procedure.
+
+Record UTC check time, upstream/pin, examined targets and outcome in private state or
+the #97 status. If the read fails or is incomplete, keep the pin, disclose it once,
+retry on the next session/resume and continue independent work; never cache failure
+as success. No background scheduler is installed.
