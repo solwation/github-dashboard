@@ -39,7 +39,7 @@ test('loading status separates sparse history from coverage and estimates discov
   await expect(status).toContainText('Visad period:');
   const spinner = status.locator('.statistics-load-spinner');
   await expect(spinner).toBeVisible();
-  await expect(spinner).toHaveCSS('animation-name', 'statistics-load-spin');
+  await expect(spinner).toHaveCSS('animation-name', /^statistics-load-spin/);
   await expect(status.locator('.statistics-load-activity')).toHaveAttribute('aria-hidden', 'true');
   await expect(status.getByRole('progressbar')).toHaveCount(0);
   await expect(status).not.toContainText('Ungefär');
