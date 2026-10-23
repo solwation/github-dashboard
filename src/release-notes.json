@@ -93,11 +93,12 @@
       },
       {
         "text": {
-          "sv": "Ett klick på en notis öppnar översikten och markerar issuet med en blinkande ram, även i ihopfällda projekt eller bakom Visa fler.",
-          "en": "Clicking a notification opens Overview and highlights the issue with a pulsing frame, even in collapsed projects or behind Show more."
+          "sv": "Ett klick på en notis markerar issuet med en blinkande ram, även i ihopfällda projekt, eller visar dess repository om issuet inte syns.",
+          "en": "Clicking a notification highlights the issue with a pulsing frame, even in collapsed projects, or shows its repository if the issue is not visible."
         },
         "issues": [
-          278
+          278,
+          288
         ]
       }
     ]

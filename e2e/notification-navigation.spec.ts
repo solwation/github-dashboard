@@ -165,3 +165,19 @@ test("a worker notice's issue link opens Overview and highlights the issue", asy
   await expect(page.locator(".sr-only[role=status]").filter({ hasText: "#999 visas inte på tavlan. Visar sample/beta." })).toHaveCount(1);
   await context.close();
 });
+
+test("a notified issue the column cannot show falls back to its repository (#288)", async ({ browser }, info) => {
+  const { context, page, closeTarget, click } = await fixture(browser, info.project.use.baseURL, devices[0]!);
+  const notice = await closeTarget();
+  // The issue is in the loaded data, but its card is not found in the rendered column.
+  await page.evaluate(() => {
+    const original = document.getElementById.bind(document);
+    document.getElementById = (id: string) => /^issue-.*-7$/.test(id) ? null : original(id);
+  });
+  await click(notice);
+  await expect(page.locator("#repo-1")).toHaveClass(/repository-navigation-highlight/);
+  await expect(page.locator(".sr-only[role=status]").filter({ hasText: "#7 visas inte på tavlan. Visar sample/alpha." })).toHaveCount(1);
+  await expect(page.locator(".sr-only[role=status]").filter({ hasText: "Visar #7 i sample/alpha" })).toHaveCount(0);
+  await expect(page.locator(".issue-navigation-highlight")).toHaveCount(0);
+  await context.close();
+});

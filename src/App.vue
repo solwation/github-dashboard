@@ -513,12 +513,13 @@ let issueNavigationHighlight: HTMLElement | null = null;
 let issueNavigationTimer: ReturnType<typeof setTimeout> | undefined;
 const parentNavigationRevision = ref(0);
 function issueDomId(repository: string, number: number) { return `issue-${encodeURIComponent(repository.toLowerCase())}-${number}`; }
-async function revealParentIssue(repository: string, number: number) {
+// Resolves true once the issue is highlighted; false when the board cannot show it (#288).
+async function revealParentIssue(repository: string, number: number): Promise<boolean> {
   parentNavigationRevision.value++;
   const lane = lanes.value.find(item => item.repo.full_name.toLowerCase() === repository.toLowerCase());
-  if (!lane) return;
+  if (!lane) return false;
   const issue = lane.issues.find(item => item.number === number);
-  if (!issue) return;
+  if (!issue) return false;
   if (currentView.value !== "overview") {
     currentView.value = "overview";
     if (window.location.hash !== "#overview") history.pushState(null, "", "#overview");
@@ -538,12 +539,12 @@ async function revealParentIssue(repository: string, number: number) {
   const index = splitByRepository.value
     ? items(lane, key).findIndex(item => item.number === number)
     : (combinedColumns.value[key] ?? []).findIndex(item => item.lane.repo.full_name.toLowerCase() === repository.toLowerCase() && item.issue.number === number);
-  if (index < 0) return;
+  if (index < 0) return false;
   if (splitByRepository.value) visibleLimit.value[lane.repo.full_name + key] = Math.max(shownLimit(lane.repo.full_name, key), index + 1);
   else combinedLimits.value[key] = Math.max(combinedLimit(key), index + 1);
   await nextTick();
   const target = document.getElementById(issueDomId(repository, number));
-  if (!target) return;
+  if (!target) return false;
   clearTimeout(issueNavigationTimer);
   issueNavigationHighlight?.classList.remove("issue-navigation-highlight");
   target.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -554,10 +555,12 @@ async function revealParentIssue(repository: string, number: number) {
     issueNavigationHighlight?.classList.remove("issue-navigation-highlight");
     issueNavigationHighlight = null;
   }, 1500);
+  return true;
 }
 // Notification clicks (#278) show the notified issue with the same pulse as parent navigation.
 // A search that hides it is cleared, like parent navigation; an issue the board cannot show
-// (hidden coordination issue, or no longer in the loaded data) falls back to its repository.
+// (hidden coordination issue, no longer in the loaded data, or not rendered in its column, #288)
+// falls back to its repository.
 async function revealNotifiedIssue(repository: string, number: number) {
   mobileToolsOpen.value = false;
   closeMobileBoardNavigator();
@@ -567,10 +570,11 @@ async function revealNotifiedIssue(repository: string, number: number) {
   if (issue && !(hideCoordination.value && isCoordination(issue))) {
     const repositoryQuery = splitByRepository.value ? repositoryQueries.value[lane.repo.full_name] || "" : "";
     const filtered = !matchesIssueFilters(issue, query.value, repositoryQuery);
-    await revealParentIssue(lane.repo.full_name, number);
-    mobileNavigationAnnouncement.value = t("Visar #{number} i {repository}", { number, repository: lane.repo.full_name })
-      + (filtered ? " " + t("Sökningen rensades så att issuet syns.") : "");
-    return;
+    if (await revealParentIssue(lane.repo.full_name, number)) {
+      mobileNavigationAnnouncement.value = t("Visar #{number} i {repository}", { number, repository: lane.repo.full_name })
+        + (filtered ? " " + t("Sökningen rensades så att issuet syns.") : "");
+      return;
+    }
   }
   if (currentView.value !== "overview") {
     currentView.value = "overview";

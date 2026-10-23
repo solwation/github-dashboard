@@ -1,10 +1,11 @@
 {
   "baseCommit": "caaa0b9a68effc491986d413a98162a9a559f2bf",
   "summary": {
-    "sv": "Estimatens antal och story points följer grupperingen av underärenden, och samma underärende räknas inte två gånger över flera repositories.",
-    "en": "Estimate counts and story points follow sub-issue grouping, and the same sub-issue is no longer counted twice across repositories."
+    "sv": "Estimatens antal och story points följer grupperingen av underärenden utan dubbelräkning, och en notis som inte hittar sitt issue leder till repositoryt.",
+    "en": "Estimate counts and story points follow sub-issue grouping without double counting, and a notification that cannot show its issue leads to its repository."
   },
   "issues": [
-    287
+    287,
+    288
   ]
 }
