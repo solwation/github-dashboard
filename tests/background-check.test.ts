@@ -58,7 +58,7 @@ describe("background comparison", () => {
     const request = notificationFor({ kind: "closed", repo, issue: done }, "https://example.test/board/");
     expect(request).toEqual({ title: "board · Issue closed", options: {
       body: "#1 Issue 1", tag: closureKey(repo.full_name, done), icon: "https://example.test/board/favicon.svg",
-      data: { app: "https://example.test/board/#repo-7", url: done.html_url },
+      data: { app: "https://example.test/board/#repo-7-issue-1", url: done.html_url },
     } });
     const timed = issue(2, { startedAt: "2026-10-17T11:00:00.000Z" });
     expect(notificationTag({ kind: "timeout", repo, issue: timed })).toBe(`timeout:acme/board:2:2026-10-17T11:00:00.000Z`);

@@ -89,6 +89,7 @@ import {
   notifyClosure,
   notifyTimeout,
 } from "./lib/notifications";
+import { parseIssueNavigationHash, type IssueNavigationTarget } from "./lib/issue-navigation";
 import {
   column,
   deriveWorkStarts,
@@ -317,6 +318,12 @@ const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
 // Board time labels keep their own clocks and stop while Statistics is shown.
 watch(currentView, view => setBoardVisible(view === "overview"), { immediate: true });
 async function navigateWorkspace() {
+  const notified = parseIssueNavigationHash(window.location.hash);
+  if (notified) {
+    pendingIssueNavigation = notified;
+    consumeIssueNavigation();
+    return;
+  }
   focusedSidebarRepository.value = null;
   statisticsNavigation.value = undefined;
   if (window.location.hash !== "#" + repositoryNavigationTarget) clearRepositoryHighlight();
@@ -545,6 +552,46 @@ async function revealParentIssue(repository: string, number: number) {
     issueNavigationHighlight = null;
   }, 1500);
 }
+// Notification clicks (#278) show the notified issue with the same pulse as parent navigation.
+// A search that hides it is cleared, like parent navigation; an issue the board cannot show
+// (hidden coordination issue, or no longer in the loaded data) falls back to its repository.
+async function revealNotifiedIssue(repository: string, number: number) {
+  mobileToolsOpen.value = false;
+  closeMobileBoardNavigator();
+  const lane = lanes.value.find(item => item.repo.full_name.toLowerCase() === repository.toLowerCase());
+  if (!lane) return;
+  const issue = lane.issues.find(item => item.number === number);
+  if (issue && !(hideCoordination.value && isCoordination(issue))) {
+    const repositoryQuery = splitByRepository.value ? repositoryQueries.value[lane.repo.full_name] || "" : "";
+    const filtered = !matchesIssueFilters(issue, query.value, repositoryQuery);
+    await revealParentIssue(lane.repo.full_name, number);
+    mobileNavigationAnnouncement.value = t("Visar #{number} i {repository}", { number, repository: lane.repo.full_name })
+      + (filtered ? " " + t("Sökningen rensades så att issuet syns.") : "");
+    return;
+  }
+  if (currentView.value !== "overview") {
+    currentView.value = "overview";
+    if (window.location.hash !== "#overview") history.pushState(null, "", "#overview");
+    await nextTick();
+  }
+  await revealRepository(lane.repo.full_name);
+  mobileNavigationAnnouncement.value = t("#{number} visas inte på tavlan. Visar {repository}.", { number, repository: lane.repo.full_name });
+}
+// A worker-shown notice opens `#repo-<id>-issue-<n>`; on a cold start it waits for that repository's data.
+let pendingIssueNavigation: IssueNavigationTarget | null = parseIssueNavigationHash(window.location.hash);
+function consumeIssueNavigation() {
+  const target = pendingIssueNavigation;
+  if (!target) return;
+  const lane = lanes.value.find(item => item.repo.id === target.repoId);
+  if (!lane || lane.loading || restoring.value) return;
+  pendingIssueNavigation = null;
+  history.replaceState(null, "", "#overview");
+  currentView.value = "overview";
+  void nextTick(() => revealNotifiedIssue(lane.repo.full_name, target.number));
+}
+function selectNotifiedIssue(repo: Repo, issue: Issue) {
+  void revealNotifiedIssue(repo.full_name, issue.number);
+}
 function initialLimit(repo: string) {
   return effectiveColumnLimit(columnLimit.value, repositoryColumnLimits.value, repo);
 }
@@ -578,6 +625,7 @@ watch([currentView, splitByRepository, sessionToken, () => lanes.value.map(lane 
 });
 
 watch([currentView, splitByRepository, sessionToken], clearRepositoryHighlight);
+watch([restoring, () => lanes.value.map(lane => `${lane.repo.id}:${lane.loading}`).join("\n")], consumeIssueNavigation, { immediate: true });
 const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
 const handoffOpen = ref(false);
@@ -780,7 +828,7 @@ async function toggleNotifications(repo: string) {
 async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
   const run = generation;
   try {
-    await notifyClosure(lane.repo, issue);
+    await notifyClosure(lane.repo, issue, selectNotifiedIssue);
   } catch {
     if (run !== generation) return;
     notificationRepos.value = notificationRepos.value.filter(
@@ -899,7 +947,7 @@ watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, sho
   for (const entry of result.newlyTimedOut) {
     if ((hideCoordination.value && isCoordination(entry.issue)) || !notificationsEnabled(entry.repo)) continue;
     const repo = lanes.value.find(lane => lane.repo.full_name === entry.repo)?.repo;
-    if (repo) void notifyTimeout(repo, entry.issue, entry.estimatedMs, timeoutSettings.value.timeoutOverrunPercent).catch(() => {});
+    if (repo) void notifyTimeout(repo, entry.issue, entry.estimatedMs, timeoutSettings.value.timeoutOverrunPercent, selectNotifiedIssue).catch(() => {});
   }
 }, { deep: true });
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
@@ -989,7 +1037,7 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   const legacyTimeout = value.timeoutMinutes !== undefined && value.timeoutEnabled === undefined && value.timeoutOverrunPercent === undefined;
   timeoutSettings.value = normalizeTimeoutSettings(legacyTimeout ? {} : { ...timeoutSettings.value, ...value });
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
-  if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+)$/.test(window.location.hash))) {
+  if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+(?:-issue-\d+)?)$/.test(window.location.hash))) {
     currentView.value = value.currentView;
     history.replaceState(null, "", "#" + value.currentView);
   }

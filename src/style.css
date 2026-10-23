@@ -2202,6 +2202,15 @@ button.lane-sync:focus-visible::after {
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="dark"] .issue-row.just-closed { animation: none; border-color: #4fae78; background: #173a2b; }
 }
+/* A notification click (#278) usually lands on a just-closed issue: pulse the frame alongside its closure glow. */
+.issue-card.just-closed.issue-navigation-highlight { animation: closed-arrival 700ms cubic-bezier(0.2, 0.8, 0.2, 1), closed-glow 5s ease-out, issue-navigation-pulse 1.5s ease-out; }
+:root[data-theme="dark"] .issue-card.just-closed.issue-navigation-highlight { animation-name: closed-arrival, closed-glow-dark, issue-navigation-pulse; }
+.issue-row.just-closed.issue-navigation-highlight { animation: row-closed-glow 5s ease-out, issue-navigation-pulse 1.5s ease-out; }
+:root[data-theme="dark"] .issue-row.just-closed.issue-navigation-highlight { animation-name: row-closed-glow-dark, issue-navigation-pulse; }
+@media (prefers-reduced-motion: reduce) {
+  :is(.issue-card, .issue-row).just-closed.issue-navigation-highlight,
+  :root[data-theme="dark"] :is(.issue-card, .issue-row).just-closed.issue-navigation-highlight { animation: none; }
+}
 
 /* Safe areas (#145): with viewport-fit=cover an installed PWA draws edge to edge, so
    the notch/status-bar strip is filled with the header surface and side/bottom insets

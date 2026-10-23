@@ -4,6 +4,7 @@
  * tested without a service worker. Token, settings and the last seen state are only read from
  * and written to the encrypted IndexedDB stores; nothing private enters caches or plaintext.
  */
+import { issueNavigationHash } from "./issue-navigation";
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Label, type Lane, type Repo, type Rules } from "./model";
 import { normalizeTimeoutSettings, TimeoutTracker, timeoutBases, timeoutDetail, type TimeoutSettings } from "./timeouts";
@@ -167,8 +168,8 @@ export function notificationFor(notice: BackgroundNotice, root: string): Notific
       body: `#${notice.issue.number} ${notice.issue.title}${notice.detail ? "\n" + notice.detail : ""}`,
       tag: notificationTag(notice),
       icon: new URL("favicon.svg", root).href,
-      // The click opens or focuses the app at the issue's repository lane.
-      data: { app: new URL(`./#repo-${notice.repo.id}`, root).href, url: notice.issue.html_url },
+      // The click opens or focuses the app and highlights the issue on its board (#278).
+      data: { app: new URL("./" + issueNavigationHash({ repoId: notice.repo.id, number: notice.issue.number }), root).href, url: notice.issue.html_url },
     },
   };
 }
