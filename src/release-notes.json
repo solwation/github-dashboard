@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-10-23",
+    "summary": {
+      "sv": "Statistik får tydligare laddning och samma repositorysektioner som Översikt.",
+      "en": "Statistics gains clearer loading feedback and the same repository sections as Overview."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "En spinner visar att statistik hämtas, och repositorysektionerna delar Översikts utseende med statistikens egna filter.",
+          "en": "A spinner makes statistics loading visible, and repository sections share Overview’s appearance while keeping their own filters."
+        },
+        "issues": [
+          257,
+          258
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-22",
     "summary": {
       "sv": "Bilder i kommentarer kan öppnas och zoomas direkt i dashboarden.",

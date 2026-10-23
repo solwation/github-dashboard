@@ -1,10 +1,11 @@
 {
-  "baseCommit": "a192b1f94ee53bc88b143433d488cfff8ce8257c",
+  "baseCommit": "fb5df25bbc8257b8345f90454151d91bd74ce3de",
   "summary": {
-    "sv": "Anpassa i bildvisaren skalar nu både små och stora bilder till fönstret och återställer vyn efter zoom och panorering.",
-    "en": "Fit in the image viewer now scales both small and large images to the window and resets the view after zooming and panning."
+    "sv": "Statistik visar en tydlig laddningsspinner och får samma repositorysektioner som Översikt, med sina egna filter.",
+    "en": "Statistics shows a clear loading spinner and shares Overview’s repository sections, with its own filters."
   },
   "issues": [
-    256
+    257,
+    258
   ]
 }
