@@ -8,13 +8,14 @@
     "sections": [
       {
         "text": {
-          "sv": "En spinner visar att statistik hämtas utan upprepad periodinformation, och repositorysektionerna delar Översikts utseende med statistikens egna filter.",
-          "en": "A spinner shows statistics loading without repeating period details, and repository sections share Overview’s appearance while keeping their own filters."
+          "sv": "Statistik laddar tydligare utan upprepad periodinformation, delar Översikts sektioner och visar hur tid per SP och avvikelse mot estimat utvecklas.",
+          "en": "Statistics loads more clearly without repeated period details, shares Overview's sections and shows how time per SP and deviation from estimate develop."
         },
         "issues": [
           257,
           258,
-          263
+          263,
+          280
         ]
       },
       {

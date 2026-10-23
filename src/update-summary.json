@@ -1,8 +1,8 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Notiser leder till issuet, tid kvar räknar av underärenden, och mobilen får lägre repositories, uppdateringsbadge och kompakt bildvisare.",
-    "en": "Notifications lead to their issue, remaining time deducts sub-issue work, and phones get shorter repositories, an update badge and a compact image viewer."
+    "sv": "Notiser leder till issuet, tid kvar räknar av underärenden, Statistik följer tid per SP och avvikelse, och mobilen blir kompaktare.",
+    "en": "Notifications lead to their issue, remaining time deducts sub-issue work, Statistics tracks time per SP and deviation, and phones get more compact."
   },
   "issues": [
     267,
@@ -14,6 +14,7 @@
     275,
     277,
     279,
-    278
+    278,
+    280
   ]
 }
