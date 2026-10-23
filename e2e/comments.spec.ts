@@ -198,6 +198,8 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 320, height: 640 
     await page.keyboard.press('Control+End');
     await expect.poll(() => body.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
     await expect(dialog.getByText('Final discussion comment')).toBeInViewport();
+    // Lazy thumbnails loading above must not leave End short of the true end of the list.
+    await expect.poll(() => body.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThanOrEqual(1);
     await expect(close).toBeInViewport();
     expect(await close.boundingBox()).toEqual(initialCloseBox);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

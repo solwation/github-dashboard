@@ -73,7 +73,28 @@ async function show() {
   void markdown.load();
   void load();
 }
+// Lazy thumbnails grow while a native End scroll animates, so End would stop short of the newest content.
+const commentsBody = ref<HTMLElement>();
+let endObserver: ResizeObserver | undefined;
+function scrollToEnd() {
+  if (commentsBody.value) commentsBody.value.scrollTop = commentsBody.value.scrollHeight;
+}
+function releaseEnd() {
+  endObserver?.disconnect();
+  endObserver = undefined;
+}
+function bodyKeydown(event: KeyboardEvent) {
+  if (event.key !== "End" || event.altKey || event.shiftKey || event.metaKey) { releaseEnd(); return; }
+  const content = commentsBody.value?.firstElementChild;
+  if (!content) return;
+  event.preventDefault();
+  scrollToEnd();
+  releaseEnd();
+  endObserver = new ResizeObserver(scrollToEnd);
+  endObserver.observe(content);
+}
 function clear() {
+  releaseEnd();
   clearInterval(clock);
   clock = undefined;
   revision++;
@@ -104,7 +125,8 @@ onBeforeUnmount(clear);
         <button type="button" class="close-comments" :aria-label="t('Stäng kommentarer')" autofocus @click="close"><X :size="20" /></button>
       </div>
       <p class="comments-issue-title">{{ issue.title }}</p>
-      <div class="comments-body" role="region" :aria-labelledby="titleId" tabindex="0">
+      <div ref="commentsBody" class="comments-body" role="region" :aria-labelledby="titleId" tabindex="0"
+        @keydown="bodyKeydown" @wheel.passive="releaseEnd" @pointerdown="releaseEnd" @touchstart.passive="releaseEnd">
         <p v-if="demo" class="comments-status">{{ t('Kommentarer visas inte i demon. Anslut GitHub för att läsa dina issuediskussioner.') }}</p>
         <div v-else aria-live="polite" :aria-busy="state === 'loading' || renderPending">
           <p v-if="state === 'loading' || (renderPending && comments.length)" class="comments-status">{{ t('Hämtar kommentarer…') }}</p>
