@@ -1,4 +1,4 @@
-import { statisticsWindowMs, type StatisticsMetric, type StatisticsSourceName } from './statistics';
+import { statisticsMetricSources, statisticsWindowMs, type StatisticsMetric, type StatisticsSourceName } from './statistics';
 
 /** Ephemeral collection feedback; never part of StatisticsData or the encrypted cache. */
 export interface StatisticsLoadStatus {
@@ -87,10 +87,7 @@ export class StatisticsLoadTracker {
 export function statisticsChartCoverage(status: StatisticsLoadStatus | undefined, metrics: StatisticsMetric[], from: string, to: string) {
   const { start, end } = statisticsWindowMs({ from, to });
   if (!status || !metrics.length || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
-  const requirements: Record<StatisticsMetric, StatisticsSourceName[]> = {
-    created: ['issues'], closed: ['events'], reopened: ['events'], netIssues: ['issues', 'events'], commits: ['commits'],
-    additions: ['changes'], deletions: ['changes'], netLines: ['changes'], files: ['changes'], prsOpened: ['pulls'], prsMerged: ['pulls'], prsClosed: ['pulls'],
-  };
+  const requirements = statisticsMetricSources;
   const confirmedEnd = Math.max(start, Math.min(end, Date.parse(status.collectionTo)));
   const boundary = Math.max(start, Date.parse(status.collectionFrom), ...metrics.flatMap(metric => requirements[metric]).map(source => status.coveredFrom?.[source] ?? confirmedEnd));
   const coveredFrom = Math.min(confirmedEnd, boundary), percent = (confirmedEnd - coveredFrom) / (end - start) * 100;

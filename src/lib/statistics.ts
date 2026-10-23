@@ -1,7 +1,13 @@
+import type { Rules } from "./model";
+import { statisticsEstimateMetrics } from "./statistics-estimates";
 /** Statistics are credential-bound snapshots; persistent copies are encrypted. */
 export interface StatisticsIssue {
   id: number; number: number; created_at: string; updated_at: string;
   labels: { name: string }[]; user?: { login: string } | null; pull_request?: unknown;
+  /** Live GitHub responses only; the encrypted cache keeps just the derived `points` (#280). */
+  title?: string; body?: string | null;
+  /** Approximate story points (1–13) derived from title/body/labels before compaction (#280). */
+  points?: number;
 }
 export interface StatisticsEvent {
   id: number; event: string; created_at: string;
@@ -60,8 +66,19 @@ export interface StatisticsFilter {
   /** Runtime grouping only; saved bounds and optical transfers remain UTC. */
   calendar?: "local";
 }
-export const statisticsMetrics = ["closed", "created", "reopened", "netIssues", "commits", "additions", "deletions", "netLines", "files", "prsOpened", "prsMerged", "prsClosed"] as const;
+export const statisticsMetrics = ["closed", "created", "reopened", "netIssues", "commits", "additions", "deletions", "netLines", "files", "prsOpened", "prsMerged", "prsClosed", "timePerPoint", "estimateDeviation"] as const;
 export type StatisticsMetric = typeof statisticsMetrics[number];
+/**
+ * Estimate metrics (#280) are levels, not counts: totals are not bucket sums and buckets without
+ * a basis stay undefined (a gap), while a measured 0 % remains 0. See statistics-estimates.ts.
+ */
+export const statisticsLevelMetrics: readonly StatisticsMetric[] = ["timePerPoint", "estimateDeviation"];
+/** Sources each metric needs from every compared repository (also drives chart load coverage). */
+export const statisticsMetricSources: Record<StatisticsMetric, StatisticsSourceName[]> = {
+  created: ["issues"], closed: ["events"], reopened: ["events"], netIssues: ["issues", "events"], commits: ["commits"],
+  additions: ["changes"], deletions: ["changes"], netLines: ["changes"], files: ["changes"], prsOpened: ["pulls"], prsMerged: ["pulls"], prsClosed: ["pulls"],
+  timePerPoint: ["events"], estimateDeviation: ["events"],
+};
 export interface StatisticsPreference extends StatisticsFilter {
   collapsed?: boolean;
   metric: StatisticsMetric;
@@ -296,8 +313,10 @@ export function statisticsDimensions(data: StatisticsData[]) {
  * the same range/resolution as the chart; without them the window is the full
  * from–to span in day buckets.
  */
-export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFilter): StatisticsSummary {
+export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFilter, options: { rules?: Record<string, Rules> } = {}): StatisticsSummary {
   const days: StatisticsDay[] = [];
+  /** Exclusive end of the last bucket, for level metrics evaluated at bucket ends (#280). */
+  let windowEnd = NaN;
   const subDayRange = filter.range === "8h" || filter.range === "12h" || filter.range === "24h";
   const durationMs = statisticsDurationMs(filter);
   const concrete = isConcreteStatisticsWindow(filter);
@@ -314,6 +333,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       if (filter.range) window = statisticsWindowMs(statisticsPresetWindow(filter.range, filter.now ?? Date.now(), filter, resolution, { calendar: "local" }));
     }
     const starts = localBucketStarts(window.start, window.end, resolution);
+    windowEnd = window.end;
     for (const start of starts) {
       // Keys remain absolute and unique, even when wall-clock labels repeat.
       days.push({ date: new Date(start).toISOString().slice(0, 16).replace("T", " "), start, values: {} });
@@ -335,6 +355,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     const stepMs = statisticsResolutionMs[resolution];
     const { start, end } = statisticsWindowMs(filter);
     const gridStart = Math.floor(start / stepMs) * stepMs;
+    windowEnd = end;
     if (Number.isFinite(start)) {
       for (let t = gridStart; t < end && days.length <= MAX_STATISTICS_BUCKETS; t += stepMs) {
         const iso = new Date(t).toISOString();
@@ -354,6 +375,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       : minStart;
     if (Number.isFinite(start) && Number.isFinite(end)) {
       for (let day = start; day <= end && days.length < 30; day += 86400000) days.push({ date: new Date(day).toISOString().slice(0, 10), values: {} });
+      windowEnd = Date.parse(`${days[days.length - 1]?.date ?? ""}T00:00:00Z`) + 86400000;
     }
     const byDate = new Map(days.map(day => [day.date, day.values]));
     bucketFor = (date: string) => byDate.get(dayOf(date));
@@ -378,6 +400,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
         : minStart;
       windowEndMs = Number.isFinite(end) ? end + 86400000 : NaN;
     }
+    windowEnd = windowEndMs;
     if (Number.isFinite(windowStartMs) && Number.isFinite(windowEndMs)) {
       for (let t = windowStartMs; t < windowEndMs && days.length < MAX_STATISTICS_BUCKETS; t += stepMs) {
         const iso = new Date(t).toISOString();
@@ -472,16 +495,30 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
   }
   // Hide combined metrics when any selected repository cannot supply that source.
   // Access is never presented as a zero or as a coverage warning.
-  const requirements: Record<StatisticsMetric, StatisticsSourceName[]> = {
-    created: ["issues"], closed: ["events"], reopened: ["events"], netIssues: ["issues", "events"], commits: ["commits"],
-    additions: ["changes"], deletions: ["changes"], netLines: ["changes"], files: ["changes"], prsOpened: ["pulls"], prsMerged: ["pulls"], prsClosed: ["pulls"],
-  };
+  const requirements = statisticsMetricSources;
   for (const metric of statisticsMetrics) if (complete[metric] !== undefined && data.some(snapshot => requirements[metric].some(source => !snapshot[source]))) {
     delete complete[metric];
     for (const day of days) delete day.values[metric];
   }
   const totals: StatisticsValues = {};
   for (const metric of statisticsMetrics) if (complete[metric] !== undefined) totals[metric] = days.reduce((sum, day) => sum + (day.values[metric] || 0), 0);
+  // Estimate levels (#280): only with events from every repository, and only when a basis exists.
+  if (days.length && data.length && data.every(snapshot => snapshot.events)) {
+    const now = filter.now !== undefined && Number.isFinite(filter.now) ? filter.now : Date.now();
+    const indexOf = new Map(days.map((day, index) => [day.values, index]));
+    const starts = days.map(day => day.start ?? Date.parse(`${day.date.replace(" ", "T")}${day.date.length > 10 ? ":00" : "T00:00:00"}Z`));
+    const buckets = starts.map((start, index) => ({ start, end: starts[index + 1] ?? windowEnd }));
+    const estimates = statisticsEstimateMetrics(data, buckets, time => {
+      const values = bucketFor(new Date(time).toISOString());
+      return values ? indexOf.get(values) ?? -1 : -1;
+    }, { now, rules: options.rules, matches: closing => labelMatches(closing) && personMatches(closing.closer) });
+    for (const metric of statisticsLevelMetrics as ("timePerPoint" | "estimateDeviation")[]) {
+      if (estimates.totals[metric] === undefined) continue;
+      totals[metric] = estimates.totals[metric];
+      complete[metric] = estimates.complete[metric];
+      estimates[metric].forEach((value, index) => { if (value !== undefined) days[index]!.values[metric] = value; });
+    }
+  }
   closures.sort((a, b) => a - b);
   const middle = Math.floor(closures.length / 2);
   const closureAgeDays = closures.length ? (closures.length % 2 ? closures[middle]! : (closures[middle - 1]! + closures[middle]!) / 2) : null;

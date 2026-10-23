@@ -6,7 +6,8 @@ import { formatBrowserDateTime, isAmbiguousBrowserTime } from "../lib/browser-ti
 import { axisTickIndices, bucketTime, hasTime, valueTicks } from "../lib/statistics-chart";
 const { t, locale } = useLanguage();
 const props = defineProps<{
-  series: { name: string; days: StatisticsDay[]; metric?: StatisticsMetric }[];
+  /** `format` labels values (units, signs); a bucket without a value is a gap, never a zero (#280). */
+  series: { name: string; days: StatisticsDay[]; metric?: StatisticsMetric; format?: (value: number) => string }[];
   metric: StatisticsMetric;
   title: string;
   resolution?: StatisticsResolution;
@@ -45,18 +46,32 @@ const subDay = computed(() => props.resolution ? props.resolution !== "1d" : dat
 const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 function color(index: number) { return colors[index % colors.length]; }
 function dash(index: number) { return index ? `${Math.max(2, 8 - (index % 5))} ${(index % 5) + 2}` : undefined; }
-function valueOf(series: { metric?: StatisticsMetric }, day: StatisticsDay | undefined) {
-  return day?.values[series.metric || props.metric] || 0;
+type Series = (typeof props.series)[number];
+function valueOf(series: { metric?: StatisticsMetric }, day: StatisticsDay | undefined): number | null {
+  const value = day?.values[series.metric || props.metric];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 const yTicks = computed(() => {
-  const values = props.series.flatMap(series => series.days.map(day => valueOf(series, day)));
+  const values = props.series.flatMap(series => series.days.map(day => valueOf(series, day)).filter((value): value is number => value !== null));
   return valueTicks(Math.min(0, ...values), Math.max(1, ...values));
 });
 const bounds = computed(() => ({ min: yTicks.value[0]!, max: yTicks.value[yTicks.value.length - 1]! }));
 function x(index: number) { return plotStart + index / Math.max(1, dates.value.length - 1) * (plotEnd.value - plotStart); }
 function y(value: number) { return plotBottom - (value - bounds.value.min) / Math.max(1e-9, bounds.value.max - bounds.value.min) * (plotBottom - plotTop); }
-function points(series: { days: StatisticsDay[]; metric?: StatisticsMetric }) { return series.days.map((day, index) => `${x(index)},${y(valueOf(series, day))}`).join(" "); }
-function number(value: number) { return value.toLocaleString(locale.value); }
+/** Connected runs of defined values; missing estimate buckets break the line. */
+function segments(series: { days: StatisticsDay[]; metric?: StatisticsMetric }) {
+  const result: string[] = [];
+  let current: string[] = [];
+  series.days.forEach((day, index) => {
+    const value = valueOf(series, day);
+    if (value === null) { if (current.length) result.push(current.join(" ")); current = []; }
+    else current.push(`${x(index)},${y(value)}`);
+  });
+  if (current.length) result.push(current.join(" "));
+  return result;
+}
+function number(value: number) { return value.toLocaleString(locale.value, { maximumFractionDigits: 2 }); }
+function formatted(series: Series, value: number) { return series.format ? series.format(value) : number(value); }
 const bucketStarts = computed(() => new Map((props.series[0]?.days || []).map(day => [day.date, day.start ?? bucketTime(day.date)])));
 function pointTime(date: string) { return bucketStarts.value.get(date) ?? bucketTime(date); }
 function shortDate(date: string) {
@@ -88,8 +103,11 @@ const xTicks = computed(() => {
   });
 });
 const selectedDate = computed(() => dates.value[selected.value] || "");
-const selectedValues = computed(() => props.series.map((series, index) => ({ name: series.name, color: color(index), dash: dash(index), value: valueOf(series, series.days[selected.value]) })));
-const selectedText = computed(() => `${fullTime(selectedDate.value)}: ${selectedValues.value.map(item => `${item.name}: ${number(item.value)}`).join(", ")}`);
+const selectedValues = computed(() => props.series.flatMap((series, index) => {
+  const value = valueOf(series, series.days[selected.value]);
+  return value === null ? [] : [{ name: series.name, color: color(index), dash: dash(index), value, text: formatted(series, value) }];
+}));
+const selectedText = computed(() => `${fullTime(selectedDate.value)}: ${selectedValues.value.map(item => `${item.name}: ${item.text}`).join(", ")}`);
 function select(index: number) { selected.value = Math.max(0, Math.min(dates.value.length - 1, index)); }
 function hidePointer() {
   if (interaction.value === "pointer") interaction.value = "none";
@@ -117,8 +135,10 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
       </text>
       <line v-if="showPopover" class="chart-cursor chart-axis" :x1="x(selected)" :y1="plotTop" :x2="x(selected)" :y2="plotBottom" stroke-dasharray="3 4" />
       <g v-for="(series, index) in series" :key="series.name">
-        <polyline :points="points(series)" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
-        <circle v-for="(day, dayIndex) in series.days" :key="day.date" :cx="x(dayIndex)" :cy="y(valueOf(series, day))" :r="showPopover && selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ number(valueOf(series, day)) }}</title></circle>
+        <polyline v-for="(line, lineIndex) in segments(series)" :key="lineIndex" :points="line" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
+        <template v-for="(day, dayIndex) in series.days" :key="day.date">
+          <circle v-if="valueOf(series, day) !== null" :cx="x(dayIndex)" :cy="y(valueOf(series, day)!)" :r="showPopover && selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ formatted(series, valueOf(series, day)!) }}</title></circle>
+        </template>
       </g>
       <g v-if="coverage" class="chart-coverage" role="img" :aria-label="coverage.percent > 0 ? t('Färdighämtat tidsspann: {from} – {to}', { from: new Date(coverage.from).toLocaleString(locale), to: new Date(coverage.to).toLocaleString(locale) }) : t('Tidsspannet är ännu inte bekräftat hämtat')">
         <line :x1="plotStart" :x2="plotEnd" y1="268" y2="268" class="chart-coverage-track" />
@@ -127,7 +147,7 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
     </svg>
     <div v-if="showPopover" class="chart-popover" role="tooltip" :style="{ left: `${popoverLeft}px` }">
       <strong class="chart-selection-time">{{ fullTime(selectedDate) }}</strong>
-      <span v-for="item in selectedValues" :key="item.name" class="chart-selection-value"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: item.color }" stroke-width="2.5" :stroke-dasharray="item.dash" /></svg><span>{{ item.name }}</span><b>{{ number(item.value) }}</b></span>
+      <span v-for="item in selectedValues" :key="item.name" class="chart-selection-value"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: item.color }" stroke-width="2.5" :stroke-dasharray="item.dash" /></svg><span>{{ item.name }}</span><b>{{ item.text }}</b></span>
     </div>
     <div class="chart-legend"><span v-for="(series, index) in series" :key="series.name"><svg class="chart-swatch" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" :style="{ stroke: color(index) }" stroke-width="2.5" :stroke-dasharray="dash(index)" /><circle cx="11" cy="5" r="2.5" :style="{ fill: color(index) }" /></svg>{{ series.name }}</span></div>
     <label class="chart-keyboard-control">{{ t("Tidpunkt i diagrammet") }}

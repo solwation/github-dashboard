@@ -6,7 +6,7 @@ import type { StatisticsLoadStatus } from "../lib/statistics-load-status";
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { RefreshCw, BarChart3, RotateCcw } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
-import type { Repo } from "../lib/model";
+import type { Repo, Rules } from "../lib/model";
 import { StatisticsCollector, type StatisticsClient } from "../lib/statistics-client";
 import {
   allowedStatisticsResolutions, clampStatisticsResolution, DEFAULT_STATISTICS_RANGE, formatStatisticsBound, hasStatisticsTime,
@@ -19,7 +19,11 @@ import { demoStatistics } from "../lib/statistics-demo";
 import { formatBrowserDateTime, parseBrowserDateTime, isAmbiguousBrowserTime } from "../lib/browser-time";
 import StatisticsRepository from "./StatisticsRepository.vue";
 const { t, locale } = useLanguage();
-const props = defineProps<{ navigation?: { name: string; toggle: boolean; sequence: number }; client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string }>();
+const props = defineProps<{ navigation?: { name: string; toggle: boolean; sequence: number }; client: StatisticsClient | null; repositories: Repo[]; demo: boolean; session: number | string; preferences?: StatisticsPreferences; credential?: string; rules?: Record<string, Rules> }>();
+/** Board label rules per repository (#280), matched like the board: exact name, then case-insensitive. */
+function repositoryRules(name: string): Rules | undefined {
+  return props.rules?.[name] ?? Object.entries(props.rules || {}).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
+}
 provideRepositoryDisplayNames(() => props.repositories.map(repo => repo.full_name), () => true);
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsCalendarWindow());
@@ -500,7 +504,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
     <div v-show="!invalidRange" class="statistics-repositories">
       <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-status="loadStatuses[repository.full_name]" :load-failed="!!failures[repository.full_name]"
-        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
+        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :rules="repositoryRules(repository.full_name)" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">
@@ -510,6 +514,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
         <li>{{ t("Labels avser dagens labels, även när äldre händelser filtreras. Bidragsgivare avser skaparen för issues och pull requests, aktören för issue-händelser och författaren för commits. Ett labelfilter döljer kodstatistik eftersom commits inte har issue-labels.") }}</li>
         <li>{{ t("Commits följer standardbranchens historik och grupperas efter committer-datum i din tidszon. Merge-commits räknas som commits men deras diff undantas från kodmåtten för att undvika dubbelräkning. Filändringar är summan av berörda filer per commit, inte unika filer i perioden.") }}</li>
         <li>{{ t("Medianålder vid stängning mäter tiden från skapande till varje stängningshändelse i urvalet, inte aktiv arbetstid. Pull requests räknas separat efter skapande, merge och stängning utan merge.") }}</li>
+        <li>{{ t("Estimat följer tavlans tidsestimat. Tid per SP är estimatets kalibrerade tid per story point vid slutet av varje intervall: median av arbetstid (från In progress till stängning) per grov storlekspoäng för de senaste högst 30 stängningarna inom 30 dagar, utan extrema avbrutna körningar. Kortet visar periodens senaste värde. Avvikelse från estimat är medianen av faktisk tid ÷ estimerad tid − 1 för issues stängda i intervallet, där estimatet bygger på övriga stängningar fram till stängningen; +25 % betyder 25 % längre tid än estimerat. Mått utan underlag visas inte, och äldre intervall markeras som delvis data när 30-dagarsunderlaget börjar före hämtade händelser.") }}</li>
         <li>{{ t("Per repository hämtas högst 300 uppdaterade issues, 10 000 issue-händelser, 300 commits och 300 pull requests. Kodmått omfattar högst 600 vanliga commits och 300 filer per commit. Begränsade källor markeras som delvis data. Underlaget återanvänds i fem minuter; Uppdatera omvaliderar hela perioden.") }}</li>
         <li>{{ t("Statistik sparas krypterat för högst tio repositories i sju dagar, upp till 8 MiB. Issues, händelser och pull requests omvalideras alltid. Commithistorik återanvänds med överlapp från den senast hämtade delen, och omvalideras helt minst var sjunde dag eller vid Uppdatera. SHA-bundna kodmått återanvänds. Återanvända källdata kan innehålla högst 600 commits; ofullständig täckning markeras som delvis data.") }}</li>
       </ul></details>

@@ -780,6 +780,17 @@ export const english: Record<string, string> = {
     "Median per repository from {count} closed issues in {repositories} repositories in the last {days} days. The slowest repository decides.",
   "Tid som redan lagts på pågående arbete och på underärenden (pågående eller stängda inom fönstret) dras av från huvudärendets uppskattning; underärenden räknas inte en gång till.":
     "Time already spent on work in progress and on sub-issues (running or closed within the window) is deducted from the parent's estimate; sub-issues are not counted again.",
+  "Estimat": "Estimates",
+  "Tid per SP": "Time per SP",
+  "Avvikelse från estimat": "Deviation from estimate",
+  "Tid per SP (timmar)": "Time per SP (hours)",
+  "Avvikelse från estimat (%)": "Deviation from estimate (%)",
+  "Estimatets kalibrerade tid per story point vid varje tidpunkt: median av arbetstid per poäng för de senaste stängningarna inom 30 dagar. Kortet visar periodens senaste värde.":
+    "The estimate's calibrated time per story point at each point in time: the median work time per point of the latest closures within 30 days. The card shows the latest value in the period.",
+  "Median av faktisk tid delat med estimerad tid minus 1 för issues stängda i perioden. Positivt värde betyder att arbetet tog längre tid än estimerat.":
+    "Median of actual time divided by estimated time minus 1 for issues closed in the period. A positive value means the work took longer than estimated.",
+  "Estimat följer tavlans tidsestimat. Tid per SP är estimatets kalibrerade tid per story point vid slutet av varje intervall: median av arbetstid (från In progress till stängning) per grov storlekspoäng för de senaste högst 30 stängningarna inom 30 dagar, utan extrema avbrutna körningar. Kortet visar periodens senaste värde. Avvikelse från estimat är medianen av faktisk tid ÷ estimerad tid − 1 för issues stängda i intervallet, där estimatet bygger på övriga stängningar fram till stängningen; +25 % betyder 25 % längre tid än estimerat. Mått utan underlag visas inte, och äldre intervall markeras som delvis data när 30-dagarsunderlaget börjar före hämtade händelser.":
+    "Estimates follow the board's time estimates. Time per SP is the estimate's calibrated time per story point at the end of each interval: the median work time (from In progress to closure) per rough size point of the latest 30 closures at most within 30 days, excluding extreme interrupted runs. The card shows the latest value in the period. Deviation from estimate is the median of actual time ÷ estimated time − 1 for issues closed in the interval, with the estimate based on the other closures up to that closure; +25% means 25% longer than estimated. Metrics without a basis are not shown, and older intervals are marked as partial data when the 30-day basis starts before the collected events.",
 };
 export function t(
   source: string,

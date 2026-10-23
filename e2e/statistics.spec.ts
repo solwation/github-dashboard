@@ -61,7 +61,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues"]);
   await expect(design.locator(".chart-legend .chart-swatch line")).toHaveCount(1);
   // #170: totals are grouped, the cards themselves select chart metrics and the old select/chips are gone.
-  await expect(design.locator(".statistics-total-group h3")).toHaveText(["Issues", "Pull requests", "Kod"]);
+  await expect(design.locator(".statistics-total-group h3")).toHaveText(["Issues", "Pull requests", "Kod", "Estimat"]);
   await expect(design.getByRole("combobox", { name: "Mätvärde", exact: true })).toHaveCount(0);
   await expect(design.locator(".statistics-metric-chips, .statistics-metric-chip")).toHaveCount(0);
   await expect(metricButton(design, "Stängda issues")).toHaveAttribute("aria-pressed", "true");
@@ -260,6 +260,38 @@ test("Statistics collapses per-repository breakdowns on phones and keeps heading
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
+});
+
+test("Statistics shows estimate time per SP and deviation as chart metrics only where they have a basis (#280)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Utforska en demo" }).click();
+  await openStatistics(page);
+  const sections = page.locator(".statistics-repository");
+  const design = sections.filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
+  const weekend = sections.filter({ has: page.getByRole("heading", { name: "demo/weekend-project", exact: true }) });
+  const estimates = design.locator(".statistics-total-group").filter({ has: page.getByRole("heading", { name: "Estimat", exact: true }) });
+  // Demo work: 5, 4, 3 and 2 h per one-point issue → median 3.5 h; the latest took 2 h against a 4 h estimate.
+  await expect(card(estimates, "Tid per SP").locator("strong")).toHaveText("3,5 h");
+  await expect(card(estimates, "Avvikelse från estimat").locator("strong")).toHaveText("−50 %");
+  const time = metricButton(design, /^Tid per SP/);
+  await expect(time).toHaveAttribute("aria-pressed", "false");
+  await expect(time).toHaveAccessibleDescription(/kalibrerade tid per story point/);
+  await time.click();
+  await metricButton(design, /^Avvikelse från estimat/).click();
+  await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues", "Tid per SP (timmar)", "Avvikelse från estimat (%)"]);
+  const slider = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
+  await slider.focus(); await page.keyboard.press("End");
+  await expect(slider).toHaveAttribute("aria-valuetext", /Tid per SP \(timmar\): 3,5 h/);
+  await expect(design.getByRole("tooltip")).toContainText("Tid per SP (timmar)");
+  // Earlier days have no basis: they are gaps (no point), not zeros.
+  await page.keyboard.press("Home");
+  await expect(slider).not.toHaveAttribute("aria-valuetext", /Tid per SP/);
+  await weekend.getByRole("button", { name: "Expandera demo/weekend-project", exact: true }).click();
+  await expect(card(weekend, "Stängda issues").locator("strong")).toHaveText("2");
+  await expect(weekend.getByRole("heading", { name: "Estimat", exact: true })).toHaveCount(0);
+  await expect(card(weekend, "Tid per SP")).toHaveCount(0);
+  await design.getByRole("combobox", { name: "Bidragsgivare", exact: true }).selectOption("demo-alex");
+  await expect(card(estimates, "Tid per SP")).toHaveCount(0);
 });
 
 test("Statistics hides inaccessible metrics silently and retains issue values after rate limiting", async ({ page }) => {

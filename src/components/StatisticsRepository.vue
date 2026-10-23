@@ -3,7 +3,7 @@ import { computed, ref, watch } from "vue";
 import { BarChart3, RefreshCw, X } from "@lucide/vue";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { useLanguage } from "../lib/i18n";
-import type { Repo } from "../lib/model";
+import type { Repo, Rules } from "../lib/model";
 import { normalizeStatisticsPreference } from "../lib/statistics-preferences";
 import {
   allowedStatisticsResolutions, clampStatisticsResolution, DEFAULT_STATISTICS_RANGE,
@@ -28,6 +28,8 @@ const props = defineProps<{
   timeSpan: { from: string; to: string; range?: StatisticsRangePreset; resolution: StatisticsResolution };
   preference?: StatisticsPreference;
   collapsed?: boolean;
+  /** The repository's label rules, so estimate metrics recognise the same progress label as the board (#280). */
+  rules?: Rules;
 }>();
 const repositoryLabel = useRepositoryDisplayName(() => props.repository.full_name);
 const hasOpened = ref(!props.collapsed);
@@ -37,12 +39,20 @@ const metricNames: Record<StatisticsMetric, string> = {
   closed: "Stängda issues", created: "Skapade issues", reopened: "Återöppnade issues", netIssues: "Nettoförändring av issues",
   commits: "Commits", additions: "Tillagda rader", deletions: "Borttagna rader", netLines: "Nettoförändring av kod", files: "Filändringar",
   prsOpened: "Öppnade pull requests", prsMerged: "Mergade pull requests", prsClosed: "Stängda pull requests utan merge",
+  timePerPoint: "Tid per SP", estimateDeviation: "Avvikelse från estimat",
+};
+// Level metrics (#280) carry their unit in the chart legend and a definition for screen readers.
+const chartNames: Partial<Record<StatisticsMetric, string>> = { timePerPoint: "Tid per SP (timmar)", estimateDeviation: "Avvikelse från estimat (%)" };
+const metricDescriptions: Partial<Record<StatisticsMetric, string>> = {
+  timePerPoint: "Estimatets kalibrerade tid per story point vid varje tidpunkt: median av arbetstid per poäng för de senaste stängningarna inom 30 dagar. Kortet visar periodens senaste värde.",
+  estimateDeviation: "Median av faktisk tid delat med estimerad tid minus 1 för issues stängda i perioden. Positivt värde betyder att arbetet tog längre tid än estimerat.",
 };
 // Totals are grouped by subject; each metric card toggles its series in the chart (#170).
 const metricGroups: { id: string; title: string; metrics: StatisticsMetric[] }[] = [
   { id: "issues", title: "Issues", metrics: ["created", "closed", "reopened", "netIssues"] },
   { id: "pulls", title: "Pull requests", metrics: ["prsOpened", "prsMerged", "prsClosed"] },
   { id: "code", title: "Kod", metrics: ["commits", "additions", "deletions", "netLines", "files"] },
+  { id: "estimates", title: "Estimat", metrics: ["timePerPoint", "estimateDeviation"] },
 ];
 const datasets = computed(() => props.data ? [props.data] : []);
 const dimensions = computed(() => statisticsDimensions(datasets.value));
@@ -51,10 +61,10 @@ const summaryCache = new Map<string, ReturnType<typeof summarizeStatistics>>();
 function summarize(filter: StatisticsFilter) {
   const data = datasets.value;
   if (cachedData !== data) { cachedData = data; summaryCache.clear(); }
-  const key = JSON.stringify([filter.from, filter.to, filter.label, filter.contributor, filter.range || "", filter.resolution || "", filter.calendar || "", browserTimeZone()]);
+  const key = JSON.stringify([filter.from, filter.to, filter.label, filter.contributor, filter.range || "", filter.resolution || "", filter.calendar || "", browserTimeZone(), props.rules || {}]);
   let cached = summaryCache.get(key);
   if (!cached) {
-    cached = summarizeStatistics(data, filter);
+    cached = summarizeStatistics(data, filter, props.rules ? { rules: { [props.repository.full_name]: props.rules } } : {});
     summaryCache.set(key, cached);
   }
   return cached;
@@ -106,13 +116,14 @@ const chartSeries = computed(() => {
   if (metrics.length === 1) {
     const metric = metrics[0]!;
     return summary.value.totals[metric] !== undefined
-      ? [{ name: t(metricNames[metric]), metric, days: summary.value.days }]
+      ? [{ name: t(chartNames[metric] ?? metricNames[metric]), metric, days: summary.value.days, format: (value: number) => display(metric, value) }]
       : [];
   }
   return metrics.map(metric => ({
-    name: t(metricNames[metric]),
+    name: t(chartNames[metric] ?? metricNames[metric]),
     metric,
     days: summary.value.days,
+    format: (value: number) => display(metric, value),
   }));
 });
 const incompleteMetrics = computed(() => selectedMetrics.value.filter(metric => summary.value.complete[metric] === false).map(metric => t(metricNames[metric])).join(", "));
@@ -140,6 +151,15 @@ const lastFetched = computed(() => {
   return values.length ? Math.min(...values) : 0;
 });
 function number(value: number) { return value.toLocaleString(locale.value); }
+/** Card and chart text: hours per point as min/h, deviation as a signed percentage (measured 0 % stays). */
+function display(metric: StatisticsMetric, value: number) {
+  if (metric === "timePerPoint") return value < 1
+    ? t("{value} min", { value: Math.max(1, Math.round(value * 60)).toLocaleString(locale.value) })
+    : t("{value} h", { value: value.toLocaleString(locale.value, { maximumFractionDigits: 1 }) });
+  if (metric === "estimateDeviation") return (value / 100).toLocaleString(locale.value, { style: "percent", signDisplay: "exceptZero", maximumFractionDigits: 0 });
+  return number(value);
+}
+function descriptionId(key: StatisticsMetric) { return metricDescriptions[key] ? "statistics-metric-" + props.repository.id + "-" + key : undefined; }
 function publish(value: StatisticsPreference) {
   if (JSON.stringify(value) !== JSON.stringify(props.preference)) emit("update:preference", { ...value });
 }
@@ -206,15 +226,16 @@ function clearFilters() {
         <section v-for="group in visibleGroups" :key="group.id" class="statistics-total-group" :aria-labelledby="'statistics-group-' + repository.id + '-' + group.id">
           <h3 :id="'statistics-group-' + repository.id + '-' + group.id">{{ t(group.title) }}</h3>
           <div class="statistics-total-grid">
-            <button v-for="key in group.metrics" :key="key" type="button" class="statistics-total statistics-total-toggle" :class="{ selected: seriesIndex(key) >= 0 }" :aria-pressed="seriesIndex(key) >= 0" :data-metric="key" :data-series-index="seriesIndex(key) >= 0 ? seriesIndex(key) : undefined" :style="metricStyle(key)" @click="toggleMetric(key)">
+            <button v-for="key in group.metrics" :key="key" type="button" class="statistics-total statistics-total-toggle" :class="{ selected: seriesIndex(key) >= 0 }" :aria-pressed="seriesIndex(key) >= 0" :aria-describedby="descriptionId(key)" :data-metric="key" :data-series-index="seriesIndex(key) >= 0 ? seriesIndex(key) : undefined" :style="metricStyle(key)" @click="toggleMetric(key)">
               <span class="statistics-total-label">{{ t(metricNames[key]) }}</span>
-              <span class="statistics-total-value"><strong>{{ number(summary.totals[key]!) }}</strong><span v-if="summary.complete[key] === false" class="statistics-partial" :title="t('Delvis data')"><span aria-hidden="true">≈</span><span class="sr-only">{{ t("Delvis data") }}</span></span><svg v-if="seriesIndex(key) >= 0" class="statistics-total-swatch" width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" :stroke-dasharray="seriesDash(seriesIndex(key))" /></svg></span>
+              <span class="statistics-total-value"><strong>{{ display(key, summary.totals[key]!) }}</strong><span v-if="summary.complete[key] === false" class="statistics-partial" :title="t('Delvis data')"><span aria-hidden="true">≈</span><span class="sr-only">{{ t("Delvis data") }}</span></span><svg v-if="seriesIndex(key) >= 0" class="statistics-total-swatch" width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" :stroke-dasharray="seriesDash(seriesIndex(key))" /></svg></span>
             </button>
             <div v-if="group.closureAge && summary.closureAgeDays !== null" class="statistics-total statistics-total-static">
               <span class="statistics-total-label">{{ t("Medianålder vid stängning") }}</span>
               <span class="statistics-total-value"><strong>{{ summary.closureAgeDays.toLocaleString(locale, { maximumFractionDigits: 1 }) }} <small>{{ t("dagar") }}</small></strong><span v-if="summary.complete.closed === false" class="statistics-partial" :title="t('Delvis data')"><span aria-hidden="true">≈</span><span class="sr-only">{{ t("Delvis data") }}</span></span></span>
             </div>
           </div>
+          <template v-for="key in group.metrics" :key="key"><p v-if="metricDescriptions[key]" :id="descriptionId(key)" hidden>{{ t(metricDescriptions[key]!) }}</p></template>
         </section>
       </div>
       <section class="statistics-panel">

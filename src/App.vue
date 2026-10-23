@@ -2040,7 +2040,7 @@ onMounted(async () => {
         </div></template
       >
       <template v-else>
-        <StatisticsView :navigation="statisticsNavigation" v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" />
+        <StatisticsView :navigation="statisticsNavigation" v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" :rules="rules" />
         <div v-show="currentView === 'overview'">
         <section class="page-heading">
           <div>

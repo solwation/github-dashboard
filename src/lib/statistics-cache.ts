@@ -1,4 +1,5 @@
 import { loadStatistics, saveStatistics } from './vault';
+import { statisticsIssuePoints } from './statistics-estimates';
 import { statisticsCollectionWindow, statisticsWindow, type StatisticsData, type StatisticsSourceName } from './statistics';
 export const STATISTICS_RETENTION_MS = 7 * 86400000;
 export const STATISTICS_CACHE_BYTES = 8 * 1024 * 1024;
@@ -63,7 +64,14 @@ export async function readStatisticsCache(token: string, now = Date.now()) {
 }
 function compactStatistics(entry: StatisticsData): StatisticsData {
   const person = (value?: { login: string } | null) => value ? { login: value.login } : null;
-  const issue = (value: import('./statistics').StatisticsIssue) => ({ id: value.id, number: value.number, created_at: value.created_at, updated_at: value.updated_at, labels: value.labels.map(label => ({ name: label.name })), user: person(value.user), ...(value.pull_request ? { pull_request: true } : {}) });
+  // Keep only the derived size (#280): titles and bodies never enter the persistent cache.
+  // Events embed the same issue many times; size each issue revision once.
+  const sizes = new Map<string, number | null>();
+  const issue = (value: import('./statistics').StatisticsIssue) => {
+    const key = `${value.id}:${value.updated_at}:${value.points ?? ''}`;
+    const points = sizes.has(key) ? sizes.get(key)! : sizes.set(key, statisticsIssuePoints(value)).get(key)!;
+    return { id: value.id, number: value.number, created_at: value.created_at, updated_at: value.updated_at, labels: value.labels.map(label => ({ name: label.name })), user: person(value.user), ...(value.pull_request ? { pull_request: true } : {}), ...(points === null ? {} : { points }) };
+  };
   const source = <T, U>(value: import('./statistics').StatisticsSource<T> | null, map: (item: T) => U) => value ? { data: value.data.map(map), complete: value.complete, fetchedAt: value.fetchedAt, ...(value.historyVerifiedAt === undefined ? {} : { historyVerifiedAt: value.historyVerifiedAt }) } : null;
   return {
     repository: entry.repository, from: entry.from, to: entry.to, fetchedAt: entry.fetchedAt, temporary: entry.temporary,
