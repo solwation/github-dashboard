@@ -22,9 +22,24 @@ for (const mixed of [false, true]) test(`statistics aligns repository filters an
   await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
   for (const repo of repos) await page.getByRole('checkbox', { name: repo.full_name }).check();
   await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
+  const overviewStyle = await page.locator('.repo-lane').first().evaluate(section => {
+    const style = getComputedStyle(section);
+    const heading = getComputedStyle(section.querySelector('h2')!);
+    return { radius: style.borderRadius, background: style.backgroundColor, border: style.borderTopWidth, titleSize: heading.fontSize };
+  });
   await page.getByRole('link', { name: 'Statistik', exact: true }).click();
   await expect(page.locator('.statistics-repository-toggle')).toHaveCount(2);
   for (const toggle of await page.locator('.statistics-repository-toggle[aria-expanded="false"]').all()) await toggle.click();
+  for (const section of await page.locator('.statistics-repository').all()) {
+    const style = await section.evaluate(section => {
+      const style = getComputedStyle(section);
+      const heading = getComputedStyle(section.querySelector('h2')!);
+      return { radius: style.borderRadius, background: style.backgroundColor, border: style.borderTopWidth, titleSize: heading.fontSize };
+    });
+    expect(style).toEqual(overviewStyle);
+    await expect(section.locator('.repo-avatar')).toBeVisible();
+    await expect(section.locator('.repo-owner')).toBeVisible();
+  }
   const fields = page.locator('.statistics-repo-filters select');
   await expect(fields).toHaveCount(4);
   for (let index = 0; index < repos.length; index++) {

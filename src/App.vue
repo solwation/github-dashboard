@@ -11,7 +11,6 @@ import {
   BellOff,
   ArrowRight,
   ChevronDown,
-  ChevronRight,
   CircleCheck,
   Clock3,
   ExternalLink,
@@ -27,6 +26,8 @@ import {
   X,
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
+import RepositorySection from "./components/RepositorySection.vue";
+import RepositoryHeading from "./components/RepositoryHeading.vue";
 import OverviewSummary from "./components/OverviewSummary.vue";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
@@ -2048,14 +2049,13 @@ onMounted(async () => {
         <p class="sr-only" role="status" aria-live="polite">{{ layoutAnnouncement }}</p>
         <p class="sr-only" role="status" aria-live="polite">{{ mobileNavigationAnnouncement }}</p>
         <template v-if="splitByRepository">
-        <section
+        <RepositorySection
           v-for="(lane, laneIndex) in orderedLanes"
           :key="lane.repo.id"
-          class="repo-lane"
           :id="'repo-' + lane.repo.id"
-          :class="{ 'is-collapsed': collapsedRepos.includes(lane.repo.full_name) }"
+          :collapsed="collapsedRepos.includes(lane.repo.full_name)"
         >
-          <header class="lane-header">
+          <template #header>
             <span v-if="isDemo" class="lane-sync">
               <time v-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"
                 :title="t('Senast uppdaterad {time}', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
@@ -2070,33 +2070,10 @@ onMounted(async () => {
               @click="refreshFromStatus(lane.repo.full_name)"
               ><span v-if="syncingRepos.has(lane.repo.full_name)" class="lane-sync-spinner" aria-hidden="true"
               /><time v-else :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()">{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time></button>
-            <div class="lane-title">
-              <button class="collapse-project icon-button" @click="toggleCollapsed(lane.repo.full_name)"
-                :aria-label="t(collapsedRepos.includes(lane.repo.full_name) ? 'Expandera {name}' : 'Kollapsa {name}', { name: lane.repo.name })"
-                :aria-expanded="!collapsedRepos.includes(lane.repo.full_name)" :aria-controls="'lane-content-' + lane.repo.id">
-                <ChevronRight v-if="collapsedRepos.includes(lane.repo.full_name)" :size="18" /><ChevronDown v-else :size="18" />
-              </button>
-              <span class="repo-avatar">{{
-                lane.repo.name.slice(0, 2).toUpperCase()
-              }}</span>
-              <div>
-                <h2>
-                  <a
-                    :href="lane.repo.html_url"
-                    :title="lane.repo.name"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    ><span class="repository-name-text">{{ lane.repo.name }}</span><ArrowRight :size="14" /></a
-                  ><span class="repository-badges"><span v-if="lane.repo.private" class="private-badge">{{
-                    t("Privat")
-                  }}</span><span v-if="!lane.loading" class="private-badge workflow-badge">{{ workflow(lane.labels) }}</span></span>
-                </h2>
-                <span class="repo-owner"
-                  >{{ lane.repo.owner.login }} <span> / </span>
-                  {{ lane.repo.description || "GitHub repository" }}</span
-                >
-              </div>
-            </div>
+            <RepositoryHeading :repository="lane.repo" :collapsed="collapsedRepos.includes(lane.repo.full_name)"
+              :controls="'lane-content-' + lane.repo.id" :toggle-name="lane.repo.name" @toggle="toggleCollapsed(lane.repo.full_name)">
+              <template #badges><span v-if="!lane.loading" class="private-badge workflow-badge">{{ workflow(lane.labels) }}</span></template>
+            </RepositoryHeading>
             <div class="lane-meta">
               <span v-if="!lane.loading && (!lane.error || lane.issues.length)" class="repository-issue-count">{{ laneIssues(lane).length }} issues</span>
               <span v-else-if="lane.loading" class="repository-issue-count">{{ t("Hämtar…") }}</span>
@@ -2129,7 +2106,7 @@ onMounted(async () => {
                 <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
                 <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepos[laneIndex]?.closed || 0 }) }}</span>
               </span>
-          </header>
+          </template>
           <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
           <p v-if="!lane.loading && !lane.error && (query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">
             {{ t("Inga issues i {name} matchar filtren.", { name: lane.repo.full_name }) }}
@@ -2236,7 +2213,7 @@ onMounted(async () => {
             </section>
           </div>
           </div>
-        </section>
+        </RepositorySection>
         </template>
         <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
           <div class="combined-board-head">

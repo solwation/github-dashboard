@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { BarChart3, ChevronDown, ChevronRight, RefreshCw, X } from "@lucide/vue";
+import { BarChart3, RefreshCw, X } from "@lucide/vue";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { useLanguage } from "../lib/i18n";
 import type { Repo } from "../lib/model";
@@ -10,6 +10,8 @@ import {
   statisticsDimensions, statisticsDurationMs, statisticsMetrics, statisticsRanges, statisticsResolutions, summarizeStatistics,
   type StatisticsData, type StatisticsFilter, type StatisticsMetric, type StatisticsPreference, type StatisticsRangePreset, type StatisticsResolution,
 } from "../lib/statistics";
+import RepositorySection from "./RepositorySection.vue";
+import RepositoryHeading from "./RepositoryHeading.vue";
 import StatisticsLoadingProgress from "./StatisticsLoadingProgress.vue";
 import { statisticsChartCoverage, type StatisticsLoadStatus } from "../lib/statistics-load-status";
 import StatisticsChart from "./StatisticsChart.vue";
@@ -174,17 +176,16 @@ function clearFilters() {
 }
 </script>
 <template>
-  <section :id="'statistics-repo-' + repository.id" class="statistics-repository" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
-    <header class="statistics-repository-heading">
-      <div class="statistics-repository-identity">
-        <button type="button" class="statistics-repository-toggle" :aria-expanded="!collapsed" :aria-controls="'statistics-repository-body-' + repository.id" :aria-label="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: repository.full_name })" @click="emit('update:collapsed', !collapsed)"><ChevronRight v-if="collapsed" :size="20" aria-hidden="true" /><ChevronDown v-else :size="20" aria-hidden="true" /></button>
-        <h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" :title="repository.full_name" :aria-label="repository.full_name" target="_blank" rel="noopener noreferrer">{{ repositoryLabel }}</a></h2>
-      </div>
+  <RepositorySection :id="'statistics-repo-' + repository.id" class="statistics-repository" :collapsed="collapsed" heading-class="statistics-repository-heading" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
+    <template #header>
+      <RepositoryHeading :repository="repository" :collapsed="collapsed" :label="repositoryLabel"
+        :controls="'statistics-repository-body-' + repository.id" :heading-id="'statistics-repository-' + repository.id"
+        toggle-class="statistics-repository-toggle" @toggle="emit('update:collapsed', !collapsed)" />
       <div v-if="showFilters" class="statistics-repo-filters" role="group" :aria-label="t('Filter för {name}', { name: repository.full_name })">
         <select v-if="dimensions.labels.length" v-model="state.label" class="statistics-filter-select" :class="{ active: state.label }" :aria-label="t('Nuvarande label')"><option value="">{{ t("Alla labels") }}</option><option v-for="name in dimensions.labels" :key="name" :value="name">{{ name }}</option></select>
         <select v-if="dimensions.contributors.length" v-model="state.contributor" class="statistics-filter-select statistics-contributor-select" :class="{ active: state.contributor }" :aria-label="t('Bidragsgivare')"><option value="">{{ t("Alla bidragsgivare") }}</option><option v-for="name in dimensions.contributors" :key="name" :value="name">{{ name }}</option></select>
       </div>
-    </header>
+    </template>
     <div v-show="!collapsed" :id="'statistics-repository-body-' + repository.id" class="statistics-repository-body">
     <template v-if="hasOpened">
     <StatisticsLoadingProgress v-if="loading && loadStatus" :status="loadStatus" :selected-from="timeSpan.from" :selected-to="timeSpan.to" />
@@ -230,19 +231,13 @@ function clearFilters() {
     </div>
     </template>
     </div>
-  </section>
+  </RepositorySection>
 </template>
 <style scoped>
-.statistics-repository { scroll-margin-top: 20px; min-width: 0; margin-bottom: 32px; padding-top: 18px; border-top: 1px solid var(--line); }
-.statistics-repository-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 29rem); align-items: center; gap: 8px 16px; margin-bottom: 12px; min-width: 0; }
-.statistics-repository-identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.statistics-repository-identity:only-child { grid-column: 1 / -1; }
-.statistics-repository-toggle { display: inline-grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; padding: 4px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; }
-.statistics-repository-toggle:hover { background: var(--surface); color: var(--text); }
-.statistics-repository-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.statistics-repository-heading h2 { margin: 0; font-size: 23px; overflow-wrap: anywhere; min-width: 0; }
-.statistics-repository-heading a { color: inherit; text-decoration: none; }
-.statistics-repository-heading a:hover { text-decoration: underline; }
+.statistics-repository { min-width: 0; }
+.statistics-repository :deep(.statistics-repository-heading) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 29rem); gap: 8px 16px; }
+.statistics-repository :deep(.lane-title:only-child) { grid-column: 1 / -1; }
+.statistics-repository-body { padding: 20px 22px; min-width: 0; }
 .statistics-repo-filters { width: 29rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; min-width: 0; max-width: 100%; }
 .statistics-filter-select { min-width: 0; max-width: 100%; width: 100%; text-overflow: ellipsis; padding: 5px 8px; font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: inherit; }
 .statistics-contributor-select { grid-column: 2; }
@@ -300,9 +295,8 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
 @keyframes statistics-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .statistics-loading-spinner { animation: none; } }
 @media (max-width: 650px) {
-  .statistics-repository { margin-bottom: 12px; padding-top: 12px; }
-  .statistics-repository-heading { margin-bottom: 10px; }
-  .statistics-repository-heading h2 { font-size: 19px; }
+  .statistics-repository { margin-bottom: 12px; }
+  .statistics-repository-body { padding: 10px 12px; }
   .statistics-panel-heading { flex-direction: column; align-items: stretch; margin-bottom: 8px; }
   .statistics-panel { padding: 10px 12px; margin-bottom: 8px; border-radius: 8px; }
   .statistics-totals { gap: 8px; margin-bottom: 8px; }
@@ -322,6 +316,6 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
 }
 @media (min-width: 360px) and (max-width: 650px) { .statistics-total-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 850px) {
-  .statistics-repository-heading { grid-template-columns: minmax(0, 1fr); }
+  .statistics-repository :deep(.statistics-repository-heading) { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
