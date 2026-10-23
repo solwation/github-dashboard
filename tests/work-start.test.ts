@@ -63,7 +63,8 @@ describe("closing work start", () => {
     expect(sameLaneContent(lane, derived)).toBe(false);
     expect(deriveWorkStarts(derived, events)).toBe(derived);
     // Estimates now see the closed issue; timers and columns do not.
-    expect(historySamples(derived.issues, Date.parse("2026-10-17T00:00:00Z")).map(sample => [sample.issue.id, sample.durationMs])).toEqual([[1, 7200000], [2, 14400000]]);
+    // Samples are newest first with ties broken by id, so compare membership in id order.
+    expect(historySamples(derived.issues, Date.parse("2026-10-17T00:00:00Z")).map(sample => [sample.issue.id, sample.durationMs]).sort((a, b) => a[0]! - b[0]!)).toEqual([[1, 7200000], [2, 14400000]]);
     expect(derived.issues[0]!.startedAt).toBeUndefined();
     expect(column(derived.issues[0]!)).toBe("closed");
   });

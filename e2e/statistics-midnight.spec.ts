@@ -9,12 +9,14 @@ async function demo(page: Page, time: string) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Utforska en demo', exact: true }).click();
   await page.getByRole('link', { name: 'Statistik', exact: true }).click();
-  await expect(page.locator('.statistics-chart')).toHaveCount(3);
+  // Only the first repository starts expanded, so one chart renders.
+  await expect(page.locator('.statistics-chart')).toHaveCount(1);
 }
 async function expectValid(page: Page) {
   await expect(page.locator('.statistics-period-label')).toBeVisible();
   await expect(page.getByText('Välj ett giltigt datumintervall inom de senaste 30 dagarna.', { exact: true })).toHaveCount(0);
-  await expect(page.locator('.statistics-chart')).toHaveCount(3);
+  // Only the first repository starts expanded, so one chart renders.
+  await expect(page.locator('.statistics-chart')).toHaveCount(1);
 }
 for (const [zone, [before, after]] of Object.entries(moments)) {
   test(`preset and Custom refresh local calendar bounds after midnight in ${zone}`, async ({ browser }) => {
