@@ -8,14 +8,15 @@
     "sections": [
       {
         "text": {
-          "sv": "Statistik laddar tydligare utan upprepad periodinformation, delar Översikts sektioner och visar hur tid per SP och avvikelse mot estimat utvecklas.",
-          "en": "Statistics loads more clearly without repeated period details, shares Overview's sections and shows how time per SP and deviation from estimate develop."
+          "sv": "Statistik laddar tydligare, delar Översikts sektioner och visar tid per SP och avvikelse mot estimat, med en egen högeraxel för en andra enhet.",
+          "en": "Statistics loads more clearly, shares Overview's sections and shows time per SP and deviation from estimate, with its own right axis for a second unit."
         },
         "issues": [
           257,
           258,
           263,
-          280
+          280,
+          283
         ]
       },
       {
@@ -72,11 +73,12 @@
       },
       {
         "text": {
-          "sv": "Tid kvar för Pågående drar av tid som redan lagts på huvudärendet och dess underärenden, även när huvudärendet ligger i Backlog, utan dubbelräkning.",
-          "en": "Remaining In progress time deducts time already spent on a parent and its sub-issues, even when the parent is in the backlog, without counting twice."
+          "sv": "Tid kvar drar av tid på huvudärendet och dess underärenden, även på huvudärendets kort och listrad, och översiktens story points räknar gruppen en gång.",
+          "en": "Remaining time deducts time spent on a parent and its sub-issues, also on the parent's card and list row, and overview story points count the group once."
         },
         "issues": [
-          279
+          279,
+          281
         ]
       },
       {
