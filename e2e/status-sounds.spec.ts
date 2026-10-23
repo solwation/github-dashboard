@@ -29,7 +29,9 @@ test("status sounds follow repository opt-in and live transitions without replay
     Object.assign(window, { AudioContext: FakeAudioContext, Notification: FakeNotification });
   });
   const repositories = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: false, description: "Fixture", html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
-  const states: Record<string, { state: string; labels: string[] }> = { alpha: { state: "open", labels: [] }, beta: { state: "open", labels: [] } };
+  // closedAt is minted once per closure, like GitHub: a closed_at that changed between two responses
+  // reads as a reopen and reclose between polls, so every refetch would otherwise notify again (#273).
+  const states: Record<string, { state: string; labels: string[]; closedAt?: string }> = { alpha: { state: "open", labels: [] }, beta: { state: "open", labels: [] } };
   let login = "sound-test";
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
@@ -39,7 +41,9 @@ test("status sounds follow repository opt-in and live transitions without replay
     else if (url.pathname.endsWith("/issues")) {
       const repo = repositories.find(repo => url.pathname.includes(`/${repo.name}/`))!;
       const state = states[repo.name]!;
-      data = url.searchParams.get("state") === state.state || url.searchParams.get("state") === "all" ? [{ id: repo.id, number: 1, title: `${repo.name} task`, state: state.state, labels: state.labels.map(name => ({ name, color: "ffffff" })), assignees: [], created_at: "2026-01-01T00:00:00Z", updated_at: new Date().toISOString(), closed_at: state.state === "closed" ? new Date().toISOString() : null, html_url: `${repo.html_url}/issues/1` }] : [];
+      if (state.state === "closed") state.closedAt ||= new Date().toISOString();
+      else delete state.closedAt;
+      data = url.searchParams.get("state") === state.state || url.searchParams.get("state") === "all" ? [{ id: repo.id, number: 1, title: `${repo.name} task`, state: state.state, labels: state.labels.map(name => ({ name, color: "ffffff" })), assignees: [], created_at: "2026-01-01T00:00:00Z", updated_at: new Date().toISOString(), closed_at: state.closedAt ?? null, html_url: `${repo.html_url}/issues/1` }] : [];
     }
     await route.fulfill({ json: data });
   });
@@ -89,6 +93,9 @@ test("status sounds follow repository opt-in and live transitions without replay
   await refreshWhenIdle();
   await expect.poll(() => page.evaluate(() => (window as unknown as { soundNotices: string[] }).soundNotices.length)).toBe(2);
   await expect(page.locator("#repo-1 .closed .issue-card.just-closed")).toHaveCount(1);
+  // Refetching an unchanged closure (dialog close, background reconcile) never notifies it again.
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
+  expect(await page.evaluate(() => (window as unknown as { soundNotices: string[] }).soundNotices)).toEqual(["alpha · Issue stängd", "alpha · Issue closed"]);
   expect(await notes()).toHaveLength(8);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
