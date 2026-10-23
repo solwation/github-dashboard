@@ -46,7 +46,8 @@ for (const device of [
   expect(await card.evaluate(el => Boolean(el.querySelector('.issue-markdown')!.compareDocumentPosition(el.querySelector('.issue-sub-issues')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await expect(section.locator('li').nth(0)).toContainText('Backlog');
   await expect(section.locator('li').nth(1)).toContainText('In progress');
-  await expect(section.locator('li').nth(1).getByRole('link')).toHaveAttribute('href', active.html_url);
+  // Sub-issues open inside the dashboard (parent navigation), so each entry is a button, prefixed with its repository when it differs.
+  await expect(section.locator('li').nth(1).getByRole('button')).toHaveText(`${other.full_name}#${active.number} · ${active.title}`);
   await expect(section.locator('li').nth(2)).toContainText('Closed');
   expect(requests).toBe(2);
   await card.getByRole('button', { name: 'Visa mindre', exact: true }).click();
