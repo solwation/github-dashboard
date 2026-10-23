@@ -50,11 +50,12 @@
       },
       {
         "text": {
-          "sv": "Ctrl+End/End i kommentarsdialogen visar alltid den sista kommentaren, även medan bildminiatyrer laddas.",
-          "en": "Ctrl+End/End in the comments dialog always shows the last comment, even while image thumbnails are loading."
+          "sv": "Ctrl+End/End i kommentarsdialogen visar alltid sista kommentaren, och bildvisaren på mobil har alla kontroller på en rad med stängkryss uppe till höger.",
+          "en": "Ctrl+End/End in the comments dialog always shows the last comment, and the phone image viewer keeps every control on one row with a top-right close button."
         },
         "issues": [
-          268
+          268,
+          274
         ]
       }
     ]

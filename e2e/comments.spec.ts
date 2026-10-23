@@ -268,6 +268,7 @@ for (const scenario of [
   { name: "narrow", width: 1000, height: 900, mobile: false },
   { name: "phone", width: 390, height: 844, mobile: true },
   { name: "landscape", width: 844, height: 390, mobile: true },
+  { name: "small-phone", width: 320, height: 568, mobile: true },
 ]) for (const mode of ["Kort", "Lista"]) {
   test(`comment image viewer ${scenario.name} ${mode}`, async ({ browser }, testInfo) => {
     const context = await browser.newContext({ viewport: scenario, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE" });
@@ -323,6 +324,16 @@ for (const scenario of [
     const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
     await expect(viewer).toBeVisible();
     await expect(viewer.locator("img")).toHaveJSProperty("naturalWidth", 1800);
+    // Every control shares one row, with the close icon at the top-right edge (#274).
+    const controls = await viewer.locator(".image-toolbar > *").evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
+    const toolbar = (await viewer.locator(".image-toolbar").boundingBox())!;
+    for (const control of controls) {
+      expect(Math.abs(control.top + control.height / 2 - (controls[0]!.top + controls[0]!.height / 2))).toBeLessThan(4);
+      expect(control.right).toBeLessThanOrEqual(toolbar.x + toolbar.width + 0.5);
+    }
+    const closeImage = (await viewer.getByRole("button", { name: "Stäng bild", exact: true }).boundingBox())!;
+    expect(closeImage.width).toBeGreaterThanOrEqual(44);
+    expect(toolbar.x + toolbar.width - closeImage.x - closeImage.width).toBeLessThan(1);
     await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
     await expect(viewer.locator("img")).toHaveCSS("width", "1800px");
     await viewer.getByRole("button", { name: "Zooma in", exact: true }).click();

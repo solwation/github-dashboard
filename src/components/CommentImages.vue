@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from "vue";
+import { X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 
 const props = defineProps<{ html: string }>();
@@ -115,8 +116,8 @@ onBeforeUnmount(() => observer?.disconnect());
         <output :aria-label="t('Zoomnivå')">{{ Math.round(scale * 100) }}%</output>
         <button type="button" :aria-label="t('Zooma in')" @click="changeZoom(scale * 1.5)">+</button>
         <button type="button" @click="fitImage">{{ t('Anpassa') }}</button>
-        <button type="button" @click="originalSize">{{ t('Originalstorlek') }}</button>
-        <button type="button" class="close-image" autofocus @click="close">{{ t('Stäng bild') }}</button>
+        <button type="button" :aria-label="t('Originalstorlek')" @click="originalSize"><span class="label-full">{{ t('Originalstorlek') }}</span><span class="label-short" aria-hidden="true">1:1</span></button>
+        <button type="button" class="close-image" :aria-label="t('Stäng bild')" :title="t('Stäng bild')" autofocus @click="close"><X :size="20" aria-hidden="true" /></button>
       </div>
       <div ref="viewport" class="image-viewport" tabindex="0" :aria-label="t('Bild, dra för att panorera')"
         @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointers.delete($event.pointerId)" @pointercancel="pointers.delete($event.pointerId)"
@@ -137,10 +138,22 @@ onBeforeUnmount(() => observer?.disconnect());
 .comment-image-viewer { box-sizing: border-box; width: calc(100vw - 1rem); height: calc(100dvh - 1rem); max-width: none; max-height: none; padding: .5rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface); color: var(--text); overflow: hidden; }
 .comment-image-viewer[open] { display: flex; flex-direction: column; gap: .5rem; }
 .comment-image-viewer::backdrop { background: #000b; }
-.image-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; flex-shrink: 0; }
-.image-toolbar button { min-height: 44px; min-width: 44px; padding: .4rem .6rem; border: 1px solid var(--line); border-radius: .4rem; color: var(--text); background: var(--surface); cursor: pointer; }
+.image-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: .3rem; flex-shrink: 0; min-width: 0; }
+.image-toolbar button { min-height: 44px; min-width: 44px; padding: .4rem .6rem; white-space: nowrap; flex-shrink: 0; border: 1px solid var(--line); border-radius: .4rem; color: var(--text); background: var(--surface); cursor: pointer; }
 .image-toolbar output { min-width: 3rem; text-align: center; font-variant-numeric: tabular-nums; }
-.close-image { margin-left: auto; }
+.close-image { display: inline-grid; place-items: center; margin-left: auto; padding: 0; }
+.label-short { display: none; }
+/* Phones keep every control on one row; the visible 1:1 keeps the full accessible name (#274). */
+@media (max-width: 480px) {
+  /* Full screen on phones; safe-area padding keeps the toolbar clear of notches (viewport-fit=cover). */
+  .comment-image-viewer { width: 100vw; height: 100dvh; border: 0; border-radius: 0;
+    padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left)); }
+  .image-toolbar { gap: .15rem; }
+  .image-toolbar button { padding: .4rem .35rem; }
+  .image-toolbar output { min-width: 2.4rem; font-size: .75rem; }
+  .label-full { display: none; }
+  .label-short { display: inline; }
+}
 .image-viewport { min-height: 0; flex: 1; overflow: auto; scrollbar-gutter: stable both-edges; touch-action: none; cursor: grab; }
 .image-viewport:active { cursor: grabbing; }
 .image-canvas { display: flex; align-items: center; justify-content: center; width: max-content; min-width: 100%; min-height: 100%; }
