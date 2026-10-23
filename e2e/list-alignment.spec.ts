@@ -217,12 +217,14 @@ for (const combined of [false, true]) {
     await page.setViewportSize({ width: 320, height: 844 });
     const before = (await row.boundingBox())!.height;
     api.move(); await page.keyboard.press('Control+r');
-    const moved = row.getByRole('button', { name: 'Nyligen flyttad. Markera som läst', exact: true });
     const comments = row.getByRole('button', { name: '2 nya kommentarer. Markera som läst', exact: true });
-    await expect(moved).toBeVisible(); await expect(comments).toBeVisible();
+    await expect(comments).toBeVisible();
+    // Phones mark a move with the row border alone, plus screen-reader text instead of a ⇄ button (#275).
+    await expect(row).toHaveClass(/unread-move/);
+    await expect(row.locator('.row-movement-marker')).toBeHidden();
+    await expect(row.locator('.row-mobile-move-note')).toHaveText(/^Flyttad till /);
     expect((await row.boundingBox())!.height).toBe(before);
-    const moveBox = (await moved.boundingBox())!, commentBox = (await comments.boundingBox())!, timeBox = (await row.locator('.row-time').boundingBox())!;
-    expect(moveBox.x + moveBox.width).toBeLessThanOrEqual(commentBox.x);
+    const commentBox = (await comments.boundingBox())!, timeBox = (await row.locator('.row-time').boundingBox())!;
     expect(commentBox.x + commentBox.width).toBeLessThanOrEqual(timeBox.x);
     await page.screenshot({ path: test.info().outputPath('compact-phone-list.png'), fullPage: true });
     await row.locator('.row-title').click();
@@ -232,7 +234,7 @@ for (const combined of [false, true]) {
     await expect(popup.locator('.issue-time-remaining')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(popup).toHaveCount(0);
-    await expect(moved).toHaveCount(0); await expect(comments).toHaveCount(0);
+    await expect(row).not.toHaveClass(/unread-move/); await expect(comments).toHaveCount(0);
     expect((await row.boundingBox())!.height).toBe(before);
   });
 }
@@ -348,10 +350,12 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     await expect(unread.locator('.row-number')).toHaveText('#12345');
     await expect(unread.locator('.issue-points')).toContainText('13 SP');
     if (combined) await expect(unread.locator('.row-repository').first()).toHaveAttribute('title', /a-very-long-repository-name/);
-    await expect(unread.locator('.row-movement-marker')).toBeVisible();
     await expect(unread.locator('.row-comment-marker')).toBeVisible();
     await expect(page.locator('.issue-row.issue-timeout').first()).toBeVisible();
     const compact = scenario.width <= 650 || (scenario.mobile && scenario.width <= 950 && scenario.height <= 500);
+    // Desktop rows keep the Flyttad ✓ marker; compact phone rows show the move by their border (#275).
+    await expect(unread).toHaveClass(/unread-move/);
+    await expect(unread.locator('.row-movement-marker')).toBeVisible({ visible: !compact });
     if (compact) {
       for (const row of await page.locator('.issue-row').all()) {
         expect((await row.boundingBox())!.height).toBeLessThanOrEqual(60);

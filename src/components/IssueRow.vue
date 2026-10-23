@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, ArrowRightLeft, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
@@ -222,10 +222,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       </span>
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
-      <button v-if="recentMove" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
-        :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
-        :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })">
-        <component :is="recentMove === 'created' ? Plus : ArrowRightLeft" :size="12" aria-hidden="true" />
+      <!-- A moved row's highlighted border already shows the move on phones; screen readers still hear it (#275). -->
+      <span v-if="recentMove === true" class="row-mobile-move-note sr-only">{{ t('Flyttad till {column}', { column: status }) }}</span>
+      <button v-if="recentMove === 'created'" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
+        :aria-label="t('Nyligen skapat i Backlog. Markera som läst')" :title="t('Skapat i Backlog')">
+        <Plus :size="12" aria-hidden="true" />
       </button>
       <button v-if="newComments && newComments > 0" type="button" class="row-mobile-activity row-comment-marker" @click="emit('read')"
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
