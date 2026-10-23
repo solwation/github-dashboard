@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 import { X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 
-const props = defineProps<{ html: string }>();
+const props = defineProps<{ html: string; contentClass?: string }>();
 const { t } = useLanguage();
 const viewer = ref<HTMLDialogElement>();
 const viewport = ref<HTMLElement>();
@@ -40,6 +40,8 @@ const html = computed(() => {
       const attachment = url.hostname === "github.com" && url.pathname.startsWith("/user-attachments/assets/");
       if (!["https:", "http:"].includes(url.protocol) || (!attachment && !/\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/i.test(url.pathname))) continue;
       if (url.hostname === "github.com" && /^\/[^/]+\/[^/]+\/blob\//.test(url.pathname)) url.searchParams.set("raw", "true");
+      link.dataset.imageSrc = url.href;
+      link.setAttribute("aria-haspopup", "dialog");
       const img = document.createElement("img");
       img.src = url.href;
       img.classList.add("direct-image-preview");
@@ -59,13 +61,17 @@ const html = computed(() => {
   return document.body.innerHTML;
 });
 async function activate(event: MouseEvent | KeyboardEvent) {
-  if (!(event.target instanceof HTMLImageElement) || !event.target.classList.contains("comment-thumbnail")) return;
+  if (!(event.target instanceof Element)) return;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   if (event instanceof KeyboardEvent && !["Enter", " "].includes(event.key)) return;
+  const image = event.target instanceof HTMLImageElement && event.target.classList.contains("comment-thumbnail") ? event.target : undefined;
+  const link = event.target.closest<HTMLAnchorElement>("a[data-image-src]");
+  if (!image && !link) return;
   event.preventDefault();
   event.stopPropagation();
-  opener = event.target;
-  selected.value = { src: event.target.src, alt: event.target.alt };
-  natural.value = { width: event.target.naturalWidth, height: event.target.naturalHeight };
+  opener = image ?? link!;
+  selected.value = { src: image?.src ?? link!.dataset.imageSrc!, alt: image?.alt ?? link!.textContent ?? t("Bild") };
+  natural.value = { width: image?.naturalWidth ?? 0, height: image?.naturalHeight ?? 0 };
   fitted.value = true;
   zoom.value = 1;
   await nextTick();
@@ -82,6 +88,10 @@ function clear() {
   opener?.focus();
 }
 function close() { viewer.value?.close(); clear(); }
+function dialogClosed() {
+  // A queued close event can arrive after the user has already reopened the viewer.
+  if (!viewer.value?.open) clear();
+}
 function changeZoom(value: number) {
   zoom.value = Math.max(minimumScale.value, Math.min(Math.max(8, fit.value), value));
   fitted.value = false;
@@ -108,8 +118,8 @@ function pointerMove(event: PointerEvent) {
 onBeforeUnmount(() => observer?.disconnect());
 </script>
 <template>
-  <div @click="activate" @keydown="activate" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="html" />
-  <dialog ref="viewer" class="comment-image-viewer" :aria-label="t('Bildvisare')" @close="clear" @keydown.esc.stop.prevent="close">
+  <div :class="contentClass" @click="activate" @keydown="activate" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="html" />
+  <dialog ref="viewer" class="comment-image-viewer" :aria-label="t('Bildvisare')" @close="dialogClosed" @keydown.esc.stop.prevent="close">
     <template v-if="selected">
       <div class="image-toolbar">
         <button type="button" :aria-label="t('Zooma ut')" :disabled="scale <= minimumScale" @click="changeZoom(scale / 1.5)">−</button>

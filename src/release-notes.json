@@ -100,6 +100,15 @@
           278,
           288
         ]
+      },
+      {
+        "text": {
+          "sv": "Bildlänkar i beskrivningar och kommentarer visar förhandsbilder och öppnas direkt i bildvisaren, även för GitHub-filer.",
+          "en": "Image links in descriptions and comments show thumbnails and open directly in the image viewer, including GitHub files."
+        },
+        "issues": [
+          290
+        ]
       }
     ]
   },

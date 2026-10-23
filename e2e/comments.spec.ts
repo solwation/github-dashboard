@@ -365,7 +365,7 @@ for (const scenario of [
     await expect(viewer).not.toBeVisible();
     await expect(commentsDialog).toBeVisible();
     await expect(thumbnail).toBeFocused();
-    await commentsDialog.getByRole("button", { name: "Öppna bild: Named image", exact: true }).click();
+    await commentsDialog.getByRole("link", { name: "Named image", exact: true }).click();
     await expect(viewer.locator("img")).toHaveAttribute("src", "https://images.example/named.webp");
     await expect(viewer.locator("img")).toHaveJSProperty("naturalWidth", 160);
     await assertImageFits(viewer, 160, 100);
