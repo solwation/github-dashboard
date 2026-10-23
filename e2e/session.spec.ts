@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { createHandoffUrl } from "../src/lib/handoff";
 import { openSettings } from "./support/phone-menu";
+import { devOrigin } from "./ports";
 async function fixture(page: Page) {
   const repo = {
     id: 1,
@@ -73,7 +74,7 @@ test("mobile handoff scrubs URL, imports repo selections and renders a local exp
   await fixture(page);
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
-  const { url } = createHandoffUrl("http://127.0.0.1:5173/", {
+  const { url } = createHandoffUrl(`${devOrigin}/`, {
     token: "fixture-handoff-token",
     selected: ["sample/test"],
     rules: { "sample/test": { progress: "Building" } },

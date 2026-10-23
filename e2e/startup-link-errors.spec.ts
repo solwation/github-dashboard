@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createHandoffUrl, HANDOFF_LIFETIME_MS } from "../src/lib/handoff";
+import { devOrigin } from "./ports";
 
 const accounts: Record<string, string> = { "fixture-saved-token": "saved-account", "fixture-foreign-token": "foreign-account" };
 const repo = { id: 1, name: "test", full_name: "sample/test", private: true, description: "Fixture", html_url: "https://github.com/sample/test", owner: { login: "sample" } };
@@ -15,7 +16,7 @@ async function fixture(page: Page, failing: Set<string>, state = { offline: fals
   return state;
 }
 const link = (token: string, now = Date.now()) =>
-  createHandoffUrl("http://127.0.0.1:5173/", { token, selected: ["sample/test"], rules: {} }, now).url;
+  createHandoffUrl(`${devOrigin}/`, { token, selected: ["sample/test"], rules: {} }, now).url;
 async function start(page: Page, url: string) {
   // Leave the document first so a hash-only change performs a real application start.
   await page.goto("about:blank");
@@ -54,7 +55,7 @@ test("rejected handoff links explain expired and invalid codes in English", asyn
 
   await start(page, link("fixture-foreign-token", Date.now() - 2 * HANDOFF_LIFETIME_MS));
   await expect(page.locator(".notice.error")).toContainText("The transfer link has expired. Links are valid for five minutes – create a new QR code on the other device.");
-  await start(page, "http://127.0.0.1:5173/#issueflow-handoff=1234");
+  await start(page, `${devOrigin}/#issueflow-handoff=1234`);
   await expect(page.locator(".notice.error")).toContainText("The transfer link is invalid or incomplete. Create a new QR code on the other device.");
   expect(page.url()).not.toContain("issueflow-handoff");
   await expectSavedBoard(page);
@@ -75,7 +76,7 @@ test("a cancelled or unverifiable OAuth return keeps the saved session and scrub
   await start(page, "/?code=fixture-oauth-code&state=fixture-state");
   await expect(page.locator(".notice.error")).toContainText("Inloggningen kunde inte verifieras");
   expect(page.url()).not.toContain("fixture-oauth-code");
-  expect(requests.filter(url => url.includes("fixture-oauth-code") && !url.startsWith("http://127.0.0.1:5173/"))).toEqual([]);
+  expect(requests.filter(url => url.includes("fixture-oauth-code") && !url.startsWith(`${devOrigin}/`))).toEqual([]);
   await expectSavedBoard(page);
 });
 

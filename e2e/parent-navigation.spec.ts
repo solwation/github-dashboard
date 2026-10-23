@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { devOrigin } from "./ports";
 
 const repos = [
   { id: 401, name: "child", full_name: "sample/child", private: true, description: "", html_url: "https://github.com/sample/child", owner: { login: "sample" } },
@@ -94,7 +95,7 @@ for (const mode of ["Cards", "List"] as const) {
 }
 
 test("parent navigation works on touch phones in portrait, landscape and 320px layouts", async ({ browser }, info) => {
-  const context = await browser.newContext({ baseURL: "http://127.0.0.1:5173", isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 }, locale: "sv-SE" });
+  const context = await browser.newContext({ baseURL: devOrigin, isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 }, locale: "sv-SE" });
   try {
     const page = await context.newPage();
     await fixture(page);
@@ -155,7 +156,7 @@ test("child selection from a parent navigates and highlights the board issue wit
 });
 
 test("child navigation fits touch phones in portrait, landscape and narrow layouts", async ({ browser }, info) => {
-  const context = await browser.newContext({ baseURL: "http://127.0.0.1:5173", isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 }, locale: "sv-SE" });
+  const context = await browser.newContext({ baseURL: devOrigin, isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 }, locale: "sv-SE" });
   try {
     const page = await context.newPage();
     const popup = await fixture(page);

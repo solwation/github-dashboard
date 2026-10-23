@@ -87,9 +87,11 @@ includes the instructions; no package install or submodule initialization is nee
 Existing skill/command adapters and other file-reading agents use the same core.
 Project capacity, release gates, phase hooks and final-review/watch rules stay in the local policy.
 Generic improvements are made in the shared repository and adopted here through an
-explicit reviewed update; see its [maintenance guide](.orchestra/shared/README.md).
+explicit reviewed update; see its [installation and update guide](.orchestra/shared/INSTALL.md).
 
 [MIT License](LICENSE) · © 2026 [Olof Wingren](https://github.com/solwation)
+
+Browser tests start their own dev and preview servers on `E2E_DEV_PORT` (default 5173) and `E2E_PREVIEW_PORT` (default 4173) and fail if a port is busy; set other ports per worktree, or `E2E_REUSE_SERVER=1` to reuse a server you already started.
 
 Public GitHub browser checks are opt-in so ordinary test runs do not consume the shared anonymous quota:
 

@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { previewOrigin } from "./ports";
 
-test.use({ baseURL: "http://127.0.0.1:4173", locale: "sv-SE" });
+test.use({ baseURL: previewOrigin, locale: "sv-SE" });
 const base = "/github-dashboard/";
-const guideUrl = `http://127.0.0.1:4173${base}ISSUEFLOW.md`;
+const guideUrl = `${previewOrigin}${base}ISSUEFLOW.md`;
 
 test("production popup shows and copies the complete raw Markdown with no reference or download links", async ({ page, request }) => {
   const response = await request.get(guideUrl);

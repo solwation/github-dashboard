@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createHandoffUrl } from "../src/lib/handoff";
 import QRCode from "qrcode";
+import { devOrigin } from "./ports";
 
 const accounts: Record<string, string> = { "fixture-saved-token": "saved-account", "fixture-foreign-token": "foreign-account" };
 const repo = { id: 1, name: "test", full_name: "sample/test", private: true, description: "Fixture", html_url: "https://github.com/sample/test", owner: { login: "sample" } };
@@ -11,7 +12,7 @@ async function fixture(page: Page) {
     return route.fulfill({ json: path === "/user" ? { login: accounts[token] ?? "unknown", avatar_url: "" } : path === "/user/repos" ? [repo] : [] });
   });
 }
-const link = (token: string) => createHandoffUrl("http://127.0.0.1:5173/", { token, selected: ["sample/test"], rules: {} }).url;
+const link = (token: string) => createHandoffUrl(`${devOrigin}/`, { token, selected: ["sample/test"], rules: {} }).url;
 async function openLink(page: Page, token: string) {
   // Leave the document first so a hash-only change performs a real application start.
   await page.goto("about:blank");

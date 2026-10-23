@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
+import { previewOrigin } from "./ports";
 
 // Startup from the encrypted content cache with 12 repositories × 70 issues (#121), measured on
 // the production build: the first card must draw quickly and without long main-thread tasks.
-test.use({ baseURL: 'http://127.0.0.1:4173' });
+test.use({ baseURL: previewOrigin });
 const base = '/github-dashboard/';
 const repos = Array.from({ length: 12 }, (_, index) => {
   const name = `cache-${String(index + 1).padStart(2, '0')}`;

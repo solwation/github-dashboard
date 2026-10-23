@@ -8,7 +8,11 @@ and overrides; explicit user instructions and platform limits take precedence.
 
 `/orkester`, `$orkester` or a plain-language request to run orchestration invokes this
 workflow. Reading, updating or installing these instructions does not start the queue.
-Keep explicit user scope; without it, work the repository's startable issue backlog.
+Keep explicit user scope. Without it this project overrides the shared core's
+[bounded pass](shared/COORDINATION.md#run-a-bounded-pass): work the repository's startable
+issue backlog as a queue session, then run the [final review and watch](#final-review-and-watch).
+As in a pass, never ask in the chat; user-only decisions use the `user question` label,
+and only the Actions gate publishes ([release](#questions-and-release)).
 Use [the compact worker brief](shared/WORKER.md) for each assignment, including the
 applicable [phase hooks](#project-phase-hooks) and the
 [resource choice](shared/ORCHESTRA.md#spend-resources-deliberately) for the worker.
@@ -62,8 +66,19 @@ One issue per worker, with a committed common baseline and explicit file ownersh
 an isolated checkout/worktree (prefer ext4 under WSL). Workers can return isolated
 commits; only the conductor integrates, validates and pushes main. They neither push
 main nor close issues. Shared dependencies are read-only: serialize package/lockfile
-changes and overlapping integrations. Each browser task gets its own port/evidence
-folder; schedule expensive browser suites instead of running them all concurrently.
+changes and overlapping integrations. The conductor's own implementation takes a slot;
+choose it deliberately (very small changes or unavailable delegation) and record why.
+
+Every writing agent, including the implementing conductor, works only in its own
+worktree under the shared [isolation rules](shared/ORCHESTRA.md#choose-the-smallest-useful-team);
+never edit or run state-changing git commands in another checkout, and remove a worktree
+only after integration or preservation. Give each worktree its own ports with
+`E2E_DEV_PORT`/`E2E_PREVIEW_PORT` (for example 5xxx/4xxx by issue number) and its own
+evidence/build paths. `playwright.config.ts` starts servers on those ports with
+`--strictPort` and never reuses an existing server unless `E2E_REUSE_SERVER=1`, so a
+busy port fails instead of testing another checkout. Fast checks run in parallel;
+expensive browser suites are a queued shared resource taken in turns, so their cost
+does not set the worker count. Report active workers, capacity and why a slot is unused.
 
 Aim for a useful delivery within 30 minutes. Reassess progress around that time and
 inspect stalled processes at 45–60 minutes without concrete progress. Split genuinely
@@ -119,7 +134,7 @@ Listed order is execution order.
 | --- | --- | --- | --- |
 | Issue and priority | `planning`: every change, entry | Create/reuse an issue with acceptance, one canonical priority and impact/urgency rationale ([AI.md](../AI.md#issues-and-priority)); never change an existing priority without user direction | Issue linked in the plan before implementation |
 | Read context | `planning`: every change, before the plan is final | Use `rg` for relevant code and instructions; read the AI.md project rules the change touches (optional-data visibility, encrypted storage, accessibility, mobile layouts) | Plan names the 2–3 risk-based checks, UI matrix need and follow-up destination |
-| Isolated checkout | `implementation`: every assignment, entry | Committed common baseline, own worktree (ext4 under WSL), explicit file ownership, own port/evidence folder ([capacity](#capacity-ownership-and-progress)) | Worktree and owned files recorded in the #97 status |
+| Isolated checkout | `implementation`: every assignment, entry | Committed common baseline, own worktree (ext4 under WSL), explicit file ownership, own `E2E_DEV_PORT`/`E2E_PREVIEW_PORT` and evidence folder ([capacity](#capacity-ownership-and-progress)) | Worktree and owned files recorded in the #97 status |
 | Preserve and resolve | `implementation`: every change, exit | Preserve others' work; resolve conflicts completely, including Vue template markers; serialize package/lockfile changes | No unrelated edits or conflict markers; out-of-scope findings filed as issues |
 | Release notes | `implementation`: published user-facing changes, exit | Update the day's bilingual entry in `src/release-notes.json` ([AI.md](../AI.md#project-and-verification)); run `npx vitest run tests/release-notes.test.ts` | Entry in the same commit; none for instruction-only work |
 | README | `implementation`: behavior or setup changes, exit | Update `README.md`; update AI.md when the workflow changes | Docs match the delivered behavior |
@@ -161,19 +176,21 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.1.2**,
-commit **ce0d93613be74c0bf653377629500b404fb8b966** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.2.3**,
+commit **562f7e409cddff4ed38700c01c0fd8d47f7116c0** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
-Follow its [update/contribution guide](shared/README.md). Keep project policy outside
+Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and explicitly adopt
 reviewed releases here. Do not subtree-push this project's files/history upstream.
 The subtree also carries the shared repository's own maintainer files (`AGENTS.md`,
-`AI.md`, `docs/`); they govern upstream maintenance only, not this project.
+`AI.md`, `CONTRIBUTING.md`, `docs/`) and its example adapter
+(`.claude/commands/orkester.md`); they govern upstream maintenance only, not this
+project, whose own adapters stay at the repository root.
 
 ### Upstream update discovery
 
 At conductor startup/resume, apply the core
-[update-discovery procedure](shared/README.md#check-for-upstream-updates): check stable
+[update-discovery procedure](shared/INSTALL.md#check-for-upstream-updates): check stable
 releases **and version tags** of the official upstream
 `solwation/dirigenten-och-orkestern` against the pin above. Reuse a successful check
 for the same upstream/pin for up to 24 hours; an explicit update request or suspected

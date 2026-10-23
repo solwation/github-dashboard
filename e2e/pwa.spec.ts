@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-test.use({ baseURL: "http://127.0.0.1:4173" });
+import { previewOrigin } from "./ports";
+test.use({ baseURL: previewOrigin });
 test("production app is installable and caches only public app shell for offline use", async ({
   page,
   context,

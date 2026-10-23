@@ -1,9 +1,10 @@
 import { expect, test, type Worker } from "@playwright/test";
 import { readSettings } from "./support/settings";
+import { previewOrigin } from "./ports";
 
 // Background notifications (#129–#131): the installed PWA's service worker checks GitHub on
 // periodicsync. Browsers schedule the event themselves, so the test dispatches it in the worker.
-test.use({ baseURL: "http://127.0.0.1:4173" });
+test.use({ baseURL: previewOrigin });
 const app = "/github-dashboard/";
 const TAG = "issueflow-check";
 const repo = { id: 31, name: "alpha", full_name: "sample/alpha", description: "Fictional background fixture", private: true, html_url: "https://github.com/sample/alpha", owner: { login: "sample" } };
@@ -25,8 +26,8 @@ const notifications = (worker: Worker) => worker.evaluate(async () =>
     .map(notification => ({ title: notification.title, body: notification.body, tag: notification.tag })));
 
 test("simulated periodic sync shows one notification per change from the encrypted background state", async ({ page, context }) => {
-  const base = new URL(app, "http://127.0.0.1:4173").href;
-  await context.grantPermissions(["notifications"], { origin: "http://127.0.0.1:4173" });
+  const base = new URL(app, previewOrigin).href;
+  await context.grantPermissions(["notifications"], { origin: previewOrigin });
   const created = new Date(Date.now() - 3600_000).toISOString();
   const issue = { id: 9101, number: 12, title: "Fictional background task", state: "open", created_at: created, updated_at: created, closed_at: null as string | null, labels: [], assignees: [], html_url: `${repo.html_url}/issues/12` };
   const seen: string[] = [];

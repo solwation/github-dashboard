@@ -4,8 +4,9 @@ import jsQR from "jsqr";
 import QRCode from "qrcode";
 import { createHandoffUrl, parseHandoffUrl, type HandoffPayload, type HandoffPreferences } from "../src/lib/handoff";
 import { openSettings, revealPhoneMenu } from "./support/phone-menu";
+import { devOrigin } from "./ports";
 
-const base = process.env.ISSUEFLOW_E2E_BASE_URL || "http://127.0.0.1:5173/";
+const base = process.env.ISSUEFLOW_E2E_BASE_URL || `${devOrigin}/`;
 const token = "fictional-optical-sync-token";
 const preferences: HandoffPreferences = {
   projectOrder: ["sample/second", "sample/test"], collapsedRepos: ["sample/second"],

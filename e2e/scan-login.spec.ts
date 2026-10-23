@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { createHandoffUrl } from "../src/lib/handoff";
 import { openSettings } from "./support/phone-menu";
 import { revealPhoneMenu } from "./support/phone-menu";
+import { devOrigin } from "./ports";
 
 const settings = { token: "fixture-scanned-token", selected: ["sample/test"], rules: { "sample/test": { progress: "Building" } } };
 async function fixture(page: Page) {
@@ -24,7 +25,7 @@ async function image(page: Page, url: string) {
 }
 test("scans real QR pixels from an in-app camera stream and stops camera after sign-in", async ({ page }) => {
   const requests = await fixture(page);
-  const { url } = createHandoffUrl("http://127.0.0.1:5173/", settings);
+  const { url } = createHandoffUrl(`${devOrigin}/`, settings);
   const data = await QRCode.toDataURL(url, { width: 640, margin: 4 });
   await page.addInitScript(data => {
     (window as any).cameraStarts = 0;
@@ -48,7 +49,7 @@ test("scans real QR pixels from an in-app camera stream and stops camera after s
   await page.getByRole("button", { name: "Logga in med QR-kod", exact: true }).click();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   expect(await page.evaluate(() => (window as any).cameraStops)).toBe(1);
-  expect(page.url()).toBe("http://127.0.0.1:5173/#overview");
+  expect(page.url()).toBe(`${devOrigin}/#overview`);
   expect(requests.some(url => url.includes("fixture-scanned-token") || url.includes("issueflow-handoff"))).toBe(false);
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(1);
@@ -59,7 +60,7 @@ test("denied camera offers image fallback, imports settings and persists in the 
   await page.goto("/");
   await page.getByRole("button", { name: "Logga in med QR-kod", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Kameraåtkomst nekades");
-  await image(page, createHandoffUrl("http://127.0.0.1:5173/", settings).url);
+  await image(page, createHandoffUrl(`${devOrigin}/`, settings).url);
   await expect(page.locator(".repo-lane")).toHaveCount(1);
   await expect.poll(() => readSettings(page, "scanner-test").then(saved => saved?.rules)).toEqual(settings.rules);
   const cdp = await page.context().newCDPSession(page);
@@ -73,13 +74,13 @@ test("rejects expired and foreign QR codes without authentication and allows ret
   await page.getByRole("button", { name: "Logga in med QR-kod", exact: true }).click();
   for (const [url, text] of [
     [createHandoffUrl("https://other.test/", settings).url, "QR-koden är ogiltig. Skanna en QR-kod från Issueflow på den andra enheten."],
-    [createHandoffUrl("http://127.0.0.1:5173/", settings, Date.now() - 600_000).url, "QR-koden har gått ut. Skapa en ny kod på den andra enheten."],
+    [createHandoffUrl(`${devOrigin}/`, settings, Date.now() - 600_000).url, "QR-koden har gått ut. Skapa en ny kod på den andra enheten."],
   ]) {
     await image(page, url!);
     await expect(page.getByRole("alert")).toContainText(text!);
   }
   expect(requests.some(url => url.startsWith("https://api.github.com/"))).toBe(false);
-  await image(page, createHandoffUrl("http://127.0.0.1:5173/", settings).url);
+  await image(page, createHandoffUrl(`${devOrigin}/`, settings).url);
   await expect(page.locator(".repo-lane")).toHaveCount(1);
 });
 test("cancel stops a camera whose permission resolves after the dialog closes", async ({ page }) => {
@@ -123,7 +124,7 @@ test('signed-in QR popup opens the camera only on scan and stops it on cancel', 
     };
   });
   await page.setViewportSize({ width: 320, height: 900 });
-  await page.goto(createHandoffUrl('http://127.0.0.1:5173/', settings).url);
+  await page.goto(createHandoffUrl(`${devOrigin}/`, settings).url);
   await expect(page.locator('.repo-lane')).toHaveCount(1);
   await revealPhoneMenu(page);
   await page.getByRole('button', { name: 'Öppna på mobilen', exact: true }).click();
