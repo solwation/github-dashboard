@@ -1787,7 +1787,7 @@ onMounted(async () => {
         <span class="breadcrumb-context">Workspace <i>/</i></span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <nav class="mobile-navigation" :aria-label="t('Navigering')">
-        <a href="#overview" :aria-label="t('Översikt')" :aria-current="currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
+        <a href="#overview" :aria-label="t('Översikt')" :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
         <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="18" /></a>
         <button type="button" class="mobile-search-link" :aria-label="t('Sök issues')" :title="t('Sök issues')" @click="openIssueSearch"><Search :size="18" /></button>
         <button v-if="workspaceOpen && currentView === 'overview'" ref="mobileBoardNavigatorButton" type="button" class="mobile-search-link mobile-board-navigator-toggle"

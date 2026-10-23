@@ -39,11 +39,12 @@
       },
       {
         "text": {
-          "sv": "Inställningar och GitHub-behörigheter förblir synliga när telefonen vrids eller fönstret smalnas av medan dialogen är öppen.",
-          "en": "Settings and GitHub permissions stay visible when a phone is rotated or the window narrows while the dialog is open."
+          "sv": "Inställningar och GitHub-behörigheter förblir synliga när telefonen vrids, och mobilens Översikt-länk markeras inte längre som aktuell på välkomstskärmen.",
+          "en": "Settings and GitHub permissions stay visible when a phone is rotated, and the phone Overview link is no longer marked current on the welcome screen."
         },
         "issues": [
-          269
+          269,
+          271
         ]
       },
       {
