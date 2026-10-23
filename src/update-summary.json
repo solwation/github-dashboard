@@ -1,10 +1,11 @@
 {
   "baseCommit": "cdfa7f1c23a8f95cd5b19b74527caf06b84b8a6b",
   "summary": {
-    "sv": "Stängkrysset i Inställningar och andra dialoger från mobilmenyn är nu en kompakt knapp uppe till höger.",
-    "en": "The close button in Settings and other dialogs from the phone menu is now a compact top-right button."
+    "sv": "Statistikens laddningsruta visar bara förloppet, och stängkrysset i Inställningar och andra mobildialoger är en kompakt knapp uppe till höger.",
+    "en": "Statistics loading shows only its progress, and the close button in Settings and other phone dialogs is a compact top-right button."
   },
   "issues": [
-    260
+    260,
+    263
   ]
 }

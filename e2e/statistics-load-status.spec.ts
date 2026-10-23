@@ -33,10 +33,8 @@ test('loading status separates sparse history from coverage and estimates discov
   const status = page.getByRole('region', { name: 'Statistikhämtning', exact: true });
   const refresh = page.getByRole('button', { name: 'Uppdatera statistik', exact: true });
   await expect.poll(async () => { await page.clock.runFor(500); return status.textContent(); }).toContain('Kontrollerar underlag: 3 av 4 källor.');
-  await expect(status).toContainText('Fullt hämtade underlag: 3 av 4.');
-  await expect(status).toContainText('cirka 20 dagar bakåt');
-  await expect(status).toContainText('Insamlingsperiod:');
-  await expect(status).toContainText('Visad period:');
+  // Only loading progress is shown; the chosen period is already visible above (#263).
+  for (const repeated of ['Fullt hämtade underlag', 'Äldsta hittade aktivitet', 'Insamlingsperiod', 'Visad period']) await expect(status).not.toContainText(repeated);
   const spinner = status.locator('.statistics-load-spinner');
   await expect(spinner).toBeVisible();
   await expect(spinner).toHaveCSS('animation-name', /^statistics-load-spin/);

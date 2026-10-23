@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useLanguage } from '../lib/i18n';
-import { parseStatisticsBound } from '../lib/statistics';
 import type { StatisticsLoadStatus } from '../lib/statistics-load-status';
-const props = defineProps<{ status: StatisticsLoadStatus; selectedFrom: string; selectedTo: string }>();
-const { t, locale } = useLanguage();
-function date(time: number) {
-  return new Intl.DateTimeFormat(locale.value, { dateStyle: 'short', timeStyle: 'short' }).format(time);
-}
-const collectionFrom = computed(() => date(Date.parse(props.status.collectionFrom)));
-const collectionTo = computed(() => date(Date.parse(props.status.collectionTo)));
-const selectedFromLabel = computed(() => date(parseStatisticsBound(props.selectedFrom, 'start')));
-const selectedToLabel = computed(() => date(parseStatisticsBound(props.selectedTo, 'end')));
+const props = defineProps<{ status: StatisticsLoadStatus }>();
+const { t } = useLanguage();
 const remaining = computed(() => {
   const ms = props.status.remainingMs;
   if (ms === undefined) return '';
@@ -32,17 +24,6 @@ const remaining = computed(() => {
       <p v-if="remaining" class="statistics-load-eta">{{ t('Ungefär {time} kvar.', { time: remaining }) }}</p>
     </div>
     <progress v-if="status.phase === 'changes' && status.diffsTotal" :max="100" :value="status.percent" :aria-label="t('Statistikhämtning')" />
-    <div class="statistics-load-row statistics-load-details">
-      <p>{{ t('Fullt hämtade underlag: {done} av {total}.', { done: status.completeSources, total: status.sourcesTotal }) }}</p>
-      <p v-if="status.oldestActivityAt !== undefined" :title="t('Äldre aktivitet betyder inte att hela perioden är färdighämtad.')">
-        {{ t('Äldsta hittade aktivitet: {date} (cirka {days} dagar bakåt).', { date: date(status.oldestActivityAt), days: status.reachedDays ?? 0 }) }}
-        <span class="sr-only">{{ t('Äldre aktivitet betyder inte att hela perioden är färdighämtad.') }}</span>
-      </p>
-    </div>
-    <div class="statistics-load-row statistics-load-windows">
-      <p>{{ t('Insamlingsperiod: {from} – {to}.', { from: collectionFrom, to: collectionTo }) }}</p>
-      <p>{{ t('Visad period: {from} – {to}.', { from: selectedFromLabel, to: selectedToLabel }) }}</p>
-    </div>
   </section>
 </template>
 <style scoped>
@@ -59,8 +40,6 @@ const remaining = computed(() => {
 .statistics-load-eta { color: var(--text); font-variant-numeric: tabular-nums; }
 .statistics-load-row { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
 .statistics-load-heading { align-items: center; justify-content: flex-start; gap: 8px 10px; }
-.statistics-load-details { padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--green) 12%, var(--line)); }
-.statistics-load-windows { font-size: 11px; }
 @keyframes statistics-load-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .statistics-load-spinner { animation: none; } }
 @media (max-width: 650px) { .statistics-load-progress { gap: 8px; padding: 10px 12px; } }

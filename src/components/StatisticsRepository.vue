@@ -188,7 +188,7 @@ function clearFilters() {
     </template>
     <div v-show="!collapsed" :id="'statistics-repository-body-' + repository.id" class="statistics-repository-body">
     <template v-if="hasOpened">
-    <StatisticsLoadingProgress v-if="loading && loadStatus" :status="loadStatus" :selected-from="timeSpan.from" :selected-to="timeSpan.to" />
+    <StatisticsLoadingProgress v-if="loading && loadStatus" :status="loadStatus" />
     <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
       <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="13" aria-hidden="true" /></button>
       <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="13" aria-hidden="true" /></button>
