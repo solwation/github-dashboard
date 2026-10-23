@@ -1,11 +1,12 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Ihopfällda repositories på mobil blir lägre, och Inställningar förblir synliga när telefonen vrids medan dialogen är öppen.",
-    "en": "Collapsed repositories on phones are shorter, and Settings stays visible when the phone is rotated while the dialog is open."
+    "sv": "Ihopfällda repositories på mobil blir lägre, Inställningar syns när telefonen vrids, och End i kommentarer når alltid sista kommentaren.",
+    "en": "Collapsed repositories on phones are shorter, Settings stays visible on rotation, and End in comments always reaches the last comment."
   },
   "issues": [
     267,
+    268,
     269
   ]
 }
