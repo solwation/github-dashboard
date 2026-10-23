@@ -27,7 +27,10 @@ import { column, type Issue, type Rules } from "./model";
  *   stays in the backlog with its spent time deducted from its backlog points. History calibration is
  *   unchanged. The parent's own card/row forecast (issueGroupEstimate, #281) applies the same rule
  *   to its own subtree once its sub-issues are loaded, and the overview story points count each
- *   group once, by its root's points, in the column the group is estimated in.
+ *   group once, by its root's points, in the column the group is estimated in. Column counts
+ *   count the same groups (#287); a member reached through any sub-issue path is absorbed; on a
+ *   combined board a walk stops at issues another repository estimates; and an unknown start
+ *   with deducted sub-issue time is not reported as assuming the full estimate.
  * - Parallelism: the time-weighted average number of issues in progress while at least one was in
  *   progress, over the window: sum of in-progress durations (history plus current in-progress
  *   issues, clipped to the window) divided by the length of their union. Idle periods such as
@@ -110,6 +113,11 @@ export interface EstimateOptions {
   rules?: Rules;
   /** Direct sub-issues per parent issue id, for deducting sub-issue time from the parent (#279). */
   children?: ReadonlyMap<number, readonly SubIssueWork[]>;
+  /**
+   * Open estimated issues that another repository on the same board estimates itself (#287): a
+   * sub-issue walk neither counts nor descends into them, so each sub-issue is deducted at most once.
+   */
+  external?: ReadonlySet<number>;
   windowDays?: number;
   sampleLimit?: number;
 }
@@ -216,11 +224,12 @@ export function repositoryEstimate(
     parallelism: parallelism(samples, active, now, windowDays),
   };
   if (msPerPoint === null) return { basis, progress: null, backlog: null };
-  const groups = subIssueGroups([...active, ...waiting], now, rules, windowDays, options.children);
+  const groups = subIssueGroups([...active, ...waiting], now, rules, windowDays, options.children, options.external);
   const items = groups.filter(group => group.inProgress).map(({ root: issue, ownProgress, spentMs, running, descendants }): ProgressItemEstimate => {
     const points = approximatePoints(issue), durationMs = points * msPerPoint;
     const started = time(issue.startedAt);
-    const unknownStart = ownProgress && !Number.isFinite(started);
+    // Unknown start means the full estimate is assumed; deducted sub-issue time makes it neither full nor contradictory (#287).
+    const unknownStart = ownProgress && !Number.isFinite(started) && spentMs === 0;
     const ownMs = ownProgress && Number.isFinite(started) ? Math.max(0, now - started) : 0;
     const left = durationMs - ownMs - spentMs;
     const ownRunning = ownProgress && Number.isFinite(started) && started <= now;
@@ -243,8 +252,9 @@ export function repositoryEstimate(
         }
       : null,
     // The Backlog column is done when its own remaining roots and any promoted parent groups are done.
+    // Count and points cover the same groups (#287): a promoted parent counts in In progress only.
     backlog: waiting.length
-      ? { count: waiting.length, points: backlogGroups.reduce((sum, group) => sum + approximatePoints(group.root), 0),
+      ? { count: backlogGroups.length, points: backlogGroups.reduce((sum, group) => sum + approximatePoints(group.root), 0),
           remainingMs: progressMs + (waitingPoints * msPerPoint) / basis.parallelism }
       : null,
   };
@@ -272,30 +282,55 @@ export interface SubIssueGroup { root: Issue; ownProgress: boolean; inProgress: 
 export interface SubIssueGroupWork { spentMs: number; running: boolean; descendants: number; openInProgress: boolean }
 
 /**
- * Walks one root's descendants (deduplicated by id, cycle-safe) and adds each one's spent time
- * exactly once. `members` are the open estimated board issues, preferred for start times and rules.
+ * Visits each descendant of `rootId` once (deduplicated by id, cycle-safe). Issues in `external` are
+ * estimated by another repository on the same board, so neither they nor their subtree are visited.
  */
-export function subIssueGroupWork(root: Issue, members: ReadonlyMap<number, Issue>, now: number, rules: Rules,
-  windowDays: number, children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined): SubIssueGroupWork {
-  const work: SubIssueGroupWork = { spentMs: 0, running: false, descendants: 0, openInProgress: false };
-  const seen = new Set([root.id]);
+function eachDescendant(rootId: number, children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined,
+  external: ReadonlySet<number> | undefined, visit: (child: SubIssueWork) => void) {
+  const seen = new Set([rootId]);
   const walk = (id: number) => {
     for (const child of children?.get(id) ?? []) {
       if (seen.has(child.issue.id)) continue;
       seen.add(child.issue.id);
-      // Prefer the estimated board copy, which carries start times and the group's rules.
-      const member = members.get(child.issue.id);
-      const entry = member ? { issue: member, rules: child.rules ?? rules } : child;
-      const spent = subIssueSpentMs(entry, rules, now, windowDays);
-      work.descendants++;
-      work.spentMs += spent.spentMs;
-      work.running ||= spent.running;
-      if (spent.open && column(entry.issue, entry.rules ?? rules) === "progress") work.openInProgress = true;
+      if (external?.has(child.issue.id)) continue;
+      visit(child);
       walk(child.issue.id);
     }
   };
-  walk(root.id);
+  walk(rootId);
+}
+
+/**
+ * Walks one root's descendants (deduplicated by id, cycle-safe) and adds each one's spent time
+ * exactly once. `members` are the open estimated board issues, preferred for start times and rules.
+ */
+export function subIssueGroupWork(root: Issue, members: ReadonlyMap<number, Issue>, now: number, rules: Rules,
+  windowDays: number, children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined,
+  external?: ReadonlySet<number>): SubIssueGroupWork {
+  const work: SubIssueGroupWork = { spentMs: 0, running: false, descendants: 0, openInProgress: false };
+  eachDescendant(root.id, children, external, child => {
+    // Prefer the estimated board copy, which carries start times and the group's rules.
+    const member = members.get(child.issue.id);
+    const entry = member ? { issue: member, rules: child.rules ?? rules } : child;
+    const spent = subIssueSpentMs(entry, rules, now, windowDays);
+    work.descendants++;
+    work.spentMs += spent.spentMs;
+    work.running ||= spent.running;
+    if (spent.open && column(entry.issue, entry.rules ?? rules) === "progress") work.openInProgress = true;
+  });
   return work;
+}
+
+/**
+ * For repositories estimated side by side on one board (combined board, overview), the open
+ * estimated issue ids of every other repository, per repository (#287). Passed as `external`.
+ */
+export function otherRepositoryMembers(groups: readonly { issues: readonly Issue[]; rules?: Rules }[]): Set<number>[] {
+  const own = groups.map(group => issuesOf([...group.issues]).filter(issue => {
+    const state = column(issue, group.rules ?? {});
+    return state === "progress" || state === "backlog";
+  }).map(issue => issue.id));
+  return own.map((_, index) => new Set(own.flatMap((ids, other) => other === index ? [] : ids)));
 }
 
 /** Open estimated issues of one repository, grouped exactly as the column estimates group them. */
@@ -303,28 +338,31 @@ export function estimateGroups(issues: Issue[], now: number, options: EstimateOp
   const { rules = {}, windowDays = ESTIMATE_WINDOW_DAYS } = options;
   const list = issuesOf(issues);
   const open = [...list.filter(issue => column(issue, rules) === "progress"), ...list.filter(issue => column(issue, rules) === "backlog")];
-  return subIssueGroups(open, now, rules, windowDays, options.children);
+  return subIssueGroups(open, now, rules, windowDays, options.children, options.external);
 }
 
 /**
  * Groups open estimated issues under their topmost open estimated ancestor. Each descendant
- * (deduplicated by id, cycle-safe) adds its spent time exactly once to that root.
+ * (deduplicated by id, cycle-safe) adds its spent time exactly once to that root. A member reached
+ * through any path, also through sub-issues outside the list, is absorbed (#287), since the root's
+ * walk already counts its time; a path stops at an `external` issue, which is estimated elsewhere.
  */
 function subIssueGroups(open: Issue[], now: number, rules: Rules, windowDays: number,
-  children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined): SubIssueGroup[] {
+  children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined, external?: ReadonlySet<number>): SubIssueGroup[] {
   const members = new Map(open.map(issue => [issue.id, issue]));
+  const reached = (id: number) => {
+    const ids: number[] = [];
+    eachDescendant(id, children, external, child => { if (members.has(child.issue.id)) ids.push(child.issue.id); });
+    return ids;
+  };
   const absorbed = new Set<number>();
-  if (children) for (const issue of open) for (const child of children.get(issue.id) ?? [])
-    if (child.issue.id !== issue.id && members.has(child.issue.id)) absorbed.add(child.issue.id);
+  if (children) for (const issue of open) for (const id of reached(issue.id)) absorbed.add(id);
   // A (malformed) cycle of absorbed members would lose them all; keep such issues as their own roots.
   const reachable = new Set<number>();
-  const visit = (id: number, seen: Set<number>) => {
-    for (const child of children?.get(id) ?? []) if (!seen.has(child.issue.id)) { seen.add(child.issue.id); visit(child.issue.id, seen); }
-  };
-  for (const issue of open) if (!absorbed.has(issue.id)) visit(issue.id, reachable);
+  if (children) for (const issue of open) if (!absorbed.has(issue.id)) for (const id of reached(issue.id)) reachable.add(id);
   return open.filter(issue => !absorbed.has(issue.id) || !reachable.has(issue.id)).map(root => {
     const ownProgress = column(root, rules) === "progress";
-    const work = subIssueGroupWork(root, members, now, rules, windowDays, children);
+    const work = subIssueGroupWork(root, members, now, rules, windowDays, children, external);
     return { root, ownProgress, inProgress: ownProgress || work.openInProgress, spentMs: work.spentMs, running: work.running, descendants: work.descendants };
   });
 }

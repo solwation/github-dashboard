@@ -1,7 +1,7 @@
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
 import { approximatePoints } from "./story-points";
-import { estimateGroups, repositoryEstimate, type SubIssueWork } from "./estimates";
+import { estimateGroups, otherRepositoryMembers, repositoryEstimate, type SubIssueWork } from "./estimates";
 
 export interface OverviewEstimateGroup { repository: string; issues: Issue[]; rules: Rules }
 export type OverviewEstimateColumn = "open" | "progress";
@@ -34,11 +34,13 @@ const selected = (group: OverviewEstimateGroup, key: OverviewEstimateColumn) => 
  */
 export function overviewPoints(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn,
   children?: ReadonlyMap<number, readonly SubIssueWork[]>, now = Date.now()): number {
-  return groups.reduce((total, group) => {
+  // Repositories are estimated side by side, so a sub-issue estimated in its own repository is not walked again (#287).
+  const external = otherRepositoryMembers(groups);
+  return groups.reduce((total, group, index) => {
     const issues = selected(group, key);
     if (!children?.size || repositoryEstimate(group.issues, now, { rules: group.rules }).basis.msPerPoint === null)
       return total + issues.reduce((sum, issue) => sum + approximatePoints(issue), 0);
-    const grouped = estimateGroups(group.issues, now, { rules: group.rules, children });
+    const grouped = estimateGroups(group.issues, now, { rules: group.rules, children, external: external[index] });
     const members = new Set(group.issues.filter(issue => { const state = column(issue, group.rules); return !issue.pull_request && (state === "progress" || state === "backlog"); }).map(issue => issue.id));
     // Open issues outside the estimated columns keep their own points; absorbed members are part of their root.
     const own = issues.filter(issue => !members.has(issue.id)).reduce((sum, issue) => sum + approximatePoints(issue), 0);
@@ -52,10 +54,11 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
   children?: ReadonlyMap<number, readonly SubIssueWork[]>) {
   let repositories = 0, knownRepositories = 0, remainingMs = 0, overdue = 0, unknownStart = 0, counting = false;
   let nextStartMs = Infinity;
-  for (const group of groups) {
+  const external = otherRepositoryMembers(groups);
+  for (const [index, group] of groups.entries()) {
     if (!selected(group, key).length) continue;
     repositories++;
-    const estimate = repositoryEstimate(group.issues, now, { rules: group.rules, children });
+    const estimate = repositoryEstimate(group.issues, now, { rules: group.rules, children, external: external[index] });
     if (estimate.basis.msPerPoint === null) continue;
     knownRepositories++;
     remainingMs = Math.max(remainingMs, estimate.progress?.remainingMs ?? 0, key === "open" ? estimate.backlog?.remainingMs ?? 0 : 0);
@@ -64,7 +67,8 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
       const start = Date.parse(item.issue.startedAt || "");
       if (start > now) nextStartMs = Math.min(nextStartMs, start);
     }
-    unknownStart += estimate.progress?.items.filter(item => item.unknownStart || Date.parse(item.issue.startedAt || "") > now).length ?? 0;
+    // Like an unknown start, a future start assumes the full time, unless sub-issue time was deducted (#287).
+    unknownStart += estimate.progress?.items.filter(item => item.unknownStart || (!item.subIssueSpentMs && Date.parse(item.issue.startedAt || "") > now)).length ?? 0;
     counting ||= !!estimate.progress?.items.some(item => item.counting);
   }
   return { repositories, knownRepositories, remainingMs: knownRepositories ? remainingMs : null, overdue, unknownStart, counting, nextStartMs };

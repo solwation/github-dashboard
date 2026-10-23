@@ -82,12 +82,13 @@
       },
       {
         "text": {
-          "sv": "Tid kvar drar av tid på huvudärendet och dess underärenden, även på huvudärendets kort och listrad, och översiktens story points räknar gruppen en gång.",
-          "en": "Remaining time deducts time spent on a parent and its sub-issues, also on the parent's card and list row, and overview story points count the group once."
+          "sv": "Tid kvar drar av tid på huvudärendet och dess underärenden, även på huvudärendets kort och listrad, och story points räknar gruppen en gång, även över flera repositories.",
+          "en": "Remaining time deducts time spent on a parent and its sub-issues, also on the parent's card and list row, and story points count the group once, also across repositories."
         },
         "issues": [
           279,
-          281
+          281,
+          287
         ]
       },
       {

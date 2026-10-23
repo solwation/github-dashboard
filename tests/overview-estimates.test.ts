@@ -96,3 +96,18 @@ it("groups story points like the time: absorbed sub-issues once, the group in th
   expect(overviewPoints(uncalibrated, "progress", children, now)).toBe(1);
   expect(overviewPoints(uncalibrated, "open", children, now)).toBe(4);
 });
+
+it("counts a sub-issue once across repositories and keeps unknown-start texts consistent (#287)", () => {
+  const parent = progress(30, 60 * minute), middle = progress(31, 20 * minute), grandchild = progress(32, 10 * minute);
+  const children = new Map([[parent.id, [{ issue: middle }]], [middle.id, [{ issue: grandchild }]]]);
+  const selection = groups([lane([...history(), parent, grandchild]), lane([...history(), middle], "a/c")]);
+  // Each repository counts its own items: a/b the parent and the grandchild, a/c the middle issue.
+  expect(overviewPoints(selection, "progress", children, now)).toBe(3);
+  // a/b: parent 30 − 60 min overdue, grandchild 30 − 10 min; a/c: 30 − 20 min. Nothing is deducted twice.
+  expect(overviewTimeEstimate(selection, "progress", now, children)).toMatchObject({ remainingMs: 20 * minute, overdue: 1 });
+  // A future-start parent whose sub-issue time already exceeds its estimate is overdue, not "full time".
+  const future = { ...progress(40), startedAt: new Date(now + minute).toISOString() };
+  const closed = issue(41, 1, { state: "closed", closed_at: new Date(now - minute).toISOString(), workStartedAt: new Date(now - 41 * minute).toISOString() });
+  const late = overviewTimeEstimate(groups([lane([...history(), future])]), "progress", now, new Map([[future.id, [{ issue: closed }]]]));
+  expect(late).toMatchObject({ remainingMs: 0, overdue: 1, unknownStart: 0 });
+});

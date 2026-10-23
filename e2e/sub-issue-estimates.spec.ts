@@ -64,6 +64,8 @@ for (const [name, parentInProgress, expected] of [
   await expect(page.locator('.stats [data-stat="open"] .overview-points')).toHaveText("≈ 5 SP");
   if (!parentInProgress) await expect(page.locator('.stats [data-stat="progress"] .overview-estimate'))
     .toHaveAttribute("aria-label", /räknas en gång, med huvudärendets poäng/);
+  // The column header counts cards, the estimate counts the group; the tooltip says so (#287).
+  if (!parentInProgress) await expect(column).toHaveAttribute("title", /Antalet i rubriken räknar kort/);
   await page.clock.fastForward(5 * minute);
   // Two clocks run (parent and child) when the parent is in progress, one otherwise.
   await expect(overview).toHaveText(parentInProgress ? "≈ 1 h 30 min kvar" : "≈ 1 h 45 min kvar");

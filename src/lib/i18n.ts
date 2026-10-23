@@ -808,6 +808,8 @@ export const english: Record<string, string> = {
     "Remaining time covers the parent and its sub-issues as one group: time already spent on sub-issues (running or closed within the window) is also deducted, as in the column estimate.",
   "Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.":
     "A parent and its sub-issues count once, with the parent's points, in the column where the group's time is counted.",
+  "Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.":
+    "The heading count counts cards; points and time count a parent and its sub-issues once, with the parent's points, in the column where the group's time is counted.",
   "Antal": "Count",
   "Timmar": "Hours",
   "Procent": "Percent",

@@ -932,7 +932,7 @@ const combinedEstimateGroups = computed(() => orderedLanes.value.filter((lane) =
 provideRepositoryDisplayNames(() => orderedLanes.value.map(lane => lane.repo.full_name), () => !splitByRepository.value);
 provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
   orderedLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
-));
+), () => !splitByRepository.value);
 const timeoutCalibrationLanes = computed(() => lanes.value.filter(lane => splitByRepository.value || !lane.loading).map(lane => ({
   ...lane, issues: splitByRepository.value ? laneIssues(lane) : lane.issues.filter(issue =>
     (!hideCoordination.value || !isCoordination(issue)) && matchesIssueFilters(issue, query.value, "")),

@@ -1,11 +1,11 @@
 import { computed, inject, provide, shallowRef, watchEffect, type ComputedRef, type InjectionKey } from "vue";
 import { column, type Issue, type Rules } from "../lib/model";
-import { closedIssueGroupOutcome, closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, nextHistoryExpiry, repositoryEstimate, subIssueGroupWork, type EstimateBasis, type HistorySample, type SubIssueGroupWork, type SubIssueWork } from "../lib/estimates";
+import { closedIssueGroupOutcome, closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate, subIssueGroupWork, type EstimateBasis, type HistorySample, type SubIssueGroupWork, type SubIssueWork } from "../lib/estimates";
 import { useNow } from "./useNow";
 import { useSubIssues } from "./useSubIssues";
 import { provideSubIssueWork } from "./useSubIssueWork";
 
-interface GroupScope { rules: Rules; members: Map<number, Issue>; children: ReadonlyMap<number, readonly SubIssueWork[]> }
+interface GroupScope { rules: Rules; members: Map<number, Issue>; children: ReadonlyMap<number, readonly SubIssueWork[]>; external?: ReadonlySet<number> }
 const groupScopeKey: InjectionKey<ComputedRef<Map<string, GroupScope>>> = Symbol("issue-group-scope");
 
 const outcomeKey: InjectionKey<ComputedRef<{ now: number; histories: Map<string, HistorySample[]> }>> = Symbol("issue-outcomes");
@@ -13,8 +13,11 @@ const outcomeKey: InjectionKey<ComputedRef<{ now: number; histories: Map<string,
 type Group = { issues: Issue[]; rules?: Rules };
 const issueEstimatesKey: InjectionKey<ComputedRef<Map<string, EstimateBasis>>> = Symbol("issue-estimates");
 
-/** Shared repository calibration, refreshed with filtered data or history expiry, never per issue tick. */
-export function provideIssueEstimates(groups: () => Map<string, Group[]>) {
+/**
+ * Shared repository calibration, refreshed with filtered data or history expiry, never per issue tick.
+ * `combined` says the repositories share one board estimate, so cards cut sub-issue walks like it (#287).
+ */
+export function provideIssueEstimates(groups: () => Map<string, Group[]>, combined: () => boolean = () => false) {
   const now = useNow(at => Math.min(86400000, ...[...groups().values()].flatMap(entries => entries.map(group => {
     const expiry = nextHistoryExpiry(group.issues, at, { rules: group.rules, sampleLimit: MAX_HISTORY_SAMPLES + 1 });
     return expiry === null ? Infinity : expiry - at;
@@ -27,17 +30,21 @@ export function provideIssueEstimates(groups: () => Map<string, Group[]>) {
   // Sub-issues the column/overview badges already loaded, plus each repository's open estimated
   // issues, so a parent's card can apply the same group rule (#281).
   const children = provideSubIssueWork();
-  provide(groupScopeKey, computed(() => new Map([...groups()].flatMap(([repository, entries]) => {
-    const group = entries[0];
-    if (!group) return [];
-    const rules = group.rules ?? {};
-    const members = new Map(group.issues.filter(issue => {
-      if (issue.pull_request) return false;
-      const state = column(issue, rules);
-      return state === "progress" || state === "backlog";
-    }).map(issue => [issue.id, issue] as const));
-    return [[repository, { rules, members, children: children.value }] as const];
-  }))));
+  provide(groupScopeKey, computed(() => {
+    const repositories = [...groups()];
+    const external = combined() ? otherRepositoryMembers(repositories.map(([, entries]) => entries[0] ?? { issues: [] })) : [];
+    return new Map(repositories.flatMap(([repository, entries], index) => {
+      const group = entries[0];
+      if (!group) return [];
+      const rules = group.rules ?? {};
+      const members = new Map(group.issues.filter(issue => {
+        if (issue.pull_request) return false;
+        const state = column(issue, rules);
+        return state === "progress" || state === "backlog";
+      }).map(issue => [issue.id, issue] as const));
+      return [[repository, { rules, members, children: children.value, external: external[index] }] as const];
+    }));
+  }));
   provide(outcomeKey, computed(() => ({ now: now.value, histories: new Map([...groups()].flatMap(([repo, entries]) => {
     const group = entries[0];
     return group ? [[repo, historySamples(group.issues, now.value, { rules: group.rules, sampleLimit: MAX_HISTORY_SAMPLES + 1 })] as const] : [];
@@ -60,7 +67,7 @@ export function useIssueGroupWork(issue: () => Issue, repository: () => string |
   return (at: number): SubIssueGroupWork | null => {
     const current = issue(), scope = scopes?.value.get(repository() ?? "");
     if (!scope || !(current.sub_issues_summary?.total) || !scope.members.has(current.id) || !scope.children.has(current.id)) return null;
-    return subIssueGroupWork(current, scope.members, at, scope.rules, basis.value?.windowDays ?? ESTIMATE_WINDOW_DAYS, scope.children);
+    return subIssueGroupWork(current, scope.members, at, scope.rules, basis.value?.windowDays ?? ESTIMATE_WINDOW_DAYS, scope.children, scope.external);
   };
 }
 
