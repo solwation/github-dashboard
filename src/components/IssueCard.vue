@@ -39,6 +39,7 @@ import { useIssueRelations } from "../composables/useIssueRelations";
 import {
   column,
   duration,
+  hidesProgressLabel,
   isProgress,
   priority,
   type Issue,
@@ -162,7 +163,7 @@ const typeTitle = computed(() => {
 });
 const rank = computed(() => priority(props.issue, props.rules));
 const visibleLabels = computed(() =>
-  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(col.value === "progress" && isProgress(l.name, props.rules))).slice(0, 4),
+  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))).slice(0, 4),
 );
 </script>
 <template>

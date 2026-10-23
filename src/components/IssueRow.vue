@@ -14,7 +14,7 @@ import { useIssueRelations } from "../composables/useIssueRelations";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { repositoryColor } from "../lib/repository-color";
 import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
-import { column, duration, isProgress, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
+import { column, duration, hidesProgressLabel, isProgress, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
 import type { IssueRelations } from "../lib/issue-relations";
 import type { ActivityMarker } from "../lib/activity";
 const { t, locale } = useLanguage();
@@ -152,7 +152,7 @@ const typeTitle = computed(() => {
   }[type.value];
   return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
 });
-const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(col.value === "progress" && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
+const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 const backlogAge = computed(() => {

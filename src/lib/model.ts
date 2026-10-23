@@ -83,6 +83,8 @@ export function isProgress(label: string, rules: Rules = {}) {
         "pågår",
       ].includes(normalize(label));
 }
+// Progress labels are redundant in the In progress column and misleading on closed issues (#264).
+export const hidesProgressLabel = (col: string) => col === "progress" || col === "closed";
 export function priority(issue: Issue, rules: Rules = {}): number {
   const names = issue.labels.map((l) => normalize(l.name));
   for (const [rank, level] of ["high", "medium", "low"].entries()) {

@@ -1,11 +1,12 @@
 {
   "baseCommit": "cdfa7f1c23a8f95cd5b19b74527caf06b84b8a6b",
   "summary": {
-    "sv": "Statistikens laddningsruta visar bara förloppet, och stängkrysset i Inställningar och andra mobildialoger är en kompakt knapp uppe till höger.",
-    "en": "Statistics loading shows only its progress, and the close button in Settings and other phone dialogs is a compact top-right button."
+    "sv": "Statistikens laddning visar bara förloppet, stängkrysset i mobildialoger är kompakt och stängda issues visar inte längre en kvarglömd in-progress-label.",
+    "en": "Statistics loading shows only progress, phone dialog close buttons are compact, and closed issues no longer show a leftover in-progress label."
   },
   "issues": [
     260,
-    263
+    263,
+    264
   ]
 }

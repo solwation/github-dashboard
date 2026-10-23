@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   column,
+  hidesProgressLabel,
+  isProgress,
   isCoordination,
   priority,
   progressStart,
@@ -100,4 +102,18 @@ describe("active timer interval", () => {
         event(3, "unlabeled"),
       ]),
     ).toBe("2026-01-02T12:00:00Z"));
+});
+
+describe("progress label visibility (#264)", () => {
+  it("hides progress labels in the progress and closed columns only, using the same rules as placement", () => {
+    const closed = issue(1, ["in-progress", "bug"], "closed");
+    expect(column(closed)).toBe("closed");
+    const shown = (i: Issue, rules = {}) =>
+      i.labels.filter((l) => !(hidesProgressLabel(column(i, rules)) && isProgress(l.name, rules))).map((l) => l.name);
+    expect(shown(closed)).toEqual(["bug"]);
+    expect(shown(issue(2, ["in-progress", "bug"]))).toEqual(["bug"]);
+    expect(shown(issue(3, ["wip", "bug"], "closed"), { progress: "wip" })).toEqual(["bug"]);
+    expect(shown(issue(4, ["in-progress", "bug"], "closed"), { progress: "wip" })).toEqual(["in-progress", "bug"]);
+    expect(hidesProgressLabel("backlog")).toBe(false);
+  });
 });

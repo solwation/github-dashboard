@@ -2,8 +2,8 @@
   {
     "date": "2026-10-23",
     "summary": {
-      "sv": "Statistik laddar tydligare och kortare och får samma repositorysektioner som Översikt; stängkrysset i dialoger är kompakt igen på mobil.",
-      "en": "Statistics loads with clearer, shorter feedback and shares Overview’s repository sections; dialog close buttons are compact again on phones."
+      "sv": "Statistik laddar tydligare och kortare och får samma repositorysektioner som Översikt; stängkrysset är kompakt på mobil och stängda issues visar inte in-progress.",
+      "en": "Statistics loads with clearer, shorter feedback and shares Overview’s sections; close buttons are compact on phones and closed issues hide in-progress."
     },
     "sections": [
       {
@@ -24,6 +24,15 @@
         },
         "issues": [
           260
+        ]
+      },
+      {
+        "text": {
+          "sv": "Stängda issues visar inte längre en kvarglömd in-progress-label på kort och listrader, så de ser inte ut att pågå.",
+          "en": "Closed issues no longer show a leftover in-progress label on cards and list rows, so they no longer look active."
+        },
+        "issues": [
+          264
         ]
       }
     ]
