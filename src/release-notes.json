@@ -8,6 +8,15 @@
     "sections": [
       {
         "text": {
+          "sv": "Sorteringen under kolumnrubriken är en meny där du väljer ordning per kolumn.",
+          "en": "The sort hint under each column title is now a menu for choosing that column's order."
+        },
+        "issues": [
+          286
+        ]
+      },
+      {
+        "text": {
           "sv": "Statistik laddar tydligare, delar Översikts sektioner och visar tid per SP och avvikelse mot estimat, med en egen högeraxel för en andra enhet.",
           "en": "Statistics loads more clearly, shares Overview's sections and shows time per SP and deviation from estimate, with its own right axis for a second unit."
         },

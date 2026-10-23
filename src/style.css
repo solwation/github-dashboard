@@ -661,6 +661,19 @@ h1 {
   margin-top: 3px;
   text-align: right;
 }
+.column-sort { position: relative; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.column-sort-button { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; margin-top: 0; padding: 3px 4px; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: 8px; color: var(--muted); text-align: right; cursor: pointer; }
+.column-sort-button:hover { background: color-mix(in srgb, var(--green) 10%, transparent); }
+.column-sort-button svg { flex: 0 0 auto; }
+.column-sort-menu { position: absolute; z-index: 30; top: 100%; right: 0; display: flex; flex-direction: column; min-width: 190px; max-width: min(260px, calc(100vw - 24px)); padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px #20394b26; }
+.column-sort-menu button { display: block; min-height: 32px; padding: 6px 10px 6px 26px; border: 0; border-radius: 5px; background: transparent; color: var(--text, inherit); font: inherit; font-size: 12px; text-align: left; position: relative; cursor: pointer; }
+.column-sort-menu button:hover, .column-sort-menu button:focus-visible { background: color-mix(in srgb, var(--green) 12%, transparent); }
+.column-sort-menu button[aria-checked="true"] { font-weight: 700; }
+.column-sort-menu button[aria-checked="true"]::before { content: "✓"; position: absolute; left: 9px; color: var(--green); }
+@media (pointer: coarse) {
+  .column-sort-button { min-height: 32px; font-size: 11px; }
+  .column-sort-menu button { min-height: 44px; font-size: 14px; }
+}
 .cards {
   padding: 13px;
   display: flex;
@@ -1168,6 +1181,8 @@ h1 {
   .column-hint {
     padding-left: 14px;
   }
+  .column-sort-button { padding-left: 14px; text-align: left; }
+  .column-sort-menu { right: auto; left: 0; }
   .lane-meta {
     gap: 8px;
   }
@@ -1400,6 +1415,8 @@ h1 {
     font-size: 8px;
     padding: 0;
   }
+  .column-sort-button { padding: 3px 4px; text-align: right; font-size: 10px; min-height: 32px; }
+  .column-sort-menu { left: auto; right: 0; }
   .cards {
     padding: 12px;
   }

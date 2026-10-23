@@ -135,18 +135,33 @@ export function column(issue: Issue, rules: Rules = {}) {
       ? "progress"
       : "backlog";
 }
-export function sortedIssues(issues: Issue[], col: string, rules: Rules = {}) {
+/** Sort choices per column (#286); "default" is the board's original order. */
+export type ColumnSort = "default" | "lowest" | "oldest" | "newest" | "recent" | "priority";
+export const COLUMN_SORT_OPTIONS: Record<string, ColumnSort[]> = {
+  backlog: ["default", "lowest", "oldest", "newest"],
+  progress: ["default", "recent", "priority"],
+  closed: ["default", "oldest", "priority"],
+};
+export function validColumnSort(col: string, value: unknown): ColumnSort {
+  return (COLUMN_SORT_OPTIONS[col] as unknown[] | undefined)?.includes(value) ? (value as ColumnSort) : "default";
+}
+const time = (value: string | null | undefined) => Date.parse(value as string);
+/** Compares two issues of one column; each issue is ranked by its own repository's rules. */
+export function compareColumnIssues(col: string, sort: ColumnSort, a: Issue, b: Issue, rulesA: Rules = {}, rulesB: Rules = rulesA) {
+  const prio = priority(a, rulesA) - priority(b, rulesB);
+  const created = time(a.created_at) - time(b.created_at);
+  const started = time(a.startedAt || a.created_at) - time(b.startedAt || b.created_at);
+  const closed = time(b.closed_at) - time(a.closed_at);
+  if (col === "closed")
+    return sort === "oldest" ? -closed : sort === "priority" ? prio || closed : closed;
+  if (col === "backlog")
+    return sort === "lowest" ? -prio || created : sort === "oldest" ? created : sort === "newest" ? -created : prio || created;
+  return sort === "recent" ? -started : sort === "priority" ? prio || started : started;
+}
+export function sortedIssues(issues: Issue[], col: string, rules: Rules = {}, sort: ColumnSort = "default") {
   return issues
     .filter((i) => !i.pull_request && column(i, rules) === col)
-    .sort((a, b) =>
-      col === "closed"
-        ? Date.parse(b.closed_at!) - Date.parse(a.closed_at!)
-        : col === "backlog"
-          ? priority(a, rules) - priority(b, rules) ||
-            Date.parse(a.created_at) - Date.parse(b.created_at)
-          : Date.parse(a.startedAt || a.created_at) -
-            Date.parse(b.startedAt || b.created_at),
-    );
+    .sort((a, b) => compareColumnIssues(col, sort, a, b, rules));
 }
 export function progressStart(
   events: Event[],

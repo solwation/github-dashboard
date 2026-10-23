@@ -27,6 +27,7 @@ import {
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
 import RepositorySection from "./components/RepositorySection.vue";
+import ColumnSortMenu from "./components/ColumnSortMenu.vue";
 import RepositoryHeading from "./components/RepositoryHeading.vue";
 import OverviewSummary from "./components/OverviewSummary.vue";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
@@ -95,6 +96,8 @@ import {
   deriveWorkStarts,
   isCoordination,
   sortedIssues,
+  validColumnSort,
+  type ColumnSort,
   workflow,
   type Lane,
   type Issue,
@@ -886,18 +889,23 @@ const filteredRepos = computed(() =>
   ),
 );
 const columns = computed(() => [
-  { key: "backlog", title: "Backlog", hint: t("Högst prioritet först") },
-  {
-    key: "progress",
-    title: "In progress",
-    hint: t("Tid sedan arbetet startade"),
-  },
-  {
-    key: "closed",
-    title: "Closed",
-    hint: t("Senaste 30 dagarna · nyast först"),
-  },
+  { key: "backlog", title: "Backlog" },
+  { key: "progress", title: "In progress" },
+  { key: "closed", title: "Closed" },
 ]);
+// Column sort (#286): one global choice per column, shared by Cards, List, split and combined boards. Not private, so a plain preference like theme.
+const COLUMN_SORT_KEY = "issueflow-column-sort";
+function storedColumnSorts(): Record<string, ColumnSort> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(COLUMN_SORT_KEY) || "{}") as Record<string, unknown>;
+    return Object.fromEntries(["backlog", "progress", "closed"].map(key => [key, validColumnSort(key, raw?.[key])]));
+  } catch { return { backlog: "default", progress: "default", closed: "default" }; }
+}
+const columnSorts = ref<Record<string, ColumnSort>>(storedColumnSorts());
+function setColumnSort(key: string, sort: ColumnSort) {
+  columnSorts.value = { ...columnSorts.value, [key]: sort };
+  try { localStorage.setItem(COLUMN_SORT_KEY, JSON.stringify(columnSorts.value)); } catch { /* The choice still applies for this visit. */ }
+}
 // Per-repository searches belong to the split view only; the combined board uses the main search alone (#132).
 const activeRepositoryQueries = computed<Record<string, string>>(() => splitByRepository.value ? repositoryQueries.value : {});
 // Filtered and sorted once per data or filter change instead of on every render (#120).
@@ -908,11 +916,11 @@ const laneColumns = computed(() => new Map(lanes.value.map((lane) => {
       matchesIssueFilters(i, query.value, activeRepositoryQueries.value[lane.repo.full_name] || ""),
   );
   const repoRules = rules.value[lane.repo.full_name];
-  return [lane.repo.full_name, { issues, ...Object.fromEntries(columns.value.map(col => [col.key, sortedIssues(issues, col.key, repoRules)])) } as Record<string, Issue[]>];
+  return [lane.repo.full_name, { issues, ...Object.fromEntries(columns.value.map(col => [col.key, sortedIssues(issues, col.key, repoRules, columnSorts.value[col.key])])) } as Record<string, Issue[]>];
 })));
 function laneIssues(lane: Lane) { return laneColumns.value.get(lane.repo.full_name)?.issues ?? []; }
 function items(lane: Lane, key: string) { return laneColumns.value.get(lane.repo.full_name)?.[key] ?? []; }
-const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value })])));
+const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value }, columnSorts.value[col.key])])));
 // Column estimates (#140) read the filtered issues shown; stable arrays keep the header clocks quiet.
 const laneEstimateGroups = computed(() => new Map(lanes.value.map((lane) => [lane.repo.full_name,
   [{ issues: laneColumns.value.get(lane.repo.full_name)?.issues ?? [], rules: rules.value[lane.repo.full_name] }]])));
@@ -2195,7 +2203,7 @@ onMounted(async () => {
                   }}</span
                   ><ColumnEstimate v-if="col.key !== 'closed'" :groups="laneEstimateGroups.get(lane.repo.full_name) ?? []" :column="col.key as 'progress' | 'backlog'" />
                 </div>
-                <span class="column-hint">{{ col.hint }}</span>
+                <ColumnSortMenu :column="col.key" :model-value="columnSorts[col.key]!" @update:model-value="setColumnSort(col.key, $event)" />
               </div>
               <div class="cards">
                 <ul v-if="listMode && items(lane, col.key).length" class="issue-rows">
@@ -2314,7 +2322,7 @@ onMounted(async () => {
                   }}</span
                   ><ColumnEstimate v-if="col.key !== 'closed'" :groups="combinedEstimateGroups" :column="col.key as 'progress' | 'backlog'" />
                 </div>
-                <span class="column-hint">{{ col.hint }}</span>
+                <ColumnSortMenu :column="col.key" :model-value="columnSorts[col.key]!" @update:model-value="setColumnSort(col.key, $event)" />
               </div>
               <div class="cards">
                 <ul v-if="listMode && combinedColumns[col.key]!.length" class="issue-rows">

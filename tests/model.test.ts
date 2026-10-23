@@ -7,6 +7,7 @@ import {
   priority,
   progressStart,
   sortedIssues,
+  validColumnSort,
   type Issue,
   type Event,
 } from "../src/lib/model";
@@ -115,5 +116,40 @@ describe("progress label visibility (#264)", () => {
     expect(shown(issue(3, ["wip", "bug"], "closed"), { progress: "wip" })).toEqual(["bug"]);
     expect(shown(issue(4, ["in-progress", "bug"], "closed"), { progress: "wip" })).toEqual(["in-progress", "bug"]);
     expect(hidesProgressLabel("backlog")).toBe(false);
+  });
+});
+describe("column sort orders (#286)", () => {
+  const nums = (list: Issue[]) => list.map((i) => i.number);
+  const backlog = [
+    issue(1, ["priority: low"], "open", "2026-01-03"),
+    issue(2, ["priority: high"], "open", "2026-01-02"),
+    issue(3, ["priority: high"], "open", "2026-01-01"),
+    issue(4, [], "open", "2026-01-04"),
+  ];
+  it("backlog keeps priority-first as default and offers the reverse, oldest and newest", () => {
+    expect(nums(sortedIssues(backlog, "backlog"))).toEqual(nums(sortedIssues(backlog, "backlog", {}, "default")));
+    expect(nums(sortedIssues(backlog, "backlog", {}, "default"))).toEqual([3, 2, 4, 1]);
+    expect(nums(sortedIssues(backlog, "backlog", {}, "lowest"))).toEqual([1, 4, 3, 2]);
+    expect(nums(sortedIssues(backlog, "backlog", {}, "oldest"))).toEqual([3, 2, 1, 4]);
+    expect(nums(sortedIssues(backlog, "backlog", {}, "newest"))).toEqual([4, 1, 2, 3]);
+  });
+  it("in progress orders by start time or priority", () => {
+    const started = (n: number, labels: string[], at: string) => ({ ...issue(n, ["in progress", ...labels]), startedAt: at });
+    const list = [started(1, ["priority: low"], "2026-02-01"), started(2, ["priority: high"], "2026-02-03"), started(3, ["priority: high"], "2026-02-02")];
+    expect(nums(sortedIssues(list, "progress"))).toEqual([1, 3, 2]);
+    expect(nums(sortedIssues(list, "progress", {}, "recent"))).toEqual([2, 3, 1]);
+    expect(nums(sortedIssues(list, "progress", {}, "priority"))).toEqual([3, 2, 1]);
+  });
+  it("closed orders by closing time or priority", () => {
+    const closed = (n: number, labels: string[], at: string) => ({ ...issue(n, labels, "closed"), closed_at: at });
+    const list = [closed(1, ["priority: low"], "2026-03-03"), closed(2, ["priority: high"], "2026-03-01"), closed(3, ["priority: high"], "2026-03-02")];
+    expect(nums(sortedIssues(list, "closed"))).toEqual([1, 3, 2]);
+    expect(nums(sortedIssues(list, "closed", {}, "oldest"))).toEqual([2, 3, 1]);
+    expect(nums(sortedIssues(list, "closed", {}, "priority"))).toEqual([3, 2, 1]);
+  });
+  it("rejects options that do not belong to the column", () => {
+    expect(validColumnSort("backlog", "recent")).toBe("default");
+    expect(validColumnSort("progress", "recent")).toBe("recent");
+    expect(validColumnSort("closed", 5)).toBe("default");
   });
 });
