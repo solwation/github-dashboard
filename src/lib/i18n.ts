@@ -797,6 +797,13 @@ export const english: Record<string, string> = {
     "Remaining time covers the parent and its sub-issues as one group: time already spent on sub-issues (running or closed within the window) is also deducted, as in the column estimate.",
   "Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.":
     "A parent and its sub-issues count once, with the parent's points, in the column where the group's time is counted.",
+  "Antal": "Count",
+  "Timmar": "Hours",
+  "Procent": "Percent",
+  "vänster axel": "left axis",
+  "höger axel": "right axis",
+  "Högst två enheter visas samtidigt, med var sin axel.": "At most two units are shown at a time, each on its own axis.",
+  "Diagrammet visar högst två enheter åt gången, så {metrics} togs bort.": "The chart shows at most two units at a time, so it no longer shows {metrics}.",
 };
 export function t(
   source: string,

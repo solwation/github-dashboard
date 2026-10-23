@@ -16,7 +16,7 @@ import StatisticsLoadingProgress from "./StatisticsLoadingProgress.vue";
 import { statisticsChartCoverage, type StatisticsLoadStatus } from "../lib/statistics-load-status";
 import StatisticsChart from "./StatisticsChart.vue";
 import { browserTimeZone } from "../lib/browser-time";
-import { activityHeadings, seriesColor, seriesDash } from "../lib/statistics-chart";
+import { activityHeadings, limitChartUnits, seriesColor, seriesDash, statisticsMetricUnit } from "../lib/statistics-chart";
 const { t, locale } = useLanguage();
 const props = defineProps<{
   repository: Repo;
@@ -107,8 +107,14 @@ const temporary = computed(() => props.loadFailed || !!props.data?.temporary.len
 const selectedMetrics = computed<StatisticsMetric[]>(() => {
   const raw = state.value.metrics?.length ? state.value.metrics : [state.value.metric];
   const valid = raw.filter(key => availableMetrics.value.includes(key));
-  return valid.length ? valid : availableMetrics.value.slice(0, 1);
+  // A left and a right axis fit two units; a stored older selection keeps its newest two (#283).
+  return valid.length ? limitChartUnits(valid, statisticsMetricUnit).kept : availableMetrics.value.slice(0, 1);
 });
+/** Metrics just taken out of the chart because a third unit was chosen, announced next to the chart (#283). */
+const replacedMetrics = ref<StatisticsMetric[]>([]);
+const replacedText = computed(() => replacedMetrics.value.length
+  ? t("Diagrammet visar högst två enheter åt gången, så {metrics} togs bort.", { metrics: replacedMetrics.value.map(metric => t(metricNames[metric])).join(", ") })
+  : "");
 const chartSeries = computed(() => {
   if (!props.data) return [];
   const metrics = selectedMetrics.value;
@@ -180,8 +186,11 @@ function toggleMetric(metric: StatisticsMetric) {
     if (current.length <= 1) return;
     next = current.filter(item => item !== metric);
   } else {
-    next = [...current, metric];
+    const limited = limitChartUnits([...current, metric], statisticsMetricUnit);
+    next = limited.kept;
+    replacedMetrics.value = limited.removed;
   }
+  if (!next.includes(metric)) replacedMetrics.value = [];
   state.value = normalize({
     ...state.value,
     metric: next[0]!,
@@ -222,7 +231,7 @@ function clearFilters() {
     <p v-if="temporary && !loading" role="status" class="notice">{{ anyData ? t("Statistiken kunde inte uppdateras helt. Tidigare hämtade värden visas där de finns. Försök igen senare.") : t("Statistiken kunde inte hämtas just nu. Försök igen senare.") }}</p>
     <template v-if="anyData">
       <div class="statistics-totals" role="group" :aria-label="t('Mätvärden i diagrammet')" :aria-describedby="'statistics-metrics-hint-' + repository.id">
-        <p :id="'statistics-metrics-hint-' + repository.id" class="sr-only">{{ t("Välj vilka mätvärden som visas i diagrammet. Minst ett mätvärde är alltid valt.") }}</p>
+        <p :id="'statistics-metrics-hint-' + repository.id" class="sr-only">{{ t("Välj vilka mätvärden som visas i diagrammet. Minst ett mätvärde är alltid valt.") }} {{ t("Högst två enheter visas samtidigt, med var sin axel.") }}</p>
         <section v-for="group in visibleGroups" :key="group.id" class="statistics-total-group" :aria-labelledby="'statistics-group-' + repository.id + '-' + group.id">
           <h3 :id="'statistics-group-' + repository.id + '-' + group.id">{{ t(group.title) }}</h3>
           <div class="statistics-total-grid">
@@ -243,6 +252,7 @@ function clearFilters() {
           <h3>{{ t(activityHeadings[timeSpan.resolution]) }}</h3>
         </div>
         <p v-if="incompleteMetrics" role="status" class="statistics-message">{{ t("Delvis underlag för {metrics}. Aktivitet i den valda perioden kan saknas.", { metrics: incompleteMetrics }) }}</p>
+        <p role="status" class="statistics-unit-message" :class="{ empty: !replacedText }">{{ replacedText }}</p>
         <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" :resolution="timeSpan.resolution" :coverage="chartCoverage" />
       </section>
       <div class="statistics-breakdowns"><details v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.contributors" @toggle="syncOpen('contributors', $event)"><summary><h3>{{ t("Bidragsgivare") }}</h3></summary><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></details><details v-if="summary.labels.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.labels" @toggle="syncOpen('labels', $event)"><summary><h3>{{ t("Labels på skapade issues") }}</h3></summary><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></details></div>
@@ -270,7 +280,9 @@ function clearFilters() {
 .statistics-filter-clear { padding: 3px 6px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
 .statistics-filter-clear:hover { color: inherit; }
 .statistics-panel { padding: 20px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; margin-bottom: 20px; min-width: 0; }
-.statistics-message, .statistics-source-time { font-size: 12px; color: var(--muted); }
+.statistics-message, .statistics-unit-message, .statistics-source-time { font-size: 12px; color: var(--muted); }
+/* The live region stays in the DOM so the replacement is announced, but takes no space while empty. */
+.statistics-unit-message.empty { margin: 0; }
 .statistics-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 14px 18px; margin: 0 0 20px; min-width: 0; }
 .statistics-total-group { min-width: 0; }
 .statistics-total-group h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }

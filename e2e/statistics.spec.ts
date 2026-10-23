@@ -278,7 +278,8 @@ test("Statistics shows estimate time per SP and deviation as chart metrics only 
   await expect(time).toHaveAccessibleDescription(/kalibrerade tid per story point/);
   await time.click();
   await metricButton(design, /^Avvikelse från estimat/).click();
-  await expect(design.locator(".chart-legend span")).toHaveText(["Stängda issues", "Tid per SP (timmar)", "Avvikelse från estimat (%)"]);
+  // A third unit replaces the oldest one (#283): hours stay on the left, the deviation gets the right axis.
+  await expect(design.locator(".chart-legend > span")).toHaveText(["Tid per SP (timmar)· vänster axel", "Avvikelse från estimat (%)· höger axel"]);
   const slider = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
   await slider.focus(); await page.keyboard.press("End");
   await expect(slider).toHaveAttribute("aria-valuetext", /Tid per SP \(timmar\): 3,5 h/);
@@ -292,6 +293,77 @@ test("Statistics shows estimate time per SP and deviation as chart metrics only 
   await expect(card(weekend, "Tid per SP")).toHaveCount(0);
   await design.getByRole("combobox", { name: "Bidragsgivare", exact: true }).selectOption("demo-alex");
   await expect(card(estimates, "Tid per SP")).toHaveCount(0);
+});
+
+test("Statistics draws a second unit on its own labeled right axis and keeps at most two units (#283)", async ({ browser }) => {
+  for (const { name, width, height, touch } of [
+    { name: "desktop", width: 1600, height: 1000, touch: false },
+    { name: "phone-portrait", width: 390, height: 844, touch: true },
+    { name: "phone-landscape", width: 844, height: 390, touch: true },
+  ]) {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch, locale: "sv-SE", timezoneId: "UTC" });
+    const page = await context.newPage();
+    await page.goto("/");
+    await page.getByRole("button", { name: "Utforska en demo" }).click();
+    await openStatistics(page);
+    const design = page.locator(".statistics-repository").filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
+    const panel = design.locator(".statistics-panel").filter({ has: page.locator(".statistics-chart") });
+    const chart = design.locator(".statistics-chart > svg");
+    const notice = design.locator(".statistics-unit-message");
+    // Single unit: unchanged chart, no axis titles or unit suffixes.
+    await expect(design.locator(".chart-axis-title")).toHaveCount(0);
+    await expect(design.locator(".chart-legend-axis")).toHaveCount(0);
+    await metricButton(design, /^Tid per SP/).click();
+    await expect(design.locator(".chart-axis-title")).toHaveText(["Antal", "Timmar"]);
+    await expect(notice).toHaveText("");
+    await metricButton(design, /^Avvikelse från estimat/).click();
+    await expect(notice).toHaveText("Diagrammet visar högst två enheter åt gången, så Stängda issues togs bort.");
+    await expect(metricButton(design, /^Stängda issues/)).toHaveAttribute("aria-pressed", "false");
+    await expect(design.locator(".chart-axis-title")).toHaveText(["Timmar", "Procent"]);
+    await expect(design.locator(".chart-y-left").first()).toHaveText(/ h$/);
+    await expect(design.locator(".chart-y-right").filter({ hasText: "%" }).first()).toBeVisible();
+    // The 3.5 h line is read against its own scale: its latest point sits in the upper half of the plot.
+    const geometry = await chart.evaluate(svg => {
+      const box = (element: Element) => element.getBoundingClientRect();
+      const groups = [...svg.querySelectorAll(":scope > g")].filter(group => group.querySelector("polyline"));
+      const latest = (group: Element) => box([...group.querySelectorAll("circle")].at(-1)!).y;
+      const zero = box(svg.querySelector("line.chart-axis")!).y;
+      const top = Math.min(...[...svg.querySelectorAll("line.chart-grid, line.chart-axis")].map(line => box(line).y));
+      const labels = [...svg.querySelectorAll(".chart-y-label, .chart-axis-title, .chart-x-label")].map(box);
+      const svgBox = box(svg);
+      const overlaps = labels.some((a, i) => labels.some((b, j) => j > i && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1));
+      return { hours: latest(groups[0]!), zero, top, overlaps, inside: labels.every(label => label.left >= svgBox.left - 1 && label.right <= svgBox.right + 1), overflow: document.documentElement.scrollWidth - window.innerWidth };
+    });
+    expect(geometry.hours).toBeLessThan((geometry.top + geometry.zero) / 2);
+    expect(geometry.overlaps).toBe(false);
+    expect(geometry.inside).toBe(true);
+    expect(geometry.overflow).toBeLessThanOrEqual(0);
+    await panel.scrollIntoViewIfNeeded();
+    await panel.screenshot({ path: test.info().outputPath(`statistics-units-estimates-${name}.png`) });
+    // Touch or pointer selection and the keyboard slider still list every value with its unit.
+    const box = (await chart.boundingBox())!;
+    if (touch) await chart.tap({ position: { x: box.width - 30, y: 100 } });
+    else await chart.hover({ position: { x: box.width - 30, y: 100 } });
+    await expect(design.getByRole("tooltip")).toContainText(/Tid per SP \(timmar\)\s*3,5 h/);
+    await expect(design.getByRole("tooltip")).toContainText("Avvikelse från estimat (%)");
+    // Estimate plus a count metric: the deviation keeps the left axis, counts get the right one.
+    await metricButton(design, /^Stängda issues/).click();
+    await expect(notice).toHaveText("Diagrammet visar högst två enheter åt gången, så Tid per SP togs bort.");
+    await expect(design.locator(".chart-axis-title")).toHaveText(["Procent", "Antal"]);
+    if (!touch) await page.mouse.move(0, 0);
+    await expect(design.getByRole("tooltip")).toHaveCount(touch ? 1 : 0);
+    await panel.screenshot({ path: test.info().outputPath(`statistics-units-estimate-count-${name}.png`) });
+    const slider = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
+    await slider.focus(); await page.keyboard.press("End");
+    await expect(slider).toHaveAttribute("aria-valuetext", /Avvikelse från estimat \(%\): −50\s%, Stängda issues: \d/);
+    await panel.screenshot({ path: test.info().outputPath(`statistics-units-estimate-count-keyboard-${name}.png`) });
+    await slider.blur();
+    // Removing a metric clears the notice; back to one unit the chart is single-axis again.
+    await metricButton(design, /^Avvikelse från estimat/).click();
+    await expect(notice).toHaveText("");
+    await expect(design.locator(".chart-axis-title")).toHaveCount(0);
+    await context.close();
+  }
 });
 
 test("Statistics hides inaccessible metrics silently and retains issue values after rate limiting", async ({ page }) => {
