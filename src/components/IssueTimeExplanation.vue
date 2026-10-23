@@ -34,6 +34,8 @@ const comparison = computed(() => outcome.value?.estimatedMs == null ? null : {
 });
 const remaining = computed(() => estimate.value?.remainingMs == null ? null : estimate.value.overdue
   ? t("över uppskattning") : estimateLabel(estimate.value.remainingMs));
+const subIssueSpent = computed(() => props.column !== "closed" && estimate.value && estimate.value.subIssueSpentMs > 0
+  ? estimateLabel(estimate.value.subIssueSpentMs).replace(/^≈\s*/, "") : null);
 </script>
 
 <template>
@@ -44,7 +46,8 @@ const remaining = computed(() => estimate.value?.remainingMs == null ? null : es
         <div><dt>{{ t("Story points") }}</dt><dd>≈ {{ points }} SP</dd></div>
         <div v-if="estimate"><dt>{{ t("Total uppskattning") }}</dt><dd>{{ estimateLabel(estimate.totalMs) }}</dd></div>
         <div v-if="column === 'progress' && elapsed"><dt>{{ t("Förfluten arbetstid") }}</dt><dd>{{ elapsed }}</dd></div>
-        <div v-if="column === 'progress' && remaining"><dt>{{ t("Kvar / över") }}</dt><dd>{{ remaining }}</dd></div>
+        <div v-if="subIssueSpent"><dt>{{ t("Tid på underärenden") }}</dt><dd>{{ subIssueSpent }}</dd></div>
+        <div v-if="column !== 'closed' && remaining"><dt>{{ t("Kvar / över") }}</dt><dd>{{ remaining }}</dd></div>
         <div v-if="actual"><dt>{{ t("Faktisk arbetstid") }}</dt><dd>{{ actual }}</dd></div>
         <div v-if="aggregation"><dt>{{ locale === "sv-SE" ? "Beräkning" : "Calculation" }}</dt><dd>{{ aggregation }}</dd></div>
         <div v-if="comparison"><dt>{{ t("Jämförelse med historik") }}</dt><dd>
@@ -56,6 +59,7 @@ const remaining = computed(() => estimate.value?.remainingMs == null ? null : es
       <p v-if="basis?.samples && basis.msPerPoint">{{ t("Tidsestimatet är ungefärligt: punktstorlek multipliceras med median tid per poäng från {count} användbara stängningar i detta repository under {days} dagar.", { count: basis.samples, days: basis.windowDays }) }}</p>
       <p v-if="comparison">{{ t("Om en pil visas betyder ↑ längre och ↓ kortare faktisk arbetstid än ett estimat som räknas nu från andra nyligen stängda ärenden. Det är inte ett sparat ursprungligt löfte.") }}</p>
       <p v-if="column === 'progress'">{{ t("Förfluten tid räknas från den registrerade starten. Kvar är total uppskattning minus förfluten tid; när den passerats visas över uppskattning.") }}</p>
+      <p v-if="subIssueSpent">{{ t("Kvar räknas för huvudärendet och dess underärenden som en grupp: tid som redan lagts på underärenden (pågående eller stängda inom fönstret) dras också av, som i kolumnens uppskattning.") }}</p>
       <p v-if="column === 'closed' && !aggregation">{{ t("Faktisk arbetstid räknas från registrerad arbetsstart till stängning.") }}</p>
     </div>
   </details>

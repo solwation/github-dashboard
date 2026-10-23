@@ -2,24 +2,29 @@
 import { computed } from "vue";
 import { Clock3 } from "@lucide/vue";
 import { useIssueForecast } from "../composables/useIssueForecast";
-import { useIssueClock } from "../composables/useIssueClock";
+import { useNow, untilNext } from "../composables/useNow";
 import { estimateLabel } from "../lib/estimates";
 import { useLanguage } from "../lib/i18n";
 import type { Issue } from "../lib/model";
 
-const props = defineProps<{ issue: Issue; repository?: string; active?: boolean; bar?: boolean }>();
+// `inProgress: false` is a Backlog parent whose sub-issue work has started (#281).
+const props = withDefaults(defineProps<{ issue: Issue; repository?: string; active?: boolean; bar?: boolean; inProgress?: boolean }>(), { inProgress: true });
 const { t } = useLanguage();
-const { estimate } = useIssueForecast({
+const { estimate, estimateAt } = useIssueForecast({
   get issue() { return props.issue; }, get repository() { return props.repository; },
-  get active() { return props.active; }, inProgress: true,
+  get active() { return props.active; }, get inProgress() { return props.inProgress; },
 });
-const now = useIssueClock(() => props.issue, () => "progress", () => props.active !== false);
+// Overtime grows while the issue or one of its sub-issues runs: wake when it starts and at each
+// rounded minute change of the overtime label.
+const now = useNow(at => {
+  const current = estimateAt(at);
+  if (!current?.running || current.remainingMs === null) return Infinity;
+  return current.overdue ? untilNext(current.overtimeMs + 30000, 60000) : current.remainingMs + 1;
+}, { board: true, active: () => props.active !== false });
 const remaining = computed(() => estimate.value?.remainingMs == null ? null : estimate.value);
-const overtimeMs = computed(() => {
-  if (!remaining.value?.overdue || !props.issue.startedAt) return 0;
-  const started = Date.parse(props.issue.startedAt);
-  return Number.isFinite(started) ? Math.max(0, now.value - started - remaining.value.totalMs) : 0;
-});
+const overtimeMs = computed(() => remaining.value?.overdue ? estimateAt(now.value)?.overtimeMs ?? 0 : 0);
+const deducted = computed(() => remaining.value && remaining.value.subIssueSpentMs > 0
+  ? [t("Tid på underärenden avdragen: {time}", { time: estimateLabel(remaining.value.subIssueSpentMs) })] : []);
 const overtimeLabel = computed(() => estimateLabel(overtimeMs.value).replace(/^≈\s*/, ""));
 const label = computed(() => !remaining.value ? "" : remaining.value.overdue
   ? overtimeLabel.value : t("{time} kvar", { time: estimateLabel(remaining.value.remainingMs!) }));
@@ -31,9 +36,11 @@ const description = computed(() => !remaining.value ? "" : remaining.value.overd
     time: overtimeLabel.value,
     estimate: estimateLabel(remaining.value.totalMs),
   }),
+  ...deducted.value,
   t("Längre än uppskattat"),
 ].join(". ") : [
   t("Uppskattad tid: {time}", { time: estimateLabel(remaining.value.totalMs) }),
+  ...deducted.value,
   t("Uppskattad tid kvar: {time}", { time: estimateLabel(remaining.value.remainingMs!) }),
 ].join(". "));
 </script>

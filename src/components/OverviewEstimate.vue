@@ -8,7 +8,6 @@ import { useLanguage } from "../lib/i18n";
 const props = defineProps<{ groups: OverviewEstimateGroup[]; column: OverviewEstimateColumn }>();
 const { t } = useLanguage();
 const children = useSubIssueWork(() => props.groups);
-const points = computed(() => overviewPoints(props.groups, props.column));
 const now = useNow(at => {
   const current = overviewTimeEstimate(props.groups, props.column, at, children.value);
   if (current.remainingMs === null) return Infinity;
@@ -20,13 +19,17 @@ const now = useNow(at => {
   return Math.min(countdown, expiry, current.nextStartMs - at, 86400000);
 }, { board: true });
 const estimate = computed(() => overviewTimeEstimate(props.groups, props.column, now.value, children.value));
+// Points follow the time's sub-issue grouping (#281); the tooltip says so when that changes them.
+const points = computed(() => overviewPoints(props.groups, props.column, children.value, now.value));
+const grouped = computed(() => points.value !== overviewPoints(props.groups, props.column, undefined, now.value));
 const time = computed(() => estimate.value.remainingMs === null ? "" : estimate.value.remainingMs === 0 && estimate.value.overdue
   ? t("över uppskattning") : t("{time} kvar", { time: estimateLabel(estimate.value.remainingMs) }));
 const partial = computed(() => estimate.value.knownRepositories > 0 && estimate.value.knownRepositories < estimate.value.repositories);
 const coverage = computed(() => t("Tid för {known} av {total} repos", { known: estimate.value.knownRepositories, total: estimate.value.repositories }));
 const description = computed(() => [
   t("Uppskattade story points: cirka {points}", { points: points.value }),
-  t("Poängen omfattar samma filtrerade issues som antalet."),
+  grouped.value ? t("Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.")
+    : t("Poängen omfattar samma filtrerade issues som antalet."),
   ...(time.value ? [
     estimate.value.remainingMs === 0 && estimate.value.overdue ? t("Uppskattad tid kvar: över uppskattning")
       : t("Uppskattad tid kvar: {time}", { time: estimateLabel(estimate.value.remainingMs!) }),

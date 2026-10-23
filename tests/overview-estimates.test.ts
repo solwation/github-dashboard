@@ -76,3 +76,23 @@ it("deducts sub-issue time from the parent in the overview badge without countin
   expect(overviewTimeEstimate(selection, "progress", now, children)).toMatchObject({ remainingMs: 70 * minute, counting: true });
   expect(overviewTimeEstimate(selection, "open", now, children)).toMatchObject({ remainingMs: 70 * minute });
 });
+
+it("groups story points like the time: absorbed sub-issues once, the group in the column its time is in (#281)", () => {
+  const parent = issue(20, 3), child = progress(21, 20 * minute), other = progress(22), waiting = issue(23, 2);
+  const selection = groups([lane([...history(), parent, child, other, waiting])]);
+  expect(overviewPoints(selection, "progress")).toBe(2);
+  expect(overviewPoints(selection, "open")).toBe(7);
+  const children = new Map([[parent.id, [{ issue: child }]]]);
+  // The Backlog parent's group runs, so In progress shows its 3 points instead of the child's 1.
+  expect(overviewPoints(selection, "progress", children, now)).toBe(4);
+  expect(overviewPoints(selection, "open", children, now)).toBe(6);
+  // A group whose sub-issue only closed stays in the Backlog; open work counts it once.
+  const closedChild = issue(24, 1, { state: "closed", closed_at: iso(now - minute), workStartedAt: iso(now - 30 * minute) });
+  const idle = groups([lane([...history(), parent, closedChild, other])]);
+  expect(overviewPoints(idle, "progress", new Map([[parent.id, [{ issue: closedChild }]]]), now)).toBe(1);
+  expect(overviewPoints(idle, "open", new Map([[parent.id, [{ issue: closedChild }]]]), now)).toBe(4);
+  // Without calibration there is no grouped time, so points stay per issue.
+  const uncalibrated = groups([lane([parent, child])]);
+  expect(overviewPoints(uncalibrated, "progress", children, now)).toBe(1);
+  expect(overviewPoints(uncalibrated, "open", children, now)).toBe(4);
+});

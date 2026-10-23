@@ -7,7 +7,9 @@ import {
   estimateLabel,
   historySamples,
   issueEstimate,
+  issueGroupEstimate,
   MAX_HISTORY_SAMPLES,
+  subIssueGroupWork,
   nextHistoryExpiry,
   median,
   parallelism,
@@ -383,5 +385,57 @@ describe("sub-issue time deduction (#279)", () => {
     const closedParent = done(hour), child = running(10 * min);
     expect(repositoryEstimate([...history(), closedParent, child], now, { children: tree([[closedParent, [child]]]) }).progress)
       .toMatchObject({ count: 1, remainingMs: 50 * min });
+  });
+});
+
+describe("parent card forecast with sub-issue groups (#281)", () => {
+  const history = () => [done(hour, 20 * day), done(hour, 10 * day), done(hour, 5 * day)];
+  const sized = (state: "backlog" | "progress", points: number, extra: Partial<Issue> = {}) => issue(state, {
+    labels: [...(state === "progress" ? [{ name: "in progress", color: "" }] : []), { name: `points: ${points}`, color: "" }], ...extra,
+  });
+  const offBoardClosed = (duration: number, ago = hour) => issue("closed", { startedAt: iso(now - ago - duration), closed_at: iso(now - ago) });
+  const tree = (entries: [Issue, Issue[]][]) => new Map(entries.map(([parent, children]) => [parent.id, children.map(child => ({ issue: child }))]));
+  /** Card forecast for `parent` with the same board members, children and rate as the column badge. */
+  const card = (parent: Issue, board: Issue[], children: ReturnType<typeof tree>, inProgress: boolean, at = now) => {
+    const estimate = repositoryEstimate(board, at, { children });
+    const members = new Map(board.filter(entry => entry.state === "open").map(entry => [entry.id, entry] as const));
+    const work = subIssueGroupWork(parent, members, at, {}, 30, children);
+    return { estimate, forecast: issueGroupEstimate(parent, estimate.basis.msPerPoint, at, inProgress, work)! };
+  };
+
+  it("matches the badge for an in-progress parent with running and closed sub-issues", () => {
+    const parent = sized("progress", 5, { startedAt: iso(now - hour) });
+    const child = running(30 * min), closed = offBoardClosed(45 * min);
+    const { estimate, forecast } = card(parent, [...history(), parent, child], tree([[parent, [child, closed]]]), true);
+    expect(forecast).toMatchObject({ totalMs: 5 * hour, remainingMs: 5 * hour - hour - 75 * min, overdue: false,
+      ownSpentMs: hour, subIssueSpentMs: 75 * min, subIssues: 2, running: true, counting: true });
+    expect(forecast.remainingMs).toBe(estimate.progress!.items[0]!.remainingMs);
+    // Before its sub-issues load the card keeps its own normal forecast.
+    expect(issueGroupEstimate(parent, hour, now, true, null)).toMatchObject({ ...issueEstimate(parent, hour, now, true), subIssueSpentMs: 0 });
+  });
+
+  it("gives a backlog parent the group's countdown only once sub-issue work has started", () => {
+    const parent = sized("backlog", 5), child = running(30 * min), closed = offBoardClosed(hour);
+    const board = [...history(), parent, child], children = tree([[parent, [child, closed]]]);
+    const { estimate, forecast } = card(parent, board, children, false);
+    expect(forecast).toMatchObject({ remainingMs: 5 * hour - 90 * min, ownSpentMs: 0, subIssueSpentMs: 90 * min, counting: true });
+    expect(forecast.remainingMs).toBe(estimate.progress!.items[0]!.remainingMs);
+    expect(card(parent, board, children, false, now + 10 * min).forecast.remainingMs).toBe(5 * hour - 100 * min);
+    // Only closed work: a static remaining time that does not count down.
+    expect(card(parent, [...history(), parent], tree([[parent, [closed]]]), false).forecast)
+      .toMatchObject({ remainingMs: 4 * hour, counting: false, running: false });
+    // Nothing started: the normal total-only forecast.
+    expect(card(parent, [...history(), parent], tree([[parent, [issue("backlog")]]]), false).forecast)
+      .toMatchObject({ totalMs: 5 * hour, remainingMs: null, subIssueSpentMs: 0 });
+  });
+
+  it("counts nested sub-issues once and reports overtime instead of negative time", () => {
+    const parent = sized("progress", 2, { startedAt: iso(now - hour) });
+    const child = sized("progress", 3, { startedAt: iso(now - 50 * min) }), grandchild = running(20 * min);
+    const children = tree([[parent, [child, child]], [child, [grandchild]]]);
+    const { estimate, forecast } = card(parent, [...history(), parent, child, grandchild], children, true);
+    expect(forecast).toMatchObject({ subIssueSpentMs: 70 * min, subIssues: 2, remainingMs: 0, overdue: true,
+      overtimeMs: 10 * min, running: true, counting: false });
+    expect(estimate.progress).toMatchObject({ count: 1, overdue: 1, remainingMs: 0 });
   });
 });

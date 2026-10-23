@@ -25,7 +25,9 @@ import { column, type Issue, type Rules } from "./model";
  *   items or backlog points, so neither their remaining nor their spent time is counted twice.
  *   A group is in progress when the parent or any open descendant is in progress; otherwise it
  *   stays in the backlog with its spent time deducted from its backlog points. History calibration is
- *   unchanged.
+ *   unchanged. The parent's own card/row forecast (issueGroupEstimate, #281) applies the same rule
+ *   to its own subtree once its sub-issues are loaded, and the overview story points count each
+ *   group once, by its root's points, in the column the group is estimated in.
  * - Parallelism: the time-weighted average number of issues in progress while at least one was in
  *   progress, over the window: sum of in-progress durations (history plus current in-progress
  *   issues, clipped to the window) divided by the length of their union. Idle periods such as
@@ -265,7 +267,44 @@ export function subIssueSpentMs(child: SubIssueWork, fallbackRules: Rules, now: 
   return { spentMs: 0, running: false, open: issue.state === "open" };
 }
 
-interface SubIssueGroup { root: Issue; ownProgress: boolean; inProgress: boolean; spentMs: number; running: boolean; descendants: number }
+export interface SubIssueGroup { root: Issue; ownProgress: boolean; inProgress: boolean; spentMs: number; running: boolean; descendants: number }
+/** Sub-issue work below one root: Σ descendant spent time, whether one runs, their count and open progress. */
+export interface SubIssueGroupWork { spentMs: number; running: boolean; descendants: number; openInProgress: boolean }
+
+/**
+ * Walks one root's descendants (deduplicated by id, cycle-safe) and adds each one's spent time
+ * exactly once. `members` are the open estimated board issues, preferred for start times and rules.
+ */
+export function subIssueGroupWork(root: Issue, members: ReadonlyMap<number, Issue>, now: number, rules: Rules,
+  windowDays: number, children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined): SubIssueGroupWork {
+  const work: SubIssueGroupWork = { spentMs: 0, running: false, descendants: 0, openInProgress: false };
+  const seen = new Set([root.id]);
+  const walk = (id: number) => {
+    for (const child of children?.get(id) ?? []) {
+      if (seen.has(child.issue.id)) continue;
+      seen.add(child.issue.id);
+      // Prefer the estimated board copy, which carries start times and the group's rules.
+      const member = members.get(child.issue.id);
+      const entry = member ? { issue: member, rules: child.rules ?? rules } : child;
+      const spent = subIssueSpentMs(entry, rules, now, windowDays);
+      work.descendants++;
+      work.spentMs += spent.spentMs;
+      work.running ||= spent.running;
+      if (spent.open && column(entry.issue, entry.rules ?? rules) === "progress") work.openInProgress = true;
+      walk(child.issue.id);
+    }
+  };
+  walk(root.id);
+  return work;
+}
+
+/** Open estimated issues of one repository, grouped exactly as the column estimates group them. */
+export function estimateGroups(issues: Issue[], now: number, options: EstimateOptions = {}): SubIssueGroup[] {
+  const { rules = {}, windowDays = ESTIMATE_WINDOW_DAYS } = options;
+  const list = issuesOf(issues);
+  const open = [...list.filter(issue => column(issue, rules) === "progress"), ...list.filter(issue => column(issue, rules) === "backlog")];
+  return subIssueGroups(open, now, rules, windowDays, options.children);
+}
 
 /**
  * Groups open estimated issues under their topmost open estimated ancestor. Each descendant
@@ -285,25 +324,8 @@ function subIssueGroups(open: Issue[], now: number, rules: Rules, windowDays: nu
   for (const issue of open) if (!absorbed.has(issue.id)) visit(issue.id, reachable);
   return open.filter(issue => !absorbed.has(issue.id) || !reachable.has(issue.id)).map(root => {
     const ownProgress = column(root, rules) === "progress";
-    const group: SubIssueGroup = { root, ownProgress, inProgress: ownProgress, spentMs: 0, running: false, descendants: 0 };
-    const seen = new Set([root.id]);
-    const walk = (id: number) => {
-      for (const child of children?.get(id) ?? []) {
-        if (seen.has(child.issue.id)) continue;
-        seen.add(child.issue.id);
-        // Prefer the estimated board copy, which carries start times and the group's rules.
-        const member = members.get(child.issue.id);
-        const work = member ? { issue: member, rules: child.rules ?? rules } : child;
-        const spent = subIssueSpentMs(work, rules, now, windowDays);
-        group.descendants++;
-        group.spentMs += spent.spentMs;
-        group.running ||= spent.running;
-        if (spent.open && column(work.issue, work.rules ?? rules) === "progress") group.inProgress = true;
-        walk(child.issue.id);
-      }
-    };
-    walk(root.id);
-    return group;
+    const work = subIssueGroupWork(root, members, now, rules, windowDays, children);
+    return { root, ownProgress, inProgress: ownProgress || work.openInProgress, spentMs: work.spentMs, running: work.running, descendants: work.descendants };
   });
 }
 
@@ -316,6 +338,45 @@ export function issueEstimate(issue: Issue, msPerPoint: number | null | undefine
   if (!inProgress || !Number.isFinite(start) || start > now) return { totalMs, remainingMs: null, overdue: false };
   const remaining = totalMs - (now - start);
   return { totalMs, remainingMs: Math.max(0, remaining), overdue: remaining < 0 };
+}
+
+export interface IssueGroupForecast {
+  totalMs: number;
+  /** Remaining time for the issue's group; null when nothing justifies a countdown. */
+  remainingMs: number | null;
+  overdue: boolean;
+  /** Time over the estimate when overdue, otherwise 0. */
+  overtimeMs: number;
+  /** The issue's own deducted in-progress time. */
+  ownSpentMs: number;
+  /** Time spent on its sub-issues and deducted from its estimate (#281). */
+  subIssueSpentMs: number;
+  subIssues: number;
+  /** Whether the issue itself or one of its sub-issues is running, so spent time grows. */
+  running: boolean;
+  /** Whether the remaining time is decreasing with the clock (or about to turn overdue). */
+  counting: boolean;
+}
+
+/**
+ * Per-card forecast with the column estimate's sub-issue group rule (#281): remaining =
+ * max(0, estimate − own elapsed − Σ sub-issue spent). Without `group` (sub-issues not loaded,
+ * or none) it equals issueEstimate. A backlog parent gets a countdown only once sub-issue work
+ * has started, matching its group moving into the In progress badge.
+ */
+export function issueGroupEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean,
+  group?: SubIssueGroupWork | null): IssueGroupForecast | null {
+  const base = issueEstimate(issue, msPerPoint, now, inProgress);
+  if (!base) return null;
+  const subIssueSpentMs = group?.spentMs ?? 0, subIssues = group?.descendants ?? 0, running = !!group?.running;
+  const start = time(issue.startedAt);
+  const ownRunning = inProgress && Number.isFinite(start) && start <= now;
+  const ownSpentMs = ownRunning ? now - start : 0;
+  const deducted = subIssueSpentMs > 0 || running || !!group?.openInProgress;
+  if (!ownRunning && !deducted) return { ...base, overtimeMs: 0, ownSpentMs, subIssueSpentMs, subIssues, running: false, counting: false };
+  const left = base.totalMs - ownSpentMs - subIssueSpentMs;
+  return { totalMs: base.totalMs, remainingMs: Math.max(0, left), overdue: left < 0, overtimeMs: Math.max(0, -left),
+    ownSpentMs, subIssueSpentMs, subIssues, running: ownRunning || running, counting: left >= 0 && (ownRunning || running) };
 }
 
 /** Combined board: repositories work in parallel, so each column takes the slowest repository. */

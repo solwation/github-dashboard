@@ -15,6 +15,7 @@ const description = computed(() => {
   const estimate = forecast.value;
   if (estimate) {
     parts.push(t("Uppskattad tid: {time}", { time: estimateLabel(estimate.totalMs) }));
+    if (estimate.subIssueSpentMs > 0) parts.push(t("Tid på underärenden avdragen: {time}", { time: estimateLabel(estimate.subIssueSpentMs) }));
     if (estimate.remainingMs !== null) parts.push(estimate.overdue
       ? t("Uppskattad tid kvar: över uppskattning")
       : t("Uppskattad tid kvar: {time}", { time: estimateLabel(estimate.remainingMs) }));

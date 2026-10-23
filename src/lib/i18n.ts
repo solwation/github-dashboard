@@ -791,6 +791,12 @@ export const english: Record<string, string> = {
     "Median of actual time divided by estimated time minus 1 for issues closed in the period. A positive value means the work took longer than estimated.",
   "Estimat följer tavlans tidsestimat. Tid per SP är estimatets kalibrerade tid per story point vid slutet av varje intervall: median av arbetstid (från In progress till stängning) per grov storlekspoäng för de senaste högst 30 stängningarna inom 30 dagar, utan extrema avbrutna körningar. Kortet visar periodens senaste värde. Avvikelse från estimat är medianen av faktisk tid ÷ estimerad tid − 1 för issues stängda i intervallet, där estimatet bygger på övriga stängningar fram till stängningen; +25 % betyder 25 % längre tid än estimerat. Mått utan underlag visas inte, och äldre intervall markeras som delvis data när 30-dagarsunderlaget börjar före hämtade händelser.":
     "Estimates follow the board's time estimates. Time per SP is the estimate's calibrated time per story point at the end of each interval: the median work time (from In progress to closure) per rough size point of the latest 30 closures at most within 30 days, excluding extreme interrupted runs. The card shows the latest value in the period. Deviation from estimate is the median of actual time ÷ estimated time − 1 for issues closed in the interval, with the estimate based on the other closures up to that closure; +25% means 25% longer than estimated. Metrics without a basis are not shown, and older intervals are marked as partial data when the 30-day basis starts before the collected events.",
+  "Tid på underärenden avdragen: {time}": "Time spent on sub-issues deducted: {time}",
+  "Tid på underärenden": "Time on sub-issues",
+  "Kvar räknas för huvudärendet och dess underärenden som en grupp: tid som redan lagts på underärenden (pågående eller stängda inom fönstret) dras också av, som i kolumnens uppskattning.":
+    "Remaining time covers the parent and its sub-issues as one group: time already spent on sub-issues (running or closed within the window) is also deducted, as in the column estimate.",
+  "Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.":
+    "A parent and its sub-issues count once, with the parent's points, in the column where the group's time is counted.",
 };
 export function t(
   source: string,

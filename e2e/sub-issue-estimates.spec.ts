@@ -59,7 +59,61 @@ for (const [name, parentInProgress, expected] of [
   await page.locator(".stats").screenshot({ path: testInfo.outputPath(`overview-${parentInProgress ? "progress" : "backlog"}-parent.png`) });
   await page.locator(".board-column.progress").first().screenshot({ path: testInfo.outputPath(`column-${parentInProgress ? "progress" : "backlog"}-parent.png`) });
   await page.screenshot({ path: testInfo.outputPath(`board-${parentInProgress ? "progress" : "backlog"}-parent.png`) });
+  // Story points follow the same grouping (#281): the whole group's 5 points, not the child's 1.
+  await expect(page.locator('.stats [data-stat="progress"] .overview-points')).toHaveText("≈ 5 SP");
+  await expect(page.locator('.stats [data-stat="open"] .overview-points')).toHaveText("≈ 5 SP");
+  if (!parentInProgress) await expect(page.locator('.stats [data-stat="progress"] .overview-estimate'))
+    .toHaveAttribute("aria-label", /räknas en gång, med huvudärendets poäng/);
   await page.clock.fastForward(5 * minute);
   // Two clocks run (parent and child) when the parent is in progress, one otherwise.
   await expect(overview).toHaveText(parentInProgress ? "≈ 1 h 30 min kvar" : "≈ 1 h 45 min kvar");
 });
+
+// The parent's own card and list row use the badge's group rule (#281).
+for (const [viewport, width, height, touch] of [["desktop", 1600, 1000, false], ["phone", 390, 844, true]] as const) {
+  for (const [name, parentInProgress, expected, later] of [
+    ["parent in progress", true, "≈ 1 h 40 min kvar", "≈ 1 h 30 min kvar"],
+    ["parent in backlog", false, "≈ 1 h 50 min kvar", "≈ 1 h 45 min kvar"],
+  ] as const) test(`parent card and row deduct sub-issue time (${viewport}, ${name})`, async ({ browser }, testInfo) => {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch, locale: "sv-SE" });
+    const page = await context.newPage();
+    try {
+      const requests = await fixture(page, parentInProgress);
+      const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
+      const shot = (kind: string) => testInfo.outputPath(`${kind}-${viewport}-${parentInProgress ? "progress" : "backlog"}-parent.png`);
+      await mode.getByRole("button", { name: "Kort", exact: true }).click();
+      const card = page.locator(".issue-card").filter({ hasText: "Parent with sub-issues" });
+      const cardTime = card.locator(".issue-time-remaining");
+      await expect(cardTime.locator(".issue-time-remaining-label")).toHaveText(expected);
+      await expect(cardTime).toHaveAttribute("title", /Tid på underärenden avdragen: ≈ 40 min/);
+      await expect(cardTime.getByRole("progressbar")).toHaveCount(1);
+      await expect(card.locator(".issue-points")).toHaveAttribute("title", new RegExp(`Uppskattad tid kvar: ${expected.replace(" kvar", "")}`));
+      // The running child's own card keeps its own forecast: 30 min − 10 min.
+      await expect(page.locator(".issue-card").filter({ hasText: "Running sub-issue" }).locator(".issue-time-remaining-label")).toHaveText("≈ 20 min kvar");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await card.scrollIntoViewIfNeeded();
+      await card.screenshot({ path: shot("card") });
+      await page.screenshot({ path: shot("cards-page") });
+      await mode.getByRole("button", { name: "Lista", exact: true }).click();
+      const row = page.locator(".issue-row").filter({ hasText: "Parent with sub-issues" });
+      const rowTime = row.locator(parentInProgress ? ".row-outcome .issue-time-remaining-label" : ".row-outcome .issue-time-estimate");
+      await expect(rowTime).toHaveText(expected);
+      await expect(row.locator(".row-outcome > *").first()).toHaveAttribute("title", /Tid på underärenden avdragen: ≈ 40 min/);
+      expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      const height = (await row.boundingBox())!.height;
+      const other = (await page.locator(".issue-row").filter({ hasText: "Running sub-issue" }).boundingBox())!.height;
+      expect(Math.abs(height - other)).toBeLessThan(2);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await row.scrollIntoViewIfNeeded();
+      await row.screenshot({ path: shot("row") });
+      await page.screenshot({ path: shot("list-page") });
+      await page.clock.fastForward(5 * minute);
+      await expect(rowTime).toHaveText(later);
+      await mode.getByRole("button", { name: "Kort", exact: true }).click();
+      await expect(cardTime.locator(".issue-time-remaining-label")).toHaveText(later);
+      expect(requests()).toBe(1);
+    } finally {
+      await context.close();
+    }
+  });
+}

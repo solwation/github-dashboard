@@ -1,10 +1,29 @@
-import { computed, shallowRef, watchEffect } from "vue";
+import { computed, inject, onScopeDispose, provide, shallowRef, watchEffect, type ComputedRef, type InjectionKey } from "vue";
 import { repositoryEstimate, type SubIssueWork } from "../lib/estimates";
 import { column, type Issue, type Rules } from "../lib/model";
 import { issueRepository, type SubIssue } from "../lib/sub-issues";
 import { useSubIssues } from "./useSubIssues";
 
 type Group = { issues: Issue[]; rules?: Rules };
+type WorkMap = Map<number, SubIssueWork[]>;
+const registryKey: InjectionKey<(work: ComputedRef<WorkMap>) => () => void> = Symbol("sub-issue-work");
+
+/**
+ * Collects what every mounted useSubIssueWork (column and overview badges) has already loaded,
+ * so a parent's own card can apply the badge's group rule (#281) without any request of its own.
+ */
+export function provideSubIssueWork(): ComputedRef<ReadonlyMap<number, readonly SubIssueWork[]>> {
+  const sources = shallowRef<ComputedRef<WorkMap>[]>([]);
+  provide(registryKey, work => {
+    sources.value = [...sources.value, work];
+    return () => { sources.value = sources.value.filter(source => source !== work); };
+  });
+  return computed(() => {
+    const merged: WorkMap = new Map();
+    for (const source of sources.value) for (const [id, children] of source.value) if (!merged.has(id)) merged.set(id, children);
+    return merged;
+  });
+}
 
 /**
  * Direct sub-issues of open estimated parents, keyed by parent id, so column and overview
@@ -40,8 +59,8 @@ export function useSubIssueWork(groups: () => readonly Group[]) {
         loaded.value = new Map(results.flatMap(([key, values]) => values ? [[key, values] as const] : []));
       });
   });
-  return computed(() => {
-    const result = new Map<number, SubIssueWork[]>();
+  const result = computed(() => {
+    const result: WorkMap = new Map();
     if (!relations) return result;
     for (const { issue, key } of parents.value) {
       const values = loaded.value.get(key);
@@ -51,4 +70,7 @@ export function useSubIssueWork(groups: () => readonly Group[]) {
     }
     return result;
   });
+  const unregister = inject(registryKey, undefined)?.(result);
+  if (unregister) onScopeDispose(unregister);
+  return result;
 }

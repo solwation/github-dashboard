@@ -1,7 +1,7 @@
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
 import { approximatePoints } from "./story-points";
-import { repositoryEstimate, type SubIssueWork } from "./estimates";
+import { estimateGroups, repositoryEstimate, type SubIssueWork } from "./estimates";
 
 export interface OverviewEstimateGroup { repository: string; issues: Issue[]; rules: Rules }
 export type OverviewEstimateColumn = "open" | "progress";
@@ -26,8 +26,25 @@ export function overviewEstimateGroups(lanes: Lane[], rules: Record<string, Rule
 }
 const selected = (group: OverviewEstimateGroup, key: OverviewEstimateColumn) => group.issues.filter(issue =>
   key === "open" ? issue.state === "open" : column(issue, group.rules) === "progress");
-export function overviewPoints(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn): number {
-  return groups.reduce((total, group) => total + selected(group, key).reduce((sum, issue) => sum + approximatePoints(issue), 0), 0);
+/**
+ * Story points of the selected work. With loaded sub-issues (#281) they follow the time estimate's
+ * grouping: a sub-issue absorbed into an open estimated parent is not counted on its own, and the
+ * group counts the parent's points in the column its time is counted in (In progress as soon as a
+ * sub-issue runs), so the points and time beside each other describe the same work.
+ */
+export function overviewPoints(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn,
+  children?: ReadonlyMap<number, readonly SubIssueWork[]>, now = Date.now()): number {
+  return groups.reduce((total, group) => {
+    const issues = selected(group, key);
+    if (!children?.size || repositoryEstimate(group.issues, now, { rules: group.rules }).basis.msPerPoint === null)
+      return total + issues.reduce((sum, issue) => sum + approximatePoints(issue), 0);
+    const grouped = estimateGroups(group.issues, now, { rules: group.rules, children });
+    const members = new Set(group.issues.filter(issue => { const state = column(issue, group.rules); return !issue.pull_request && (state === "progress" || state === "backlog"); }).map(issue => issue.id));
+    // Open issues outside the estimated columns keep their own points; absorbed members are part of their root.
+    const own = issues.filter(issue => !members.has(issue.id)).reduce((sum, issue) => sum + approximatePoints(issue), 0);
+    const counted = grouped.filter(entry => key === "open" || entry.inProgress);
+    return total + own + counted.reduce((sum, entry) => sum + approximatePoints(entry.root), 0);
+  }, 0);
 }
 
 /** Repositories run in parallel; open work includes the backlog horizon after current work. */

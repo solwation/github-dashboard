@@ -286,7 +286,7 @@ const visibleLabels = computed(() =>
           height="22"
       /></span>
       <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
-      <IssueTimeRemaining v-if="!rowDetails && col === 'progress'" :issue="issue" :repository="repository" :active="visible" bar />
+      <IssueTimeRemaining v-if="!rowDetails && (col === 'progress' || (col === 'backlog' && issue.sub_issues_summary?.total))" :issue="issue" :repository="repository" :active="visible" :in-progress="col === 'progress'" bar />
     </div>
     <div
       v-if="col === 'closed' && !demo && loadCommit && (commitState === 'loading' || (commitState === 'loaded' && commit))"
