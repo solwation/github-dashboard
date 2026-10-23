@@ -67,6 +67,15 @@
         "issues": [
           277
         ]
+      },
+      {
+        "text": {
+          "sv": "Tid kvar för Pågående drar av tid som redan lagts på huvudärendet och dess underärenden, även när huvudärendet ligger i Backlog, utan dubbelräkning.",
+          "en": "Remaining In progress time deducts time already spent on a parent and its sub-issues, even when the parent is in the backlog, without counting twice."
+        },
+        "issues": [
+          279
+        ]
       }
     ]
   },

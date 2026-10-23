@@ -1,8 +1,8 @@
 {
   "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Mobilen får lägre ihopfällda repositories, uppdateringsbadge, en kompakt bildvisare och Inställningar som tål vridning; End i kommentarer når sista kommentaren.",
-    "en": "Phones get shorter collapsed repositories, an update badge, a compact image viewer and Settings that survive rotation; End in comments reaches the last comment."
+    "sv": "Tid kvar räknar av arbete på underärenden, mobilen får lägre repositories, uppdateringsbadge och kompakt bildvisare, och End i kommentarer når sista kommentaren.",
+    "en": "Remaining time deducts sub-issue work, phones get shorter repositories, an update badge and a compact image viewer, and End in comments reaches the last comment."
   },
   "issues": [
     267,
@@ -12,6 +12,7 @@
     271,
     274,
     275,
-    277
+    277,
+    279
   ]
 }
