@@ -1,13 +1,10 @@
 {
-  "baseCommit": "cdfa7f1c23a8f95cd5b19b74527caf06b84b8a6b",
+  "baseCommit": "afedcdd39eefb4e0b039b060ef92af1dfcb2ca4c",
   "summary": {
-    "sv": "Statistikens laddning visar bara förloppet, mobilen får kompakta stängkryss och döljer sökrutan i ihopfällda repositories, och stängda issues visar inte in-progress.",
-    "en": "Statistics loading shows only progress, phones get compact close buttons and hide search in collapsed repositories, and closed issues no longer show in-progress."
+    "sv": "Ihopfällda repositories på mobil blir lägre: inställningsknappen delar rad med sammanfattningen i stället för att lämna en tom rad.",
+    "en": "Collapsed repositories on phones are shorter: the settings button shares the summary row instead of leaving an empty row."
   },
   "issues": [
-    260,
-    263,
-    264,
-    265
+    267
   ]
 }
