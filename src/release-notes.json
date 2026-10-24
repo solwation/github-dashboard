@@ -1,5 +1,32 @@
 [
   {
+    "date": "2026-10-24",
+    "summary": {
+      "sv": "Sidomenyn visar om ett repository är privat eller publikt och länkar till GitHub Pages; översiktens kort för repositories och stängda ger mer information.",
+      "en": "The sidebar shows whether a repository is private or public and links to GitHub Pages; the overview's repository and closed cards show more detail."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Sidomenyn visar en liten ikon för privat eller publikt repository och en ikon som öppnar repots GitHub Pages när det finns.",
+          "en": "The sidebar shows a small private or public icon per repository and an icon that opens its GitHub Pages site when available."
+        },
+        "issues": [
+          292
+        ]
+      },
+      {
+        "text": {
+          "sv": "Kortet Repositories visar fördelningen privata/publika, och Stängda visar levererade story points och mediantid i arbete.",
+          "en": "The Repositories card shows the private/public split, and Closed shows delivered story points and median time in progress."
+        },
+        "issues": [
+          291
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-23",
     "summary": {
       "sv": "Statistik laddar tydligare och kortare och delar Översikts sektioner; mobilen får kompakta stängkryss och färre sökrutor, och stängda issues visar inte in-progress.",

@@ -1,10 +1,11 @@
 {
-  "baseCommit": "6f261e1d4c8482c3717bdc8413afebe84167b725",
+  "baseCommit": "0aad644450d1f7679a273cdc529a73a2ee3e1244",
   "summary": {
-    "sv": "Bildlänkar i ärendebeskrivningar och kommentarer får förhandsbilder och öppnas direkt i bildvisaren.",
-    "en": "Image links in issue descriptions and comments show thumbnails and open directly in the image viewer."
+    "sv": "Sidomenyn visar privat/publikt och länk till GitHub Pages; korten Repositories och Stängda visar fördelning, levererade SP och mediantid.",
+    "en": "The sidebar shows private/public and a GitHub Pages link; the Repositories and Closed cards show the split, delivered SP and median time."
   },
   "issues": [
-    290
+    291,
+    292
   ]
 }

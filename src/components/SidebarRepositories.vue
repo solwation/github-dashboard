@@ -54,7 +54,7 @@ function lastChange(changedAt: string | null) {
       <span class="repository-name">
         <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
-        <component :is="repo.private ? Lock : Globe" v-if="repo.private !== undefined" class="repo-visibility" :size="11" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')" />
+        <span v-if="repo.private !== undefined" class="repo-visibility" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')"><component :is="repo.private ? Lock : Globe" :size="11" aria-hidden="true" /></span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
       </span>
       <span v-if="repo.loading" class="repository-counts">{{ t("Hämtar…") }}</span>
@@ -99,7 +99,7 @@ function lastChange(changedAt: string | null) {
 .backlog { color: #61727b; }
 .progress { color: #916010; }
 .closed { color: #287c66; }
-.repo-visibility { flex-shrink: 0; color: var(--muted); opacity: .8; }
+.repo-visibility { flex-shrink: 0; display: inline-flex; color: var(--muted); opacity: .8; }
 .has-pages .repository-name { padding-right: 20px; }
 .repo-pages { position: absolute; right: 3px; top: 0; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; color: var(--muted); }
 .repo-pages:hover { color: var(--green); }
