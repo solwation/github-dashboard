@@ -1,10 +1,11 @@
 {
   "baseCommit": "c5fb12bea654f620f890832134409336e2cb08ce",
   "summary": {
-    "sv": "Bildvisarens bläddringsknappar och bildräknare ligger nu under bilden, så bilden får mer plats.",
-    "en": "The image viewer’s browse buttons and image counter now sit below the image, giving the image more room."
+    "sv": "Bildvisarens bläddring ligger under bilden; kombinerade listrader ger titeln plats och visar repository vid status.",
+    "en": "Image navigation sits below the viewer; combined list rows give titles room and show repositories beside status."
   },
   "issues": [
+    308,
     309
   ]
 }

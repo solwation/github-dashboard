@@ -184,9 +184,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     tabindex="-1"
     :style="{ '--repository-color': assignedColor || repositoryColor(repository) }"
     @click="rowClick"
-    :class="[col, { expanded, 'has-repository': showRepository, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
+    :class="[col, { expanded, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
   >
-    <span v-if="showRepository && !isPhone" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
     <span class="row-heading">
     <span class="row-id"
       ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
@@ -264,7 +263,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
-      ><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
+      ><span v-if="showRepository" class="row-repository row-meta-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
         >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button></span
@@ -340,38 +339,33 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 }
 @media (min-width: 951px) {
   .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
 }
 /* Keep title and both time values readable; metadata gets its own line until all columns fit. */
 @media (min-width: 951px) {
   @container issue-list (max-width: 849px) {
     .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 6rem 7.25rem; }
-    .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 6rem 7.25rem; }
     .row-meta { grid-column: 1 / -1; grid-row: 2; }
   }
 }
 @container issue-list (min-width: 850px) {
   .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 5.4rem 6rem 7.25rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 1fr) 5.4rem 6rem 7.25rem; }
   .row-meta { grid-column: 1 / -1; grid-row: 2; }
   .row-comments { display: block; }
 }
 @container issue-list (min-width: 1100px) {
-  .issue-row:not(.has-repository) { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
-  .issue-row:not(.has-repository) .row-meta { grid-column: auto; grid-row: auto; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
+  .issue-row .row-meta { grid-column: auto; grid-row: auto; }
 }
 @container issue-list (min-width: 1250px) {
   .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
   .row-meta { grid-column: auto; grid-row: auto; }
 }
 @media (min-width: 651px) and (max-width: 950px) {
   .issue-row { grid-template-columns: auto minmax(0, 1fr) auto 7.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; }
-  .issue-row.has-repository { grid-template-areas: "repo repo repo repo" "number title title title" "meta meta meta meta" "time time time outcome"; }
   .row-outcome { grid-area: outcome; }
 }
 @media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
-  .issue-row, .issue-row.has-repository {
+  .issue-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 4.5rem) auto;
     grid-template-areas: "heading heading heading" "meta time outcome";
     gap: 2px 6px; min-height: 56px; padding: 6px 8px;
@@ -388,7 +382,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-summary > .issue-points { order: 3; }
   .row-mobile-summary > .row-mobile-activity { order: 6; }
   .row-mobile-summary > .row-mobile-relation { order: 4; }
-  .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
+  .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; max-width: 9rem; padding: 1px 4px; font-size: 9px; }
   .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 9px; line-height: 1; white-space: nowrap; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
@@ -399,7 +393,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
-  .issue-row, .issue-row.has-repository {
+  .issue-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 2.75rem) auto;
     grid-template-areas: "heading heading heading" "meta time outcome";
     min-height: 56px;

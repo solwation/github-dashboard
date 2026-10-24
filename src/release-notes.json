@@ -2,8 +2,8 @@
   {
     "date": "2026-10-24",
     "summary": {
-      "sv": "Sidomenyn, översikten och listorna är tydligare; bildvisaren låter dig bläddra med knappar, piltangenter och svep.",
-      "en": "The sidebar, overview and lists are clearer; browse issue images with buttons, arrow keys and swipes."
+      "sv": "Sidomenyn och översikten blev tydligare, listraderna ger titeln mer plats och bildvisaren visar bläddringen under bilden.",
+      "en": "The sidebar and overview are clearer, list rows give titles more room, and the image viewer places navigation below the image."
     },
     "sections": [
       {
@@ -48,15 +48,6 @@
       },
       {
         "text": {
-          "sv": "I listan på mobil står prioritet och story points stilla, och aktivitetsmarkeringen hamnar sist på raden.",
-          "en": "In the phone list, priority and story points stay in place, and the activity marker sits at the end of the row."
-        },
-        "issues": [
-          301
-        ]
-      },
-      {
-        "text": {
           "sv": "Startsidans knappar radbryts på surfplattor och staplas på mobil, så sidan inte längre kan scrollas i sidled.",
           "en": "Start page buttons wrap on tablets and stack on phones, so the page no longer scrolls sideways."
         },
@@ -66,12 +57,14 @@
       },
       {
         "text": {
-          "sv": "Kort och listrader använder gemensamma avstånds- och färgtokens, och mobillistans aktivitetsmärke följer mörkt tema.",
-          "en": "Cards and list rows use shared spacing and colour tokens, and the phone list activity chip follows the dark theme."
+          "sv": "Kort och listrader delar tokens; mobillistans prioritet, poäng och aktivitetsmärke håller formen, medan kombinerade rader visar repo-chip vid statusen.",
+          "en": "Cards and lists share tokens; phone list priority, points and activity stay aligned, while combined rows show repository chips beside the status."
         },
         "issues": [
+          301,
           302,
-          306
+          306,
+          308
         ]
       },
       {

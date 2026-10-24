@@ -1879,7 +1879,6 @@ button.lane-sync:focus-visible::after {
 .issue-rows { container: issue-list / inline-size; display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .issue-row { display: grid; grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6.5rem; align-items: center; gap: 4px 12px; min-height: 34px; padding: 5px 10px; border: 1px solid #edf0f2; border-radius: 6px; background: var(--surface); font-size: 12px; transition: border-color .15s; }
 .issue-row:hover { border-color: #b4c9c1; }
-.issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6.5rem; }
 .issue-row.progress { box-shadow: inset 2px 0 0 #d9ba7a; }
 .row-repository { display: inline-flex; align-items: center; justify-self: start; gap: 6px; min-width: 0; max-width: 100%; padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 10px; line-height: 1.4; }
 .row-repository span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1963,6 +1962,8 @@ button.lane-sync:focus-visible::after {
 .row-close:hover { border-color: #b4c9c1; }
 .row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
+.row-meta > .row-meta-repository { order: 2; flex: 0 1 min(10rem, 30%); max-width: min(10rem, 30%); padding: 1px 6px; font-size: 9px; }
+.row-meta > .row-meta-repository i { width: 7px; height: 7px; }
 /* List badges share text metrics, spacing, and neutral surfaces; custom labels keep their natural width. */
 .row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
 .row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: var(--badge-bg); color: var(--badge-text); }
@@ -2021,9 +2022,7 @@ button.lane-sync:focus-visible::after {
 }
 /* Narrow content: number, title and time on the first line; status and labels below. */
 @media (max-width: 950px) {
-  .issue-row, .issue-row.has-repository { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "number title time" "meta meta meta"; padding: 7px 10px; }
-  .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title time" "meta meta meta"; }
-  .row-repository { grid-area: repo; }
+  .issue-row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "number title time" "meta meta meta"; padding: 7px 10px; }
   .row-id { grid-area: number; }
   .row-title { grid-area: title; }
   .row-title-text { display: -webkit-box; white-space: normal; overflow-wrap: anywhere; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -2036,8 +2035,7 @@ button.lane-sync:focus-visible::after {
   .swimlane.list-mode .column-header { padding: 10px 12px 8px; }
   .swimlane.list-mode .cards { padding: 6px 8px 8px; }
   /* Phones: the time label moves beside the status line so the title keeps the width. */
-  .issue-row, .issue-row.has-repository { grid-template-areas: "number title title" "meta meta time"; }
-  .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title title" "meta meta time"; }
+  .issue-row { grid-template-areas: "number title title" "meta meta time"; }
 }
 @media (max-width: 480px) {
   .row-parent-label { display: none; }
@@ -2728,11 +2726,9 @@ a.sidebar-repository:focus-visible {
 .row-time > .timer { flex: 0 0 auto; }
 @media (min-width: 951px) {
   .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 14rem; }
-  .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 14rem; }
 }
 @media (max-width: 950px) {
-  .issue-row, .issue-row.has-repository { grid-template-areas: "number title title" "meta meta meta" "time time time"; }
-  .issue-row.has-repository { grid-template-areas: "repo repo repo" "number title title" "meta meta meta" "time time time"; }
+  .issue-row { grid-template-areas: "number title title" "meta meta meta" "time time time"; }
   .row-time { justify-self: stretch; justify-content: flex-end; }
 }
 :root[data-theme="dark"] .issue-time-remaining.overdue { color: #f3c66f; }
