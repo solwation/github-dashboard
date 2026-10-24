@@ -108,16 +108,15 @@ function lastChange(changedAt: string | null) {
 /* Three equal tracks keep backlog, progress and closed in columns across rows; a track only grows for unusually long numbers. */
 .repository-counts { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: var(--space-1); min-width: 0; white-space: nowrap; font-size: 10px; line-height: var(--space-4); font-variant-numeric: tabular-nums; }
 .status-count { display: inline-flex; align-items: center; gap: var(--space-1); }
-.backlog { color: #61727b; }
-.progress { color: #916010; }
-.closed { color: #287c66; }
+.backlog { color: var(--status-backlog); }
+.progress { color: var(--status-progress); }
+.closed { color: var(--status-closed); }
 .repo-visibility { display: grid; place-items: center; color: var(--muted); }
 /* Public is the common case: keep it quiet; private stays at full muted strength. Both keep tooltip + label. */
 .repo-visibility.is-public { opacity: .45; }
 .repo-pages { position: absolute; right: var(--row-pad-end); top: var(--space-1); display: grid; place-items: center; width: var(--slot); height: var(--row-line); border-radius: 4px; color: var(--muted); }
 .repo-pages:hover { color: var(--green); }
 .repo-pages:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.recent-activity { width: 6px; height: 6px; border-radius: 50%; background: #25866a; }
-:root[data-theme="dark"] .recent-activity { background: var(--accent-green); }
+.recent-activity { width: 6px; height: 6px; border-radius: 50%; background: var(--unread); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 </style>

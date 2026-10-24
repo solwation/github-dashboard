@@ -25,6 +25,43 @@
   --chart-axis: #aab6b7;
   --chart-grid: #e4e8eb;
   --chart-text: #56696b;
+  /* Light values for tokens that started dark-only (#302). --card and --faint match what light
+     rules already use; --accent-red/--accent-amber match the existing light fallbacks. --tint-* and
+     --accent-green/-blue/-purple have no single light equivalent (light rules use several
+     different greens, blues and tints), so they stay dark-only: outside dark rules use them as
+     var(--accent-green, <light value>) or use a semantic token below. */
+  --card: var(--surface);
+  --faint: #87929a;
+  --accent-red: #b42332;
+  --accent-amber: #946000;
+  /* Semantic state colours (#302); dark values in the theme section. */
+  --status-backlog: #61727b;
+  --status-progress: #916010;
+  --status-closed: #287c66;
+  --unread: #25866a;
+  --unread-move-border: #2875ba;
+  --unread-move-ring: #2875ba55;
+  --unread-move-bg: #f1f8ff;
+  --unread-created-border: #39885b;
+  --unread-created-ring: #39885b33;
+  --unread-created-bg: #edf8f0;
+  --timeout-border: #b42332;
+  --timeout-ring: #b4233233;
+  --timeout-bg: #fff1f2;
+  --timeout-text: #9f1c2a;
+  --on-timeout: #fff;
+  --marker-move-bg: #dcecff;
+  --marker-move-text: #175b96;
+  --marker-created-bg: #d8efde;
+  --marker-created-text: #1c6239;
+  --badge-bg: #edf0f4;
+  --badge-text: #5b6b75;
+  --badge-progress-bg: #fbf1dd;
+  --badge-progress-text: #81621f;
+  --badge-closed-bg: #e8f3ee;
+  --badge-closed-text: #2b6d5c;
+  --diff-add: var(--green);
+  --diff-del: #ab3434;
   /* Layout tokens (#296): 4px grid spacing scale and icon sizes; theme independent. See DESIGN.md. */
   --space-1: 4px;
   --space-2: 8px;
@@ -720,7 +757,7 @@ h1 {
   align-items: center;
   flex: 1 1 0;
   flex-wrap: wrap;
-  gap: 4px 5px;
+  gap: var(--space-1);
   min-width: 0;
 }
 .card-top-main .issue-number { flex-shrink: 0; margin-right: 2px; }
@@ -729,7 +766,7 @@ h1 {
   color: #99a3a7;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
 }
 .issue-number svg {
   color: #94a3ab;
@@ -800,7 +837,7 @@ h1 {
 .card-bottom {
   margin-top: 12px;
   border-top: 1px solid #f0f2f3;
-  padding-top: 9px;
+  padding-top: var(--space-2);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1839,7 +1876,7 @@ button.lane-sync:focus-visible::after {
 .swimlane.list-mode .column-header { align-items: center; padding: 10px 18px 8px; }
 .swimlane.list-mode .cards { gap: 4px; padding: 6px 10px 8px; }
 .swimlane.list-mode .column-empty { min-height: 0; flex-direction: row; padding: 10px; }
-.issue-rows { container: issue-list / inline-size; display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.issue-rows { container: issue-list / inline-size; display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .issue-row { display: grid; grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6.5rem; align-items: center; gap: 4px 12px; min-height: 34px; padding: 5px 10px; border: 1px solid #edf0f2; border-radius: 6px; background: var(--surface); font-size: 12px; transition: border-color .15s; }
 .issue-row:hover { border-color: #b4c9c1; }
 .issue-row.has-repository { grid-template-columns: minmax(7rem, .55fr) 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6.5rem; }
@@ -1924,28 +1961,28 @@ button.lane-sync:focus-visible::after {
 }
 .row-close { display: inline-flex; align-items: center; align-self: flex-end; gap: 4px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer; }
 .row-close:hover { border-color: #b4c9c1; }
-.row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
+.row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
 /* List badges share text metrics, spacing, and neutral surfaces; custom labels keep their natural width. */
 .row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
-.row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: #edf0f4; color: #5b6b75; }
+.row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: var(--badge-bg); color: var(--badge-text); }
 .row-meta .label i { width: 9px; height: 9px; }
 .row-meta > .row-labels { display: flex; align-items: center; gap: 5px; flex: 1 1 0; min-width: 0; overflow: hidden; }
 .row-labels .label { flex: 0 1 auto; }
-.row-status { background: #edf0f4; color: #5b6b75; }
-.row-status.progress { background: #fbf1dd; color: #81621f; }
-.row-status.closed { background: #e8f3ee; color: #2b6d5c; }
-.row-timeout { background: #b42332; color: #fff; }
-.row-marker { border: 0; background: #dcecff; color: #175b96; cursor: pointer; }
-.row-marker:focus-visible { outline: 2px solid #175b96; outline-offset: -2px; }
-.unread-created .row-marker { background: #d8efde; color: #1c6239; }
-.unread-created .row-marker:focus-visible { outline-color: #1c6239; }
-.row-comment-marker { display: inline-flex; align-items: center; gap: 3px; background: #d8efde; color: #1c6239; border: 0; cursor: pointer; }
-.row-comment-marker:focus-visible { outline: 2px solid #1c6239; outline-offset: -2px; }
+.row-status { background: var(--badge-bg); color: var(--badge-text); }
+.row-status.progress { background: var(--badge-progress-bg); color: var(--badge-progress-text); }
+.row-status.closed { background: var(--badge-closed-bg); color: var(--badge-closed-text); }
+.row-timeout { background: var(--accent-red); color: var(--on-timeout); }
+.row-marker { border: 0; background: var(--marker-move-bg); color: var(--marker-move-text); cursor: pointer; }
+.row-marker:focus-visible { outline: 2px solid var(--marker-move-text); outline-offset: -2px; }
+.unread-created .row-marker { background: var(--marker-created-bg); color: var(--marker-created-text); }
+.unread-created .row-marker:focus-visible { outline-color: var(--marker-created-text); }
+.row-comment-marker { display: inline-flex; align-items: center; gap: 3px; background: var(--marker-created-bg); color: var(--marker-created-text); border: 0; cursor: pointer; }
+.row-comment-marker:focus-visible { outline: 2px solid var(--marker-created-text); outline-offset: -2px; }
 .row-comment-marker .comment-icon-animated { animation: comment-bounce 1.6s ease-in-out infinite; }
 .row-subtask-badge, .row-parent-badge { display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
-.row-subtask-badge { background: #edf0f4; color: #5b6b75; }
-.row-parent-badge { color: #1c6239; background: #d8efde; font-weight: 700; }
+.row-subtask-badge { background: var(--badge-bg); color: var(--badge-text); }
+.row-parent-badge { color: var(--marker-created-text); background: var(--marker-created-bg); font-weight: 700; }
 /* Activity keeps its reserved space at every width; status/priority columns align on wide rows.
    The movement/status group stays together when compact metadata wraps. */
 .row-slot { display: contents; }
@@ -1968,10 +2005,10 @@ button.lane-sync:focus-visible::after {
   .row-meta > .row-marker:not(.row-comment-marker) { order: 6; }
 }
 .row-time { justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; text-align: right; white-space: nowrap; }
-.row-time .backlog-age { color: #87929a; }
-.issue-row.unread-move { border-color: #2875ba; background: #f1f8ff; }
-.issue-row.unread-created { border-color: #39885b; background: #edf8f0; }
-.issue-row.issue-timeout { border-color: #b42332; background: #fff1f2; }
+.row-time .backlog-age { color: var(--faint); }
+.issue-row.unread-move { border-color: var(--unread-move-border); background: var(--unread-move-bg); }
+.issue-row.unread-created { border-color: var(--unread-created-border); background: var(--unread-created-bg); }
+.issue-row.issue-timeout { border-color: var(--timeout-border); background: var(--timeout-bg); }
 .issue-row.just-closed { animation: row-closed-glow 5s ease-out; }
 @keyframes row-closed-glow {
   0%, 25% { border-color: #49ab86; background: #e9f8ef; }
@@ -2044,6 +2081,33 @@ button.lane-sync:focus-visible::after {
   --chart-axis: #5d7176;
   --chart-grid: #2b3a3f;
   --chart-text: #a6b5b8;
+  --status-backlog: var(--muted);
+  --status-progress: var(--accent-amber);
+  --status-closed: var(--accent-green);
+  --unread: var(--accent-green);
+  --unread-move-border: #5b9be0;
+  --unread-move-ring: #5b9be055;
+  --unread-move-bg: #18293a;
+  --unread-created-border: #4fae78;
+  --unread-created-ring: #4fae7844;
+  --unread-created-bg: #172d24;
+  --timeout-border: #e06b78;
+  --timeout-ring: #e06b7833;
+  --timeout-bg: #33191d;
+  --timeout-text: var(--accent-red);
+  --on-timeout: #2a0d11;
+  --marker-move-bg: #1d3a5a;
+  --marker-move-text: #a9cdf5;
+  --marker-created-bg: #1d4532;
+  --marker-created-text: #a6e3bf;
+  --badge-bg: var(--hover);
+  --badge-text: var(--muted);
+  --badge-progress-bg: var(--tint-amber);
+  --badge-progress-text: var(--accent-amber);
+  --badge-closed-bg: var(--tint-green);
+  --badge-closed-text: var(--accent-green);
+  --diff-add: var(--accent-green);
+  --diff-del: var(--accent-red);
 }
 /* Repository palette colors are lifted toward white so every hue keeps at least 4:1 on dark surfaces. */
 :root[data-theme="dark"] .sidebar-repository .repo-dot,
@@ -2134,22 +2198,16 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .label { background: var(--surface-sunken); border-color: var(--line); }
 :root[data-theme="dark"] .card-bottom { border-top-color: var(--line); }
 :root[data-theme="dark"] .timer { color: var(--accent-amber); }
-:root[data-theme="dark"] .backlog-age { color: var(--faint); }
-:root[data-theme="dark"] .additions { color: var(--accent-green); }
-:root[data-theme="dark"] .deletions { color: var(--accent-red); }
 :root[data-theme="dark"] .column-empty { border-color: var(--line); }
 :root[data-theme="dark"] .show-more,
 :root[data-theme="dark"] .empty-state > svg,
 :root[data-theme="dark"] .welcome .eyebrow,
 :root[data-theme="dark"] .intro-tag { color: var(--accent-green); }
-:root[data-theme="dark"] .issue-card.unread-move { border-color: #5b9be0; box-shadow: 0 0 0 2px #5b9be055; background: #18293a; }
-:root[data-theme="dark"] .issue-card.unread-created { border-color: #4fae78; box-shadow: 0 0 0 2px #4fae7844; background: #172d24; }
-:root[data-theme="dark"] .issue-card.issue-timeout { border-color: #e06b78; background: #33191d; box-shadow: 0 0 0 2px #e06b7833; }
-:root[data-theme="dark"] .movement-marker { background: #1d3a5a; color: #a9cdf5; }
-:root[data-theme="dark"] .movement-marker:focus-visible { outline-color: #a9cdf5; }
-:root[data-theme="dark"] .unread-created .movement-marker { background: #1d4532; color: #a6e3bf; }
-:root[data-theme="dark"] .unread-created .movement-marker:focus-visible { outline-color: #a6e3bf; }
-:root[data-theme="dark"] .timeout-warning { color: var(--accent-red); }
+/* State colours come from tokens; these dark selectors stay only to outrank the dark
+   .issue-card base and :hover rules above, as the light rules outrank the light ones. */
+:root[data-theme="dark"] .issue-card.unread-move { border-color: var(--unread-move-border); box-shadow: 0 0 0 2px var(--unread-move-ring); background: var(--unread-move-bg); }
+:root[data-theme="dark"] .issue-card.unread-created { border-color: var(--unread-created-border); box-shadow: 0 0 0 2px var(--unread-created-ring); background: var(--unread-created-bg); }
+:root[data-theme="dark"] .issue-card.issue-timeout { border-color: var(--timeout-border); background: var(--timeout-bg); box-shadow: 0 0 0 2px var(--timeout-ring); }
 :root[data-theme="dark"] .notice { border-color: #3a4530; background: #1d241a; color: #c3cfaa; }
 :root[data-theme="dark"] .notice.error { background: var(--tint-red); border-color: #6a343a; color: var(--accent-red); }
 :root[data-theme="dark"] .demo-notice,
@@ -2170,9 +2228,6 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .granted,
 :root[data-theme="dark"] .public-read { color: var(--accent-green); }
 :root[data-theme="dark"] .missing { color: var(--accent-red); }
-:root[data-theme="dark"] .sidebar-repository .backlog { color: var(--muted); }
-:root[data-theme="dark"] .sidebar-repository .progress { color: var(--accent-amber); }
-:root[data-theme="dark"] .sidebar-repository .closed { color: var(--accent-green); }
 :root[data-theme="dark"] :is(input:not([type]), input[type="text"], input[type="search"], input[type="password"], input[type="number"], input[type="date"], select, textarea) {
   background-color: var(--surface-sunken);
   color: var(--text);
@@ -2214,22 +2269,14 @@ button.lane-sync:focus-visible::after {
 :root[data-theme="dark"] .row-popup-close { color: var(--muted); }
 :root[data-theme="dark"] .row-popup-close:hover { background: var(--hover); color: var(--text-strong); }
 :root[data-theme="dark"] .row-close { background: var(--card); border-color: #30424a; }
-:root[data-theme="dark"] .row-meta .label,
-:root[data-theme="dark"] .row-status { background: var(--hover); color: var(--muted); }
-:root[data-theme="dark"] .row-status.progress { background: var(--tint-amber); color: var(--accent-amber); }
-:root[data-theme="dark"] .row-status.closed { background: var(--tint-green); color: var(--accent-green); }
-:root[data-theme="dark"] .row-timeout { background: var(--accent-red); color: #2a0d11; }
-:root[data-theme="dark"] .row-marker { background: #1d3a5a; color: #a9cdf5; }
-:root[data-theme="dark"] .row-marker:focus-visible { outline-color: #a9cdf5; }
-:root[data-theme="dark"] .unread-created .row-marker { background: #1d4532; color: #a6e3bf; }
-:root[data-theme="dark"] .unread-created .row-marker:focus-visible { outline-color: #a6e3bf; }
-:root[data-theme="dark"] .row-comment-marker { background: #1d4532; color: #a6e3bf; }
-:root[data-theme="dark"] .row-comment-marker:focus-visible { outline-color: #a6e3bf; }
-:root[data-theme="dark"] .row-subtask-badge { background: var(--hover); color: var(--muted); }
-:root[data-theme="dark"] .row-parent-badge { background: #1d4532; color: #a6e3bf; }
-:root[data-theme="dark"] .issue-row.unread-move { border-color: #5b9be0; background: #18293a; }
-:root[data-theme="dark"] .issue-row.unread-created { border-color: #4fae78; background: #172d24; }
-:root[data-theme="dark"] .issue-row.issue-timeout { border-color: #e06b78; background: #33191d; }
+/* Row badge and state colours come from tokens. These dark selectors stay only for the cascade:
+   .row-meta .label must outrank the dark .label rules, .row-comment-marker the phone
+   .row-mobile-activity chip, and the row states the dark .issue-row base and :hover rules. */
+:root[data-theme="dark"] .row-meta .label { background: var(--badge-bg); color: var(--badge-text); }
+:root[data-theme="dark"] .row-comment-marker { background: var(--marker-created-bg); color: var(--marker-created-text); }
+:root[data-theme="dark"] .issue-row.unread-move { border-color: var(--unread-move-border); background: var(--unread-move-bg); }
+:root[data-theme="dark"] .issue-row.unread-created { border-color: var(--unread-created-border); background: var(--unread-created-bg); }
+:root[data-theme="dark"] .issue-row.issue-timeout { border-color: var(--timeout-border); background: var(--timeout-bg); }
 :root[data-theme="dark"] .issue-row.just-closed { animation-name: row-closed-glow-dark; }
 @keyframes row-closed-glow-dark {
   0%, 25% { border-color: #4fae78; background: #173a2b; }

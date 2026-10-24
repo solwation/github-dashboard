@@ -93,9 +93,12 @@ Verification is part of the [AI.md project rules](AI.md#project-and-verification
 ## 5. Colour
 
 - Use the theme tokens only: `--bg`, `--surface`, `--text`, `--muted`, `--line`, `--green`,
-  `--on-green`, `--hover`, `--focus`, `--input-border`, `--code-bg`, `--chart-*`, and the dark
-  theme's `--card`, `--faint`, `--tint-*`, `--accent-*` (give these a light fallback,
-  `var(--accent-red, #b42332)`, or define a light value, when used outside dark rules).
+  `--on-green`, `--hover`, `--focus`, `--input-border`, `--code-bg`, `--chart-*`, `--card`,
+  `--faint`, `--tint-*`, `--accent-*`, and the semantic state tokens (`--status-*`, `--unread*`,
+  `--timeout-*`, `--marker-*`, `--badge-*`, `--diff-add`/`--diff-del`). `--card`, `--faint`,
+  `--accent-red` and `--accent-amber` have light values; `--tint-*` and
+  `--accent-green/-blue/-purple` are dark-only, so give them a light fallback
+  (`var(--accent-green, #147d69)`) or use a semantic token when used outside dark rules.
 - **No new hard-coded colours** in component or rule bodies. If a colour is missing, add a
   token with both a light value (`:root`) and a dark value (`:root[data-theme="dark"]`).
   Repository colours come from `--repository-color` mixed with `color-mix()`.

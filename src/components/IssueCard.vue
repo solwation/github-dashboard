@@ -364,17 +364,17 @@ const visibleLabels = computed(() =>
 
 .backlog-age {
   font-size: 9px;
-  color: #87929a;
+  color: var(--faint);
 }
-.issue-card.unread-move { border-color: #2875ba; box-shadow: 0 0 0 2px #2875ba55; background: #f1f8ff; }
-.issue-card.unread-created { border-color: #39885b; box-shadow: 0 0 0 2px #39885b33; background: #edf8f0; }
-.issue-card.issue-timeout { border-color: #b42332; background: #fff1f2; box-shadow: 0 0 0 2px #b4233233; }
-.timeout-warning { color: #9f1c2a; font-size: .75rem; line-height: 1.5; }
+.issue-card.unread-move { border-color: var(--unread-move-border); box-shadow: 0 0 0 2px var(--unread-move-ring); background: var(--unread-move-bg); }
+.issue-card.unread-created { border-color: var(--unread-created-border); box-shadow: 0 0 0 2px var(--unread-created-ring); background: var(--unread-created-bg); }
+.issue-card.issue-timeout { border-color: var(--timeout-border); background: var(--timeout-bg); box-shadow: 0 0 0 2px var(--timeout-ring); }
+.timeout-warning { color: var(--timeout-text); font-size: .75rem; line-height: 1.5; }
 .timeout-warning p { margin: .7rem 0 .4rem; }
-.movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: #dcecff; color: #175b96; font-size: .72rem; font-weight: 700; cursor: pointer; }
-.movement-marker:focus-visible { outline: 2px solid #175b96; outline-offset: 2px; }
-.unread-created .movement-marker { background: #d8efde; color: #1c6239; }
-.unread-created .movement-marker:focus-visible { outline-color: #1c6239; }
+.movement-marker { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: .4rem; border: 0; border-radius: .35rem; padding: .35rem .5rem; margin-bottom: .6rem; background: var(--marker-move-bg); color: var(--marker-move-text); font-size: .72rem; font-weight: 700; cursor: pointer; }
+.movement-marker:focus-visible { outline: 2px solid var(--marker-move-text); outline-offset: 2px; }
+.unread-created .movement-marker { background: var(--marker-created-bg); color: var(--marker-created-text); }
+.unread-created .movement-marker:focus-visible { outline-color: var(--marker-created-text); }
 .closing-commit {
   display: flex;
   align-items: center;
@@ -402,10 +402,10 @@ const visibleLabels = computed(() =>
   font-variant-numeric: tabular-nums;
 }
 .additions {
-  color: #147d69;
+  color: var(--diff-add);
 }
 .deletions {
-  color: #ab3434;
+  color: var(--diff-del);
 }
 .closing-commit button {
   border: 1px solid var(--line);
