@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Circle, CircleCheck, Clock3, Plus } from "@lucide/vue";
+import { Circle, CircleCheck, Clock3, Globe, Lock, Plus, SquareArrowOutUpRight } from "@lucide/vue";
 import RepositoryOrderControls from "./RepositoryOrderControls.vue";
 import { repositoryColor } from "../lib/repository-color";
 import { projectDragType } from "../lib/project-layout";
@@ -49,10 +49,12 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="(repo, index) in repos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
     <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
-    <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
+    <div class="repo-body">
+    <a class="repo-nav sidebar-repository" :class="{ 'has-pages': repo.pagesUrl }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repository-name">
         <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
         <span class="repository-label">{{ repo.name }}</span>
+        <component :is="repo.private ? Lock : Globe" v-if="repo.private !== undefined" class="repo-visibility" :size="11" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')" />
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
       </span>
       <span v-if="repo.loading" class="repository-counts">{{ t("Hämtar…") }}</span>
@@ -63,6 +65,8 @@ function lastChange(changedAt: string | null) {
       </span>
       <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
     </a>
+    <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><SquareArrowOutUpRight :size="11" aria-hidden="true" /></a>
+    </div>
     </div>
     <div v-if="restoring && !repos.length" class="sidebar-placeholder" aria-hidden="true"><span /><span /><span /></div>
     <p v-else-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
@@ -74,6 +78,7 @@ function lastChange(changedAt: string | null) {
 .sidebar-placeholder span:nth-child(2) { width: 65%; }
 .sidebar-projects { min-height: 0; overflow-y: auto; }
 .sidebar-repository-row { display: flex; align-items: flex-start; gap: 4px; margin-top: 14px; min-width: 0; }
+.repo-body { position: relative; flex: 1; min-width: 0; display: flex; }
 .sidebar-repository {
   flex: 1;
   min-width: 0;
@@ -94,6 +99,11 @@ function lastChange(changedAt: string | null) {
 .backlog { color: #61727b; }
 .progress { color: #916010; }
 .closed { color: #287c66; }
+.repo-visibility { flex-shrink: 0; color: var(--muted); opacity: .8; }
+.has-pages .repository-name { padding-right: 20px; }
+.repo-pages { position: absolute; right: 3px; top: 0; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; color: var(--muted); }
+.repo-pages:hover { color: var(--green); }
+.repo-pages:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .recent-activity { flex-shrink: 0; margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: #25866a; box-shadow: 0 0 0 3px #25866a14; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 </style>

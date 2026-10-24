@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recentlyChanged, summarizeLanes } from "../src/lib/sidebar";
+import { pagesUrl, recentlyChanged, summarizeLanes } from "../src/lib/sidebar";
 import type { Issue, Lane } from "../src/lib/model";
 const issue = (id: number, labels: string[] = [], overrides: Partial<Issue> = {}): Issue => ({
   id, number: id, title: `Task ${id}`, html_url: "https://github.com/example/project/issues/1",
@@ -43,5 +43,22 @@ describe("sidebar summaries", () => {
     expect(recentlyChanged("2026-10-15T12:00:01Z", now)).toBe(false);
     expect(recentlyChanged(null, now)).toBe(false);
     expect(recentlyChanged("invalid", now)).toBe(false);
+  });
+});
+
+describe("sidebar visibility and Pages link", () => {
+  const repo = (name: string, extra: object = {}) => ({ id: 1, name, full_name: `Example/${name}`, description: null, html_url: "x", owner: { login: "Example" }, ...extra }) as never;
+  it("builds standard and user-site Pages addresses with a lowercase host", () => {
+    expect(pagesUrl(repo("project", { private: false, has_pages: true }))).toBe("https://example.github.io/project/");
+    expect(pagesUrl(repo("Example.github.io", { private: false, has_pages: true }))).toBe("https://example.github.io/");
+  });
+  it("hides visibility and Pages when the data is unknown or Pages is off", () => {
+    const summary = (r: object) => summarizeLanes([{ repo: r, labels: [], issues: [] } as Lane], {}, true)[0]!;
+    const unknown = summary(repo("project"));
+    expect(unknown).not.toHaveProperty("private");
+    expect(unknown).not.toHaveProperty("pagesUrl");
+    expect(summary(repo("project", { private: true, has_pages: false }))).toMatchObject({ private: true });
+    expect(summary(repo("project", { private: true, has_pages: false }))).not.toHaveProperty("pagesUrl");
+    expect(summary(repo("project", { private: false, has_pages: true }))).toMatchObject({ private: false, pagesUrl: "https://example.github.io/project/" });
   });
 });

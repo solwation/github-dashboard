@@ -41,6 +41,8 @@ export interface Repo {
   full_name: string;
   description: string | null;
   private: boolean;
+  /** GitHub Pages enabled; absent when the API data does not say. */
+  has_pages?: boolean;
   html_url: string;
   owner: { login: string };
   language?: string | null;
