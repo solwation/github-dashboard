@@ -79,6 +79,7 @@ Run affected tests locally before pushing; use `npm run build` for code changes.
 - [Setup, OAuth, security and board behavior](docs/guide.md)
 - [Issue workflow instructions for AI assistants](public/ISSUEFLOW.md)
 - [Repository development workflow](AI.md)
+- [Design rules for UI changes](DESIGN.md)
 - [Shared orchestra and this project's policy](.orchestra/project.md)
 
 `/orkester` uses [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern)
