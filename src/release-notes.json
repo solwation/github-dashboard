@@ -24,6 +24,15 @@
         "issues": [
           291
         ]
+      },
+      {
+        "text": {
+          "sv": "Issuenummer linjerar på kort med och utan typikon, och ikonerna i kort och listrader har samma storlek.",
+          "en": "Issue numbers line up on cards with and without a type icon, and icons in cards and list rows share one size."
+        },
+        "issues": [
+          297
+        ]
       }
     ]
   },

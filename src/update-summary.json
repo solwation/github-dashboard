@@ -1,10 +1,11 @@
 {
   "baseCommit": "917a998bfae46c8a404453de09e547b98487f2f5",
   "summary": {
-    "sv": "Ikonerna i sidomenyn står nu i fasta, linjerade kolumner och är lugnare, och antalen linjerar under namnen.",
-    "en": "Sidebar icons now sit in fixed, aligned columns with a calmer look, and the counts line up under the names."
+    "sv": "Ikonerna i sidomenyn står i fasta, linjerade kolumner, och issuenummer och ikoner i kort och listrader linjerar bättre.",
+    "en": "Sidebar icons sit in fixed, aligned columns, and issue numbers and icons in cards and list rows line up better."
   },
   "issues": [
-    295
+    295,
+    297
   ]
 }
