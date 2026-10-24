@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
+import { computed, inject, nextTick, onBeforeUnmount, provide, ref, useId, watch } from "vue";
 import { MessageCircle, X } from "@lucide/vue";
+import { imageGalleryKey, type ImageSource } from "../lib/comment-images";
 import CommentImages from "./CommentImages.vue";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
@@ -39,6 +40,13 @@ const rendered = computed(() => [...comments.value].sort((a, b) => {
   const first = Date.parse(a.created_at), second = Date.parse(b.created_at);
   return (Number.isFinite(second) ? second : -Infinity) - (Number.isFinite(first) ? first : -Infinity) || 0;
 }).map(comment => ({ ...comment, markdown: markdown.renderer.value?.(comment.body) })));
+// Compact list rows render comments directly, outside IssueDetails.
+const gallery = inject(imageGalleryKey, undefined) ?? {
+  description: computed(() => markdown.renderer.value?.(props.issue.body) ?? ""),
+  comments: ref<ImageSource[]>([]),
+};
+provide(imageGalleryKey, gallery);
+watch(rendered, value => { gallery.comments.value = value.map(comment => ({ key: String(comment.id), html: comment.markdown ?? "" })); }, { immediate: true });
 function safeUrl(value: string) {
   try { const url = new URL(value); return url.origin === "https://github.com" ? url.href : undefined; }
   catch { return undefined; }
@@ -143,7 +151,7 @@ onBeforeUnmount(clear);
                   :title="dateLabel(comment.created_at)" :aria-label="dateLabel(comment.created_at)" aria-live="off">{{ commentTimeLabel(comment.created_at, now, locale) }}</time>
                 <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
               </div>
-              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown"><CommentImages :html="comment.markdown" /></div>
+              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown"><CommentImages :gallery-source="String(comment.id)" :html="comment.markdown" /></div>
               <p v-else-if="comment.body?.trim()" class="comment-markdown plain-comment">{{ comment.body }}</p>
               <p v-else class="comments-status">{{ t('Kommentaren saknar text.') }}</p>
             </article>

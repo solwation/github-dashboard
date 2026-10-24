@@ -2,8 +2,8 @@
   {
     "date": "2026-10-24",
     "summary": {
-      "sv": "Sidomenyn visar om ett repository är privat eller publikt och länkar till GitHub Pages; översiktens kort för repositories och stängda ger mer information.",
-      "en": "The sidebar shows whether a repository is private or public and links to GitHub Pages; the overview's repository and closed cards show more detail."
+      "sv": "Sidomenyn, översikten och listorna är tydligare; bildvisaren låter dig bläddra med knappar, piltangenter och svep.",
+      "en": "The sidebar, overview and lists are clearer; browse issue images with buttons, arrow keys and swipes."
     },
     "sections": [
       {
@@ -72,6 +72,15 @@
         "issues": [
           302,
           306
+        ]
+      },
+      {
+        "text": {
+          "sv": "Bläddra mellan ärendets bilder med föregående/nästa, piltangenter eller svep, medan zoom och panorering fungerar som tidigare.",
+          "en": "Browse issue images with previous/next buttons, arrow keys or swipes while keeping the existing zoom and pan controls."
+        },
+        "issues": [
+          307
         ]
       }
     ]

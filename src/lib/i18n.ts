@@ -37,6 +37,10 @@ export const locale = computed(() =>
 export const english: Record<string, string> = {
   "Bild": "Image",
   "Öppna bild: {name}": "Open image: {name}",
+  "Bildnavigering": "Image navigation",
+  "Föregående bild": "Previous image",
+  "Nästa bild": "Next image",
+  "Bild {current} av {total}": "Image {current} of {total}",
   "Bildvisare": "Image viewer",
   "Zooma ut": "Zoom out",
   "Zooma in": "Zoom in",

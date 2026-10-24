@@ -5,14 +5,15 @@ const timestamp = "2026-10-15T12:00:00Z";
 function comment(id: number, body: string) {
   return { id, body, html_url: `https://github.com/sample/comment-project/issues/1#issuecomment-${id}`, created_at: timestamp, user: { login: "fictional-author" } };
 }
-async function connect(page: Page, onComments: (route: Route, url: URL) => Promise<void>) {
+async function connect(page: Page, onComments: (route: Route, url: URL) => Promise<void>, issueBody?: string, otherIssueBody?: string) {
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/comments")) return onComments(route, url);
     let result: unknown = [];
     if (url.pathname === "/user") result = { login: "sample", avatar_url: "https://github.com/identicons/sample.png" };
     else if (url.pathname === "/user/repos") result = [repo];
-    else if (url.pathname.endsWith("/issues") && ["open", "all"].includes(url.searchParams.get("state") || "")) result = [{ id: 891, number: 1, title: "Commented task", comments: 102, html_url: "https://github.com/sample/comment-project/issues/1", state: "open", created_at: timestamp, updated_at: timestamp, closed_at: null, labels: [], assignees: [] }];
+    else if (url.pathname.endsWith("/issues") && ["open", "all"].includes(url.searchParams.get("state") || "")) result = [{ id: 891, number: 1, title: "Commented task", body: issueBody, comments: 102, html_url: "https://github.com/sample/comment-project/issues/1", state: "open", created_at: timestamp, updated_at: timestamp, closed_at: null, labels: [], assignees: [] }];
+    if (otherIssueBody && Array.isArray(result) && result.some(item => item.id === 891)) result.push({ ...result[0], id: 892, number: 2, title: "Other fixture issue", body: otherIssueBody, comments: 0 });
     await route.fulfill({ json: result });
   });
   await page.goto("/");
@@ -409,3 +410,83 @@ async function assertImageFits(viewer: Locator, width: number, height: number) {
       image.y >= area.y - 1 && image.bottom <= area.bottom + 1;
   }, { width, height })).toBe(true);
 }
+
+
+for (const scenario of [
+  { name: "desktop", width: 1600, height: 1000, mobile: false },
+  { name: "rail", width: 950, height: 900, mobile: false },
+  { name: "portrait", width: 390, height: 844, mobile: true },
+  { name: "landscape", width: 844, height: 390, mobile: true },
+]) test(`issue image navigation ${scenario.name}`, async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ viewport: scenario, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE" });
+  const page = await context.newPage();
+  await page.route("https://images.example/**", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200"><rect width="1800" height="1200" fill="#287f83"/></svg>' }));
+  await connect(page, route => route.fulfill({ json: [comment(1, "![First](https://images.example/first.png)\n\n![Repeated](https://images.example/first.png)"), comment(2, "[Last](https://images.example/last.png)")] }), "![Description](https://images.example/description.png)", "![Other issue image](https://images.example/other.png)");
+  if (scenario.name === "desktop") await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
+  const card = scenario.name === "desktop" ? page.locator(".issue-row").first() : page.locator(".issue-card").first();
+  if (scenario.name === "desktop") await page.locator(".issue-row").nth(1).locator(".row-title").click();
+  else await page.locator(".issue-card").nth(1).getByRole("button", { name: "Läs mer", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Öppna bild: Other issue image", exact: true })).toBeVisible();
+  // The description is collapsed, but its images belong to the same issue gallery.
+  await card.getByRole("button", { name: "102 kommentarer", exact: true }).click();
+  const discussion = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+  const opener = discussion.getByRole("button", { name: "Öppna bild: Repeated", exact: true });
+  await opener.click();
+  const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
+  const previous = viewer.getByRole("button", { name: "Föregående bild", exact: true });
+  const next = viewer.getByRole("button", { name: "Nästa bild", exact: true });
+  await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 3 av 4");
+  await next.click();
+  await expect(viewer.locator("img")).toHaveAttribute("src", "https://images.example/last.png");
+  await expect(next).toBeDisabled();
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 4 av 4");
+  await page.keyboard.press("ArrowLeft");
+  await expect(viewer.locator("img")).toHaveAttribute("alt", "Repeated");
+  await previous.click();
+  await page.keyboard.press("ArrowLeft");
+  await expect(viewer.locator("img")).toHaveAttribute("alt", "Description");
+  await expect(previous).toBeDisabled();
+  await page.keyboard.press("ArrowLeft");
+  await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 1 av 4");
+  await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
+  await viewer.locator(".image-viewport").evaluate(el => el.scrollTo(100, 100));
+  await page.keyboard.press("ArrowRight");
+  await assertImageFits(viewer, 1800, 1200);
+  await expect(viewer.locator(".image-viewport")).toHaveJSProperty("scrollLeft", 0);
+  await expect(viewer.locator(".image-viewport")).toHaveJSProperty("scrollTop", 0);
+  if (scenario.mobile) {
+    const client = await context.newCDPSession(page);
+    const area = (await viewer.locator(".image-viewport").boundingBox())!;
+    const x = area.x + area.width / 2, y = area.y + area.height / 2;
+    async function swipe(dx: number, dy = 0) {
+      await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y, id: 1 }] });
+      await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x + dx, y: y + dy, id: 1 }] });
+      await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    }
+    await swipe(-80);
+    await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 3 av 4");
+    await swipe(80);
+    await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 2 av 4");
+    await swipe(10, 60);
+    await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 2 av 4");
+    await viewer.getByRole("button", { name: "Originalstorlek", exact: true }).click();
+    await swipe(-80);
+    await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 2 av 4");
+    await viewer.getByRole("button", { name: "Anpassa", exact: true }).click();
+  }
+  await page.screenshot({ path: testInfo.outputPath("navigation-light.png") });
+  await page.evaluate(() => document.documentElement.dataset.theme = "dark");
+  await page.screenshot({ path: testInfo.outputPath("navigation-dark.png") });
+  await page.keyboard.press("Escape");
+  await expect(opener).toBeFocused();
+  await discussion.getByRole("button", { name: "Stäng kommentarer", exact: true }).click();
+  if (scenario.name === "desktop") await card.locator(".row-title").click();
+  else await card.getByRole("button", { name: "Läs mer", exact: true }).click();
+  await card.getByRole("button", { name: "Öppna bild: Description", exact: true }).click();
+  // Closed comment dialogs supply no stale images; another issue cannot enter this gallery.
+  await expect(viewer.locator(".image-navigation")).toHaveCount(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer.locator("img")).toHaveAttribute("alt", "Description");
+  await context.close();
+});

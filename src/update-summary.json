@@ -1,17 +1,10 @@
 {
-  "baseCommit": "b7daa90accace0e9685e3ba1da42d9260040fcfe",
+  "baseCommit": "76763739bdb7e3436a8d52ab0462f60b433a296a",
   "summary": {
-    "sv": "Tooltips på ikonknappar, enhetliga ikoner och märken, stabila mobilmärken, mörkt tema i mobillistan och startknappar utan sidscroll.",
-    "en": "Icon button tooltips, consistent icons and badges, stable phone chips, dark theme in the phone list and start buttons without sideways scroll."
+    "sv": "Bläddra mellan ärendets bilder med knappar, piltangenter eller svep i bildvisaren.",
+    "en": "Browse the issue’s images with buttons, arrow keys or swipes in the image viewer."
   },
   "issues": [
-    298,
-    299,
-    300,
-    301,
-    302,
-    304,
-    305,
-    306
+    307
   ]
 }

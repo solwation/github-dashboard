@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId, watch } from "vue";
+import { computed, provide, ref, useId, watch } from "vue";
 import { ChevronDown, ChevronUp } from "@lucide/vue";
 import type { SubIssueProgress } from "../lib/issue-relations";
 import IssueSubIssues from "./IssueSubIssues.vue";
@@ -7,6 +7,7 @@ import IssueComments from "./IssueComments.vue";
 import CommentImages from "./CommentImages.vue";
 import type { Issue, IssueComment } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
+import { imageGalleryKey, type ImageSource } from "../lib/comment-images";
 import { useMarkdown } from "../lib/lazy-markdown";
 
 const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
@@ -23,7 +24,9 @@ watch(() => props.defaultExpanded, value => { if (value) expanded.value = true; 
 watch([expanded, () => props.body], ([open, body]) => { if (open && body?.trim()) void markdown.load(); }, { immediate: true });
 const panelId = useId();
 const count = computed(() => Math.max(0, Math.floor(props.comments ?? 0)));
-const rendered = computed(() => expanded.value && markdown.renderer.value ? markdown.renderer.value(props.body) : "");
+const rendered = computed(() => markdown.renderer.value ? markdown.renderer.value(props.body) : "");
+const commentImages = ref<ImageSource[]>([]);
+provide(imageGalleryKey, { description: rendered, comments: commentImages });
 </script>
 <template>
   <div class="issue-details">
@@ -35,7 +38,7 @@ const rendered = computed(() => expanded.value && markdown.renderer.value ? mark
     </div>
     <section v-if="expanded" :id="panelId" class="details-panel" :aria-label="t('Beskrivning')">
       <template v-if="body?.trim()">
-        <CommentImages v-if="markdown.renderer.value" content-class="issue-markdown" :html="rendered" />
+        <CommentImages v-if="markdown.renderer.value" gallery-source="description" content-class="issue-markdown" :html="rendered" />
         <!-- Without the Markdown chunk (offline before it was cached), show the source as safe plain text. -->
         <p v-else-if="markdown.failed.value" class="issue-markdown plain-description">{{ body }}</p>
         <p v-else class="empty-description" role="status" aria-busy="true">{{ t("Hämtar beskrivning…") }}</p>
