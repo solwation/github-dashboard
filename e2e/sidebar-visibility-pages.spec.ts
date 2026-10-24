@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
 import { revealPhoneMenu } from './support/phone-menu';
 
 const long = 'a-very-long-repository-name-that-must-keep-its-ellipsis-in-the-slim-sidebar';
@@ -17,7 +16,7 @@ const scenarios = [
 ];
 for (const scenario of scenarios) test.describe(scenario.name, () => {
   test.use({ viewport: scenario.viewport, isMobile: scenario.mobile, hasTouch: scenario.mobile });
-  test('sidebar shows visibility and a separate Pages link without activating the row', async ({ page }) => {
+  test('sidebar shows visibility and a separate Pages link without activating the row', async ({ page }, testInfo) => {
   await page.route('https://api.github.com/**', async route => {
     const url = new URL(route.request().url());
     let data: unknown = [];
@@ -35,8 +34,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   if (scenario.mobile) { // The repository sidebar is not part of the phone layout (<=650px / <=950px).
     await expect(page.locator('.sidebar-projects')).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-    mkdirSync('.evidence', { recursive: true });
-    await page.screenshot({ path: '.evidence/sidebar-pages-phone.png' });
+    await page.screenshot({ path: testInfo.outputPath('sidebar-pages-phone.png') });
     return;
   }
   const rows = page.locator('.sidebar-repository-row');
@@ -50,8 +48,6 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   await expect(row('Sample.github.io').locator('.repo-pages')).toHaveAttribute('href', 'https://sample.github.io/');
   await expect(row('site').locator('.repo-pages')).toHaveAttribute('target', '_blank');
   await expect(row('site').locator('a a')).toHaveCount(0);
-  mkdirSync('.evidence', { recursive: true });
-  await page.screenshot({ path: `.evidence/sidebar-pages-${scenario.name}-before.png` });
   // Clicking the Pages link must not activate the row.
   const hash = await page.evaluate(() => location.hash);
   const [popup] = await Promise.all([page.waitForEvent('popup'), row('site').locator('.repo-pages').click()]);
@@ -63,7 +59,6 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     return { clipped: label.scrollWidth > label.clientWidth, over: document.documentElement.scrollWidth > innerWidth, bodyOver: body.scrollWidth > body.clientWidth };
   });
   expect(box).toEqual({ clipped: true, over: false, bodyOver: false });
-  mkdirSync('.evidence', { recursive: true });
-  await page.screenshot({ path: `.evidence/sidebar-pages-${scenario.name}.png` });
+  await page.screenshot({ path: testInfo.outputPath(`sidebar-pages-${scenario.name}.png`) });
 });
 });
