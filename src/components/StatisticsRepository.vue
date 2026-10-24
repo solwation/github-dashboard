@@ -219,8 +219,8 @@ function clearFilters() {
     <template v-if="hasOpened">
     <StatisticsLoadingProgress v-if="loading && loadStatus" :status="loadStatus" />
     <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
-      <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="13" aria-hidden="true" /></button>
-      <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="13" aria-hidden="true" /></button>
+      <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="12" aria-hidden="true" /></button>
+      <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="12" aria-hidden="true" /></button>
       <button type="button" class="statistics-filter-clear" @click="clearFilters">{{ t("Rensa filter") }}</button>
     </div>
     <div v-if="loading && !data" class="statistics-repository-loading" role="status" aria-live="polite">

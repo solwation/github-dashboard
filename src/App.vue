@@ -1811,12 +1811,12 @@ onMounted(async () => {
     <nav class="workspace-navigation">
     <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')" aria-describedby="overview-unread-count"
       :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined">
-      <LayoutDashboard :size="18" /> {{ t("Översikt") }}
+      <LayoutDashboard :size="20" /> {{ t("Översikt") }}
       <span id="overview-unread-count" class="nav-count" :title="t('{count} olästa händelser', { count: unreadOverviewCount })" :aria-label="t('{count} olästa händelser', { count: unreadOverviewCount })">{{ unreadOverviewCount }}</span>
     </a>
     <a v-if="workspaceOpen" class="nav-item statistics-nav" :class="{ active: currentView === 'statistics' }" href="#statistics"
       :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined">
-      <Activity :size="18" /><span>{{ t("Statistik") }}</span>
+      <Activity :size="20" /><span>{{ t("Statistik") }}</span>
     </a>
     </nav>
     <SidebarRepositories
@@ -1834,7 +1834,7 @@ onMounted(async () => {
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
     <a class="sidebar-footer" href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
-      <Github :size="19" aria-hidden="true" />
+      <Github :size="20" aria-hidden="true" />
       <span class="sidebar-credits">
         <span>Olof Wingren</span>
         <small class="sidebar-license-label">MIT License</small>
@@ -1848,13 +1848,13 @@ onMounted(async () => {
         <span class="breadcrumb-context">Workspace <i>/</i></span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <nav class="mobile-navigation" :aria-label="t('Navigering')">
-        <a href="#overview" :aria-label="t('Översikt')" :title="t('Översikt')" :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
-        <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="18" /></a>
-        <button type="button" class="mobile-search-link" :aria-label="t('Sök issues')" :title="t('Sök issues')" @click="openIssueSearch"><Search :size="18" /></button>
+        <a href="#overview" :aria-label="t('Översikt')" :title="t('Översikt')" :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="20" /></a>
+        <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="20" /></a>
+        <button type="button" class="mobile-search-link" :aria-label="t('Sök issues')" :title="t('Sök issues')" @click="openIssueSearch"><Search :size="20" /></button>
         <button v-if="workspaceOpen && currentView === 'overview'" ref="mobileBoardNavigatorButton" type="button" class="mobile-search-link mobile-board-navigator-toggle"
           :aria-label="t('Hoppa till repository eller status')" :title="t('Hoppa till repository eller status')"
           aria-controls="mobile-board-navigator" :aria-expanded="mobileBoardNavigatorOpen"
-          @click="mobileBoardNavigatorOpen = !mobileBoardNavigatorOpen" @keydown.esc.prevent="closeMobileBoardNavigator(true)"><ChevronDown :size="18" /></button>
+          @click="mobileBoardNavigatorOpen = !mobileBoardNavigatorOpen" @keydown.esc.prevent="closeMobileBoardNavigator(true)"><ChevronDown :size="20" /></button>
       </nav>
       <div v-if="workspaceOpen && currentView === 'overview' && mobileBoardNavigatorOpen" id="mobile-board-navigator" class="mobile-board-navigator"
         role="group" :aria-label="t('Snabbnavigering mellan repositories och status')" @keydown.esc.prevent="closeMobileBoardNavigator(true)">
@@ -1878,7 +1878,7 @@ onMounted(async () => {
       <!-- Phones hide the sidebar, so its update badge is repeated beside the menu (#270). -->
       <button v-if="updateAvailable" ref="mobileUpdateBadge" type="button" class="mobile-update-badge" aria-haspopup="dialog"
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
-      <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="19" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
+      <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="20" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
         <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
@@ -1903,7 +1903,7 @@ onMounted(async () => {
             :aria-label="t('Logga ut')"
             :title="t('Logga ut')"
           >
-            <LogOut :size="17" /><span class="mobile-account-label">{{ t("Logga ut") }}</span></button></template
+            <LogOut :size="16" /><span class="mobile-account-label">{{ t("Logga ut") }}</span></button></template
         ><template v-else-if="publicMode"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">{{ t("Lämna publik vy") }}</button></template
         ><template v-else-if="isDemo"><span class="account-context"><span class="account-timezone">{{ accountTimeZone }}</span></span><button class="button small" @click="logout">
           {{ t("Till inloggning") }}
@@ -1960,13 +1960,13 @@ onMounted(async () => {
           </p>
           <div class="welcome-actions">
             <button v-if="oauthReady" class="button primary" @click="oauth">
-              <Github :size="19" /> {{ t("Logga in med GitHub") }}
-              <ArrowRight :size="17" /></button
+              <Github :size="16" /> {{ t("Logga in med GitHub") }}
+              <ArrowRight :size="16" /></button
             ><button v-else class="button primary" @click="tokenPanel = true">
-              <Github :size="19" /> {{ t("Anslut GitHub") }}
-              <ArrowRight :size="17" /></button
+              <Github :size="16" /> {{ t("Anslut GitHub") }}
+              <ArrowRight :size="16" /></button
             ><button class="button" :disabled="authBusy || restoring" @click="scannerOpen = true">
-              <QrCode :size="19" />{{ t("Logga in med QR-kod") }}
+              <QrCode :size="16" />{{ t("Logga in med QR-kod") }}
             </button><button class="button" :disabled="authBusy || restoring" @click="openPublicWorkspace">{{ t("Följ publika repositories") }}</button><button class="button" @click="showDemo">
               {{ t("Utforska en demo") }} <ArrowRight :size="16" />
             </button>
@@ -2502,7 +2502,7 @@ onMounted(async () => {
         :aria-checked="notificationsEnabled(editing)" :aria-label="t('Notiser för ') + editing.split('/').pop()"
         :disabled="notificationPending !== null" :class="{ enabled: notificationsEnabled(editing) }"
         @click="toggleNotifications(editing)">
-        <Bell v-if="notificationsEnabled(editing)" :size="15" /><BellOff v-else :size="15" />
+        <Bell v-if="notificationsEnabled(editing)" :size="16" /><BellOff v-else :size="16" />
         {{ t("Notiser") }} {{ notificationsEnabled(editing) ? t("på") : t("av") }}
       </button>
       <div v-if="notificationNotice" class="notice notification-notice" role="status">

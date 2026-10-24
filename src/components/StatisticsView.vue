@@ -468,7 +468,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
 </script>
 <template>
   <section class="statistics-view" :aria-label="t('Statistik')">
-    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1></div><button class="button small" :disabled="busy || !expandedRepositories.length" @click="load(true)"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
+    <div class="statistics-heading"><div><span class="eyebrow">{{ t("DITT ARBETE I SIFFROR") }}</span><h1>{{ t("Statistik") }}</h1></div><button class="button small" :disabled="busy || !expandedRepositories.length" @click="load(true)"><RefreshCw :size="16" :class="{ spinning: busy }" />{{ t("Uppdatera statistik") }}</button></div>
     <div v-if="repositories.length && !initialLoading" class="statistics-time-controls" role="region" :aria-label="t('Tidsintervall')">
       <div class="statistics-time-row">
         <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
@@ -484,7 +484,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
               <option v-for="res in statisticsResolutions" :key="res" :value="res" :disabled="!allowedResolutions.has(res)">{{ t(resolutionNames[res]) }}</option>
             </select>
           </label>
-          <button v-if="resettable" type="button" class="icon-button statistics-time-reset" :aria-label="t('Återställ period')" :title="t('Återställ period')" @click="resetTimeSpan"><RotateCcw :size="15" aria-hidden="true" /></button>
+          <button v-if="resettable" type="button" class="icon-button statistics-time-reset" :aria-label="t('Återställ period')" :title="t('Återställ period')" @click="resetTimeSpan"><RotateCcw :size="16" aria-hidden="true" /></button>
         </div>
       </div>
       <div v-show="!activeRange" class="statistics-time-dates">

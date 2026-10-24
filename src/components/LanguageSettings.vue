@@ -57,7 +57,7 @@ function changeTheme(event: Event) {
     :aria-label="t('Inställningar')"
     :aria-describedby="settingsNotices ? 'settings-notices' : undefined"
   >
-    <Settings2 :size="15" /><span>{{ t("Inställningar") }}</span>
+    <Settings2 :size="16" /><span>{{ t("Inställningar") }}</span>
     <NoticeBadge id="settings-notices" :count="settingsNotices" :label="t('{count} saknade GitHub-rättigheter', { count: settingsNotices })" />
   </button>
   <dialog

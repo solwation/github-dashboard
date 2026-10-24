@@ -54,6 +54,7 @@ Verification is part of the [AI.md project rules](AI.md#project-and-verification
   | `--icon-md` | 20px | Primary navigation, toolbar and header actions, empty states |
 
   Larger illustrative icons (empty/welcome states) are the only exception.
+  The brand logo (`Layers3` in the sidebar header, 23px) is the one documented exception.
 - Colour: icons inherit `currentColor`. Decorative and metadata icons use `var(--muted)`;
   `var(--green)` (accent) only for active state, primary action or a meaningful status. Status
   colours follow the text they belong to.

@@ -21,12 +21,12 @@ const { t } = useLanguage();
       :aria-label="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: toggleName || repository.full_name })"
       :title="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: toggleName || repository.full_name })"
       :aria-expanded="!collapsed" :aria-controls="controls" @click="emit('toggle')">
-      <ChevronRight v-if="collapsed" :size="18" aria-hidden="true" /><ChevronDown v-else :size="18" aria-hidden="true" />
+      <ChevronRight v-if="collapsed" :size="16" aria-hidden="true" /><ChevronDown v-else :size="16" aria-hidden="true" />
     </button>
     <span class="repo-avatar" aria-hidden="true">{{ repository.name.slice(0, 2).toUpperCase() }}</span>
     <div>
       <h2 :id="headingId">
-        <a :href="repository.html_url" :title="repository.full_name" :aria-label="repository.full_name" target="_blank" rel="noopener noreferrer"><span class="repository-name-text">{{ label || repository.name }}</span><ArrowRight :size="14" aria-hidden="true" /></a>
+        <a :href="repository.html_url" :title="repository.full_name" :aria-label="repository.full_name" target="_blank" rel="noopener noreferrer"><span class="repository-name-text">{{ label || repository.name }}</span><ArrowRight :size="12" aria-hidden="true" /></a>
         <span v-if="repository.private || $slots.badges" class="repository-badges"><span v-if="repository.private" class="private-badge">{{ t("Privat") }}</span><slot name="badges" /></span>
       </h2>
       <span class="repo-owner" :title="repository.description || repository.owner.login">{{ repository.owner.login }} <span> / </span>{{ repository.description || "GitHub repository" }}</span>

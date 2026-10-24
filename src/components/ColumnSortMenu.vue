@@ -62,7 +62,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onOutside, tru
   <div ref="root" class="column-sort">
     <button ref="trigger" type="button" class="column-hint column-sort-button" aria-haspopup="menu" :aria-expanded="open"
       :aria-label="t('Sortering: {order}', { order: hint() })" :title="t('Välj sortering')" @click="toggle" @keydown="onTriggerKey">
-      <span>{{ hint() }}</span><ChevronDown :size="10" aria-hidden="true" />
+      <span>{{ hint() }}</span><ChevronDown :size="12" aria-hidden="true" />
     </button>
     <div v-if="open" ref="menu" class="column-sort-menu" role="menu" :aria-label="t('Sortering')" @keydown="onMenuKey">
       <button v-for="sort in options()" :key="sort" type="button" role="menuitemradio" :aria-checked="sort === modelValue"

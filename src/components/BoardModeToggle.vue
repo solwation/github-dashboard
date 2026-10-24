@@ -9,10 +9,10 @@ const emit = defineEmits<{ "update:list": [value: boolean] }>();
 <template>
   <div class="board-mode-toggle" role="group" :aria-label="label">
     <button type="button" :aria-pressed="!list" :title="t('Kort')" @click="emit('update:list', false)">
-      <LayoutGrid :size="14" aria-hidden="true" /><span class="board-mode-text">{{ t("Kort") }}</span>
+      <LayoutGrid :size="16" aria-hidden="true" /><span class="board-mode-text">{{ t("Kort") }}</span>
     </button>
     <button type="button" :aria-pressed="list" :title="t('Lista')" @click="emit('update:list', true)">
-      <List :size="14" aria-hidden="true" /><span class="board-mode-text">{{ t("Lista") }}</span>
+      <List :size="16" aria-hidden="true" /><span class="board-mode-text">{{ t("Lista") }}</span>
     </button>
   </div>
 </template>
