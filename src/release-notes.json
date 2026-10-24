@@ -54,6 +54,15 @@
         "issues": [
           301
         ]
+      },
+      {
+        "text": {
+          "sv": "Startsidans knappar radbryts på surfplattor och staplas på mobil, så sidan inte längre kan scrollas i sidled.",
+          "en": "Start page buttons wrap on tablets and stack on phones, so the page no longer scrolls sideways."
+        },
+        "issues": [
+          305
+        ]
       }
     ]
   },
