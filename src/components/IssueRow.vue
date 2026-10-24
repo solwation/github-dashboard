@@ -386,7 +386,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-summary > .row-repository { order: 4; flex: 1 1 0; }
   .row-mobile-summary > .row-mobile-priority { order: 2; }
   .row-mobile-summary > .issue-points { order: 3; }
-  .row-mobile-summary > .row-mobile-activity { order: 1; }
+  .row-mobile-summary > .row-mobile-activity { order: 6; }
   .row-mobile-summary > .row-mobile-relation { order: 4; }
   .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; padding: 1px 4px; font-size: 9px; }
   .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 9px; line-height: 1; white-space: nowrap; }

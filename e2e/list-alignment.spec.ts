@@ -239,6 +239,29 @@ for (const combined of [false, true]) {
   });
 }
 
+for (const combined of [false, true]) {
+  test(`phone list priority chips keep their x with and without an activity marker in ${combined ? "combined" : "split"} mode`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const page = await context.newPage();
+    const api = await fixture(page);
+    if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    api.move(); await page.keyboard.press("Control+r");
+    const marked = page.locator(".issue-row").filter({ has: page.locator(".row-comment-marker") });
+    await expect(marked).toHaveCount(1);
+    const plain = page.locator(".issue-row", { hasText: "Backlog none" });
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      const x = async (row: ReturnType<Page["locator"]>) => (await row.locator(".row-mobile-priority").boundingBox())!.x;
+      const xs = [await x(marked), await x(plain)];
+      expect(Math.abs(xs[0]! - xs[1]!)).toBeLessThanOrEqual(1);
+      const pts = async (row: ReturnType<Page["locator"]>) => (await row.locator(".issue-points").first().boundingBox())?.x;
+      const [p0, p1] = [await pts(marked), await pts(plain)];
+      if (p0 !== undefined && p1 !== undefined) expect(Math.abs(p0 - p1)).toBeLessThanOrEqual(1);
+    }
+    await context.close();
+  });
+}
+
 test("closed work duration and estimate arrows appear in rows and cards without growing phone rows", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await fixture(page, false, true);
