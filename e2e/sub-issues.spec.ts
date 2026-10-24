@@ -43,6 +43,9 @@ for (const device of [
   await expect(card.locator('.sub-issue-progress')).toHaveCount(1);
   await expect(card.locator('.issue-relations .sub-issue-progress')).toHaveCount(0);
   await expect(card.locator('.parent-task-badge')).toContainText('1/3');
+  // #300: relation badge and priority chip share one height (±1px).
+  const [badgeBox, chipBox] = await Promise.all([card.locator('.parent-task-badge').boundingBox(), card.locator('.priority').boundingBox()]);
+  expect(Math.abs(badgeBox!.height - chipBox!.height)).toBeLessThanOrEqual(1);
   expect(await card.evaluate(el => Boolean(el.querySelector('.issue-markdown')!.compareDocumentPosition(el.querySelector('.issue-sub-issues')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await expect(section.locator('li').nth(0)).toContainText('Backlog');
   await expect(section.locator('li').nth(1)).toContainText('In progress');

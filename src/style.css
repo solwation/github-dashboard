@@ -765,7 +765,8 @@ h1 {
   overflow-wrap: anywhere;
 }
 .issue-title svg {
-  margin: 0 0 -2px 5px;
+  margin: 0 0 0 var(--space-1);
+  vertical-align: middle;
   color: #a1aeaf;
   opacity: 0;
 }

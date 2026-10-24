@@ -331,17 +331,19 @@ const visibleLabels = computed(() =>
 </template>
 
 <style scoped>
-.card-top-meta { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.card-top-meta { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
 .subtask-badge, .parent-task-badge {
   display: inline-flex;
   align-items: center;
-  gap: .25rem;
-  padding: .15rem .45rem;
-  border-radius: .3rem;
-  font-size: .68rem;
+  gap: var(--space-1);
+  padding: 2px var(--space-1);
+  border-radius: 4px;
+  font-size: 8px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 12px;
+  white-space: nowrap;
 }
+.subtask-badge svg, .parent-task-badge svg { flex: 0 0 12px; }
 .subtask-badge {
   background: var(--hover, #edf0f2);
   color: var(--muted, #627179);
