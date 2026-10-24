@@ -1,11 +1,10 @@
 {
-  "baseCommit": "0aad644450d1f7679a273cdc529a73a2ee3e1244",
+  "baseCommit": "917a998bfae46c8a404453de09e547b98487f2f5",
   "summary": {
-    "sv": "Sidomenyn visar privat/publikt och länk till GitHub Pages; korten Repositories och Stängda visar fördelning, levererade SP och mediantid.",
-    "en": "The sidebar shows private/public and a GitHub Pages link; the Repositories and Closed cards show the split, delivered SP and median time."
+    "sv": "Ikonerna i sidomenyn står nu i fasta, linjerade kolumner och är lugnare, och antalen linjerar under namnen.",
+    "en": "Sidebar icons now sit in fixed, aligned columns with a calmer look, and the counts line up under the names."
   },
   "issues": [
-    291,
-    292
+    295
   ]
 }

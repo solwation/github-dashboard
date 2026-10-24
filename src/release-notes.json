@@ -8,11 +8,12 @@
     "sections": [
       {
         "text": {
-          "sv": "Sidomenyn visar en liten ikon för privat eller publikt repository och en ikon som öppnar repots GitHub Pages när det finns.",
-          "en": "The sidebar shows a small private or public icon per repository and an icon that opens its GitHub Pages site when available."
+          "sv": "Sidomenyn visar privat eller publikt repository och en länk till GitHub Pages i fasta, linjerade ikonkolumner med lugnare ikoner.",
+          "en": "The sidebar shows private or public and a GitHub Pages link in fixed, aligned icon columns with calmer icons."
         },
         "issues": [
-          292
+          292,
+          295
         ]
       },
       {
