@@ -1,13 +1,14 @@
 {
   "baseCommit": "b7daa90accace0e9685e3ba1da42d9260040fcfe",
   "summary": {
-    "sv": "Ikonknappar visar tooltips, ikoner har enhetliga storlekar och relationsmärken på kort matchar prioritetsmärket.",
-    "en": "Icon buttons show tooltips, icons have consistent sizes, and card relation badges match the priority chip."
+    "sv": "Ikonknappar visar tooltips, ikoner och märken har enhetliga storlekar, och mobillistans märken flyttar sig inte längre.",
+    "en": "Icon buttons show tooltips, icons and badges have consistent sizes, and chips in the phone list no longer shift."
   },
   "issues": [
     298,
     299,
     300,
+    301,
     304
   ]
 }

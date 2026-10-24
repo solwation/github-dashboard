@@ -45,6 +45,15 @@
         "issues": [
           299
         ]
+      },
+      {
+        "text": {
+          "sv": "I listan på mobil står prioritet och story points stilla, och aktivitetsmarkeringen hamnar sist på raden.",
+          "en": "In the phone list, priority and story points stay in place, and the activity marker sits at the end of the row."
+        },
+        "issues": [
+          301
+        ]
       }
     ]
   },
