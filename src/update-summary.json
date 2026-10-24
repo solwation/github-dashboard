@@ -1,10 +1,11 @@
 {
   "baseCommit": "b7daa90accace0e9685e3ba1da42d9260040fcfe",
   "summary": {
-    "sv": "Ikonknappar som stäng, zooma och flytta visar nu en förklarande tooltip när du håller muspekaren över dem.",
-    "en": "Icon buttons such as close, zoom and move now show an explanatory tooltip when you hover over them."
+    "sv": "Ikonknappar visar förklarande tooltips, och ikoner i sidhuvud, rubriker, sortering och Statistik har enhetliga storlekar.",
+    "en": "Icon buttons show explanatory tooltips, and icons in the header, headings, sorting and Statistics have consistent sizes."
   },
   "issues": [
+    298,
     299
   ]
 }
