@@ -34,7 +34,7 @@ function openNotesFromKeyboard(event: KeyboardEvent) {
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click.stop="emit('open-update')">
         <span aria-hidden="true">!</span>
       </button>
-      <ExternalLink class="sidebar-version-open" :size="13" aria-hidden="true" />
+      <ExternalLink class="sidebar-version-open" :size="12" aria-hidden="true" />
     </div>
     <p class="sidebar-version-build"><BuildInfo /></p>
     <p class="sidebar-version-status" :class="available ? 'is-update' : checking ? 'is-checking' : checked ? 'is-current' : 'is-unchecked'" role="status">
@@ -48,7 +48,9 @@ function openNotesFromKeyboard(event: KeyboardEvent) {
 <style scoped>
 .sidebar-version {
   margin-top: auto;
-  padding: 12px 6px;
+  /* Same inset as .sidebar-footer below, so both open icons share one right edge (#304). */
+  padding: var(--space-3) var(--space-2);
+  margin-inline: -5px;
   border-top: 1px solid var(--line);
   color: #6c797e;
   font-size: 11px;
@@ -90,7 +92,7 @@ function openNotesFromKeyboard(event: KeyboardEvent) {
 .sidebar-version-badge:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 /* Collapsed and phone sidebars keep only the update badge reachable. */
 @media (max-width: 950px) {
-  .sidebar-version { display: none; padding: 12px 0 0; border-top: 0; cursor: default; border-radius: 0; }
+  .sidebar-version { display: none; padding: 12px 0 0; margin-inline: 0; border-top: 0; cursor: default; border-radius: 0; }
   .sidebar-version:hover { background: transparent; }
   .sidebar-version.has-update { display: block; }
   .sidebar-version-caption, .sidebar-version-build, .sidebar-version-status, .sidebar-version-open { display: none; }

@@ -1839,7 +1839,7 @@ onMounted(async () => {
         <span>Olof Wingren</span>
         <small class="sidebar-license-label">MIT License</small>
       </span>
-      <ExternalLink class="sidebar-footer-open" :size="13" aria-hidden="true" />
+      <ExternalLink class="sidebar-footer-open" :size="12" aria-hidden="true" />
     </a>
   </aside>
   <div class="workspace">

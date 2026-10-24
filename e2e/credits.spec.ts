@@ -13,12 +13,17 @@ test("the whole sidebar license badge opens LICENSE, while the version badge kee
   await expect(license).toHaveAttribute("rel", "noopener noreferrer");
   await expect(license.locator("a, button")).toHaveCount(0);
   await expect(license).toContainText("Olof Wingren");
+  const iconRights: number[] = [];
   for (const [badge, iconName] of [[license, ".sidebar-footer-open"], [version, ".sidebar-version-open"]] as const) {
     const icon = badge.locator(iconName);
     await expect(icon).toHaveAttribute("aria-hidden", "true");
     const [badgeBox, iconBox] = await Promise.all([badge.boundingBox(), icon.boundingBox()]);
-    expect(badgeBox!.x + badgeBox!.width - iconBox!.x - iconBox!.width).toBeLessThanOrEqual(7);
+    // The icon sits in the badge's --space-2 end padding (#304).
+    expect(badgeBox!.x + badgeBox!.width - iconBox!.x - iconBox!.width).toBeLessThanOrEqual(8.5);
+    iconRights.push(iconBox!.x + iconBox!.width);
   }
+  // Both stacked badges' open icons share one right edge (DESIGN.md alignment).
+  expect(Math.abs(iconRights[0] - iconRights[1])).toBeLessThanOrEqual(1);
   await expect(version).toHaveAttribute("title", "Klicka för att visa versionsnyheter");
   // The new version icon remains decorative: the existing keyboard action opens a local dialog.
   await version.focus();
