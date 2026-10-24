@@ -1,7 +1,7 @@
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
 import { approximatePoints } from "./story-points";
-import { estimateGroups, otherRepositoryMembers, repositoryEstimate, type SubIssueWork } from "./estimates";
+import { estimateGroups, median, otherRepositoryMembers, repositoryEstimate, type SubIssueWork } from "./estimates";
 
 export interface OverviewEstimateGroup { repository: string; issues: Issue[]; rules: Rules }
 export type OverviewEstimateColumn = "open" | "progress";
@@ -72,4 +72,31 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
     counting ||= !!estimate.progress?.items.some(item => item.counting);
   }
   return { repositories, knownRepositories, remainingMs: knownRepositories ? remainingMs : null, overdue, unknownStart, counting, nextStartMs };
+}
+
+/**
+ * Closed card detail (#291): points of the closed issues the card counts (same filtered scope) and the median
+ * measured work time of those that have a known start. `medianMs` is null when no duration is known.
+ */
+export function overviewClosedSummary(groups: OverviewEstimateGroup[], now: number) {
+  let points = 0;
+  const durations: number[] = [];
+  for (const group of groups) for (const issue of group.issues) {
+    if (issue.state !== "closed") continue;
+    points += approximatePoints(issue);
+    const start = Date.parse(issue.workStartedAt || ""), end = Date.parse(issue.closed_at || "");
+    if (Number.isFinite(start) && Number.isFinite(end) && end > start && end <= now) durations.push(end - start);
+  }
+  return { points, medianMs: median(durations), measured: durations.length };
+}
+
+/** Repository card detail (#291): visibility split and owner count of the loaded repositories, each counted once. */
+export function overviewRepositoryInfo(lanes: Lane[]) {
+  const repos = new Map(lanes.map(lane => [lane.repo.full_name, lane.repo]));
+  const all = [...repos.values()];
+  return {
+    private: all.filter(repo => repo.private).length,
+    public: all.filter(repo => !repo.private).length,
+    owners: new Set(all.map(repo => repo.owner?.login).filter(Boolean)).size,
+  };
 }

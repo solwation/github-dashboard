@@ -111,3 +111,26 @@ it("counts a sub-issue once across repositories and keeps unknown-start texts co
   const late = overviewTimeEstimate(groups([lane([...history(), future])]), "progress", now, new Map([[future.id, [{ issue: closed }]]]));
   expect(late).toMatchObject({ remainingMs: 0, overdue: 1, unknownStart: 0 });
 });
+
+import { overviewClosedSummary, overviewRepositoryInfo } from "../src/lib/overview-estimates";
+describe("overview closed and repository details (#291)", () => {
+  const closed = (id: number, points: number, duration?: number, extra: Partial<Issue> = {}) => issue(id, points, { state: "closed", closed_at: iso(now - day), ...(duration ? { workStartedAt: iso(now - day - duration) } : {}), ...extra });
+  it("sums points of closed issues and takes the median of known durations", () => {
+    const selection = groups([lane([closed(1, 3, 10 * minute), closed(2, 5, 30 * minute), closed(3, 2), issue(4, 8)])]);
+    expect(overviewClosedSummary(selection, now)).toMatchObject({ points: 10, medianMs: 20 * minute, measured: 2 });
+  });
+  it("hides the median without known durations and keeps a measured zero", () => {
+    expect(overviewClosedSummary(groups([lane([closed(1, 2)])]), now)).toMatchObject({ points: 2, medianMs: null });
+    expect(overviewClosedSummary(groups([lane([issue(4, 8)])]), now)).toMatchObject({ points: 0, medianMs: null });
+  });
+  it("follows coordination and text filters", () => {
+    const data = [closed(1, 3, 10 * minute, { title: "Keep" }), closed(2, 5, 30 * minute, { labels: [{ name: "orkester", color: "" }] }), closed(3, 8, undefined, { title: "Other" })];
+    expect(overviewClosedSummary(groups([lane(data)]), now).points).toBe(11);
+    expect(overviewClosedSummary(overviewEstimateGroups([lane(data)], {}, true, { query: "Keep" }), now)).toMatchObject({ points: 3, medianMs: 10 * minute });
+  });
+  it("counts visibility and owners once per repository", () => {
+    const pub = lane([], "x/y"); pub.repo = { ...pub.repo, private: false, owner: { login: "x" } };
+    expect(overviewRepositoryInfo([lane([]), lane([]), pub])).toEqual({ private: 1, public: 1, owners: 2 });
+    expect(overviewRepositoryInfo([])).toEqual({ private: 0, public: 0, owners: 0 });
+  });
+});

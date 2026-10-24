@@ -2,8 +2,9 @@
 import { computed, onBeforeUnmount, reactive, watch } from "vue";
 import { Activity, CircleCheck, Layers3, LayoutDashboard, Plus } from "@lucide/vue";
 import OverviewEstimate from "./OverviewEstimate.vue";
-import { overviewEstimateGroups } from "../lib/overview-estimates";
+import { overviewClosedSummary, overviewEstimateGroups, overviewRepositoryInfo } from "../lib/overview-estimates";
 import { useLanguage } from "../lib/i18n";
+import { estimateLabel } from "../lib/estimates";
 import { untilNext, useNow } from "../composables/useNow";
 import type { Lane, Rules } from "../lib/model";
 import { coalesceDeltas, VALUE_DELTA_MS, ValueDeltaTracker } from "../lib/value-delta";
@@ -75,6 +76,19 @@ watch(clock, () => secondaryTracker.rebaseline(summarizeOverviewSecondary(props.
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); for (const key of secondaryKeys) clearCell(key); });
 const estimateGroups = computed(() => overviewEstimateGroups(props.lanes, props.rules, props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
 const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
+const repositoryInfo = computed(() => overviewRepositoryInfo(props.lanes));
+const repositoryInfoLabel = computed(() => [
+  t("Privata: {count}", { count: repositoryInfo.value.private }), t("Publika: {count}", { count: repositoryInfo.value.public }),
+  ...(repositoryInfo.value.owners > 1 ? [t("Ägare: {count}", { count: repositoryInfo.value.owners })] : []),
+]);
+const repositoryInfoTitle = computed(() => t("Valda repositories fördelade på privata och publika{owners}. Fritextfilter påverkar inte fördelningen.", { owners: repositoryInfo.value.owners > 1 ? t(" samt antal olika ägare") : "" }));
+const closedSummary = computed(() => overviewClosedSummary(estimateGroups.value, current()));
+const closedMedian = computed(() => closedSummary.value.medianMs === null ? "" : t("median {time}", { time: estimateLabel(closedSummary.value.medianMs) }));
+const closedTitle = computed(() => [
+  t("Uppskattade story points: cirka {points}", { points: closedSummary.value.points }),
+  t("Poängen omfattar samma filtrerade stängda issues som antalet."),
+  ...(closedMedian.value ? [t("Mediantid i arbete för {count} stängda issues med känd starttid: {time}", { count: closedSummary.value.measured, time: estimateLabel(closedSummary.value.medianMs!) })] : []),
+].map(part => part.replace(/[.]$/, "")).join(". ") + ".");
 const secondary = computed(() => summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
 const activeDefinition = computed(() => t("Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet."));
 const todayDefinition = computed(() => t("Inlästa issues i valda repositories som nu är stängda och har senaste stängning idag, i din lokala tidszon. Fritextfilter påverkar inte dagsuppgiften. Detta är inte en komplett historik över stängningar."));
@@ -118,6 +132,10 @@ const announcement = computed(() => [
       <div class="stat-content">
         <span class="stat-label">Repositories</span>
         <strong>{{ totalRepositories }}</strong>
+        <div class="overview-estimate" role="img" :title="repositoryInfoTitle" :aria-label="repositoryInfoTitle + ' ' + repositoryInfoLabel.join(', ')" data-testid="repository-info">
+          <span class="overview-points">{{ repositoryInfoLabel[0] }}</span>
+          <span v-for="part in repositoryInfoLabel.slice(1)" :key="part" class="overview-time">{{ part }}</span>
+        </div>
         <div class="stat-cells">
           <span class="stat-cell repository-active" tabindex="0" :title="activeDefinition" :aria-label="t('{count} aktiva projekt. {definition}', { count: secondary.activeRepositories, definition: activeDefinition })">{{ repositoryCells[0].text }}<span v-if="cellDeltas.activeRepositories" class="cell-delta" :class="cellDeltas.activeRepositories > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas.activeRepositories) }}</span></span>
           <span class="stat-cell">{{ repositoryCells[1].text }}<span v-if="cellDeltas.backlogRepositories" class="cell-delta" :class="cellDeltas.backlogRepositories > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas.backlogRepositories) }}</span></span>
@@ -131,6 +149,10 @@ const announcement = computed(() => [
         <span class="stat-label">{{ card.label }}</span>
         <strong>{{ counts[card.key] }}<span v-if="deltas[card.key]" class="stat-delta" aria-hidden="true">{{ signedDelta(deltas[card.key]) }}</span><small>{{ card.hint }}</small></strong>
         <OverviewEstimate v-if="card.key !== 'closed'" :groups="estimateGroups" :column="card.key" />
+        <div v-else class="overview-estimate" role="img" :title="closedTitle" :aria-label="closedTitle" data-testid="closed-info">
+          <span class="overview-points">≈ {{ closedSummary.points }} SP</span>
+          <span v-if="closedMedian" class="overview-time">{{ closedMedian }}</span>
+        </div>
         <div class="stat-cells">
           <span v-for="(cell, index) in card.cells" :key="index" class="stat-cell" :class="cell.className" :title="cell.title">{{ cell.text }}<span v-if="cellDeltas[cell.key]" class="cell-delta" :class="cellDeltas[cell.key]! > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas[cell.key]!) }}</span></span>
         </div>
@@ -170,6 +192,10 @@ const announcement = computed(() => [
 .stat-delta { font-size: .75rem; font-weight: 600; color: #53636d; }
 .stat-positive .stat-delta { color: #19643c; }
 .stat-negative .stat-delta { color: #943d28; }
+.overview-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -.1rem 0 .6rem; font-size: .7rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.overview-points { color: var(--green); font-weight: 650; white-space: nowrap; }
+.overview-time { color: var(--text); }
+@media (max-width: 650px) { .overview-estimate { justify-content: center; } }
 .stat-today { color: #286b51; }
 @media (prefers-reduced-motion: reduce) { .stat { transition: none; } .cell-delta { animation: none; transform: none; } }
 </style>
