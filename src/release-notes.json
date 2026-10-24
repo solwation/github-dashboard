@@ -63,6 +63,16 @@
         "issues": [
           305
         ]
+      },
+      {
+        "text": {
+          "sv": "Kort och listrader använder gemensamma avstånds- och färgtokens, och mobillistans aktivitetsmärke följer mörkt tema.",
+          "en": "Cards and list rows use shared spacing and colour tokens, and the phone list activity chip follows the dark theme."
+        },
+        "issues": [
+          302,
+          306
+        ]
       }
     ]
   },

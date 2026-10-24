@@ -1,15 +1,17 @@
 {
   "baseCommit": "b7daa90accace0e9685e3ba1da42d9260040fcfe",
   "summary": {
-    "sv": "Ikonknappar visar tooltips, ikoner och märken har enhetliga storlekar, och mobillistans märken flyttar sig inte längre.",
-    "en": "Icon buttons show tooltips, icons and badges have consistent sizes, and chips in the phone list no longer shift."
+    "sv": "Tooltips på ikonknappar, enhetliga ikoner och märken, stabila mobilmärken, mörkt tema i mobillistan och startknappar utan sidscroll.",
+    "en": "Icon button tooltips, consistent icons and badges, stable phone chips, dark theme in the phone list and start buttons without sideways scroll."
   },
   "issues": [
     298,
     299,
     300,
     301,
+    302,
     304,
-    305
+    305,
+    306
   ]
 }
