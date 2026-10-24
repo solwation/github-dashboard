@@ -76,11 +76,12 @@
       },
       {
         "text": {
-          "sv": "Bläddra mellan ärendets bilder med föregående/nästa, piltangenter eller svep, medan zoom och panorering fungerar som tidigare.",
-          "en": "Browse issue images with previous/next buttons, arrow keys or swipes while keeping the existing zoom and pan controls."
+          "sv": "Bläddra mellan ärendets bilder med föregående/nästa under bilden, piltangenter eller svep, medan zoom och panorering fungerar som tidigare.",
+          "en": "Browse issue images with previous/next buttons below the image, arrow keys or swipes while keeping the existing zoom and pan controls."
         },
         "issues": [
-          307
+          307,
+          309
         ]
       }
     ]

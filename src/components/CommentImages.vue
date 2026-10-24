@@ -158,11 +158,6 @@ onBeforeUnmount(() => observer?.disconnect());
         <button type="button" :aria-label="t('Originalstorlek')" @click="originalSize"><span class="label-full">{{ t('Originalstorlek') }}</span><span class="label-short" aria-hidden="true">1:1</span></button>
         <button type="button" class="close-image" :aria-label="t('Stäng bild')" :title="t('Stäng bild')" autofocus @click="close"><X :size="20" aria-hidden="true" /></button>
       </div>
-      <nav v-if="gallery.length > 1" class="image-navigation" :aria-label="t('Bildnavigering')">
-        <button type="button" :aria-label="t('Föregående bild')" :title="t('Föregående bild')" :disabled="index === 0" @click="navigate(-1)"><ChevronLeft :size="20" aria-hidden="true" /></button>
-        <output aria-live="polite" aria-atomic="true">{{ t('Bild {current} av {total}', { current: index + 1, total: gallery.length }) }}</output>
-        <button type="button" :aria-label="t('Nästa bild')" :title="t('Nästa bild')" :disabled="index === gallery.length - 1" @click="navigate(1)"><ChevronRight :size="20" aria-hidden="true" /></button>
-      </nav>
       <div ref="viewport" class="image-viewport" tabindex="0" :aria-label="t('Bild, dra för att panorera')"
         @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="pointerUp"
         @wheel.ctrl.prevent="changeZoom(scale * ($event.deltaY < 0 ? 1.15 : 1 / 1.15))">
@@ -171,6 +166,12 @@ onBeforeUnmount(() => observer?.disconnect());
             @load="natural = { width: ($event.target as HTMLImageElement).naturalWidth, height: ($event.target as HTMLImageElement).naturalHeight }" />
         </div>
       </div>
+      <!-- Below the image (#309): the toolbar stays directly above the viewport. -->
+      <nav v-if="gallery.length > 1" class="image-navigation" :aria-label="t('Bildnavigering')">
+        <button type="button" :aria-label="t('Föregående bild')" :title="t('Föregående bild')" :disabled="index === 0" @click="navigate(-1)"><ChevronLeft :size="20" aria-hidden="true" /></button>
+        <output aria-live="polite" aria-atomic="true">{{ t('Bild {current} av {total}', { current: index + 1, total: gallery.length }) }}</output>
+        <button type="button" :aria-label="t('Nästa bild')" :title="t('Nästa bild')" :disabled="index === gallery.length - 1" @click="navigate(1)"><ChevronRight :size="20" aria-hidden="true" /></button>
+      </nav>
     </template>
   </dialog>
 </template>

@@ -1,10 +1,11 @@
 {
   "baseCommit": "76763739bdb7e3436a8d52ab0462f60b433a296a",
   "summary": {
-    "sv": "Bläddra mellan ärendets bilder med knappar, piltangenter eller svep i bildvisaren.",
-    "en": "Browse the issue’s images with buttons, arrow keys or swipes in the image viewer."
+    "sv": "Bläddra mellan ärendets bilder med knappar under bilden, piltangenter eller svep i bildvisaren.",
+    "en": "Browse the issue’s images with buttons below the image, arrow keys or swipes in the image viewer."
   },
   "issues": [
-    307
+    307,
+    309
   ]
 }

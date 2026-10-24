@@ -436,6 +436,11 @@ for (const scenario of [
   const previous = viewer.getByRole("button", { name: "Föregående bild", exact: true });
   const next = viewer.getByRole("button", { name: "Nästa bild", exact: true });
   await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 3 av 4");
+  // #309: the toolbar sits directly on the image area and the navigation row comes below it, inside the viewer.
+  const [toolbarBox, viewportBox, navigationBox, viewerBox] = await Promise.all([".image-toolbar", ".image-viewport", ".image-navigation"].map(s => viewer.locator(s).boundingBox()).concat(viewer.boundingBox()));
+  expect(viewportBox!.y - (toolbarBox!.y + toolbarBox!.height)).toBeLessThanOrEqual(10);
+  expect(navigationBox!.y).toBeGreaterThanOrEqual(viewportBox!.y + viewportBox!.height - 1);
+  expect(navigationBox!.y + navigationBox!.height).toBeLessThanOrEqual(viewerBox!.y + viewerBox!.height + 1);
   await next.click();
   await expect(viewer.locator("img")).toHaveAttribute("src", "https://images.example/last.png");
   await expect(next).toBeDisabled();
