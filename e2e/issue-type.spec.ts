@@ -54,7 +54,15 @@ test("list rows show the type icon and hide the type and in-progress labels on p
   await expect(rows.filter({ has: page.locator(".type-circle.type-bug") }).locator('.label[title="bug" i]')).toHaveCount(0);
   await expect(rows.filter({ has: page.locator(".type-circle.type-feature") }).locator('.label[title="enhancement" i]')).toHaveCount(0);
   await expect(page.locator('.issue-row.progress .label[title="in-progress" i]')).toHaveCount(0);
-  await expect(page.locator('.issue-row .label[title="design"]').first()).toBeVisible();
+  // Collapsed phone rows show a compact summary without label chips (the demo's "design" label sits on the third issue);
+  // the label appears in the expanded card, where the type label is still not repeated.
+  await expect(page.locator('.issue-row .label[title="design"]')).toHaveCount(0);
+  const designRow = page.locator(".issue-row", { hasText: "Bygg en sökbar komponentöversikt" });
+  await designRow.locator(".row-title").click();
+  await expect(designRow.locator(".type-circle.type-bug")).toHaveCount(1);
+  const expanded = page.getByRole("dialog", { name: "Bygg en sökbar komponentöversikt" });
+  await expect(expanded.locator('.label[title="design"]').first()).toBeVisible();
+  await expect(expanded.locator('.label[title="bug" i]')).toHaveCount(0);
   await expect(page.locator(".issue-row.closed .type-circle .type-closed").first()).toBeVisible();
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
