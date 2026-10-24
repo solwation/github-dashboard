@@ -2596,6 +2596,8 @@ a.sidebar-repository:focus-visible {
   --type-chore-bg: #26343a; --type-chore-fg: #b4c4c8;
 }
 .type-circle { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; }
+/* Untyped cards reserve the same 16px slot so issue numbers line up with typed cards (#297). */
+.issue-number .type-slot { display: inline-flex; flex: 0 0 var(--icon-sm); align-items: center; justify-content: center; width: var(--icon-sm); height: var(--icon-sm); }
 .issue-number .type-circle svg, .type-circle svg { color: inherit; }
 .type-circle svg:not(.type-closed) { stroke-width: 2.25; }
 .type-circle .type-closed { position: absolute; right: -3px; bottom: -3px; padding: 0; border-radius: 50%; background: var(--surface); color: var(--green); stroke-width: 3; }

@@ -236,12 +236,12 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       <span v-if="progress" class="row-mobile-relation row-parent-badge"
         :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
         :aria-label="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })" role="img">
-        <ListTree :size="11" aria-hidden="true" /><span>{{ progress.completed }}/{{ progress.total }}</span>
+        <ListTree :size="12" aria-hidden="true" /><span>{{ progress.completed }}/{{ progress.total }}</span>
       </span>
       <span v-else-if="isSubtask && parentIssue" class="row-mobile-relation row-subtask-badge"
         :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
         :aria-label="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })" role="img">
-        <CornerDownRight :size="11" aria-hidden="true" /><span aria-hidden="true">#{{ parentIssue.number }}</span>
+        <CornerDownRight :size="12" aria-hidden="true" /><span aria-hidden="true">#{{ parentIssue.number }}</span>
       </span>
     </span>
     <span v-else class="row-meta">
@@ -249,21 +249,21 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
         :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
       >
-        <CornerDownRight :size="10" aria-hidden="true" />
+        <CornerDownRight :size="12" aria-hidden="true" />
         <span class="row-subtask-text">{{ t("Subtask") }}</span>
       </span>
       <span v-if="progress" class="row-marker row-parent-badge"
         :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
         :aria-label="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
       >
-        <ListTree :size="11" aria-hidden="true" />
+        <ListTree :size="12" aria-hidden="true" />
         <span>{{ progress.completed }}/{{ progress.total }}</span>
         <span class="row-parent-label">{{ t("klara") }}</span>
       </span>
       <span class="row-slot row-slot-comment"><button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
-        ><MessageCircle :size="11" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
+        ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
       ><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
@@ -273,7 +273,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         >{{ t("Timeout") }}</span></span
       ><span class="row-slot row-slot-status"><span class="row-status" :class="col">{{ status }}</span></span></span
       ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
-        ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="11" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
+        ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
       ></span><span class="row-labels"><span v-for="label in labels" :key="label.name" class="label" :title="label.name"
         ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
       ></span>

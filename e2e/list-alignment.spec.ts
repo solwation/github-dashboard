@@ -455,3 +455,20 @@ test('shared time column stays empty when repository history is insufficient', a
   await expect(rows.first().locator('.row-time')).toContainText(/−3 d/);
   expect((await rows.first().boundingBox())!.height).toBeLessThanOrEqual(60);
 });
+
+// #297: cards without a type icon reserve the same 16px slot, so issue numbers line up with typed cards.
+test("card issue numbers align with and without a type icon", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await fixture(page);
+  await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Kort", exact: true }).click();
+  const cards = page.locator(".issue-card:not(.progress)");
+  await expect(cards.locator(".issue-number .type-slot").first()).toBeVisible();
+  await expect(cards.locator(".issue-number .type-circle").first()).toBeVisible();
+  const offsets = await cards.evaluateAll(list => list.map(card => {
+    const number = card.querySelector(".issue-number")!;
+    const text = [...number.childNodes].reverse().find(node => node.nodeType === Node.TEXT_NODE && node.textContent!.trim())!;
+    const range = document.createRange(); range.selectNodeContents(text);
+    return range.getBoundingClientRect().x - card.getBoundingClientRect().x;
+  }));
+  expect(Math.max(...offsets) - Math.min(...offsets), `number offsets ${offsets}`).toBeLessThanOrEqual(1);
+});

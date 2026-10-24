@@ -185,10 +185,10 @@ const visibleLabels = computed(() =>
         ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
           ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"
         /></span
-        ><template v-else><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
+        ><span v-else class="type-slot" aria-hidden="true"><CircleCheck v-if="col === 'closed'" :size="13" /><Circle
           v-else
           :size="13"
-        /></template>
+        /></span>
         #{{ issue.number }}</span
       >
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
@@ -207,13 +207,13 @@ const visibleLabels = computed(() =>
         <span v-if="isSubtask && parent" class="subtask-badge"
           :title="t('Underärende till {parent} · {title}', { parent: (parent.repository.toLowerCase() === (repository || '').toLowerCase() ? '' : parent.repository) + '#' + parent.number, title: parent.title })"
         >
-          <CornerDownRight :size="10" aria-hidden="true" />{{ t("Subtask") }}
+          <CornerDownRight :size="12" aria-hidden="true" />{{ t("Subtask") }}
         </span>
         <span v-if="progress" class="parent-task-badge"
           :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
           :aria-label="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"
         >
-          <ListTree :size="11" aria-hidden="true" />{{ progress.completed }}/{{ progress.total }} {{ t("klara") }}
+          <ListTree :size="12" aria-hidden="true" />{{ progress.completed }}/{{ progress.total }} {{ t("klara") }}
         </span>
         <span
           class="priority"
@@ -261,7 +261,7 @@ const visibleLabels = computed(() =>
               new Date(issue.startedAt).toLocaleString(locale)
             : t('Ingen säker starttid kunde hämtas')
         "
-        ><Clock3 :size="13" />{{
+        ><Clock3 :size="12" aria-hidden="true" />{{
           issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd")
         }}</span
       ><time
