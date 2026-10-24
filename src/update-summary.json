@@ -1,11 +1,10 @@
 {
-  "baseCommit": "76763739bdb7e3436a8d52ab0462f60b433a296a",
+  "baseCommit": "c5fb12bea654f620f890832134409336e2cb08ce",
   "summary": {
-    "sv": "Bläddra mellan ärendets bilder med knappar under bilden, piltangenter eller svep i bildvisaren.",
-    "en": "Browse the issue’s images with buttons below the image, arrow keys or swipes in the image viewer."
+    "sv": "Bildvisarens bläddringsknappar och bildräknare ligger nu under bilden, så bilden får mer plats.",
+    "en": "The image viewer’s browse buttons and image counter now sit below the image, giving the image more room."
   },
   "issues": [
-    307,
     309
   ]
 }
