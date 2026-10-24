@@ -936,12 +936,18 @@ h1 {
 }
 .welcome-actions {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   margin-top: 29px;
 }
 .welcome-actions .button {
   padding: 13px 18px;
   font-size: 12px;
+}
+@media (pointer: coarse) {
+  .welcome-actions .button {
+    min-height: 44px;
+  }
 }
 .welcome p.privacy-note {
   font-size: 10px;
@@ -1454,7 +1460,8 @@ h1 {
     font-size: 13px;
   }
   .welcome-actions {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
   }
   .welcome-actions .button {
     font-size: 11px;
