@@ -44,15 +44,15 @@ function drop(event: DragEvent, target: string) {
       @click="event => { if (event.target === dialog) dialog?.close(); }">
       <div class="order-heading">
         <h2 :id="titleId">{{ t("Ordna repositories") }}</h2>
-        <button class="icon-button" :aria-label="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
+        <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
       </div>
       <p :id="helpId">{{ t("Dra i handtaget eller använd upp- och nedknapparna. Ordningen sparas direkt.") }}</p>
       <ol class="repository-order-list">
         <li v-for="(repo, index) in repos" :key="repo.fullName" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
           <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="repos.length" @move="move(index, $event)" @reorder="reorder" />
           <span class="order-repository-name">{{ repo.fullName }}</span>
-          <button class="icon-button" :disabled="index === 0" :aria-label="t('Flytta {name} upp', { name: repo.name })" @click="move(index, -1)"><ArrowUp :size="18" /></button>
-          <button class="icon-button" :disabled="index === repos.length - 1" :aria-label="t('Flytta {name} ned', { name: repo.name })" @click="move(index, 1)"><ArrowDown :size="18" /></button>
+          <button class="icon-button" :disabled="index === 0" :aria-label="t('Flytta {name} upp', { name: repo.name })" :title="t('Flytta {name} upp', { name: repo.name })" @click="move(index, -1)"><ArrowUp :size="18" /></button>
+          <button class="icon-button" :disabled="index === repos.length - 1" :aria-label="t('Flytta {name} ned', { name: repo.name })" :title="t('Flytta {name} ned', { name: repo.name })" @click="move(index, 1)"><ArrowDown :size="18" /></button>
         </li>
       </ol>
       <span class="sr-only" role="status">{{ announcement }}</span>

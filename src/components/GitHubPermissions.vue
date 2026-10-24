@@ -26,7 +26,7 @@ const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas
     @click="event => { if (event.target === dialog) dialog?.close(); }">
     <div class="permissions-heading">
       <h2 id="github-permissions-title">GitHub permissions</h2>
-      <button class="icon-button" :aria-label="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
+      <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
     </div>
     <div class="permissions-content" :aria-busy="checking">
       <p>{{ t('Läsrättigheter styr vilka funktioner du kan använda. Saknad åtkomst döljer motsvarande information. Kontrollen ändrar ingenting på GitHub.') }}</p>

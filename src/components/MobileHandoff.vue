@@ -109,7 +109,7 @@ onUnmounted(() => {
   >
     <div class="modal-heading">
       <h2 id="handoff-title">{{ t("Synka med QR-kod") }}</h2>
-      <button class="icon-button" :aria-label="t('Stäng')" @click="close">
+      <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" @click="close">
         <X :size="20" />
       </button>
     </div>

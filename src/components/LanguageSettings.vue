@@ -75,6 +75,7 @@ function changeTheme(event: Event) {
       <button
         class="icon-button"
         :aria-label="t('Stäng')"
+        :title="t('Stäng')"
         @click="dialog?.close()"
       >
         <X :size="20" />

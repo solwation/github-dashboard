@@ -122,9 +122,9 @@ onBeforeUnmount(() => observer?.disconnect());
   <dialog ref="viewer" class="comment-image-viewer" :aria-label="t('Bildvisare')" @close="dialogClosed" @keydown.esc.stop.prevent="close">
     <template v-if="selected">
       <div class="image-toolbar">
-        <button type="button" :aria-label="t('Zooma ut')" :disabled="scale <= minimumScale" @click="changeZoom(scale / 1.5)">−</button>
+        <button type="button" :aria-label="t('Zooma ut')" :title="t('Zooma ut')" :disabled="scale <= minimumScale" @click="changeZoom(scale / 1.5)">−</button>
         <output :aria-label="t('Zoomnivå')">{{ Math.round(scale * 100) }}%</output>
-        <button type="button" :aria-label="t('Zooma in')" @click="changeZoom(scale * 1.5)">+</button>
+        <button type="button" :aria-label="t('Zooma in')" :title="t('Zooma in')" @click="changeZoom(scale * 1.5)">+</button>
         <button type="button" @click="fitImage">{{ t('Anpassa') }}</button>
         <button type="button" :aria-label="t('Originalstorlek')" @click="originalSize"><span class="label-full">{{ t('Originalstorlek') }}</span><span class="label-short" aria-hidden="true">1:1</span></button>
         <button type="button" class="close-image" :aria-label="t('Stäng bild')" :title="t('Stäng bild')" autofocus @click="close"><X :size="20" aria-hidden="true" /></button>

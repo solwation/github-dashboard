@@ -65,7 +65,7 @@ onUnmounted(() => {
   >
     <div class="modal-heading">
       <h2>{{ t("Installera Issueflow") }}</h2>
-      <button class="icon-button" :aria-label="t('Stäng')" @click="dialog?.close()">
+      <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" @click="dialog?.close()">
         <X :size="20" />
       </button>
     </div>

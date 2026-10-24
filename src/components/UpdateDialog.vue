@@ -43,7 +43,7 @@ function closed() {
       @click="(event) => { if (event.target === dialog) dialog?.close(); }">
       <div class="update-heading">
         <h2 :id="titleId">{{ t("Automatiska uppdateringar") }}</h2>
-        <button type="button" class="icon-button" :aria-label="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
+        <button type="button" class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
       </div>
       <p class="update-installed">{{ t("Installerad version:") }} <BuildInfo /></p>
       <section v-if="available" class="update-available" :aria-labelledby="titleId + '-new'">

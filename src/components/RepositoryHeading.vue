@@ -19,6 +19,7 @@ const { t } = useLanguage();
   <div class="lane-title">
     <button type="button" class="collapse-project icon-button" :class="toggleClass"
       :aria-label="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: toggleName || repository.full_name })"
+      :title="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: toggleName || repository.full_name })"
       :aria-expanded="!collapsed" :aria-controls="controls" @click="emit('toggle')">
       <ChevronRight v-if="collapsed" :size="18" aria-hidden="true" /><ChevronDown v-else :size="18" aria-hidden="true" />
     </button>

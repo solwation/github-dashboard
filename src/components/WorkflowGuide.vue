@@ -33,7 +33,7 @@ async function copy() {
     <dialog ref="dialog" class="workflow-guide-dialog" :aria-labelledby="titleId" @close="trigger?.focus()">
       <div class="guide-heading">
         <h2 :id="titleId">{{ t("Instruktioner för issueflödet") }}</h2>
-        <button class="icon-button" :aria-label="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
+        <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
       </div>
       <div class="guide-content">
         <label :for="fieldId">{{ t("Instruktioner (Markdown)") }}</label>

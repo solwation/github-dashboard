@@ -1848,8 +1848,8 @@ onMounted(async () => {
         <span class="breadcrumb-context">Workspace <i>/</i></span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <nav class="mobile-navigation" :aria-label="t('Navigering')">
-        <a href="#overview" :aria-label="t('Översikt')" :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
-        <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="18" /></a>
+        <a href="#overview" :aria-label="t('Översikt')" :title="t('Översikt')" :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined"><LayoutDashboard :size="18" /></a>
+        <a v-if="workspaceOpen" href="#statistics" :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined"><Activity :size="18" /></a>
         <button type="button" class="mobile-search-link" :aria-label="t('Sök issues')" :title="t('Sök issues')" @click="openIssueSearch"><Search :size="18" /></button>
         <button v-if="workspaceOpen && currentView === 'overview'" ref="mobileBoardNavigatorButton" type="button" class="mobile-search-link mobile-board-navigator-toggle"
           :aria-label="t('Hoppa till repository eller status')" :title="t('Hoppa till repository eller status')"
@@ -1922,6 +1922,7 @@ onMounted(async () => {
         ><button
           class="icon-button"
           :aria-label="t('Stäng notismeddelande')"
+          :title="t('Stäng notismeddelande')"
           @click="notificationNotice = ''"
         >
           <X :size="16" />
@@ -1932,6 +1933,7 @@ onMounted(async () => {
         }}<button
           class="icon-button"
           :aria-label="t('Stäng felmeddelande')"
+          :title="t('Stäng felmeddelande')"
           @click="error = ''"
         >
           <X :size="16" />
@@ -2426,6 +2428,7 @@ onMounted(async () => {
           class="icon-button"
           @click="picker = false"
           :aria-label="t('Stäng')"
+          :title="t('Stäng')"
         >
           <X :size="20" />
         </button>
@@ -2489,6 +2492,7 @@ onMounted(async () => {
           class="icon-button"
           @click="applyRules"
           :aria-label="t('Stäng')"
+          :title="t('Stäng')"
         >
           <X :size="20" />
         </button>
@@ -2503,7 +2507,8 @@ onMounted(async () => {
       </button>
       <div v-if="notificationNotice" class="notice notification-notice" role="status">
         <span>{{ notificationNotice }}</span><button type="button" class="icon-button"
-          :aria-label="t('Stäng notismeddelande')" @click="notificationNotice = ''"><X :size="16" /></button>
+          :aria-label="t('Stäng notismeddelande')"
+          :title="t('Stäng notismeddelande')" @click="notificationNotice = ''"><X :size="16" /></button>
       </div>
       <h3>{{ t("Labelregler") }}</h3>
       <p>{{ t("Lämna tomt för automatisk detektering. Ange exakta labelnamn.") }}</p>

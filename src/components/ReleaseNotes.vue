@@ -54,7 +54,7 @@ onBeforeUnmount(() => {
     <dialog ref="dialog" class="release-notes-dialog" :aria-labelledby="titleId" @close="closed">
       <div class="release-notes-heading">
         <h2 :id="titleId">{{ t("Versionsnyheter") }}</h2>
-        <button ref="closeButton" type="button" class="icon-button" :aria-label="t('Stäng versionsnyheter')" @click="dialog?.close()">
+        <button ref="closeButton" type="button" class="icon-button" :aria-label="t('Stäng versionsnyheter')" :title="t('Stäng versionsnyheter')" @click="dialog?.close()">
           <X :size="20" aria-hidden="true" />
         </button>
       </div>

@@ -160,7 +160,7 @@ onUnmounted(() => {
     @cancel.prevent="close" @close="close" @click="event => { if (event.target === dialog) close(); }">
     <div class="modal-heading">
       <h2 id="scanner-title">{{ mode === 'preferences' ? t("Läs QR-kod") : t("Logga in med QR-kod") }}</h2>
-      <button class="icon-button" :aria-label="t('Stäng')" @click="close"><X :size="20" /></button>
+      <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" @click="close"><X :size="20" /></button>
     </div>
     <p>{{ t("Visa en QR-kod i Issueflow på den andra enheten och skanna den här. Konto, inställningar och vy överförs utan att du behöver logga ut först.") }}</p>
     <video ref="video" autoplay muted playsinline :aria-label="t('Kameraförhandsvisning')" v-show="scanning || pending" />

@@ -122,7 +122,7 @@ onBeforeUnmount(clear);
     <template v-if="open">
       <div class="comments-heading">
         <h2 :id="titleId">{{ t('Kommentarer för #{number}', { number: issue.number }) }}</h2>
-        <button type="button" class="close-comments" :aria-label="t('Stäng kommentarer')" autofocus @click="close"><X :size="20" /></button>
+        <button type="button" class="close-comments" :aria-label="t('Stäng kommentarer')" :title="t('Stäng kommentarer')" autofocus @click="close"><X :size="20" /></button>
       </div>
       <p class="comments-issue-title">{{ issue.title }}</p>
       <div ref="commentsBody" class="comments-body" role="region" :aria-labelledby="titleId" tabindex="0"
