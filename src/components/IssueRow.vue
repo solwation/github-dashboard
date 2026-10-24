@@ -392,7 +392,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 9px; line-height: 1; white-space: nowrap; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
-  .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: #dcecff; color: #175b96; font-size: 9px; cursor: pointer; }
+  .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: var(--marker-move-bg); color: var(--marker-move-text); font-size: 9px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
   .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
   .row-time > .timer { flex: 1 1 auto; min-width: 0; }
