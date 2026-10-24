@@ -1,11 +1,12 @@
 {
   "baseCommit": "b7daa90accace0e9685e3ba1da42d9260040fcfe",
   "summary": {
-    "sv": "Ikonknappar visar förklarande tooltips, och ikoner i sidhuvud, rubriker, sortering och Statistik har enhetliga storlekar.",
-    "en": "Icon buttons show explanatory tooltips, and icons in the header, headings, sorting and Statistics have consistent sizes."
+    "sv": "Ikonknappar visar tooltips, ikoner har enhetliga storlekar och relationsmärken på kort matchar prioritetsmärket.",
+    "en": "Icon buttons show tooltips, icons have consistent sizes, and card relation badges match the priority chip."
   },
   "issues": [
     298,
-    299
+    299,
+    300
   ]
 }

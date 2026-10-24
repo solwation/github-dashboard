@@ -27,12 +27,13 @@
       },
       {
         "text": {
-          "sv": "Issuenummer linjerar på kort med och utan typikon, och ikoner i kort, listrader, sidhuvud, rubriker och Statistik följer samma storlekar.",
-          "en": "Issue numbers line up on cards with and without a type icon, and icons in cards, rows, header, headings and Statistics share consistent sizes."
+          "sv": "Issuenummer linjerar på kort med och utan typikon, relationsmärken på kort matchar prioritetsmärket, och ikoner följer samma storlekar.",
+          "en": "Issue numbers line up on cards with and without a type icon, card relation badges match the priority chip, and icons share consistent sizes."
         },
         "issues": [
           297,
-          298
+          298,
+          300
         ]
       },
       {
