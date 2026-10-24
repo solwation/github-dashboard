@@ -1,11 +1,10 @@
 {
-  "baseCommit": "917a998bfae46c8a404453de09e547b98487f2f5",
+  "baseCommit": "b7daa90accace0e9685e3ba1da42d9260040fcfe",
   "summary": {
-    "sv": "Ikonerna i sidomenyn står i fasta, linjerade kolumner, och issuenummer och ikoner i kort och listrader linjerar bättre.",
-    "en": "Sidebar icons sit in fixed, aligned columns, and issue numbers and icons in cards and list rows line up better."
+    "sv": "Ikonknappar som stäng, zooma och flytta visar nu en förklarande tooltip när du håller muspekaren över dem.",
+    "en": "Icon buttons such as close, zoom and move now show an explanatory tooltip when you hover over them."
   },
   "issues": [
-    295,
-    297
+    299
   ]
 }

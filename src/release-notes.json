@@ -33,6 +33,15 @@
         "issues": [
           297
         ]
+      },
+      {
+        "text": {
+          "sv": "Ikonknappar som stäng, zooma och flytta visar en förklarande tooltip när du håller muspekaren över dem.",
+          "en": "Icon buttons such as close, zoom and move show an explanatory tooltip when you hover over them."
+        },
+        "issues": [
+          299
+        ]
       }
     ]
   },
