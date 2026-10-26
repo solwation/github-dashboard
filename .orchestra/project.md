@@ -150,16 +150,21 @@ Listed order is execution order.
 
 ## Queue intake hooks
 
-None configured. Queue sessions follow [COORDINATION.md](shared/COORDINATION.md) with
-the complete paginated open-issue fetch described [above](#issueflow-and-queue).
+None configured, so the core's dispatch-before-intake rule has nothing to schedule.
+Queue sessions follow [COORDINATION.md](shared/COORDINATION.md) with the complete
+paginated open-issue fetch described [above](#issueflow-and-queue).
 
 ## Final review and watch
 
-When the actionable queue is empty and the latest app batch is published and verified,
-review acceptance, commits, code quality, test evidence and live behavior that has not
-yet been reviewed in its final state. Reuse valid final-state evidence; do not blindly
-repeat green tests. Reopen an affected issue (clearing stale work/`needs-deploy` labels)
-or create a scoped priority-assessed issue for actual defects/gaps, then continue work.
+This is the project's configuration of the core
+[session review](shared/COORDINATION.md#review-the-session); it replaces rather than
+adds to it. Run it when the actionable queue is empty and the latest app batch is
+published and verified (instruction-only batches: after their Action outcome is
+checked). Besides the core areas, review acceptance, commits, code quality, test
+evidence and live Pages behavior that has not yet been reviewed in its final state.
+Reuse valid final-state evidence; do not blindly repeat green tests. Reopen an affected
+issue (clearing stale work/`needs-deploy` labels) or create a scoped priority-assessed
+issue for actual defects/gaps, then continue work.
 
 Only after the final work is solved, published, verified and reviewed without findings,
 start the 60-minute idle watch. This project-specific trigger overrides the shared
@@ -177,8 +182,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.3.2**,
-commit **ebe2cb8738d9f1ce52f68497e8cfa26b90a01bc1** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.4.0**,
+commit **d317d0d8733f548d5e62cf8cb1717c495f316c91** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and explicitly adopt
