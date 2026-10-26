@@ -176,7 +176,7 @@ test("the sync spinner is static with reduced motion", async ({ page }) => {
   await expect(spinner).toHaveCount(0);
 });
 
-test("the combined board status stays on the summary line in both display modes", async ({ page }) => {
+test("the combined board status stays inside the header in both display modes", async ({ page }) => {
   await connect(page, copy.sv);
   await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
   const head = page.locator(".combined-board-head");
@@ -187,25 +187,17 @@ test("the combined board status stays on the summary line in both display modes"
       await page.setViewportSize({ width, height: 800 });
       const sample = await head.evaluate(element => {
         const status = element.querySelector<HTMLElement>(".lane-sync")!;
-        const summary = element.querySelector("summary")!.getBoundingClientRect();
         const headBox = element.getBoundingClientRect();
         const box = status.getBoundingClientRect();
         const height = headBox.height;
-        status.style.display = "none";
-        const without = element.getBoundingClientRect().height;
-        status.style.display = "";
         const marginTop = Math.round(box.top - headBox.top);
         const marginRight = Math.round(headBox.right - box.right);
         return {
           height,
-          without,
-          sameLine: box.top < summary.bottom && box.bottom > summary.top,
           right: box.right <= headBox.right,
           statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
         };
       });
-      expect.soft(sample.height, `combined header height at ${width}px (${mode})`).toBe(sample.without);
-      expect.soft(sample.sameLine, `status on the summary line at ${width}px (${mode})`).toBe(true);
       expect.soft(sample.right, `status inside the header at ${width}px (${mode})`).toBe(true);
       expect.soft(sample.statusMarginsEqual, `combined status margins equal at ${width}px (${mode})`).toBe(true);
     }

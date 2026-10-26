@@ -210,7 +210,7 @@ function setShowInactiveRepos(value: boolean) {
   showInactiveRepos.value = value;
   void save();
 }
-let highlightedRepository: HTMLElement | null = null;
+let highlightedRepositories: HTMLElement[] = [];
 let repositoryHighlightTimer: ReturnType<typeof setTimeout> | undefined;
 let repositoryNavigationTarget: string | null = null;
 let repositoryNavigationRun = 0;
@@ -218,8 +218,8 @@ function clearRepositoryHighlight() {
   repositoryNavigationRun++;
   clearTimeout(repositoryHighlightTimer);
   repositoryHighlightTimer = undefined;
-  highlightedRepository?.classList.remove("repository-navigation-highlight");
-  highlightedRepository = null;
+  for (const el of highlightedRepositories) el.classList.remove("repository-navigation-highlight");
+  highlightedRepositories = [];
   repositoryNavigationTarget = null;
 }
 const focusedSidebarRepository = ref<string | null>(null);
@@ -304,6 +304,22 @@ async function revealRepository(name: string, toggle = false) {
   if (currentView.value === "overview" && splitByRepository.value && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
   await nextTick();
   if (run !== repositoryNavigationRun) return;
+  if (currentView.value === "overview" && !splitByRepository.value) {
+    const combinedBoard = document.querySelector<HTMLElement>(".combined-board");
+    combinedBoard?.scrollIntoView({ block: "start" });
+    const matchingElements = Array.from(
+      document.querySelectorAll<HTMLElement>(".combined-board :is(.cards > .issue-card, .issue-rows > .issue-row)")
+    ).filter(el => el.getAttribute("data-repository") === name);
+    for (const el of matchingElements) {
+      void el.offsetWidth;
+      el.classList.add("repository-navigation-highlight");
+    }
+    highlightedRepositories = matchingElements;
+    if (matchingElements.length) {
+      repositoryHighlightTimer = setTimeout(clearRepositoryHighlight, 1200);
+    }
+    return;
+  }
   const target = document.getElementById(targetId);
   if (!target) return;
   const controls = target.closest("details");
@@ -312,7 +328,7 @@ async function revealRepository(name: string, toggle = false) {
   // Flush removal of the previous outline so same-repository activation restarts its pulse.
   void target.offsetWidth;
   target.classList.add("repository-navigation-highlight");
-  highlightedRepository = target;
+  highlightedRepositories = [target];
   repositoryHighlightTimer = setTimeout(clearRepositoryHighlight, 1200);
 }
 const rules = ref<Record<string, Rules>>({});
@@ -338,6 +354,17 @@ async function navigateWorkspace() {
   if (window.location.hash !== "#" + repositoryNavigationTarget) clearRepositoryHighlight();
   currentView.value = isStatisticsHash() ? "statistics" : "overview";
   await nextTick();
+  if (currentView.value === "overview" && !splitByRepository.value) {
+    const match = window.location.hash.match(/^#repo-(\d+)$/);
+    if (match) {
+      const repoId = Number(match[1]);
+      const repo = lanes.value.find(lane => lane.repo.id === repoId)?.repo;
+      if (repo) {
+        void revealRepository(repo.full_name);
+        return;
+      }
+    }
+  }
   const target = document.getElementById(window.location.hash.slice(1));
   const repositoryControls = target?.closest("details");
   if (repositoryControls) repositoryControls.open = true;
@@ -2346,14 +2373,6 @@ onMounted(async () => {
         </template>
         <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
           <div class="combined-board-head">
-          <details class="combined-repository-controls">
-            <summary>{{ t("Repositoryinställningar") }}</summary>
-            <p class="combined-limit-note">{{ t("Den gemensamma tavlan använder det globala antalet kort per kolumn. Visa fler lägger till lika många till.") }}</p>
-            <div v-for="lane in orderedLanes" :key="lane.repo.full_name" class="combined-repository-control" :id="'repo-' + lane.repo.id">
-              <span class="combined-repository-name"><i :style="{ backgroundColor: workspaceRepositoryColors[lane.repo.full_name] }" aria-hidden="true" />{{ lane.repo.full_name }}</span>
-              <button v-if="!isDemo" class="icon-button" @click="editRules(lane)" :aria-label="t('Repositoryegenskaper för ') + lane.repo.name" :title="t('Repositoryegenskaper')"><Settings2 :size="16" /></button>
-            </div>
-          </details>
           <span v-if="isDemo" class="lane-sync combined-sync">
             <time v-if="refreshed" :datetime="new Date(refreshed).toISOString()"
               :title="t('Senast uppdaterad {time}', { time: statusTime(refreshed) })">{{ statusTime(refreshed) }}</time>
@@ -2399,6 +2418,7 @@ onMounted(async () => {
                     v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                     :key="boardEntryKey({ lane, issue }, col.key)"
                     :id="issueDomId(lane.repo.full_name, issue.number)"
+                    :data-repository="lane.repo.full_name"
                     :issue="issue"
                     :repository="lane.repo.full_name"
                     show-repository
@@ -2424,6 +2444,7 @@ onMounted(async () => {
                   v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
                   :key="boardEntryKey({ lane, issue }, col.key)"
                   :id="issueDomId(lane.repo.full_name, issue.number)"
+                  :data-repository="lane.repo.full_name"
                   v-bind="cardProps(lane, issue, true)"
                   show-time-explanation
                   @read="readIssue(lane.repo.full_name, issue)"
@@ -2645,15 +2666,8 @@ onMounted(async () => {
 .repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .repository-loading svg { flex-shrink: 0; }
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
-/* The sync status sits on the summary's line (#149), so it never wraps onto a row of its own. */
-.combined-board-head { display: flex; align-items: flex-start; gap: 0 8px; border-bottom: 1px solid var(--line); }
-.combined-board-head > .combined-sync { position: relative; flex: 0 0 auto; top: 0; right: 0; margin: 15px 15px 0 auto; height: 16px; line-height: 16px; }
-.combined-repository-controls { flex: 1 1 0; min-width: 0; padding: 15px 18px; font-size: 12px; }
-.combined-repository-controls summary { cursor: pointer; font-weight: 600; }
-.combined-limit-note { color: var(--muted); font-size: 11px; line-height: 1.6; }
-.combined-repository-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
-.combined-repository-name { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex: 1 1 180px; overflow-wrap: anywhere; }
-.combined-repository-name i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.combined-board-head { display: flex; align-items: center; justify-content: flex-end; border-bottom: 1px solid var(--line); }
+.combined-board-head > .combined-sync { position: relative; flex: 0 0 auto; top: 0; right: 0; margin: 15px 15px 15px auto; height: 16px; line-height: 16px; }
 .repository-properties { overflow-wrap: anywhere; }
 .repository-properties .modal-heading h2 { min-width: 0; }
 .repository-properties .modal-heading > button { flex-shrink: 0; }
