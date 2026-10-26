@@ -1,15 +1,14 @@
 {
-  "baseCommit": "16e846f38fa1b37f3f60571451b81ac51f3bd830",
+  "baseCommit": "b5dbe506bb2a7266063cda54a9eb17a56b6a9180",
   "summary": {
-    "sv": "Inaktiva repositories kan döljas i sidomenyn, synkning och statistik är stabilare och appen skyddas av CSP.",
-    "en": "Inactive repositories can be hidden in sidebar, sync and statistics are more robust, and app is CSP hardened."
+    "sv": "Stängning av aktiva notiser vid utloggning, översättning av GitHub-rättigheter, fix för Escape i mobildialog och stabilare relationer samt statistikkälla.",
+    "en": "Active notifications close on sign-out, GitHub permissions translated, mobile escape fix, and more reliable issue relations and statistics cache."
   },
   "issues": [
-    311,
-    313,
-    317,
-    318,
-    321,
-    328
+    312,
+    314,
+    315,
+    319,
+    322
   ]
 }

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-26",
     "summary": {
-      "sv": "Inaktiva repositories kan fällas ihop i sidomenyn, synkning och statistikhistorik har blivit tåligare, och säkerheten har stärkts med en Content-Security-Policy.",
-      "en": "Inactive repositories can be collapsed in the sidebar, sync and statistics history are more resilient, and security is hardened with a Content-Security-Policy."
+      "sv": "Inaktiva repositories kan fällas ihop, notiser och dialoger hanteras säkrare, och synkning och statistik är mer feltåliga.",
+      "en": "Inactive repositories can be collapsed, notifications and dialogs are safer, and sync and statistics are more resilient."
     },
     "sections": [
       {
@@ -51,6 +51,51 @@
         },
         "issues": [
           310
+        ]
+      },
+      {
+        "text": {
+          "sv": "Aktiva systemnotiser med privata ärendetitlar stängs automatiskt vid bekräftad utloggning för att skydda känslig data.",
+          "en": "Active desktop notifications with private issue titles close automatically upon confirmed logout to protect sensitive data."
+        },
+        "issues": [
+          312
+        ]
+      },
+      {
+        "text": {
+          "sv": "Escape-tangenten i mobilens kommentarsdialog stänger nu enbart kommentarsvyn utan att oavsiktligt stänga underliggande ärende.",
+          "en": "Pressing Escape in the phone comments dialog now closes only the comments view without dismissing the parent issue popup."
+        },
+        "issues": [
+          314
+        ]
+      },
+      {
+        "text": {
+          "sv": "Knappen och dialogen för GitHub-rättigheter i inställningar visas nu konsekvent på svenska när svenska är valt.",
+          "en": "The GitHub permissions button and dialog title in settings are now consistently translated into Swedish when selected."
+        },
+        "issues": [
+          315
+        ]
+      },
+      {
+        "text": {
+          "sv": "Misslyckade hämtningar av delärenden och relationer rensas omedelbart ur cachen så att tillfälliga nätverksfel inte låser vyn i tio minuter.",
+          "en": "Failed sub-issue and relation requests are evicted from cache immediately so transient network errors do not lock state for ten minutes."
+        },
+        "issues": [
+          319
+        ]
+      },
+      {
+        "text": {
+          "sv": "Statistikinsamlaren begränsar tavlans ärenden till de 300 senast uppdaterade så att mellanlagringen förblir giltig vid stora projekt.",
+          "en": "The statistics collector limits board issues to the 300 newest-updated entries so cache validation stays intact on large projects."
+        },
+        "issues": [
+          322
         ]
       }
     ]
