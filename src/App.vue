@@ -172,6 +172,7 @@ const selected = ref<string[]>([]);
 const repositoryColors = ref<Record<string, string>>({});
 const projectOrder = ref<string[]>([]);
 const collapsedRepos = ref<string[]>([]);
+const showInactiveRepos = ref(false);
 const layoutAnnouncement = ref("");
 const orderedLanes = computed(() => {
   const order = reconcileOrder(projectOrder.value, lanes.value.map(lane => lane.repo.full_name));
@@ -203,6 +204,10 @@ function toggleCollapsed(name: string) {
   collapsedRepos.value = collapsedRepos.value.includes(name)
     ? collapsedRepos.value.filter(repo => repo !== name) : [...collapsedRepos.value, name];
   save();
+}
+function setShowInactiveRepos(value: boolean) {
+  showInactiveRepos.value = value;
+  void save();
 }
 let highlightedRepository: HTMLElement | null = null;
 let repositoryHighlightTimer: ReturnType<typeof setTimeout> | undefined;
@@ -1097,6 +1102,7 @@ function save(): Promise<void> {
         selected: selected.value,
         projectOrder: projectOrder.value,
         collapsedRepos: collapsedRepos.value,
+        showInactiveRepos: showInactiveRepos.value,
         rules: rules.value,
         columnLimit: columnLimit.value,
         repositoryColumnLimits: repositoryColumnLimits.value,
@@ -1115,6 +1121,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     repositoryColors.value = {};
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
+    showInactiveRepos.value = false;
     columnLimit.value = defaultColumnLimit;
     timeoutSettings.value = normalizeTimeoutSettings({});
     repositoryColumnLimits.value = {};
@@ -1134,6 +1141,9 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
         const layout = restoreLayout(saved, available.map(repo => repo.full_name));
         projectOrder.value = layout.order;
         collapsedRepos.value = layout.collapsed;
+        if (typeof saved.showInactiveRepos === "boolean") {
+          showInactiveRepos.value = saved.showInactiveRepos;
+        }
         activity.restore(saved.activityRead);
         permissionAcknowledgements.value = restorePermissionAcknowledgements(saved.permissionAcknowledgements);
         selected.value = Array.isArray(saved.selected)
@@ -1465,6 +1475,7 @@ function showDemo() {
   visibleLimit.value = {};
   projectOrder.value = [];
   collapsedRepos.value = [];
+  showInactiveRepos.value = false;
   lanes.value = demo();
   refreshed.value = Date.now();
   repoSyncedAt.value = {};
@@ -1515,6 +1526,7 @@ function logout() {
   selected.value = [];
   projectOrder.value = [];
   collapsedRepos.value = [];
+  showInactiveRepos.value = false;
   layoutAnnouncement.value = "";
   rules.value = {};
   columnLimit.value = defaultColumnLimit;
@@ -1825,6 +1837,8 @@ onMounted(async () => {
       :repository-colors="workspaceRepositoryColors"
       :can-select="loggedIn || publicMode"
       :restoring="restoring && !workspaceOpen"
+      :show-inactive="showInactiveRepos"
+      @update:show-inactive="setShowInactiveRepos"
       @select="picker = true"
       @move="moveRepository"
       @reorder="reorderProject"

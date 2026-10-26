@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pagesUrl, recentlyChanged, summarizeLanes } from "../src/lib/sidebar";
+import { isInactiveRepository, pagesUrl, recentlyChanged, summarizeLanes } from "../src/lib/sidebar";
 import type { Issue, Lane } from "../src/lib/model";
 const issue = (id: number, labels: string[] = [], overrides: Partial<Issue> = {}): Issue => ({
   id, number: id, title: `Task ${id}`, html_url: "https://github.com/example/project/issues/1",
@@ -60,5 +60,20 @@ describe("sidebar visibility and Pages link", () => {
     expect(summary(repo("project", { private: true, has_pages: false }))).toMatchObject({ private: true });
     expect(summary(repo("project", { private: true, has_pages: false }))).not.toHaveProperty("pagesUrl");
     expect(summary(repo("project", { private: false, has_pages: true }))).toMatchObject({ private: false, pagesUrl: "https://example.github.io/project/" });
+  });
+});
+
+describe("isInactiveRepository", () => {
+  it("identifies repositories without open backlog or in-progress issues as inactive", () => {
+    expect(isInactiveRepository({ backlog: 0, progress: 0 })).toBe(true);
+    expect(isInactiveRepository({ backlog: 0, progress: 0, loading: false })).toBe(true);
+  });
+  it("keeps repositories with open backlog or in-progress issues active", () => {
+    expect(isInactiveRepository({ backlog: 1, progress: 0 })).toBe(false);
+    expect(isInactiveRepository({ backlog: 0, progress: 2 })).toBe(false);
+    expect(isInactiveRepository({ backlog: 3, progress: 1 })).toBe(false);
+  });
+  it("does not classify actively loading repositories as inactive before issues resolve", () => {
+    expect(isInactiveRepository({ backlog: 0, progress: 0, loading: true })).toBe(false);
   });
 });
