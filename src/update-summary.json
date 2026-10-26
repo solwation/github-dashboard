@@ -1,14 +1,10 @@
 {
-  "baseCommit": "7436822ba32da5f27d437bbc5839f05665bdd8c3",
+  "baseCommit": "e54c556b91e387a7808e21895847027a9d0847ce",
   "summary": {
-    "sv": "Gemensam tavla förenklad med kortmarkering från sidomenyn, delad kolumnkomponent, säkrad synkning och uppdateringsnotiser samt tvåpassvalidering i publiceringsgrinden.",
-    "en": "Combined board streamlined with sidebar card highlighting, shared column component, hardened sync and update notes, and two-pass validation in publication gate."
+    "sv": "Draghandtagen i sidomenyn har tagits bort för att ge mer plats åt projektnamn och statusikoner; repositories ordnas via inställningar.",
+    "en": "Sidebar drag handles are removed to free up horizontal space for project names and status icons; repositories are reordered in settings."
   },
   "issues": [
-    316,
-    320,
-    323,
-    324,
-    327
+    329
   ]
 }

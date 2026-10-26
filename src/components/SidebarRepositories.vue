@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronRight, Circle, CircleCheck, Clock3, Globe, Lock, Plus, SquareArrowOutUpRight } from "@lucide/vue";
-import RepositoryOrderControls from "./RepositoryOrderControls.vue";
 import { repositoryColor } from "../lib/repository-color";
-import { projectDragType } from "../lib/project-layout";
 import { useLanguage } from "../lib/i18n";
 import { isInactiveRepository, recentlyChanged, RECENT_CHANGE_MS, type SidebarRepository } from "../lib/sidebar";
 import { HOVER_DELAY_MS } from "../lib/adhoc-refresh";
@@ -29,8 +27,6 @@ const now = useNow(at => Math.min(...props.repos.map(repo => {
 })));
 const emit = defineEmits<{
   select: [];
-  move: [name: string, direction: -1 | 1];
-  reorder: [source: string, target: string];
   interest: [name: string];
   activate: [name: string];
   "update:showInactive": [value: boolean];
@@ -48,18 +44,11 @@ function toggleInactive() {
 }
 const activeRepos = computed(() => props.repos.filter(repo => !isInactiveRepository(repo)));
 const inactiveRepos = computed(() => props.repos.filter(repo => isInactiveRepository(repo)));
-function repoIndex(fullName: string) {
-  return props.repos.findIndex(repo => repo.fullName === fullName);
-}
 // Interest in a repository (#187): click and focus act at once, hover after a short rest.
 let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 function hoverStart(name: string) { hoverEnd(); hoverTimer = setTimeout(() => emit('interest', name), HOVER_DELAY_MS); }
 function hoverEnd() { clearTimeout(hoverTimer); hoverTimer = undefined; }
 onBeforeUnmount(hoverEnd);
-function drop(event: DragEvent, target: string) {
-  const source = event.dataTransfer?.getData(projectDragType);
-  if (source) emit("reorder", source, target);
-}
 const { t, locale } = useLanguage();
 function activateRepository(event: MouseEvent, repo: SidebarRepository) {
   if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -83,8 +72,7 @@ function lastChange(changedAt: string | null) {
       <Plus :size="16" />
     </button>
     </div>
-    <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
-    <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="repoIndex(repo.fullName)" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
+    <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName">
     <div class="repo-body">
     <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
       <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
@@ -128,8 +116,7 @@ function lastChange(changedAt: string | null) {
     </button>
 
     <div v-if="inactiveRepos.length > 0" v-show="showInactive" id="sidebar-inactive-repositories" class="sidebar-inactive-group">
-      <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
-      <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="repoIndex(repo.fullName)" :total="repos.length" @move="emit('move', repo.fullName, $event)" @reorder="(source, target) => emit('reorder', source, target)" />
+      <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :data-repository="repo.fullName">
       <div class="repo-body">
       <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.loading ? t('Hämtar…') : lastChange(repo.changedAt)" :aria-busy="repo.loading || undefined">
         <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />

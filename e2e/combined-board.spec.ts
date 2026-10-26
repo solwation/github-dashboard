@@ -91,8 +91,12 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("startsidan");
   await expect(board.locator(".issue-card")).toHaveCount(2);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
-  await page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna weekend-project med/ }).focus();
-  await page.keyboard.press("ArrowUp");
+  await openSettings(page);
+  await page.getByRole("button", { name: "Ordna repositories", exact: true }).click();
+  const reorderDialog = page.getByRole("dialog", { name: "Ordna repositories", exact: true });
+  await reorderDialog.getByRole("button", { name: "Flytta weekend-project upp", exact: true }).click();
+  await reorderDialog.getByRole("button", { name: "Klart", exact: true }).click();
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
   expect(await matchingColors(page)).toEqual(colors);
   for (const width of [320, 390, 650]) {
     await page.setViewportSize({ width, height: 844 });

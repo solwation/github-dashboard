@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openSettings } from "./support/phone-menu";
 
 async function connect(page: Page) {
   let version = 1;
@@ -51,8 +52,12 @@ async function expectSameDocument(page: Page) {
 test("refresh shortcuts fetch full data in place and preserve filters, order and collapsed lanes while busy", async ({ page }) => {
   const api = await connect(page);
   await expect(page.getByRole("button", { name: "Uppdatera", exact: true })).toHaveCount(0);
-  await page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna beta med/ }).focus();
-  await page.keyboard.press("ArrowUp");
+  await openSettings(page);
+  await page.getByRole("button", { name: "Ordna repositories", exact: true }).click();
+  const reorderDialog = page.getByRole("dialog", { name: "Ordna repositories", exact: true });
+  await reorderDialog.getByRole("button", { name: "Flytta beta upp", exact: true }).click();
+  await reorderDialog.getByRole("button", { name: "Klart", exact: true }).click();
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
   await page.getByRole("button", { name: "Kollapsa beta", exact: true }).click();
   await page.getByRole("textbox", { name: "Sök issues" }).fill("Keep");
   await page.getByRole("checkbox", { name: "Dölj koordinationsärenden" }).uncheck();

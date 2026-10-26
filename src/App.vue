@@ -179,11 +179,6 @@ function reorderProject(source: string, target: string) {
     focused.scrollIntoView({ block: "nearest" });
   });
 }
-function moveRepository(name: string, direction: -1 | 1) {
-  const names = orderedLanes.value.map(lane => lane.repo.full_name);
-  const target = names[names.indexOf(name) + direction];
-  if (target) reorderProject(name, target);
-}
 function toggleCollapsed(name: string) {
   if (collapsedRepos.value.includes(name)) resetVisible(name);
   collapsedRepos.value = collapsedRepos.value.includes(name)
@@ -1903,8 +1898,6 @@ onMounted(async () => {
       :show-inactive="showInactiveRepos"
       @update:show-inactive="setShowInactiveRepos"
       @select="picker = true"
-      @move="moveRepository"
-      @reorder="reorderProject"
       @interest="refreshStaleRepository"
       @activate="activateSidebarRepository"
     />

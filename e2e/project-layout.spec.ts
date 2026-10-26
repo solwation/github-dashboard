@@ -59,19 +59,24 @@ test("drag and keyboard order stay in sync, survive refresh and reload, and rema
   await expectOrder(page, ["alpha", "bravo", "charlie"]);
   const sidebar = page.locator(".sidebar-projects");
   await expect(page.locator(".repo-lane .project-order-controls")).toHaveCount(0);
-  await expect(sidebar.locator(".sidebar-repository-row > .project-order-controls:first-child")).toHaveCount(3);
-  await expect(sidebar.locator(".project-order-controls button")).toHaveCount(3);
-  const firstHandle = (await sidebar.locator(".project-drag-handle").first().boundingBox())!;
-  const firstLink = (await sidebar.locator(".sidebar-repository").first().boundingBox())!;
-  expect(firstHandle.x + firstHandle.width).toBeLessThanOrEqual(firstLink.x);
-  expect(firstHandle.y).toBeLessThan(firstLink.y + firstLink.height);
-  await sidebar.getByRole("button", { name: /^Ordna charlie med/ }).dragTo(sidebar.locator(".sidebar-repository-row").first());
+  await expect(sidebar.locator(".project-order-controls")).toHaveCount(0);
+  await expect(sidebar.locator(".project-drag-handle")).toHaveCount(0);
+
+  await openSettings(page, "Inställningar", false);
+  const settings = page.locator('dialog[aria-labelledby="language-settings-title"]');
+  await settings.getByRole("button", { name: "Ordna repositories", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Ordna repositories", exact: true });
+  await dialog.getByRole("button", { name: "Flytta charlie upp", exact: true }).click();
+  await dialog.getByRole("button", { name: "Flytta charlie upp", exact: true }).click();
   await expectOrder(page, ["charlie", "alpha", "bravo"]);
-  const handle = sidebar.getByRole("button", { name: /^Ordna bravo med/ });
+  const handle = dialog.locator("li").nth(2).locator(".project-drag-handle");
   await handle.focus();
   await page.keyboard.press("ArrowUp");
   await expectOrder(page, ["charlie", "bravo", "alpha"]);
-  await expect(handle).toBeFocused();
+  await expect(dialog.locator("li").nth(1).locator(".project-drag-handle")).toBeFocused();
+  await dialog.getByRole("button", { name: "Klart", exact: true }).click();
+  await settings.getByRole("button", { name: "Klart", exact: true }).click();
+
   await page.getByRole("button", { name: "Kollapsa bravo", exact: true }).click();
   await expect(page.locator("#repo-2 .swimlane")).toBeHidden();
   await expect(page.locator("#repo-2 .lane-summary")).toContainText("Backlog: 1");
@@ -100,13 +105,17 @@ test("drag and keyboard order stay in sync, survive refresh and reload, and rema
 });
 
 
-test.describe("touch sidebar ordering", () => {
+test.describe("touch repository ordering in Settings", () => {
   test.use({ viewport: { width: 1100, height: 900 }, hasTouch: true });
-  test("a real touch drag reorders repositories and persists after reload", async ({ page, context }) => {
+  test("a real touch drag in settings dialog reorders repositories and persists after reload", async ({ page, context }) => {
     await fixture(page);
     await page.goto("/");
     await connect(page);
-    const rows = page.locator(".sidebar-repository-row");
+    await openSettings(page, "Inställningar", false);
+    const settings = page.locator('dialog[aria-labelledby="language-settings-title"]');
+    await settings.getByRole("button", { name: "Ordna repositories", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Ordna repositories", exact: true });
+    const rows = dialog.locator("li");
     const handle = rows.nth(2).locator(".project-drag-handle");
     await expect(handle).toBeVisible();
     const source = (await handle.boundingBox())!;
@@ -120,6 +129,9 @@ test.describe("touch sidebar ordering", () => {
       await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: startY + (endY - startY) * step / 10 }] });
     }
     await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(rows.first()).toHaveAttribute("data-repository", "sample/charlie");
+    await dialog.getByRole("button", { name: "Klart", exact: true }).click();
+    await settings.getByRole("button", { name: "Klart", exact: true }).click();
     await expectOrder(page, ["charlie", "alpha", "bravo"]);
     await page.reload();
     await expectOrder(page, ["charlie", "alpha", "bravo"]);

@@ -2,10 +2,19 @@
   {
     "date": "2026-10-26",
     "summary": {
-      "sv": "Inaktiva repositories kan fällas ihop, gemensam tavla har förenklats med kortmarkering från sidomenyn, och synkning, uppdateringar och publiceringsgrind har härdats.",
-      "en": "Inactive repositories can be collapsed, combined board is streamlined with sidebar card highlighting, and sync, updates, and the publication gate are hardened."
+      "sv": "Draghandtag i sidomenyn har tagits bort för mer plats, inaktiva repositories kan fällas ihop och gemensam tavla, synkning och grind har härdats.",
+      "en": "Sidebar drag handles are removed for more space, inactive repos can collapse, and combined board, sync, and publication gate are hardened."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Draghandtagen i sidomenyn har tagits bort för att ge mer horisontellt utrymme åt projektnamn och statusikoner; ordningen ändras via inställningsdialogen.",
+          "en": "Sidebar drag handles are removed to give project names and status icons more horizontal room; ordering remains available in settings."
+        },
+        "issues": [
+          329
+        ]
+      },
       {
         "text": {
           "sv": "Inaktiva repositories utan ärenden i backlog eller under arbete kan fällas ihop under en expanderbar kontroll i sidomenyn.",
