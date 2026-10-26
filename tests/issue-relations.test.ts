@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { GitHub } from "../src/lib/github";
-import { IssueRelationsCache, parseIssueRelations, RELATIONS_TTL_MS, subIssueProgress } from "../src/lib/issue-relations";
+import { IssueRelationsCache, parseIssueRelations, RELATIONS_TTL_MS, subIssueProgress, type IssueRelations } from "../src/lib/issue-relations";
 import type { Issue } from "../src/lib/model";
 const parent = { number: 42, title: "Parent plan", url: "https://github.com/other/plans/issues/42" };
 const response = (issue: unknown, errors?: unknown[]) => ({ data: { repository: { issue } }, errors });
@@ -31,25 +31,27 @@ describe("native issue relations", () => {
   });
   it("deduplicates pending requests and revalidates expired, updated or explicitly refreshed relations", async () => {
     vi.useFakeTimers();
-    let complete!: (value: null) => void;
-    const fetch = vi.fn(() => new Promise<null>(resolve => { complete = resolve; }));
+    let complete!: (value: IssueRelations | null) => void;
+    const empty: IssueRelations = { parent: null, progress: null };
+    const fetch = vi.fn(() => new Promise<IssueRelations | null>(resolve => { complete = resolve; }));
     const cache = new IssueRelationsCache(fetch);
     const first = cache.get("owner/repo", issue());
     expect(cache.get("owner/repo", issue())).toBe(first);
-    complete(null); await first;
+    complete(empty); await first;
     await cache.get("owner/repo", issue());
     expect(fetch).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(RELATIONS_TTL_MS);
-    const next = cache.get("owner/repo", issue()); complete(null); await next;
+    const next = cache.get("owner/repo", issue()); complete(empty); await next;
     expect(fetch).toHaveBeenCalledTimes(2);
-    const changed = cache.get("owner/repo", { ...issue(), updated_at: "later" }); complete(null); await changed;
+    const changed = cache.get("owner/repo", { ...issue(), updated_at: "later" }); complete(empty); await changed;
     expect(fetch).toHaveBeenCalledTimes(3);
     cache.clear();
-    const refreshed = cache.get("owner/repo", issue()); complete(null); await refreshed;
+    const refreshed = cache.get("owner/repo", issue()); complete(empty); await refreshed;
     expect(fetch).toHaveBeenCalledTimes(4);
   });
   it("clears only the named repositories so a targeted refresh keeps other repositories' relations (#149)", async () => {
-    const fetch = vi.fn(async () => null);
+    const empty: IssueRelations = { parent: null, progress: null };
+    const fetch = vi.fn(async () => empty);
     const cache = new IssueRelationsCache(fetch);
     await cache.get("owner/one", issue()); await cache.get("owner/two", issue());
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -57,6 +59,65 @@ describe("native issue relations", () => {
     await cache.get("owner/one", issue()); await cache.get("owner/two", issue());
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(fetch).toHaveBeenLastCalledWith("owner/one", 1);
+  });
+  it("does not cache failed or rate-limit-skipped relation fetches so subsequent calls retry (#319)", async () => {
+    let mode: "fail" | "rate-limit" | "empty" = "fail";
+    const relations: IssueRelations = { parent: { ...parent, repository: "owner/plans" }, progress: { total: 5, completed: 2 } };
+    const fetch = vi.fn(async () => {
+      if (mode === "fail") throw new Error("502 Bad Gateway");
+      if (mode === "rate-limit") return null;
+      return relations;
+    });
+    const cache = new IssueRelationsCache(fetch);
+    // 1. Failed fetch rejects/throws -> resolves to null and is not cached
+    expect(await cache.get("owner/repo", issue())).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    // 2. Next get fetches again; rate-limit skipped returns null and is not cached
+    mode = "rate-limit";
+    expect(await cache.get("owner/repo", issue())).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    // 3. Next get fetches again; successful result is returned and cached
+    mode = "empty";
+    expect(await cache.get("owner/repo", issue())).toEqual(relations);
+    expect(fetch).toHaveBeenCalledTimes(3);
+
+    // 4. Subsequent get within TTL uses cache without fetching again
+    expect(await cache.get("owner/repo", issue())).toEqual(relations);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+  it("retries relations when client rate limit clears without caching skipped calls (#319)", async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: "rate limited" }), {
+        status: 429,
+        headers: { "retry-after": "60" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(response({ parent, subIssuesSummary: { total: 3, completed: 1 } }))));
+    vi.stubGlobal("fetch", fetch);
+    const client = new GitHub("fictional-token");
+
+    // First call hits 429 rate limit
+    expect(await client.issueRelations("owner/repo", issue() as Issue)).toBeNull();
+    expect(client.retryAfterMs()).toBeGreaterThan(0);
+
+    // Second call while still rate-limited honours wait and does not make another HTTP request
+    expect(await client.issueRelations("owner/repo", issue() as Issue)).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    // Advance time past the rate limit wait
+    vi.advanceTimersByTime(65_000);
+    expect(client.retryAfterMs()).toBe(0);
+
+    // Third call fetches again, succeeds, and caches for TTL
+    const result = await client.issueRelations("owner/repo", issue() as Issue);
+    expect(result?.parent?.number).toBe(42);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    // Fourth call uses cache
+    expect(await client.issueRelations("owner/repo", issue() as Issue)).toEqual(result);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
   it("limits relationship requests across repositories to three and releases slots after failures", async () => {
     let active = 0, maximum = 0;

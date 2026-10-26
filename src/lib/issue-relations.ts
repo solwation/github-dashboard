@@ -59,7 +59,13 @@ export class IssueRelationsCache {
     const previous = this.entries.get(key);
     if (previous && (previous.pending || Date.now() - previous.at < RELATIONS_TTL_MS)) return previous.result;
     const entry = { at: Date.now(), pending: true, result: Promise.resolve<IssueRelations | null>(null) };
-    entry.result = this.run(repository, issue.number).catch(() => null).finally(() => { entry.pending = false; entry.at = Date.now(); });
+    entry.result = this.run(repository, issue.number)
+      .catch(() => null)
+      .then((result) => {
+        if (result == null && this.entries.get(key) === entry) this.entries.delete(key);
+        return result;
+      })
+      .finally(() => { entry.pending = false; entry.at = Date.now(); });
     this.entries.delete(key);
     this.entries.set(key, entry);
     if (this.entries.size > 300) this.entries.delete(this.entries.keys().next().value!);
