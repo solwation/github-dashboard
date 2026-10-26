@@ -1,3 +1,5 @@
+import { PUBLIC_MODE_KEY } from "./public-workspace";
+
 /** Encrypted, origin-local account settings (selected repositories, layout, rules, filters,
  * read markers). Unlike the credential vault, records and their non-exportable key survive
  * confirmed logout so the same account gets its settings back after signing in again.
@@ -132,7 +134,7 @@ async function write(login: string, json: string): Promise<void> {
 function legacyKeys(): string[] {
   try {
     return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
-      .filter((key): key is string => Boolean(key?.startsWith(LEGACY_SETTINGS_PREFIX)));
+      .filter((key): key is string => Boolean(key?.startsWith(LEGACY_SETTINGS_PREFIX) && key !== PUBLIC_MODE_KEY));
   } catch {
     return [];
   }
@@ -149,6 +151,19 @@ async function migrateLegacy(): Promise<void> {
     try { localStorage.removeItem(storageKey); } catch { /* Retried on the next load. */ }
   }
 }
+
+/** Runs legacy settings migration once at startup, swallowing storage errors so startup is never blocked. */
+export function migrateLegacySettings(): Promise<void> {
+  return serialize(async () => {
+    try {
+      await migrateLegacy();
+    } catch {
+      /* Storage errors are swallowed and never block startup. */
+    }
+  });
+}
+
+void migrateLegacySettings();
 
 /** Resolves the saved settings for `login`, or null when none exist (or they are damaged).
  * Rejects with SettingsStorageError on storage failures so callers can avoid overwriting them. */

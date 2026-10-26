@@ -1,7 +1,8 @@
 import type { Repo } from "./model";
 /** Separate from every valid GitHub login; contents still use the encrypted settings store. */
 export const PUBLIC_SETTINGS_ACCOUNT = ':public-workspace:';
-const MODE_KEY = 'issueflow:public-mode';
+export const PUBLIC_MODE_KEY = 'issueflow:public-mode';
+const MODE_KEY = PUBLIC_MODE_KEY;
 export function publicWorkspaceRemembered(): boolean {
   try { return localStorage.getItem(MODE_KEY) === 'true'; } catch { return false; }
 }
