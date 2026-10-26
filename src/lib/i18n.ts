@@ -323,6 +323,7 @@ export const english: Record<string, string> = {
   "Tid (UTC)": "Time (UTC)",
   "Publik läsåtkomst": "Public read access",
   "ISSUEFLOW.md är en guide för dig och din AI-assistent. Den beskriver hur status, prioritet och labels på GitHub-issues används i dashboarden. Läs guiden här, eller kopiera hänvisningen till assistenten och följ instruktionerna i ditt projekt.": "ISSUEFLOW.md is a guide for you and your AI assistant. It explains how GitHub issue status, priority and labels are used in the dashboard. Read the guide here, or copy the reference for your assistant and follow the instructions in your project.",
+  "GitHub-rättigheter": "GitHub permissions",
   "Översikt över GitHub-rättigheter": "GitHub permissions overview",
   "Rättighet": "Permission",
   "Funktioner i dashboarden": "Dashboard features",
