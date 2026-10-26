@@ -4,6 +4,10 @@
  */
 export interface IssueNavigationTarget { repoId: number; number: number }
 
+export function issueDomId(repository: string, number: number): string {
+  return `issue-${encodeURIComponent(repository.toLowerCase())}-${number}`;
+}
+
 export function issueNavigationHash({ repoId, number }: IssueNavigationTarget): string {
   return `#repo-${repoId}-issue-${number}`;
 }

@@ -11,8 +11,6 @@ import {
   BellOff,
   ArrowRight,
   ChevronDown,
-  CircleCheck,
-  Clock3,
   ExternalLink,
   Layers3,
   LayoutDashboard,
@@ -27,7 +25,7 @@ import {
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
 import RepositorySection from "./components/RepositorySection.vue";
-import ColumnSortMenu from "./components/ColumnSortMenu.vue";
+import BoardColumn from "./components/BoardColumn.vue";
 import RepositoryHeading from "./components/RepositoryHeading.vue";
 import OverviewSummary from "./components/OverviewSummary.vue";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
@@ -73,10 +71,7 @@ import { sameLaneContent, sameLaneList } from "./lib/lane-changes";
 import { measureRender } from "./lib/startup-timing";
 import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
-import IssueCard from "./components/IssueCard.vue";
-import IssueRow from "./components/IssueRow.vue";
 import BoardModeToggle from "./components/BoardModeToggle.vue";
-import ColumnEstimate from "./components/ColumnEstimate.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { provideSubIssues } from "./composables/useSubIssues";
@@ -91,7 +86,7 @@ import {
   notifyTimeout,
   closeActiveNotifications,
 } from "./lib/notifications";
-import { parseIssueNavigationHash, type IssueNavigationTarget } from "./lib/issue-navigation";
+import { parseIssueNavigationHash, issueDomId, type IssueNavigationTarget } from "./lib/issue-navigation";
 import {
   column,
   deriveWorkStarts,
@@ -519,7 +514,6 @@ const repositoryColumnLimits = ref<Record<string, number>>({});
 let issueNavigationHighlight: HTMLElement | null = null;
 let issueNavigationTimer: ReturnType<typeof setTimeout> | undefined;
 const parentNavigationRevision = ref(0);
-function issueDomId(repository: string, number: number) { return `issue-${encodeURIComponent(repository.toLowerCase())}-${number}`; }
 // Resolves true once the issue is highlighted; false when the board cannot show it (#288).
 async function revealParentIssue(repository: string, number: number): Promise<boolean> {
   parentNavigationRevision.value++;
@@ -755,6 +749,21 @@ function cardProps(lane: Lane, issue: Issue, showRepository = false) {
     commitRetry: commitRetry.value, recentMove: activity.moved(repo, issue, activityNow.value),
     newComments: activity.newComments(repo, issue, activityNow.value),
     celebrate: recentClosures.value.has(closureKey(repo, issue)),
+  };
+}
+function rowProps(lane: Lane, issue: Issue, showRepository = false) {
+  const repo = lane.repo.full_name, load = isDemo.value ? undefined : loaders(repo);
+  return {
+    issue, repository: repo, showRepository, assignedColor: workspaceRepositoryColors.value[repo],
+    loadRelations: load?.relations, relationsRevision: relationsRevisions.value[repo] ?? 0,
+    rules: rules.value[repo] || {}, timedOut: issueTimedOut(repo, issue),
+    timeoutOverrunPercent: timeoutSettings.value.timeoutOverrunPercent,
+    timeoutEstimateMs: timeoutEstimateMs(repo, issue),
+    demo: isDemo.value, loadComments: load?.comments, commentsSession: generation,
+    recentMove: activity.moved(repo, issue, activityNow.value),
+    newComments: activity.newComments(repo, issue, activityNow.value),
+    celebrate: recentClosures.value.has(closureKey(repo, issue)),
+    navigationRevision: parentNavigationRevision.value,
   };
 }
 function readIssue(repo: string, issue: Issue) {
@@ -2255,91 +2264,28 @@ onMounted(async () => {
             {{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}
           </div>
           <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane" :class="{ 'list-mode': listMode }">
-            <section
+            <BoardColumn
               v-for="col in columns"
               :key="col.key"
               :id="'board-' + lane.repo.id + '-' + col.key"
-              tabindex="-1"
               :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
-              class="board-column"
-              :class="col.key"
-            >
-              <div class="column-header">
-                <div class="column-heading">
-                  <i :class="col.key" />{{ col.title
-                  }}<span class="column-count">{{
-                    items(lane, col.key).length
-                  }}</span
-                  ><ColumnEstimate v-if="col.key !== 'closed'" :groups="laneEstimateGroups.get(lane.repo.full_name) ?? []" :column="col.key as 'progress' | 'backlog'" />
-                </div>
-                <ColumnSortMenu :column="col.key" :model-value="columnSorts[col.key]!" @update:model-value="setColumnSort(col.key, $event)" />
-              </div>
-              <div class="cards">
-                <ul v-if="listMode && items(lane, col.key).length" class="issue-rows">
-                  <IssueRow
-                    v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
-                    :key="boardEntryKey({ lane, issue }, col.key)"
-                    :id="issueDomId(lane.repo.full_name, issue.number)"
-                    :issue="issue"
-                    :repository="lane.repo.full_name"
-                    :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
-                    :rules="rules[lane.repo.full_name] || {}"
-                    :timed-out="issueTimedOut(lane.repo.full_name, issue)"
-                    :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" :timeout-estimate-ms="timeoutEstimateMs(lane.repo.full_name, issue)"
-                    :demo="isDemo"
-                    :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
-                    :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
-                    :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
-                    :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
-                    :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
-                    :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
-                    :navigation-revision="parentNavigationRevision"
-                    :comments-session="generation"
-                    @read="readIssue(lane.repo.full_name, issue)"
-                    v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" @child-select="revealParentIssue" /></IssueRow>
-                </ul>
-                <template v-else-if="!listMode">
-                <IssueCard
-                  v-for="issue in items(lane, col.key).slice(0, shownLimit(lane.repo.full_name, col.key))"
-                  :key="boardEntryKey({ lane, issue }, col.key)"
-                  :id="issueDomId(lane.repo.full_name, issue.number)"
-                  v-bind="cardProps(lane, issue)"
-                  show-time-explanation
-                  @read="readIssue(lane.repo.full_name, issue)"
-                  @parent-select="revealParentIssue"
-                  @child-select="revealParentIssue"
-                />
-                </template>
-                <div v-if="!items(lane, col.key).length" class="column-empty">
-                  <CircleCheck v-if="col.key === 'closed'" :size="20" /><Clock3
-                    v-else-if="col.key === 'progress'"
-                    :size="20"
-                  /><Layers3 v-else :size="20" /><span>{{
-                    query || repositoryQueries[lane.repo.full_name]
-                      ? t("Inga issues matchar filtren")
-                      : col.key === "progress"
-                      ? t("Inget pågående arbete")
-                      : col.key === "closed"
-                        ? t("Inga stängda issues ännu")
-                        : t("Backloggen är tom")
-                  }}</span>
-                </div>
-                <button
-                  v-if="
-                    items(lane, col.key).length >
-                    (shownLimit(lane.repo.full_name, col.key))
-                  "
-                  class="show-more"
-                  @click="
-                    visibleLimit[lane.repo.full_name + col.key] =
-                      (shownLimit(lane.repo.full_name, col.key)) + initialLimit(lane.repo.full_name)
-                  "
-                >
-                  {{ t("Visa fler") }} <ChevronDown :size="14" />
-                </button>
-              </div>
-            </section>
+              :column="col"
+              :lane="lane"
+              :items="items(lane, col.key)"
+              :list-mode="listMode"
+              :limit="shownLimit(lane.repo.full_name, col.key)"
+              :limit-increment="initialLimit(lane.repo.full_name)"
+              :estimate-groups="laneEstimateGroups.get(lane.repo.full_name) ?? []"
+              :sort="columnSorts[col.key]"
+              :filtered="Boolean(query || repositoryQueries[lane.repo.full_name])"
+              :card-props="cardProps"
+              :row-props="rowProps"
+              @update:sort="setColumnSort(col.key, $event)"
+              @show-more="visibleLimit[lane.repo.full_name + col.key] = shownLimit(lane.repo.full_name, col.key) + initialLimit(lane.repo.full_name)"
+              @read="readIssue"
+              @parent-select="revealParentIssue"
+              @child-select="revealParentIssue"
+            />
           </div>
           </div>
         </RepositorySection>
@@ -2374,91 +2320,29 @@ onMounted(async () => {
             <p v-if="lane.timerWarning" class="notice"><strong>{{ lane.repo.full_name }}</strong> {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</p>
           </template>
           <div class="swimlane" :class="{ 'list-mode': listMode }">
-            <section
+            <BoardColumn
               v-for="col in columns"
               :key="col.key"
               :id="'board-combined-' + col.key"
-              tabindex="-1"
               :aria-label="t('{status} i alla repositories', { status: mobileStatusLabel(col.key) })"
-              class="board-column"
-              :class="col.key"
-            >
-              <div class="column-header">
-                <div class="column-heading">
-                  <i :class="col.key" />{{ col.title
-                  }}<span v-if="combinedColumns[col.key]!.length || !orderedLanes.some(lane => lane.loading || lane.error)" class="column-count">{{
-                    combinedColumns[col.key]!.length
-                  }}</span
-                  ><ColumnEstimate v-if="col.key !== 'closed'" :groups="combinedEstimateGroups" :column="col.key as 'progress' | 'backlog'" />
-                </div>
-                <ColumnSortMenu :column="col.key" :model-value="columnSorts[col.key]!" @update:model-value="setColumnSort(col.key, $event)" />
-              </div>
-              <div class="cards">
-                <ul v-if="listMode && combinedColumns[col.key]!.length" class="issue-rows">
-                  <IssueRow
-                    v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
-                    :key="boardEntryKey({ lane, issue }, col.key)"
-                    :id="issueDomId(lane.repo.full_name, issue.number)"
-                    :issue="issue"
-                    :repository="lane.repo.full_name"
-                    show-repository
-                    :assigned-color="workspaceRepositoryColors[lane.repo.full_name]"
-                    :rules="rules[lane.repo.full_name] || {}"
-                    :timed-out="issueTimedOut(lane.repo.full_name, issue)"
-                    :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" :timeout-estimate-ms="timeoutEstimateMs(lane.repo.full_name, issue)"
-                    :demo="isDemo"
-                    :recent-move="activity.moved(lane.repo.full_name, issue, activityNow)"
-                    :new-comments="activity.newComments(lane.repo.full_name, issue, activityNow)"
-                    :celebrate="recentClosures.has(closureKey(lane.repo.full_name, issue))"
-                    :load-relations="isDemo ? undefined : loaders(lane.repo.full_name)?.relations"
-                    :load-comments="isDemo ? undefined : loaders(lane.repo.full_name)?.comments"
-                    :relations-revision="relationsRevisions[lane.repo.full_name] ?? 0"
-                    :navigation-revision="parentNavigationRevision"
-                    :comments-session="generation"
-                    @read="readIssue(lane.repo.full_name, issue)"
-                    v-slot="{ inPopup }"
-                  ><IssueCard v-bind="cardProps(lane, issue, true)" :row-details="!inPopup" show-time-explanation :default-expanded="true" @read="readIssue(lane.repo.full_name, issue)" @parent-select="revealParentIssue" @child-select="revealParentIssue" /></IssueRow>
-                </ul>
-                <template v-else-if="!listMode">
-                <IssueCard
-                  v-for="{ lane, issue } in combinedColumns[col.key]!.slice(0, combinedLimit(col.key))"
-                  :key="boardEntryKey({ lane, issue }, col.key)"
-                  :id="issueDomId(lane.repo.full_name, issue.number)"
-                  v-bind="cardProps(lane, issue, true)"
-                  show-time-explanation
-                  @read="readIssue(lane.repo.full_name, issue)"
-                  @parent-select="revealParentIssue"
-                  @child-select="revealParentIssue"
-                />
-                </template>
-                <div v-if="!combinedColumns[col.key]!.length && !orderedLanes.some(lane => lane.loading || lane.error)" class="column-empty">
-                  <CircleCheck v-if="col.key === 'closed'" :size="20" /><Clock3
-                    v-else-if="col.key === 'progress'"
-                    :size="20"
-                  /><Layers3 v-else :size="20" /><span>{{
-                    query
-                      ? t("Inga issues matchar filtren")
-                      : col.key === "progress"
-                      ? t("Inget pågående arbete")
-                      : col.key === "closed"
-                        ? t("Inga stängda issues ännu")
-                        : t("Backloggen är tom")
-                  }}</span>
-                </div>
-                <button
-                  v-if="
-                    combinedColumns[col.key]!.length >
-                    combinedLimit(col.key)
-                  "
-                  class="show-more"
-                  @click="
-                    combinedLimits[col.key] = combinedLimit(col.key) + columnLimit
-                  "
-                >
-                  {{ t("Visa fler") }} <ChevronDown :size="14" />
-                </button>
-              </div>
-            </section>
+              :column="col"
+              :items="combinedColumns[col.key]!"
+              :show-repository="true"
+              :list-mode="listMode"
+              :limit="combinedLimit(col.key)"
+              :limit-increment="columnLimit"
+              :estimate-groups="combinedEstimateGroups"
+              :sort="columnSorts[col.key]"
+              :loading="orderedLanes.some(lane => lane.loading || lane.error)"
+              :filtered="Boolean(query)"
+              :card-props="cardProps"
+              :row-props="rowProps"
+              @update:sort="setColumnSort(col.key, $event)"
+              @show-more="combinedLimits[col.key] = combinedLimit(col.key) + columnLimit"
+              @read="readIssue"
+              @parent-select="revealParentIssue"
+              @child-select="revealParentIssue"
+            />
           </div>
         </section>
         <footer class="board-footer">
