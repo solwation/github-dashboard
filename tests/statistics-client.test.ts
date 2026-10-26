@@ -15,7 +15,11 @@ function mockClient(handler: (url: URL) => Promise<Reply> | Reply) {
 function baseline(url: URL): Reply {
   if (url.pathname.endsWith("/issues/events")) return { data: [{ id: 1, event: "closed", created_at: "2026-10-13T00:00:00Z", issue, actor: { login: "alice" } }], next: null };
   if (url.pathname.endsWith("/issues")) return { data: [issue, { ...issue, id: 2, pull_request: {} }], next: null };
-  if (url.pathname.endsWith("/commits")) return { data: [commit, { ...commit, sha: "merge", parents: [{ sha: "first" }, { sha: "other" }] }], next: null };
+  if (url.pathname.endsWith("/commits")) {
+    const since = url.searchParams.get("since");
+    const data = [commit, { ...commit, sha: "merge", parents: [{ sha: "first" }, { sha: "other" }] }];
+    return { data: since ? data.filter(item => (item.commit.committer?.date ?? item.commit.author?.date ?? "") >= since) : data, next: null };
+  }
   if (url.pathname.includes("/commits/")) return { data: { stats: { additions: 10, deletions: 4 }, files: [{ filename: "first.ts" }] }, next: null };
   return { data: [], next: null };
 }
@@ -193,8 +197,8 @@ describe('persistent statistics history reuse', () => {
   it('restores immediately, refetches the previous partial day and reuses immutable older commit details after two days', async () => {
     let shifted = false;
     const historical = { ...commit, sha: 'historical' };
-    const overlap = { ...commit, sha: 'overlap', commit: { committer: { date: '2026-10-16T01:00:00Z' } } };
-    const fresh = { ...commit, sha: 'new', commit: { committer: { date: '2026-10-18T01:00:00Z' } } };
+    const overlap = { ...commit, sha: 'overlap', parents: [{ sha: 'historical' }], commit: { committer: { date: '2026-10-16T01:00:00Z' } } };
+    const fresh = { ...commit, sha: 'new', parents: [{ sha: 'overlap' }], commit: { committer: { date: '2026-10-18T01:00:00Z' } } };
     const { calls, client } = mockClient(url => url.pathname.endsWith('/commits')
       ? { data: shifted ? [overlap, fresh] : [historical, overlap], next: null } : baseline(url));
     const first = new StatisticsCollector(client);
@@ -246,5 +250,132 @@ describe('persistent statistics history reuse', () => {
     calls.length = 0;
     await restored.load('sample/repo', now + 7 * 86400000);
     expect(calls.find(url => url.pathname.endsWith('/commits'))!.searchParams.get('since')).toBe('2026-09-23T00:00:00Z');
+  });
+  it('discards history reuse and fetches the full window when a merge commit introduces an older-dated commit (#321)', async () => {
+    const c0: StatisticsCommit = { ...commit, sha: 'c0', parents: [], commit: { committer: { date: '2026-09-01T00:00:00Z' } } };
+    const c1: StatisticsCommit = { ...commit, sha: 'c1', parents: [{ sha: 'c0' }], commit: { committer: { date: '2026-10-15T12:00:00Z' } } };
+    const pr1: StatisticsCommit = { ...commit, sha: 'pr1', parents: [{ sha: 'c1' }], commit: { committer: { date: '2026-10-14T10:00:00Z' } } };
+    const merge: StatisticsCommit = { ...commit, sha: 'merge1', parents: [{ sha: 'c1' }, { sha: 'pr1' }], commit: { committer: { date: '2026-10-17T10:00:00Z' } } };
+
+    let allCommits: StatisticsCommit[] = [c1];
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith('/commits')) {
+        const sinceParam = url.searchParams.get('since');
+        const data = sinceParam ? allCommits.filter(c => (c.commit.committer?.date ?? '') >= sinceParam) : allCommits;
+        return { data, next: null };
+      }
+      return baseline(url);
+    });
+
+    const collector = new StatisticsCollector(client);
+    await collector.load('sample/repo', now); // 2026-10-16: fetches c1
+
+    // Merge lands: default branch now contains c1, pr1, merge1.
+    allCommits = [merge, pr1, c1];
+    calls.length = 0;
+
+    const later = now + 86400000; // 2026-10-17
+    const result = await collector.load('sample/repo', later);
+
+    const commitCalls = calls.filter(url => url.pathname.endsWith('/commits'));
+    // Incremental fetch returned only [merge1] (since pr1 is from 2026-10-14 < 2026-10-16).
+    // Because pr1 is missing from historical and fetched commits, reuse was invalidated and full window was fetched.
+    expect(commitCalls).toHaveLength(2);
+    expect(commitCalls[0]!.searchParams.get('since')).toBe('2026-10-16T00:00:00Z');
+    expect(commitCalls[1]!.searchParams.get('since')).toBe('2026-09-17T00:00:00Z');
+    expect(result.commits!.data.map(c => c.sha).sort()).toEqual(['c1', 'merge1', 'pr1']);
+    expect(result.commits!.historyVerifiedAt).toBe(later);
+  });
+  it('discards history reuse and fetches the full window when a fast-forward introduces an older-dated commit (#321)', async () => {
+    const c1: StatisticsCommit = { ...commit, sha: 'c1', parents: [], commit: { committer: { date: '2026-10-15T12:00:00Z' } } };
+    const delayed: StatisticsCommit = { ...commit, sha: 'delayed', parents: [{ sha: 'c1' }], commit: { committer: { date: '2026-10-14T12:00:00Z' } } };
+    const c2: StatisticsCommit = { ...commit, sha: 'c2', parents: [{ sha: 'delayed' }], commit: { committer: { date: '2026-10-16T20:00:00Z' } } };
+
+    let allCommits: StatisticsCommit[] = [c1];
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith('/commits')) {
+        const sinceParam = url.searchParams.get('since');
+        const data = sinceParam ? allCommits.filter(c => (c.commit.committer?.date ?? '') >= sinceParam) : allCommits;
+        return { data, next: null };
+      }
+      return baseline(url);
+    });
+
+    const collector = new StatisticsCollector(client);
+    await collector.load('sample/repo', now);
+
+    allCommits = [c2, delayed, c1];
+    calls.length = 0;
+
+    const later = now + 86400000;
+    const result = await collector.load('sample/repo', later);
+
+    const commitCalls = calls.filter(url => url.pathname.endsWith('/commits'));
+    expect(commitCalls).toHaveLength(2);
+    expect(commitCalls[0]!.searchParams.get('since')).toBe('2026-10-16T00:00:00Z');
+    expect(commitCalls[1]!.searchParams.get('since')).toBe('2026-09-17T00:00:00Z');
+    expect(result.commits!.data.map(c => c.sha).sort()).toEqual(['c1', 'c2', 'delayed']);
+  });
+  it('preserves history reuse on linear incremental updates without refetching the full window (#321)', async () => {
+    const c1: StatisticsCommit = { ...commit, sha: 'c1', parents: [], commit: { committer: { date: '2026-10-15T12:00:00Z' } } };
+    const c2: StatisticsCommit = { ...commit, sha: 'c2', parents: [{ sha: 'c1' }], commit: { committer: { date: '2026-10-17T10:00:00Z' } } };
+
+    let allCommits: StatisticsCommit[] = [c1];
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith('/commits')) {
+        const sinceParam = url.searchParams.get('since');
+        const data = sinceParam ? allCommits.filter(c => (c.commit.committer?.date ?? '') >= sinceParam) : allCommits;
+        return { data, next: null };
+      }
+      return baseline(url);
+    });
+
+    const collector = new StatisticsCollector(client);
+    const first = await collector.load('sample/repo', now);
+    const verified = first.commits!.historyVerifiedAt;
+
+    allCommits = [c2, c1];
+    calls.length = 0;
+
+    const later = now + 86400000;
+    const result = await collector.load('sample/repo', later);
+
+    const commitCalls = calls.filter(url => url.pathname.endsWith('/commits'));
+    expect(commitCalls).toHaveLength(1);
+    expect(commitCalls[0]!.searchParams.get('since')).toBe('2026-10-16T00:00:00Z');
+    expect(result.commits!.data.map(c => c.sha).sort()).toEqual(['c1', 'c2']);
+    expect(result.commits!.historyVerifiedAt).toBe(verified);
+  });
+  it('preserves history reuse when commit parent is older than the statistics window (#321)', async () => {
+    // c_old is from 2026-09-10, which was in history when window started earlier
+    const c_old: StatisticsCommit = { ...commit, sha: 'c_old', parents: [], commit: { committer: { date: '2026-09-10T12:00:00Z' } } };
+    const c1: StatisticsCommit = { ...commit, sha: 'c1', parents: [{ sha: 'c_old' }], commit: { committer: { date: '2026-10-15T12:00:00Z' } } };
+    const c2: StatisticsCommit = { ...commit, sha: 'c2', parents: [{ sha: 'c_old' }], commit: { committer: { date: '2026-10-17T10:00:00Z' } } };
+
+    let allCommits: StatisticsCommit[] = [c1, c_old];
+    const { calls, client } = mockClient(url => {
+      if (url.pathname.endsWith('/commits')) {
+        const sinceParam = url.searchParams.get('since');
+        const data = sinceParam ? allCommits.filter(c => (c.commit.committer?.date ?? '') >= sinceParam) : allCommits;
+        return { data, next: null };
+      }
+      return baseline(url);
+    });
+
+    const collector = new StatisticsCollector(client);
+    // Initial collection with window from 2026-09-10
+    const first = await collector.load('sample/repo', Date.parse('2026-10-10T12:00:00Z'));
+    // Ensure c_old is retained in the cache
+    expect(first.commits!.data.map(c => c.sha)).toContain('c_old');
+
+    allCommits = [c2, c1, c_old];
+    calls.length = 0;
+
+    const later = now + 86400000; // window.from is now 2026-09-17, c_old (2026-09-10) is older than window
+    const result = await collector.load('sample/repo', later);
+
+    const commitCalls = calls.filter(url => url.pathname.endsWith('/commits'));
+    expect(commitCalls).toHaveLength(1);
+    expect(result.commits!.data.map(c => c.sha)).toContain('c2');
   });
 });
