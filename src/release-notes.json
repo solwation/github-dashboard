@@ -2,8 +2,8 @@
   {
     "date": "2026-10-26",
     "summary": {
-      "sv": "Inaktiva repositories kan fällas ihop, notiser och dialoger hanteras säkrare, och synkning och statistik är mer feltåliga.",
-      "en": "Inactive repositories can be collapsed, notifications and dialogs are safer, and sync and statistics are more resilient."
+      "sv": "Inaktiva repositories kan fällas ihop, gemensam tavla har förenklats med kortmarkering från sidomenyn, och synkning, uppdateringar och publiceringsgrind har härdats.",
+      "en": "Inactive repositories can be collapsed, combined board is streamlined with sidebar card highlighting, and sync, updates, and the publication gate are hardened."
     },
     "sections": [
       {
@@ -96,6 +96,51 @@
         },
         "issues": [
           322
+        ]
+      },
+      {
+        "text": {
+          "sv": "Gemensam tavla har förenklats utan överflödiga kontroller, och klick eller Enter på ett repository i sidomenyn framhäver dess kort och rader med en tydlig pulsanimering.",
+          "en": "Combined board is streamlined without redundant controls, and clicking or pressing Enter on a repository in the sidebar highlights its cards and rows with a clear pulse animation."
+        },
+        "issues": [
+          327
+        ]
+      },
+      {
+        "text": {
+          "sv": "Tavlans kolumnmarkup har brutits ut till en delad BoardColumn-komponent som enar visningslägen och förenklar gränssnittskoden.",
+          "en": "Board column markup is extracted into a shared BoardColumn component, unifying view modes and simplifying interface templates."
+        },
+        "issues": [
+          316
+        ]
+      },
+      {
+        "text": {
+          "sv": "Tavelsynkningen köar en uppföljande full uppdatering om regeländringar sker under pågående synk, och bevarar avstämningsbegäran vid upptagna tillfällen.",
+          "en": "Board sync queues a follow-up full refresh if rule changes occur during an active sync, and preserves reconciliation requests when busy."
+        },
+        "issues": [
+          320
+        ]
+      },
+      {
+        "text": {
+          "sv": "Uppdateringsnotiser och versionssammanfattning hålls synkroniserade när en väntande service worker ersätts eller dialogen öppnas igen efter tidigare stängning.",
+          "en": "Update notifications and release notes stay in sync when a waiting service worker is replaced or the prompt is reopened after deferral."
+        },
+        "issues": [
+          323
+        ]
+      },
+      {
+        "text": {
+          "sv": "Publiceringsgrinden verifierar öppna ärenden i två pass vid paginering så att parallella avslut under valideringskörningar inte leder till felaktiga avbrott.",
+          "en": "The publication gate verifies open issues in two passes across pagination so concurrent closures during validation runs do not cause false aborts."
+        },
+        "issues": [
+          324
         ]
       }
     ]
