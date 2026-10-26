@@ -520,6 +520,11 @@ export const english: Record<string, string> = {
   "Inga stängda issues ännu": "No closed issues yet",
   "Backloggen är tom": "The backlog is empty",
   "Visa fler": "Show more",
+  "Visa inaktiva repositories": "Show inactive repositories",
+  "Dölj inaktiva repositories": "Hide inactive repositories",
+  "Visa inaktiva": "Show inactive",
+  "Dölj inaktiva": "Hide inactive",
+  "{count} inaktiva repositories": "{count} inactive repositories",
   "Dina repositories. Ditt arbetssätt.": "Your repositories. Your workflow.",
   "Fiktiva exempeldata": "Fictional sample data",
   "Läsande vy · ändra issues på GitHub":

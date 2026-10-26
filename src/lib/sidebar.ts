@@ -70,3 +70,9 @@ export function recentlyChanged(changedAt: string | null, now: number): boolean 
   const elapsed = now - Date.parse(changedAt);
   return elapsed >= 0 && elapsed <= RECENT_CHANGE_MS;
 }
+
+/** A repository is inactive when it has no open issues in Backlog or In Progress, and is not actively loading. */
+export function isInactiveRepository(repo: Pick<SidebarRepository, "backlog" | "progress" | "loading">): boolean {
+  return !repo.loading && repo.backlog === 0 && repo.progress === 0;
+}
+
