@@ -58,6 +58,8 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   // A status move after the first load marks two repositories as recently active.
   await expect(page.locator('.repo-lane')).toHaveCount(5);
   for (const name of ['site', 'notes']) await expect(row(name).locator('.backlog')).toContainText('1');
+  const toggle = page.locator('.sidebar-inactive-toggle');
+  if (await toggle.isVisible()) await toggle.click();
   moved = true; updated = new Date().toISOString();
   // A manual refresh may be ignored while the initial load settles; retry until the move is seen.
   await expect(async () => {

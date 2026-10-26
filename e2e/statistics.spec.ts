@@ -201,8 +201,12 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(design.locator(".chart-legend span")).toHaveText(["Skapade issues", "Stängda issues"]);
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
   await expect(weekend.locator(".statistics-filter-chip")).toHaveText(["Bidragsgivare: demo-alex"]);
-  const reorder = page.locator(".sidebar-projects").getByRole("button", { name: /^Ordna weekend-project med/ });
-  await reorder.focus(); await page.keyboard.press("ArrowUp");
+  await openSettings(page);
+  await page.getByRole("button", { name: "Ordna repositories", exact: true }).click();
+  const reorderDialog = page.getByRole("dialog", { name: "Ordna repositories", exact: true });
+  await reorderDialog.getByRole("button", { name: "Flytta weekend-project upp", exact: true }).click();
+  await reorderDialog.getByRole("button", { name: "Klart", exact: true }).click();
+  await page.getByRole("button", { name: "Klart", exact: true }).click();
   await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["design-system", "weekend-project", "personal-website"]);
   await expect(weekend.getByRole("combobox", { name: "Bidragsgivare", exact: true })).toHaveValue("demo-alex");
   for (const width of [320, 390, 650]) {
