@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createIssueSync, type IssueSyncOptions } from "../src/lib/sync";
+import { createIssueSync, RepositoryBackoff, syncBackoffMs, ACTIVE_SYNC_MS, MAX_SYNC_BACKOFF_MS, type IssueSyncOptions } from "../src/lib/sync";
 const running: ReturnType<typeof createIssueSync>[] = [];
 function setup(overrides: Partial<IssueSyncOptions> = {}) {
   let allowed = true;
@@ -108,5 +108,55 @@ describe("adaptive issue sync", () => {
     expect(app.options.onSuccess).not.toHaveBeenCalled();
     expect(app.options.reconcile).toHaveBeenCalledTimes(1);
     expect(app.options.refreshActive).not.toHaveBeenCalled();
+  });
+});
+
+describe("RepositoryBackoff", () => {
+  it("computes capped exponential backoff durations", () => {
+    expect(syncBackoffMs(0)).toBe(0);
+    expect(syncBackoffMs(1)).toBe(15_000);
+    expect(syncBackoffMs(2)).toBe(30_000);
+    expect(syncBackoffMs(3)).toBe(60_000);
+    expect(syncBackoffMs(4)).toBe(120_000);
+    expect(syncBackoffMs(5)).toBe(240_000);
+    expect(syncBackoffMs(6)).toBe(300_000);
+    expect(syncBackoffMs(10)).toBe(MAX_SYNC_BACKOFF_MS);
+  });
+  it("tracks individual repository failures and backoff status", () => {
+    let now = 1_000_000;
+    const tracker = new RepositoryBackoff(syncBackoffMs, () => now);
+    expect(tracker.isBackingOff("sample/repo")).toBe(false);
+    expect(tracker.isDue("sample/repo")).toBe(false);
+
+    tracker.recordFailure("sample/repo");
+    expect(tracker.failureCount("sample/repo")).toBe(1);
+    expect(tracker.isBackingOff("sample/repo")).toBe(true);
+    expect(tracker.isDue("sample/repo")).toBe(false);
+    expect(tracker.shouldSync("sample/repo", { hasActive: true, reconcile: true })).toBe(false);
+    expect(tracker.shouldSync("sample/repo", { hasActive: false, reconcile: false, manual: true })).toBe(true);
+
+    now += 15_000;
+    expect(tracker.isBackingOff("sample/repo")).toBe(false);
+    expect(tracker.isDue("sample/repo")).toBe(true);
+    expect(tracker.shouldSync("sample/repo", { hasActive: false, reconcile: false })).toBe(true);
+
+    tracker.recordFailure("sample/repo");
+    expect(tracker.failureCount("sample/repo")).toBe(2);
+    expect(tracker.retryTime("sample/repo")).toBe(now + 30_000);
+
+    tracker.recordSuccess("sample/repo");
+    expect(tracker.failureCount("sample/repo")).toBe(0);
+    expect(tracker.isBackingOff("sample/repo")).toBe(false);
+    expect(tracker.isDue("sample/repo")).toBe(false);
+  });
+  it("cleans up untracked repositories on retain and clear", () => {
+    const tracker = new RepositoryBackoff();
+    tracker.recordFailure("repo1");
+    tracker.recordFailure("repo2");
+    tracker.retain(["repo2", "repo3"]);
+    expect(tracker.failureCount("repo1")).toBe(0);
+    expect(tracker.failureCount("repo2")).toBe(1);
+    tracker.clear();
+    expect(tracker.failureCount("repo2")).toBe(0);
   });
 });

@@ -3,6 +3,78 @@ export const ACTIVE_RECONCILE_MS = 120_000;
 export const IDLE_RECONCILE_MS = 300_000;
 export const MAX_SYNC_BACKOFF_MS = 300_000;
 export type SyncKind = "active" | "reconcile";
+
+export function syncBackoffMs(failures: number): number {
+  if (failures <= 0) return 0;
+  return Math.min(MAX_SYNC_BACKOFF_MS, ACTIVE_SYNC_MS * 2 ** Math.min(failures - 1, 5));
+}
+
+export class RepositoryBackoff {
+  private readonly failures = new Map<string, number>();
+  private readonly retryAt = new Map<string, number>();
+
+  constructor(
+    private readonly backoffMs: (failures: number) => number = syncBackoffMs,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  isBackingOff(name: string, now = this.now()): boolean {
+    const at = this.retryAt.get(name);
+    return at !== undefined && now < at;
+  }
+
+  isDue(name: string, now = this.now()): boolean {
+    const at = this.retryAt.get(name);
+    return at !== undefined && now >= at;
+  }
+
+  recordFailure(name: string, now = this.now()): number {
+    const count = (this.failures.get(name) || 0) + 1;
+    this.failures.set(name, count);
+    const delay = this.backoffMs(count);
+    const until = now + delay;
+    this.retryAt.set(name, until);
+    return until;
+  }
+
+  recordSuccess(name: string): void {
+    this.failures.delete(name);
+    this.retryAt.delete(name);
+  }
+
+  retryTime(name: string): number | undefined {
+    return this.retryAt.get(name);
+  }
+
+  failureCount(name: string): number {
+    return this.failures.get(name) || 0;
+  }
+
+  shouldSync(name: string, options: { hasActive: boolean; reconcile: boolean; manual?: boolean }, now = this.now()): boolean {
+    if (options.manual) return true;
+    if (this.isBackingOff(name, now)) return false;
+    if (options.reconcile) return true;
+    if (options.hasActive) return true;
+    if (this.isDue(name, now)) return true;
+    return false;
+  }
+
+  retain(names: readonly string[]): void {
+    const keep = new Set(names);
+    for (const key of this.failures.keys()) {
+      if (!keep.has(key)) {
+        this.failures.delete(key);
+        this.retryAt.delete(key);
+      }
+    }
+  }
+
+  clear(): void {
+    this.failures.clear();
+    this.retryAt.clear();
+  }
+}
+
 export interface IssueSyncOptions {
   /** Read live state: authenticated, not editing, online, and visible or notifications enabled. */
   canSync(): boolean;
@@ -64,7 +136,7 @@ export function createIssueSync(options: IssueSyncOptions) {
       if (kind === "reconcile") requestedReconcile = true;
       failures++;
       const serverDelay = options.retryAfterMs?.(error);
-      const backoff = Math.min(MAX_SYNC_BACKOFF_MS, ACTIVE_SYNC_MS * 2 ** Math.min(failures - 1, 5));
+      const backoff = syncBackoffMs(failures);
       // Never retry before a valid server-specified limit, even when it exceeds our own cap.
       retryAt = now() + Math.max(backoff, serverDelay !== undefined && Number.isFinite(serverDelay) ? Math.max(0, serverDelay) : 0);
       options.onError?.(error, kind);

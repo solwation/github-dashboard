@@ -49,7 +49,7 @@ import { summarizeLanes } from "./lib/sidebar";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
 import { countUnreadActivity, ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
-import { createIssueSync } from "./lib/sync";
+import { createIssueSync, RepositoryBackoff } from "./lib/sync";
 import { createBackgroundCheckScheduler } from "./lib/background-sync";
 import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
 import { shouldAdhocRefresh } from "./lib/adhoc-refresh";
@@ -413,6 +413,7 @@ async function writeContent(changedOnly: boolean) {
 const syncError = ref("");
 const lastSynced = new Map<string, number>();
 const lastFullSynced = new Map<string, number>();
+const repoBackoff = new RepositoryBackoff();
 /**
  * Per-repository sync status for the repository headers (#146). Kept outside the cached lanes, so a
  * new timestamp never rewrites the content cache or the lane objects; both refs are replaced, never
@@ -1177,7 +1178,7 @@ async function openPublicWorkspace() {
     api = client; sessionToken.value = ""; user.value = null;
     isDemo.value = false; publicMode.value = true;
     publicSnapshots = snapshots.filter(entry => available.some(repo => repo.id === entry.lane.repo.id && repo.full_name === entry.lane.repo.full_name));
-    lastSynced.clear(); lastFullSynced.clear(); repoSyncedAt.value = {}; refreshed.value = null;
+    lastSynced.clear(); lastFullSynced.clear(); repoSyncedAt.value = {}; refreshed.value = null; repoBackoff.clear();
     lanes.value = []; repos.value = available; selected.value = []; notificationRepos.value = [];
     restorePreferences(available, settings);
     rememberPublicWorkspace(true);
@@ -1270,6 +1271,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     if (!cached) generation++;
     lastSynced.clear();
     lastFullSynced.clear();
+    repoBackoff.clear();
     sessionToken.value = token;
     api = next;
     publicMode.value = false; rememberPublicWorkspace(false);
@@ -1329,6 +1331,7 @@ function reconcileSelection() {
   timedOut.value = timedOut.value.filter(entry => selected.value.includes(entry.repo));
   for (const name of lastSynced.keys()) if (!selected.value.includes(name)) lastSynced.delete(name);
   for (const name of lastFullSynced.keys()) if (!selected.value.includes(name)) lastFullSynced.delete(name);
+  repoBackoff.retain(selected.value);
 }
 /**
  * `activeOnly` is the 15-second tick: one conditional list per repository with active issues (#123).
@@ -1364,8 +1367,21 @@ async function refresh(incremental = false, replacePending = false, manual = fal
   busy.value = true;
   fullRefreshRunning = !incremental && !only;
   if (!activeOnly) error.value = "";
-  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name) && (!only || only.includes(repo.full_name)) &&
-    (!activeOnly || lanes.value.some(lane => lane.repo.full_name === repo.full_name && laneHasActiveIssues(lane)))).sort((a, b) =>
+  if ((client.retryAfterMs?.() || 0) > 0) {
+    if (incremental) throw new Error(t("Hastighetsbegränsad av GitHub."));
+    return;
+  }
+  const nowMs = Date.now();
+  const targets = repos.value.filter(repo => {
+    if (!selected.value.includes(repo.full_name)) return false;
+    if (only && !only.includes(repo.full_name)) return false;
+    const hasActive = lanes.value.some(lane => lane.repo.full_name === repo.full_name && laneHasActiveIssues(lane));
+    return repoBackoff.shouldSync(repo.full_name, {
+      hasActive,
+      reconcile: !activeOnly,
+      manual: manual || (only !== undefined && only.includes(repo.full_name)),
+    }, nowMs);
+  }).sort((a, b) =>
     Number(!!lanes.value.find(lane => lane.repo.full_name === b.full_name)?.loading) - Number(!!lanes.value.find(lane => lane.repo.full_name === a.full_name)?.loading));
   const result: Lane[] = [];
   let cursor = 0;
@@ -1375,6 +1391,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
       while (cursor < targets.length && current()) {
         const repo = targets[cursor++]!;
+        if ((client.retryAfterMs?.() || 0) > 0) break;
         markSyncing(repo.full_name, 1);
         try {
           const repoRules = { ...rules.value[repo.full_name] };
@@ -1389,6 +1406,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
             return { lane, started, full };
           });
           if (!current() || !selected.value.includes(repo.full_name)) continue;
+          repoBackoff.recordSuccess(repo.full_name);
           lastSynced.set(repo.full_name, loaded.started);
           const syncedAt = Date.now();
           markSynced([repo.full_name], syncedAt);
@@ -1403,6 +1421,9 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           if (lane !== shown) lanes.value = lanes.value.map(entry => entry.repo.full_name === repo.full_name ? lane : entry);
         } catch (cause) {
           if (!current() || cause instanceof RepositoryRequestCancelled) continue;
+          if ((client.retryAfterMs?.() || 0) === 0) {
+            repoBackoff.recordFailure(repo.full_name);
+          }
           const old = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           if (!old || !selected.value.includes(repo.full_name)) continue;
           const reason = message(cause);
@@ -1420,12 +1441,16 @@ async function refresh(incremental = false, replacePending = false, manual = fal
         const times = publicSnapshots.filter(entry => selected.value.includes(entry.lane.repo.full_name)).map(entry => entry.syncedAt);
         refreshed.value = times.length ? Math.min(...times) : null;
       }
-      if (!only && result.every(lane => !lane.error)) {
+      if (!only && result.some(lane => !lane.error)) {
         refreshed.value = Date.now();
         showingCache.value = false;
       }
       await persistContent(incremental);
-      if (incremental && result.some(lane => lane.error)) throw new Error(result.find(lane => lane.error)!.error);
+      const rateLimitDelay = client.retryAfterMs?.() || 0;
+      if (incremental && rateLimitDelay > 0) {
+        const rateLimitError = result.find(lane => lane.error)?.error || t("Hastighetsbegränsad av GitHub.");
+        throw new Error(rateLimitError);
+      }
     }
   } finally {
     if (current()) busy.value = false;
@@ -1499,6 +1524,7 @@ function logout() {
   tokenPanel.value = false;
   lastSynced.clear();
   lastFullSynced.clear();
+  repoBackoff.clear();
   syncError.value = "";
   sessionToken.value = "";
   handoffOpen.value = false;
@@ -1640,7 +1666,7 @@ const sync = createIssueSync({
     (!document.hidden ||
       (notificationPermission() === "granted" &&
         selected.value.some((repo) => notificationRepos.value.includes(repo)))),
-  hasActiveIssues: () => lanes.value.some(laneHasActiveIssues),
+  hasActiveIssues: () => lanes.value.some(laneHasActiveIssues) || selected.value.some(name => repoBackoff.isDue(name)),
   refreshActive: () => refresh(true, false, false, true),
   reconcile: () => refresh(true),
   retryAfterMs: () => api?.retryAfterMs(),
