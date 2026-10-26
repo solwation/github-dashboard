@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { issueNavigationHash, parseIssueNavigationHash } from "../src/lib/issue-navigation";
+import { issueDomId, issueNavigationHash, parseIssueNavigationHash } from "../src/lib/issue-navigation";
 
 describe("issue navigation hash", () => {
+  it("formats deterministic DOM ids for issues", () => {
+    expect(issueDomId("sample/alpha", 42)).toBe("issue-sample%2Falpha-42");
+    expect(issueDomId("Sample/Alpha", 42)).toBe("issue-sample%2Falpha-42");
+  });
   it("round-trips a repository id and issue number", () => {
     const hash = issueNavigationHash({ repoId: 7, number: 42 });
     expect(hash).toBe("#repo-7-issue-42");
