@@ -45,17 +45,48 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await board.locator(".closed").getByRole("button", { name: "Visa fler", exact: true }).click();
   await expect(board.locator(".issue-card")).toHaveCount(17);
   expect(await matchingColors(page)).toEqual(colors);
+  await expect(board.locator(".combined-repository-controls")).toHaveCount(0);
+  await expect(board.locator(".combined-limit-note")).toHaveCount(0);
+  await expect(board.getByText("Repositoryinställningar")).toHaveCount(0);
   const sidebarProject = page.locator('.sidebar-repository-row[data-repository="demo/design-system"] .sidebar-repository');
+  const designCards = board.locator('.issue-card[data-repository="demo/design-system"]');
+  const otherCards = board.locator('.issue-card:not([data-repository="demo/design-system"])');
+  await expect(designCards).not.toHaveCount(0);
   await sidebarProject.click();
-  await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
-  await expect(board.locator(".combined-limit-note")).toBeVisible();
-  await sidebarProject.click();
-  await expect(board.locator(".combined-repository-controls")).not.toHaveAttribute("open", "");
+  await expect(sidebarProject).toBeFocused();
+  await expect(designCards.first()).toHaveClass(/repository-navigation-highlight/);
+  for (const card of await designCards.all()) {
+    await expect(card).toHaveClass(/repository-navigation-highlight/);
+  }
+  for (const card of await otherCards.all()) {
+    await expect(card).not.toHaveClass(/repository-navigation-highlight/);
+  }
   await sidebarProject.press("Enter");
-  await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
-  await board.getByText("Repositoryinställningar", { exact: true }).click();
-  await sidebarProject.click(); // The same hash must also reveal a manually closed panel.
-  await expect(board.locator(".combined-repository-controls")).toHaveAttribute("open", "");
+  await expect(sidebarProject).toBeFocused();
+  await expect(designCards.first()).toHaveClass(/repository-navigation-highlight/);
+
+  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  const designRows = board.locator('.issue-row[data-repository="demo/design-system"]');
+  const otherRows = board.locator('.issue-row:not([data-repository="demo/design-system"])');
+  await expect(designRows).not.toHaveCount(0);
+  await sidebarProject.click();
+  await expect(sidebarProject).toBeFocused();
+  for (const row of await designRows.all()) {
+    await expect(row).toHaveClass(/repository-navigation-highlight/);
+  }
+  for (const row of await otherRows.all()) {
+    await expect(row).not.toHaveClass(/repository-navigation-highlight/);
+  }
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await sidebarProject.click();
+  await expect(sidebarProject).toBeFocused();
+  const reducedRow = designRows.first();
+  await expect(reducedRow).toHaveClass(/repository-navigation-highlight/);
+  expect(await reducedRow.evaluate(element => getComputedStyle(element).animationName)).toBe("none");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
+  await page.getByRole("button", { name: "Kort", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("startsidan");
   await expect(board.locator(".issue-card")).toHaveCount(2);

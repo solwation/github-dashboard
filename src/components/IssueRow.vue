@@ -182,6 +182,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     ref="row"
     class="issue-row"
     tabindex="-1"
+    :data-repository="repository"
     :style="{ '--repository-color': assignedColor || repositoryColor(repository) }"
     @click="rowClick"
     :class="[col, { expanded, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"

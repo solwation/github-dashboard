@@ -171,6 +171,7 @@ const visibleLabels = computed(() =>
     ref="card"
     class="issue-card"
     tabindex="-1"
+    :data-repository="rowDetails ? undefined : repository"
     :style="repository ? { '--repository-color': assignedColor || repositoryColor(repository) } : undefined"
     :class="[col, { 'row-details-card': rowDetails, 'has-repository': !!repository && !rowDetails, 'just-closed': celebrate && col === 'closed' && !rowDetails, 'unread-move': recentMove === true && !rowDetails, 'unread-created': recentMove === 'created' && !rowDetails, 'issue-timeout': timedOut && col === 'progress' && !rowDetails }]"
   >

@@ -160,6 +160,7 @@ const shouldShowEmpty = computed(() => {
           v-for="{ lane, issue } in visibleEntries"
           :key="boardEntryKey({ lane, issue }, column.key)"
           :id="issueDomId(lane.repo.full_name, issue.number)"
+          :data-repository="lane.repo.full_name"
           v-bind="rowProps(lane, issue, showRepository)"
           @read="emit('read', lane.repo.full_name, issue)"
           v-slot="{ inPopup }"
@@ -180,6 +181,7 @@ const shouldShowEmpty = computed(() => {
           v-for="{ lane, issue } in visibleEntries"
           :key="boardEntryKey({ lane, issue }, column.key)"
           :id="issueDomId(lane.repo.full_name, issue.number)"
+          :data-repository="lane.repo.full_name"
           v-bind="cardProps(lane, issue, showRepository)"
           show-time-explanation
           @read="emit('read', lane.repo.full_name, issue)"
