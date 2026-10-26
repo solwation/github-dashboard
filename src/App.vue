@@ -89,6 +89,7 @@ import {
   requestNotifications,
   notifyClosure,
   notifyTimeout,
+  closeActiveNotifications,
 } from "./lib/notifications";
 import { parseIssueNavigationHash, type IssueNavigationTarget } from "./lib/issue-navigation";
 import {
@@ -1234,6 +1235,8 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
   if (authBusy.value) return false;
   authBusy.value = true;
   error.value = "";
+  const previousToken = sessionToken.value;
+  const previousLogin = user.value?.login;
   // Set once GitHub accepted the token, so a later board refresh failure still counts as connected.
   let connected = false;
   try {
@@ -1271,6 +1274,15 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     const available = await next.repos();
     const liveSettings = cached?.user.login === identity.login ? null : await readSettings(identity.login);
     connected = true;
+    const credentialChanged = Boolean(previousToken && previousToken !== token);
+    const accountChanged = Boolean(previousLogin && previousLogin !== identity.login);
+    if (credentialChanged || accountChanged) {
+      try {
+        await closeActiveNotifications();
+      } catch {
+        // Closing is best-effort and never blocks connect (#312).
+      }
+    }
     let storageWarning = "";
     try {
       await saveToken(token);
@@ -1512,6 +1524,11 @@ async function confirmLogout() {
   logoutBusy.value = true;
   try {
     await clearToken();
+    try {
+      await closeActiveNotifications();
+    } catch {
+      // Closing is best-effort and never blocks logout (#312).
+    }
     logoutPrompt.value = false;
     savedSession.value = false;
     logout();
@@ -1522,6 +1539,11 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  try {
+    void closeActiveNotifications();
+  } catch {
+    // Closing is best-effort (#312).
+  }
   mobileToolsOpen.value = false;
   rememberPublicWorkspace(false); publicRepoInput.value = ""; publicRepoError.value = ""; publicRepoBusy.value = false;
   timeoutSettings.value = normalizeTimeoutSettings({});
