@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   issues:
-    types: [opened, reopened, closed, labeled, unlabeled]
+    types: [opened, reopened, closed, deleted, transferred, labeled, unlabeled]
   workflow_dispatch:
   # Lets the three-hour fallback publish ready work even when no push or issue event arrives (#144).
   schedule:

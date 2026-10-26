@@ -89,19 +89,44 @@ describe("fresh paginated GitHub and public metadata", () => {
       return Response.json(page === 1 ? Array.from({ length: 100 }, (_, i) => issue(i + 1)) : [issue(101)]);
     });
     expect(await fetchOpenQueue(transport(fetcher))).toHaveLength(101);
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(4);
     expect(String(fetcher.mock.calls[1]![0])).toContain("page=2");
   });
   it("checks the following page when the final nonempty page contains exactly 100 issues", async () => {
-    let calls = 0;
-    const fetcher = vi.fn(async () => Response.json(++calls === 1 ? Array.from({ length: 100 }, (_, i) => issue(i + 1)) : []));
+    const fetcher = vi.fn(async (url: string | URL | Request) => {
+      const page = Number(new URL(String(url)).searchParams.get("page"));
+      return Response.json(page === 1 ? Array.from({ length: 100 }, (_, i) => issue(i + 1)) : []);
+    });
     expect(await fetchOpenQueue(transport(fetcher))).toHaveLength(100);
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(4);
   });
   it("follows next-page indication even if a page has fewer than 100 rows", async () => {
-    let count = 0;
-    const fetcher = vi.fn(async () => Response.json([issue(++count)], { headers: count === 1 ? { Link: '<https://api.github.com/next>; rel="next"' } : {} }));
+    const fetcher = vi.fn(async (url: string | URL | Request) => {
+      const page = Number(new URL(String(url)).searchParams.get("page"));
+      return Response.json([issue(page)], { headers: page === 1 ? { Link: '<https://api.github.com/next>; rel="next"' } : {} });
+    });
     expect(await fetchOpenQueue(transport(fetcher))).toHaveLength(2);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+  it("fails closed when an issue disappears during pagination causing page 2 to shift", async () => {
+    let removed = false;
+    const fetcher = vi.fn(async (value: string | URL | Request) => {
+      const url = new URL(String(value));
+      if (url.pathname.endsWith("/commits/main")) return Response.json({ sha: commit });
+      if (url.pathname.endsWith("/release-notes.json")) return Response.json(published);
+      const page = Number(url.searchParams.get("page"));
+      if (page === 1) {
+        if (!removed) {
+          removed = true;
+          return Response.json(Array.from({ length: 100 }, (_, i) => issue(i + 1)));
+        }
+        return Response.json([...Array.from({ length: 49 }, (_, i) => issue(i + 1)), ...Array.from({ length: 51 }, (_, i) => issue(i + 51))]);
+      }
+      return Response.json([]);
+    });
+    await expect(fetchOpenQueue(transport(fetcher))).rejects.toThrow("Inconsistent issue pagination");
+    removed = false;
+    expect(await inspectPublication(transport(fetcher), fixture())).toMatchObject({ allowed: false, reason: "metadata-unavailable" });
   });
   it("fails closed on later pagination errors and inconsistent or invalid issue data", async () => {
     let count = 0;

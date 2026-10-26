@@ -73,15 +73,25 @@ async function json(url: string, options: RequestInit, fetcher: typeof fetch) {
 function apiOptions(token: string): RequestInit {
   return { credentials: "omit", headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token, "X-GitHub-Api-Version": "2022-11-28" } };
 }
-export async function fetchOpenQueue(transport: GateTransport): Promise<QueueIssue[]> {
+async function fetchQueuePass(transport: GateTransport): Promise<{ issues: QueueIssue[]; pages: number }> {
   const issues: QueueIssue[] = [];
   for (let page = 1; page <= 1000; page++) {
     const response = await json(transport.api + "/repos/" + transport.repository + "/issues?state=open&per_page=100&page=" + page, apiOptions(transport.token), transport.fetcher);
     const items = queue(response.value);
     issues.push(...items);
-    if (!response.next && items.length < 100) return queue(issues);
+    if (!response.next && items.length < 100) return { issues: queue(issues), pages: page };
   }
   throw new Error("Issue pagination incomplete");
+}
+export async function fetchOpenQueue(transport: GateTransport): Promise<QueueIssue[]> {
+  const first = await fetchQueuePass(transport);
+  if (first.pages <= 1) return first.issues;
+  const second = await fetchQueuePass(transport);
+  const secondSet = new Set(second.issues.map(issue => issue.number));
+  if (first.issues.length !== second.issues.length || !first.issues.every(issue => secondSet.has(issue.number))) {
+    throw new Error("Inconsistent issue pagination");
+  }
+  return first.issues;
 }
 export async function inspectPublication(transport: GateTransport, source: Pick<GateInput, "runCommit" | "sourceDelta" | "sourceNotes" | "artifact">): Promise<GateDecision> {
   try {
