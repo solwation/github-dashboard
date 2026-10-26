@@ -25,6 +25,7 @@ const buttonLabel = computed(() => {
     ? t("{count} kommentarer, 1 ny", { count: props.count })
     : t("{count} kommentarer, {unread} nya", { count: props.count, unread: props.newComments! });
 });
+const trigger = ref<HTMLButtonElement>();
 const dialog = ref<HTMLDialogElement>();
 const titleId = useId();
 const open = ref(false);
@@ -109,12 +110,21 @@ function clear() {
   open.value = false;
   comments.value = [];
 }
-function close() { clear(); dialog.value?.close(); }
+function close() {
+  const wasOpen = open.value || Boolean(dialog.value?.open);
+  dialog.value?.close();
+  clear();
+  if (wasOpen) {
+    trigger.value?.focus();
+    void nextTick(() => trigger.value?.focus());
+  }
+}
 watch([() => props.issue.id, () => props.issue.html_url, () => props.demo, () => props.session], close);
 onBeforeUnmount(clear);
 </script>
 <template>
   <button
+    ref="trigger"
     type="button"
     class="comment-count"
     :class="{ 'has-new-comments': hasNew }"
@@ -126,7 +136,7 @@ onBeforeUnmount(clear);
     <span class="comment-count-value">{{ count }}</span>
     <span v-if="hasNew" class="new-comments-badge" aria-hidden="true">+{{ newComments }}</span>
   </button>
-  <dialog ref="dialog" class="comments-dialog" :aria-labelledby="titleId" @cancel="clear" @close="clear">
+  <dialog ref="dialog" class="comments-dialog" :aria-labelledby="titleId" @cancel.prevent="close" @close="clear" @keydown.esc.stop.prevent="close">
     <template v-if="open">
       <div class="comments-heading">
         <h2 :id="titleId">{{ t('Kommentarer för #{number}', { number: issue.number }) }}</h2>
