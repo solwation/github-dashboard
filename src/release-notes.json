@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-26",
+    "summary": {
+      "sv": "Säkerhetsuppdatering för rendering av Markdown-innehåll.",
+      "en": "Security update for Markdown content rendering."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "markdown-it är uppdaterat till 15.0.3 för att åtgärda en sårbarhet med kvadratisk renderingstid vid länkdefinitioner.",
+          "en": "markdown-it is updated to 15.0.3 to fix a quadratic-time rendering vulnerability in link definitions."
+        },
+        "issues": [
+          310
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-24",
     "summary": {
       "sv": "Sidomenyn och översikten blev tydligare, listraderna ger titeln mer plats och bildvisaren visar bläddringen under bilden.",

@@ -1,11 +1,10 @@
 {
-  "baseCommit": "c5fb12bea654f620f890832134409336e2cb08ce",
+  "baseCommit": "81cad3ab9e69f125cb4c7c824432f5e67113d4c8",
   "summary": {
-    "sv": "Bildvisarens bläddring ligger under bilden; kombinerade listrader ger titeln plats och visar repository vid status.",
-    "en": "Image navigation sits below the viewer; combined list rows give titles room and show repositories beside status."
+    "sv": "Säkerhetsuppdatering för rendering av Markdown-innehåll.",
+    "en": "Security update for Markdown content rendering."
   },
   "issues": [
-    308,
-    309
+    310
   ]
 }
