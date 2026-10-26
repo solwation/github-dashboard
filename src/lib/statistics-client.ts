@@ -202,7 +202,16 @@ export class StatisticsCollector {
       attempt("issues", async () => {
         // Reuse the board's fresh lists when they cover the whole window; a forced refresh always asks GitHub.
         const board = force ? null : this.client.boardIssues?.(repository, since, cacheDuration, now);
-        if (board) { for (const issue of board) if (!issue.pull_request) tracker?.observe(issue.created_at); return { data: board, complete: true, fetchedAt: now }; }
+        if (board) {
+          const sorted = cleanIssues({ data: board, complete: true, fetchedAt: now }).data
+            .sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0) || b.id - a.id);
+          const limit = statisticsLimits.issues * 100;
+          const complete = sorted.length <= limit;
+          const data = sorted.slice(0, limit);
+          tracker?.updatedPage("issues", data.map(issue => issue.updated_at));
+          for (const issue of data) tracker?.observe(issue.created_at);
+          return { data, complete, fetchedAt: now };
+        }
         return cleanIssues(await this.pages<StatisticsIssue>(`${root}/issues?state=all&sort=updated&direction=desc&since=${since}&per_page=100`, statisticsLimits.issues, now, undefined, (source, page) => {
           tracker?.updatedPage("issues", page.map(issue => issue.updated_at));
           for (const issue of page) if (!issue.pull_request) tracker?.observe(issue.created_at);
