@@ -225,22 +225,38 @@ export class StatisticsCollector {
         try {
           const old = previous?.commits;
           const verified = old?.historyVerifiedAt ?? old?.fetchedAt ?? 0;
-          const reuse = !force && !!old?.complete && previous!.from <= window.from && previous!.to <= window.to && previous!.to > window.from &&
+          let reuse = !force && !!old?.complete && previous!.from <= window.from && previous!.to <= window.to && previous!.to > window.from &&
             verified <= now && now - verified < STATISTICS_RETENTION_MS;
           // The previous final day was partial; always refetch it along with new days.
           const from = reuse ? `${previous!.to}T00:00:00Z` : since;
           // A day-stable URL (no `until`; filtered below) lets unchanged history revalidate as a free 304 (#136).
-          const historical = reuse ? old!.data.filter(commit => commitDate(commit) >= since && commitDate(commit) < from) : [];
+          let historical = reuse ? old!.data.filter(commit => commitDate(commit) >= since && commitDate(commit) < from) : [];
           const cleanCommits = (source: StatisticsSource<StatisticsCommit>) => {
             const data = [...new Map([...historical, ...source.data].map(commit => [commit.sha, commit])).values()]
               .filter(commit => commitDate(commit) >= since && commitDate(commit) <= until)
               .sort((a, b) => Date.parse(commitDate(b)) - Date.parse(commitDate(a)));
             return { ...source, complete: source.complete && data.length <= 600, data: data.slice(0, 600), historyVerifiedAt: reuse ? verified : now };
           };
-          const source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now, undefined, (source, page) => {
+          let source = await this.pages<StatisticsCommit>(`${root}/commits?since=${from}&per_page=100`, statisticsLimits.commits, now, undefined, (source, page) => {
             for (const commit of page) tracker?.observe(commitDate(commit));
             progress("commits", () => cleanCommits(source));
           }, signal);
+          if (reuse) {
+            const fetchedShas = new Set(source.data.map(commit => commit.sha));
+            const historicalShas = new Set(historical.map(commit => commit.sha));
+            const olderShas = new Set((old?.data ?? []).filter(commit => commitDate(commit) < since).map(commit => commit.sha));
+            const valid = source.data.every(commit =>
+              commit.parents.every(parent => fetchedShas.has(parent.sha) || historicalShas.has(parent.sha) || olderShas.has(parent.sha))
+            );
+            if (!valid) {
+              reuse = false;
+              historical = [];
+              source = await this.pages<StatisticsCommit>(`${root}/commits?since=${since}&per_page=100`, statisticsLimits.commits, now, undefined, (source, page) => {
+                for (const commit of page) tracker?.observe(commitDate(commit));
+                progress("commits", () => cleanCommits(source));
+              }, signal);
+            }
+          }
           return cleanCommits(source);
         } catch (error) {
           // GitHub returns 409 for an empty Git repository: this is a real zero.
