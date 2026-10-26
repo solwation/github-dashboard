@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GitHub } from '../src/lib/github';
-import { issueRepository, parseSubIssues, SubIssuesCache } from '../src/lib/sub-issues';
+import { issueRepository, parseSubIssues, SubIssuesCache, type SubIssue } from '../src/lib/sub-issues';
 import { RELATIONS_TTL_MS } from '../src/lib/issue-relations';
 import type { Issue } from '../src/lib/model';
 const parent = { id: 1, number: 1, updated_at: '2026-10-21', html_url: 'https://github.com/a/one/issues/1', sub_issues_summary: { total: 2, completed: 1 } } as Issue;
@@ -43,5 +43,65 @@ describe('lazy sub-issues', () => {
     await cache.get('a/one', { ...parent, sub_issues_summary: { total: 3, completed: 1 } }); expect(load).toHaveBeenCalledTimes(2);
     vi.advanceTimersByTime(RELATIONS_TTL_MS); await cache.get('a/one', parent); expect(load).toHaveBeenCalledTimes(3);
     cache.clear(); await cache.get('a/one', parent); expect(load).toHaveBeenCalledTimes(4);
+  });
+  it('does not cache failed or rate-limit-skipped sub-issue fetches and retries on subsequent gets (#319)', async () => {
+    let mode: 'fail' | 'rate-limit' | 'empty' = 'fail';
+    const subList: SubIssue[] = [{ repository: 'b/two', issue: child(2) }];
+    const fetch = vi.fn(async () => {
+      if (mode === 'fail') throw new Error('502 Bad Gateway');
+      if (mode === 'rate-limit') return null;
+      return subList;
+    });
+    const cache = new SubIssuesCache(fetch);
+
+    // 1. Failed fetch rejects/throws -> resolves to null and is not cached
+    expect(await cache.get('a/one', parent)).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    // 2. Next get fetches again; rate-limit skipped returns null and is not cached
+    mode = 'rate-limit';
+    expect(await cache.get('a/one', parent)).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    // 3. Next get fetches again; successful result is returned and cached
+    mode = 'empty';
+    expect(await cache.get('a/one', parent)).toEqual(subList);
+    expect(fetch).toHaveBeenCalledTimes(3);
+
+    // 4. Subsequent get within TTL uses cache without fetching again
+    expect(await cache.get('a/one', parent)).toEqual(subList);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+  it('retries sub-issues when client rate limit clears without caching skipped calls (#319)', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'rate limited' }), {
+        status: 429,
+        headers: { 'retry-after': '60' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([child(2)])));
+    vi.stubGlobal('fetch', fetch);
+    const client = new GitHub();
+
+    // First call hits 429 rate limit
+    expect(await client.subIssues('a/one', parent)).toBeNull();
+    expect(client.retryAfterMs()).toBeGreaterThan(0);
+
+    // Second call while still rate-limited honours wait and does not make another HTTP request
+    expect(await client.subIssues('a/one', parent)).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    // Advance time past the rate limit wait
+    vi.advanceTimersByTime(65_000);
+    expect(client.retryAfterMs()).toBe(0);
+
+    // Third call fetches again, succeeds, and caches for TTL
+    const result = await client.subIssues('a/one', parent);
+    expect(result?.map(entry => entry.issue.id)).toEqual([2]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    // Fourth call uses cache
+    expect(await client.subIssues('a/one', parent)).toEqual(result);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
