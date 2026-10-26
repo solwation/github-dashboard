@@ -36,7 +36,7 @@ import VersionUpdate from "./components/VersionUpdate.vue";
 import UpdateDialog from "./components/UpdateDialog.vue";
 import SidebarVersion from "./components/SidebarVersion.vue";
 import ReleaseNotes from "./components/ReleaseNotes.vue";
-import { bundledReleaseNotes, fetchPublishedReleaseNotes, noteLanguage, notesSince, updateSummary as summarizeUpdate, type PublishedReleaseNotes, type ReleaseNoteDay } from "./lib/release-notes";
+import { bundledReleaseNotes, noteLanguage, notesSince, type ReleaseNoteDay } from "./lib/release-notes";
 import { useAppUpdate } from "./composables/useAppUpdate";
 import { PUBLIC_CONTENT_LIFETIME_MS, readPublicContent, writePublicContent, type PublicLaneSnapshot } from "./lib/public-content-cache";
 import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
@@ -107,37 +107,26 @@ import {
   type Rules,
 } from "./lib/model";
 // One update controller shared by the automatic prompt, the update dialog and the sidebar badge.
-const appUpdate = useAppUpdate();
+const installedBuild = __BUILD_INFO__;
+const appUpdate = useAppUpdate({
+  language: () => noteLanguage(locale.value),
+  installedBuild,
+});
 const {
   available: updateAvailable, seconds: updateSeconds, counting: updateCounting,
   applying: updateApplying, error: updateError, deferred: updateDeferred,
   checked: updateChecked, checking: updateChecking,
+  summary: updateSummary, availableVersion: availableBuild, notes: publishedNotes,
 } = appUpdate;
 const updateDialogOpen = ref(false);
-// Notes published with the latest deployment describe what the waiting update adds.
-const publishedNotes = ref<PublishedReleaseNotes | null>(null);
-let notesRequest: Promise<void> | null = null;
-function loadPublishedNotes() {
-  notesRequest ??= fetchPublishedReleaseNotes()
-    .then((notes) => { if (notes) publishedNotes.value = notes; })
-    .finally(() => { notesRequest = null; });
-}
-watch(updateAvailable, (available) => { if (available) loadPublishedNotes(); }, { immediate: true });
-const installedBuild = __BUILD_INFO__;
-const newerBuild = computed(() => {
-  const build = publishedNotes.value?.build;
-  return build && build.commit !== installedBuild.commit ? build : null;
-});
 const newNoteDays = computed(() =>
-  newerBuild.value && publishedNotes.value ? notesSince(publishedNotes.value.days, installedBuild.builtAt) : []);
-const updateSummary = computed(() => summarizeUpdate(newerBuild.value ? publishedNotes.value?.delta : null, noteLanguage(locale.value)));
-const availableBuild = computed(() => (updateAvailable.value ? newerBuild.value : null));
+  availableBuild.value && publishedNotes.value ? notesSince(publishedNotes.value.days, installedBuild.builtAt) : []);
 const sidebarVersion = ref<InstanceType<typeof SidebarVersion> | null>(null);
 const mobileUpdateBadge = ref<HTMLButtonElement | null>(null);
 function openUpdateDialog() {
   updateDialogOpen.value = true;
   void appUpdate.check();
-  if (updateAvailable.value) loadPublishedNotes();
+  if (updateAvailable.value) void appUpdate.refreshNotes();
 }
 const releaseNotesOpen = ref(false);
 const releaseNotesDays = ref<ReleaseNoteDay[]>(bundledReleaseNotes);

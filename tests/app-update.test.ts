@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAppUpdateController, nextLocalMidnight, UPDATE_DEFERRAL_KEY } from "../src/composables/useAppUpdate";
+import type { PublishedReleaseNotes } from "../src/lib/release-notes";
 class Worker extends EventTarget {
   state = "installed";
   postMessage = vi.fn();
@@ -10,7 +11,14 @@ class MemoryStorage {
   setItem(key: string, value: string) { this.values.set(key, value); }
   removeItem(key: string) { this.values.delete(key); }
 }
-interface FixtureOptions { hidden?: boolean; now?: () => number; storage?: MemoryStorage }
+interface FixtureOptions {
+  hidden?: boolean;
+  now?: () => number;
+  storage?: MemoryStorage;
+  fetchNotes?: () => Promise<PublishedReleaseNotes | null>;
+  installedBuild?: { builtAt: string | null; commit: string | null } | null;
+  language?: () => "sv" | "en";
+}
 function fixture(initialController = true, options: FixtureOptions = {}) {
   const worker = new Worker();
   const registration = Object.assign(new EventTarget(), {
@@ -45,6 +53,9 @@ function fixture(initialController = true, options: FixtureOptions = {}) {
     visibility: visibility as unknown as Document,
     storage,
     ...(options.now ? { now: options.now } : {}),
+    ...(options.fetchNotes ? { fetchNotes: options.fetchNotes } : {}),
+    ...(options.installedBuild !== undefined ? { installedBuild: options.installedBuild } : {}),
+    ...(options.language ? { language: options.language } : {}),
   });
   controller.start();
   return {
@@ -385,6 +396,113 @@ describe("app version updates", () => {
     expect(replacement.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
     expect(app.error.value).toBe("");
   });
+  it("refetches notes and updates version and summary when the waiting worker is replaced", async () => {
+    vi.useFakeTimers();
+    const installed = { builtAt: "2026-10-26T10:00:00.000Z", commit: "1111111" };
+    const notes1: PublishedReleaseNotes = {
+      build: { builtAt: "2026-10-26T11:00:00.000Z", commit: "2222222" },
+      days: [{
+        date: "2026-10-26",
+        summary: { sv: "Förbättringar", en: "Improvements" },
+        sections: [{ text: { sv: "Fixar", en: "Fixes" }, issues: [100] }],
+      }],
+      delta: {
+        baseCommit: "1111111",
+        summary: { sv: "Första sammanfattningen", en: "First summary" },
+        issues: [100],
+      },
+    };
+    const notes2: PublishedReleaseNotes = {
+      build: { builtAt: "2026-10-26T12:00:00.000Z", commit: "3333333" },
+      days: [{
+        date: "2026-10-26",
+        summary: { sv: "Förbättringar", en: "Improvements" },
+        sections: [{ text: { sv: "Fixar", en: "Fixes" }, issues: [100, 101] }],
+      }],
+      delta: {
+        baseCommit: "1111111",
+        summary: { sv: "Andra sammanfattningen", en: "Second summary" },
+        issues: [100, 101],
+      },
+    };
+    const fetchNotes = vi.fn().mockResolvedValue(notes1);
+    const app = setup(true, { fetchNotes, installedBuild: installed });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(app.available.value).toBe(true);
+    expect(fetchNotes).toHaveBeenCalledTimes(1);
+    expect(app.version.value).toEqual(notes1.build);
+    expect(app.summary.value).toBe("Första sammanfattningen");
+
+    // Advance 5 seconds of countdown
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(app.seconds.value).toBe(5);
+
+    // Replace the waiting worker with a newer installed worker
+    fetchNotes.mockResolvedValue(notes2);
+    const worker2 = new Worker();
+    app.registration.installing = worker2;
+    worker2.state = "installing";
+    app.registration.dispatchEvent(new Event("updatefound"));
+    app.registration.waiting = worker2;
+    worker2.state = "installed";
+    worker2.dispatchEvent(new Event("statechange"));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchNotes).toHaveBeenCalledTimes(2);
+    expect(app.version.value).toEqual(notes2.build);
+    expect(app.summary.value).toBe("Andra sammanfattningen");
+    // Countdown resets for the new update
+    expect(app.seconds.value).toBe(10);
+  });
+  it("queues and refetches latest notes if waiting worker is replaced while a fetch is in flight", async () => {
+    vi.useFakeTimers();
+    const installed = { builtAt: "2026-10-26T10:00:00.000Z", commit: "1111111" };
+    const notes1: PublishedReleaseNotes = {
+      build: { builtAt: "2026-10-26T11:00:00.000Z", commit: "2222222" },
+      days: [],
+      delta: {
+        baseCommit: "1111111",
+        summary: { sv: "Version 1", en: "Version 1" },
+        issues: [1],
+      },
+    };
+    const notes2: PublishedReleaseNotes = {
+      build: { builtAt: "2026-10-26T12:00:00.000Z", commit: "3333333" },
+      days: [],
+      delta: {
+        baseCommit: "1111111",
+        summary: { sv: "Version 2", en: "Version 2" },
+        issues: [1, 2],
+      },
+    };
+    let resolveFirst!: (value: PublishedReleaseNotes) => void;
+    const fetchNotes = vi.fn()
+      .mockImplementationOnce(() => new Promise((res) => { resolveFirst = res; }))
+      .mockResolvedValueOnce(notes2);
+
+    const app = setup(true, { fetchNotes, installedBuild: installed });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchNotes).toHaveBeenCalledTimes(1);
+
+    // Replace waiting worker while first fetch is pending
+    const worker2 = new Worker();
+    app.registration.installing = worker2;
+    worker2.state = "installing";
+    app.registration.dispatchEvent(new Event("updatefound"));
+    app.registration.waiting = worker2;
+    worker2.state = "installed";
+    worker2.dispatchEvent(new Event("statechange"));
+    await vi.advanceTimersByTimeAsync(0);
+
+    // First fetch resolves
+    resolveFirst(notes1);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchNotes).toHaveBeenCalledTimes(2);
+    expect(app.version.value).toEqual(notes2.build);
+    expect(app.summary.value).toBe("Version 2");
+  });
 });
 describe("update prompt in visible tabs and Not now", () => {
   // A local time zone with a DST change makes the calendar-day boundary meaningful.
@@ -511,5 +629,56 @@ describe("update prompt in visible tabs and Not now", () => {
     app.online();
     expect(app.applying.value).toBe(true);
     expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+  });
+  it("refetches notes and updates version and summary when a deferred prompt reappears", async () => {
+    vi.useFakeTimers();
+    let clock = at("2026-10-16T22:00:00");
+    const now = () => clock;
+    const installed = { builtAt: "2026-10-16T20:00:00.000Z", commit: "1111111" };
+    const notes1: PublishedReleaseNotes = {
+      build: { builtAt: "2026-10-16T21:00:00.000Z", commit: "2222222" },
+      days: [{
+        date: "2026-10-16",
+        summary: { sv: "Förbättringar", en: "Improvements" },
+        sections: [{ text: { sv: "Fixar", en: "Fixes" }, issues: [100] }],
+      }],
+      delta: {
+        baseCommit: "1111111",
+        summary: { sv: "Kvällsuppdatering", en: "Evening update" },
+        issues: [100],
+      },
+    };
+    const notes2: PublishedReleaseNotes = {
+      build: { builtAt: "2026-10-17T00:01:00.000Z", commit: "3333333" },
+      days: [{
+        date: "2026-10-17",
+        summary: { sv: "Förbättringar", en: "Improvements" },
+        sections: [{ text: { sv: "Fixar", en: "Fixes" }, issues: [100, 102] }],
+      }],
+      delta: {
+        baseCommit: "1111111",
+        summary: { sv: "Morgonuppdatering", en: "Morning update" },
+        issues: [100, 102],
+      },
+    };
+    const fetchNotes = vi.fn().mockResolvedValue(notes1);
+    const app = setup(true, { fetchNotes, installedBuild: installed, now });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(app.available.value).toBe(true);
+    expect(app.summary.value).toBe("Kvällsuppdatering");
+
+    app.defer();
+    expect(app.deferred.value).toBe(true);
+
+    // Later at midnight, a new release was published
+    fetchNotes.mockResolvedValue(notes2);
+    clock = at("2026-10-17T00:00:00");
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(app.deferred.value).toBe(false);
+    expect(fetchNotes).toHaveBeenCalledTimes(2);
+    expect(app.version.value).toEqual(notes2.build);
+    expect(app.summary.value).toBe("Morgonuppdatering");
   });
 });

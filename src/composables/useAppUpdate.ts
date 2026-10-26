@@ -1,4 +1,10 @@
-import { onMounted, onUnmounted, reactive, toRefs } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, toRefs } from "vue";
+import {
+  fetchPublishedReleaseNotes,
+  updateSummary as summarizeUpdate,
+  type PublishedReleaseNotes,
+  type NoteLanguage,
+} from "../lib/release-notes";
 
 type DeferralStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 interface UpdateEnvironment {
@@ -17,6 +23,14 @@ interface UpdateEnvironment {
   visibility?: Pick<Document, "addEventListener" | "removeEventListener">;
   /** Non-private persistence for "Not now", shared by this origin's tabs. */
   storage?: DeferralStorage | null;
+  /** Injectable fetcher for published release notes. */
+  fetchNotes?(): Promise<PublishedReleaseNotes | null>;
+  /** Installed build metadata for computing newer version. Defaults to __BUILD_INFO__. */
+  installedBuild?: { builtAt: string | null; commit: string | null } | null;
+  /** Localized note language getter. Defaults to "sv". */
+  language?(): NoteLanguage;
+  /** Optional callback invoked when published release notes are fetched. */
+  onNotesFetched?(notes: PublishedReleaseNotes | null): void;
 }
 export const UPDATE_DEFERRAL_KEY = "issueflow-update-deferred";
 const COUNTDOWN_SECONDS = 10;
@@ -39,6 +53,19 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     deferred: false,
     /** The update prompt is counting down to an automatic installation. */
     counting: false,
+    notes: null as PublishedReleaseNotes | null,
+  });
+  const installedBuild = environment.installedBuild !== undefined
+    ? environment.installedBuild
+    : (typeof __BUILD_INFO__ !== "undefined" ? __BUILD_INFO__ : null);
+  const newerBuild = computed(() => {
+    const build = state.notes?.build;
+    return build && (!installedBuild?.commit || build.commit !== installedBuild.commit) ? build : null;
+  });
+  const availableVersion = computed(() => (state.available ? newerBuild.value : null));
+  const summary = computed(() => {
+    const lang = environment.language?.() ?? "sv";
+    return summarizeUpdate(availableVersion.value ? state.notes?.delta : null, lang);
   });
   const now = environment.now ?? (() => Date.now());
   const blocked = environment.blocked ?? (() => false);
@@ -121,7 +148,11 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     const stored = storedDeferral();
     if (stored !== undefined) deferredUntil = stored;
     if (deferredUntil !== null && !validDeferral(deferredUntil)) deferredUntil = null;
+    const previouslyDeferred = state.deferred;
     state.deferred = deferredUntil !== null;
+    if (previouslyDeferred && !state.deferred && state.available) {
+      void refreshNotes();
+    }
   }
   /** Every tab counts down; an open dialog pauses and restarts the full interval. */
   function schedule() {
@@ -147,14 +178,70 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     installWhenOnline = false;
     schedule();
   }
+  let currentFetch: Promise<PublishedReleaseNotes | null> | null = null;
+  let nextFetchQueued = false;
+  let queuedPromise: Promise<PublishedReleaseNotes | null> | null = null;
+  let queuedResolve: ((val: PublishedReleaseNotes | null) => void) | null = null;
+
+  async function performFetch(): Promise<PublishedReleaseNotes | null> {
+    const fetcher = environment.fetchNotes ?? (() => fetchPublishedReleaseNotes());
+    try {
+      const notes = await fetcher();
+      if (!active) return null;
+      if (notes) {
+        state.notes = notes;
+        environment.onNotesFetched?.(notes);
+      }
+      return notes;
+    } catch {
+      return null;
+    }
+  }
+
+  function refreshNotes(): Promise<PublishedReleaseNotes | null> {
+    if (!active) return Promise.resolve(null);
+    if (currentFetch) {
+      if (!queuedPromise) {
+        queuedPromise = new Promise((resolve) => {
+          queuedResolve = resolve;
+        });
+      }
+      nextFetchQueued = true;
+      return queuedPromise;
+    }
+
+    currentFetch = performFetch().finally(async () => {
+      currentFetch = null;
+      if (nextFetchQueued && active) {
+        nextFetchQueued = false;
+        const resolve = queuedResolve;
+        queuedPromise = null;
+        queuedResolve = null;
+        const result = await refreshNotes();
+        resolve?.(result);
+      }
+    });
+
+    return currentFetch;
+  }
+
   function offer(worker: ServiceWorker | null) {
     if (!active || !hadController || state.applying) return;
+    const replaced = Boolean(worker && waiting && worker !== waiting);
     if (worker) waiting = worker;
-    if (state.available) return;
-    state.available = true;
-    state.checked = false;
-    refreshDeferral();
-    schedule();
+    if (!state.available) {
+      state.available = true;
+      state.checked = false;
+      refreshDeferral();
+      schedule();
+      void refreshNotes();
+      return;
+    }
+    if (replaced) {
+      deadline = undefined;
+      schedule();
+      void refreshNotes();
+    }
   }
   function finish() {
     if (!active || reloading) return;
@@ -234,6 +321,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
       else maybeFinish();
     } else {
       offer(null);
+      void refreshNotes();
     }
   }
   function watchInstalling() {
@@ -353,6 +441,10 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   }
   function stop() {
     active = false;
+    currentFetch = null;
+    nextFetchQueued = false;
+    queuedPromise = null;
+    queuedResolve = null;
     clearInterval(tickTimer);
     clearInterval(checkTimer);
     clearTimeout(activationTimeout);
@@ -368,10 +460,21 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
       worker.removeEventListener("statechange", listener);
     installationListeners.clear();
   }
-  return { ...toRefs(state), reloadNow, defer, check, start, stop };
+  return {
+    ...toRefs(state),
+    version: availableVersion,
+    availableVersion,
+    summary,
+    refreshNotes,
+    reloadNow,
+    defer,
+    check,
+    start,
+    stop,
+  };
 }
 export type AppUpdate = Pick<ReturnType<typeof createAppUpdateController>,
-  "available" | "checked" | "checking" | "seconds" | "applying" | "error" | "deferred" | "counting" | "reloadNow" | "defer" | "check">;
+  "available" | "checked" | "checking" | "seconds" | "applying" | "error" | "deferred" | "counting" | "reloadNow" | "defer" | "check" | "version" | "availableVersion" | "summary" | "notes" | "refreshNotes">;
 
 function browserStorage(): DeferralStorage | null {
   try {
@@ -381,7 +484,10 @@ function browserStorage(): DeferralStorage | null {
   }
 }
 /** Call once (App.vue) and share the result: each call registers its own controller. */
-export function useAppUpdate(): AppUpdate {
+export function useAppUpdate(options?: {
+  language?(): NoteLanguage;
+  installedBuild?: { builtAt: string | null; commit: string | null } | null;
+}): AppUpdate {
   const supported =
     typeof navigator !== "undefined" && "serviceWorker" in navigator;
   const controller = supported
@@ -395,6 +501,9 @@ export function useAppUpdate(): AppUpdate {
         blocked: () => Boolean(document.querySelector('dialog[open], [role="dialog"]')),
         reload: () => window.location.reload(),
         storage: browserStorage(),
+        fetchNotes: () => fetchPublishedReleaseNotes(),
+        installedBuild: options?.installedBuild ?? (typeof __BUILD_INFO__ !== "undefined" ? __BUILD_INFO__ : null),
+        language: options?.language,
       })
     : null;
   onMounted(() => controller?.start());
@@ -402,11 +511,15 @@ export function useAppUpdate(): AppUpdate {
   return (
     controller || {
       ...toRefs(reactive({
-        available: false, checked: false, checking: false, seconds: COUNTDOWN_SECONDS, applying: false, error: "", deferred: false, counting: false,
+        available: false, checked: false, checking: false, seconds: COUNTDOWN_SECONDS, applying: false, error: "", deferred: false, counting: false, notes: null as PublishedReleaseNotes | null,
       })),
+      version: computed(() => null),
+      availableVersion: computed(() => null),
+      summary: computed(() => ""),
       reloadNow() {},
       defer() {},
       check: () => Promise.resolve(),
+      refreshNotes: () => Promise.resolve(null),
     }
   );
 }
