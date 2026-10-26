@@ -1,10 +1,15 @@
 {
-  "baseCommit": "81cad3ab9e69f125cb4c7c824432f5e67113d4c8",
+  "baseCommit": "16e846f38fa1b37f3f60571451b81ac51f3bd830",
   "summary": {
-    "sv": "Säkerhetsuppdatering för rendering av Markdown-innehåll.",
-    "en": "Security update for Markdown content rendering."
+    "sv": "Inaktiva repositories kan döljas i sidomenyn, synkning och statistik är stabilare och appen skyddas av CSP.",
+    "en": "Inactive repositories can be hidden in sidebar, sync and statistics are more robust, and app is CSP hardened."
   },
   "issues": [
-    310
+    311,
+    313,
+    317,
+    318,
+    321,
+    328
   ]
 }

@@ -2,10 +2,48 @@
   {
     "date": "2026-10-26",
     "summary": {
-      "sv": "Säkerhetsuppdatering för rendering av Markdown-innehåll.",
-      "en": "Security update for Markdown content rendering."
+      "sv": "Inaktiva repositories kan fällas ihop i sidomenyn, synkning och statistikhistorik har blivit tåligare, och säkerheten har stärkts med en Content-Security-Policy.",
+      "en": "Inactive repositories can be collapsed in the sidebar, sync and statistics history are more resilient, and security is hardened with a Content-Security-Policy."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Inaktiva repositories utan ärenden i backlog eller under arbete kan fällas ihop under en expanderbar kontroll i sidomenyn.",
+          "en": "Inactive repositories without backlog or in-progress issues can be collapsed under an expandable control in the sidebar."
+        },
+        "issues": [
+          328
+        ]
+      },
+      {
+        "text": {
+          "sv": "Synkningen isolerar felande repositories så att friska uppdateras som vanligt, och GitHubs sekundära anropsgränser hanteras med korrekt paus.",
+          "en": "Sync isolates failing repositories so healthy ones update normally, and GitHub secondary rate limits are handled with the correct pause."
+        },
+        "issues": [
+          317,
+          318
+        ]
+      },
+      {
+        "text": {
+          "sv": "En Content-Security-Policy härdar appen mot skadlig kod, och inställningsmigreringen körs säkert vid start utan att påverka publikt läge.",
+          "en": "A Content-Security-Policy hardens the app against malicious scripts, and settings migration runs safely at startup without affecting public mode."
+        },
+        "issues": [
+          311,
+          313
+        ]
+      },
+      {
+        "text": {
+          "sv": "Statistikhistorik kontrollerar commits föräldrar vid inkrementell hämtning så att äldre commits från merges och sena pushar fångas upp.",
+          "en": "Statistics history verifies commit parents during incremental fetch so older commits from merges and delayed pushes are counted."
+        },
+        "issues": [
+          321
+        ]
+      },
       {
         "text": {
           "sv": "markdown-it är uppdaterat till 15.0.3 för att åtgärda en sårbarhet med kvadratisk renderingstid vid länkdefinitioner.",
