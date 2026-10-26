@@ -36,6 +36,7 @@ This file applies to all work in this repository, regardless of which AI tool pe
 - Prepare the short AI update summary in `src/update-summary.json` from the locally verified batch’s actual user-facing delta against the public `release-notes.json` build. Record that exact published commit as `baseCommit`, keep each Swedish/English summary at most 180 characters, and list only included issues with traceable daily release notes. Both Action gates verify the current main SHA, published baseline and prepared delta; the final gate also checks the exact built artifact. Missing, stale or unreadable metadata blocks publication, and an already published SHA is skipped. The automatic update popup describes this latest publication only, never all changes from a calendar day or a concatenation of daily summaries. Keep daily release notes compact and link issues for details.
 - Before pushing, fetch `origin main`, inspect divergence, and rebase your own commits if necessary without overwriting someone else's changes. Preserve unpublished subtree merge ancestry with `git rebase --rebase-merges origin/main`. Never force-push `main`.
 - Verify appropriate behavior locally, then verify the GitHub Actions / Pages deployment after pushing. Resolve failures before reporting completion.
+- Technical changes are exempt from following the Action: a push whose commits touch only paths outside the build and publication inputs (for example `.orchestra/`, `AI.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.agents/`, `docs/`, `README.md`, `DESIGN.md`, `tests/`, `e2e/`, `playwright.config.ts`). Run `npm run build` locally before pushing, then report the work done without waiting for, polling or inspecting its Actions/Pages run; it needs no release notes, update summary or `needs-deploy`, and its issue may close on push. Any change to `src/`, `public/` (including the published `ISSUEFLOW.md`), `index.html`, `package*.json`, `vite.config.ts`, `tsconfig.json`, `scripts/`, `auth/` or `.github/workflows/` is an app change and keeps the full Action/Pages verification. The next app delivery's Action check covers any failure a technical push left behind; resolve it then.
 - Run tests locally before pushing, selecting only behavior that the change can reasonably affect. Do not routinely run or repeat the full suite. GitHub Actions only builds and publishes Pages; do not add test runs or browser installation to the deployment workflow.
 
 ## Project and verification
@@ -66,5 +67,6 @@ The user authorizes parallel subagents when useful. The local policy retains mea
 capacity including conductor work, one issue per worker, isolated ownership, fresh queue
 checks, question routing, Actions-only publication, final review and the 60-minute watch
 with minute polling. Shared planning and verification avoid needless splitting or repeated
-tests while preserving these project requirements. Instruction-only maintenance checks
-its Action outcome without inventing app release notes or bypassing the publication gate.
+tests while preserving these project requirements. Instruction-only maintenance is a
+[technical change](#implementation-and-git): it neither follows its Action run nor invents
+app release notes, and never bypasses the publication gate.

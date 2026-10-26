@@ -108,9 +108,11 @@ unfinished work ready or close issues to bypass the gate. After an Action actual
 publishes, verify Pages, close delivered issues and remove `needs-deploy`. Distinguish
 successful publication from a successful Action whose deployment was skipped.
 
-Instruction-only maintenance is delivered as usable checked-in instructions. Inspect
-its Action outcome and report an unchanged/legitimately skipped app publication honestly;
-do not invent user-facing app release notes or alter the deployment gate to publish docs.
+Instruction-only maintenance and other [technical changes](../AI.md#implementation-and-git)
+(no build or publication inputs touched) are delivered as usable checked-in files after a
+local `npm run build`. Do not wait for, poll or inspect their Action run; the next app
+delivery's Action check covers it. Do not invent user-facing app release notes or alter
+the deployment gate to publish docs.
 
 The unattended orchestra never asks in chat or waits for routine confirmation. Decide
 implementation/coordination choices, documenting material reasoning. Genuine user
@@ -145,7 +147,7 @@ Listed order is execution order.
 | Integration review | `review`: every change, before delivery | Conductor reads the combined diff and evidence, inspects screenshots against acceptance, rechecks conflict markers | Defects corrected and affected checks refreshed |
 | Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
 | Prepare publication | `delivery`: app changes, after integration | Mark `needs-deploy` without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta; never bypass the Actions gate |
-| Check Action | `delivery`: every push to `main` | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
+| Check Action | `delivery`: every push to `main` that includes an app change (skip for technical changes) | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
 | Complete issue | `follow-up`: every tracked change, before closure | [Completion comment](shared/ORCHESTRA.md#follow-up-with-evidence-that-fits-the-change) with outcome, revision, checks, evidence and limits; app work closes only after verified Pages publication and `needs-deploy` removal | All work and own owner labels removed; unmet acceptance stays open with next action and owner |
 
 ## Queue intake hooks
@@ -159,8 +161,8 @@ paginated open-issue fetch described [above](#issueflow-and-queue).
 This is the project's configuration of the core
 [session review](shared/COORDINATION.md#review-the-session); it replaces rather than
 adds to it. Run it when the actionable queue is empty and the latest app batch is
-published and verified (instruction-only batches: after their Action outcome is
-checked). Besides the core areas, review acceptance, commits, code quality, test
+published and verified (technical-only batches: once pushed, without waiting for their
+Action). Besides the core areas, review acceptance, commits, code quality, test
 evidence and live Pages behavior that has not yet been reviewed in its final state.
 Reuse valid final-state evidence; do not blindly repeat green tests. Reopen an affected
 issue (clearing stale work/`needs-deploy` labels) or create a scoped priority-assessed
