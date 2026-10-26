@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createIssueSync, RepositoryBackoff, syncBackoffMs, ACTIVE_SYNC_MS, MAX_SYNC_BACKOFF_MS, type IssueSyncOptions } from "../src/lib/sync";
+import { createIssueSync, RefreshQueue, RepositoryBackoff, syncBackoffMs, ACTIVE_SYNC_MS, MAX_SYNC_BACKOFF_MS, type IssueSyncOptions } from "../src/lib/sync";
 const running: ReturnType<typeof createIssueSync>[] = [];
 function setup(overrides: Partial<IssueSyncOptions> = {}) {
   let allowed = true;
@@ -108,6 +108,80 @@ describe("adaptive issue sync", () => {
     expect(app.options.onSuccess).not.toHaveBeenCalled();
     expect(app.options.reconcile).toHaveBeenCalledTimes(1);
     expect(app.options.refreshActive).not.toHaveBeenCalled();
+  });
+  it("skipped refresh because busy returns false and keeps requestedReconcile without onSuccess", async () => {
+    vi.useFakeTimers();
+    let busy = true;
+    const reconcile = vi.fn().mockImplementation(async () => {
+      if (busy) return false;
+      return true;
+    });
+    const app = setup({ reconcile });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(app.options.onSuccess).not.toHaveBeenCalled();
+    expect(app.options.onError).not.toHaveBeenCalled();
+
+    // 1 second tick while still busy: returns false again without reporting success
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    expect(app.options.onSuccess).not.toHaveBeenCalled();
+
+    // When no longer busy: reconcile runs and reports success
+    busy = false;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(reconcile).toHaveBeenCalledTimes(3);
+    expect(app.options.onSuccess).toHaveBeenCalledWith("reconcile");
+  });
+  it("applying rules during running sync triggers a full refresh after it completes", () => {
+    const queue = new RefreshQueue();
+    let syncRunning = true;
+    const fullRefresh = vi.fn();
+    const targetedRefresh = vi.fn();
+
+    // While sync is running, applyRules is called
+    const queued = queue.applyRules(syncRunning);
+    expect(queued).toBe(true);
+    expect(queue.isRefreshRequested()).toBe(true);
+    expect(fullRefresh).not.toHaveBeenCalled();
+
+    // When running sync completes, the queued full refresh is executed
+    syncRunning = false;
+    queue.onComplete({
+      runFullRefresh: fullRefresh,
+      runTargetedRefresh: targetedRefresh,
+    });
+    expect(fullRefresh).toHaveBeenCalledTimes(1);
+    expect(queue.isRefreshRequested()).toBe(false);
+  });
+  it("reconcile requested during targeted refresh executes when targeted refresh finishes", async () => {
+    vi.useFakeTimers();
+    const queue = new RefreshQueue();
+    let targetedRunning = true;
+
+    const reconcile = vi.fn().mockImplementation(async () => {
+      if (queue.checkBusy(targetedRunning, { replacePending: false })) return false;
+      return true;
+    });
+
+    const app = setup({ reconcile });
+    // Sync attempts reconcile while targeted refresh is running:
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(app.options.onSuccess).not.toHaveBeenCalled();
+
+    // Targeted refresh completes before next scheduled timer tick:
+    targetedRunning = false;
+    queue.onComplete({
+      runFullRefresh: () => {},
+      runTargetedRefresh: () => {},
+      onIdle: () => app.tick(),
+    });
+
+    // Reconcile executes immediately via tick() rather than waiting for timer
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(app.options.onSuccess).toHaveBeenCalledWith("reconcile");
   });
 });
 

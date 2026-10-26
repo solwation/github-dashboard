@@ -49,7 +49,7 @@ import { summarizeLanes } from "./lib/sidebar";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
 import { countUnreadActivity, ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
-import { createIssueSync, RepositoryBackoff } from "./lib/sync";
+import { createIssueSync, RefreshQueue, RepositoryBackoff } from "./lib/sync";
 import { createBackgroundCheckScheduler } from "./lib/background-sync";
 import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
 import { shouldAdhocRefresh } from "./lib/adhoc-refresh";
@@ -336,22 +336,14 @@ async function navigateWorkspace() {
 const busy = ref(false);
 // A manual refresh requested during a partial background sync runs right after it, instead of
 // being dropped. A full refresh already in flight satisfies it.
-let refreshRequested = false;
-let fullRefreshRunning = false;
-// Repositories whose header status was clicked during another run (#149) follow right after it.
-let requestedRepos = new Set<string>();
+const refreshQueue = new RefreshQueue();
 watch(busy, (running) => {
   if (running) return;
-  fullRefreshRunning = false;
-  if (refreshRequested) {
-    refreshRequested = false;
-    requestedRepos = new Set();
-    void refresh();
-  } else if (requestedRepos.size) {
-    const only = [...requestedRepos];
-    requestedRepos = new Set();
-    void refresh(false, false, true, false, only);
-  }
+  refreshQueue.onComplete({
+    runFullRefresh: () => refresh(),
+    runTargetedRefresh: (only) => refresh(false, false, true, false, only),
+    onIdle: () => sync.tick(),
+  });
 });
 const error = ref("");
 const refreshed = ref<number | null>(null);
@@ -1348,19 +1340,15 @@ function reconcileSelection() {
  * `activeOnly` is the 15-second tick: one conditional list per repository with active issues (#123).
  * `only` limits a manual run to the repositories whose header status was clicked (#149).
  */
-async function refresh(incremental = false, replacePending = false, manual = false, activeOnly = false, only?: readonly string[]) {
+async function refresh(incremental = false, replacePending = false, manual = false, activeOnly = false, only?: readonly string[]): Promise<boolean> {
   if (!api) {
-    refreshRequested = false;
-    requestedRepos = new Set();
-    return;
+    refreshQueue.clear();
+    return false;
   }
-  if (busy.value && !replacePending) {
-    if (manual && only) { if (!fullRefreshRunning) only.forEach(name => requestedRepos.add(name)); }
-    else if (manual && !fullRefreshRunning) refreshRequested = true;
-    return;
+  if (refreshQueue.checkBusy(busy.value, { replacePending, manual, only })) {
+    return false;
   }
-  refreshRequested = false;
-  if (!only && !incremental) requestedRepos = new Set();
+  refreshQueue.setRunning({ incremental, only });
   const client = api, run = generation, selection = selectionRevision;
   const current = () => run === generation && client === api && selection === selectionRevision;
   if (repositoryRequestClient !== client) {
@@ -1373,14 +1361,14 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     busy.value = false;
     showingCache.value = false;
     await persistContent();
-    return;
+    return false;
   }
   busy.value = true;
-  fullRefreshRunning = !incremental && !only;
   if (!activeOnly) error.value = "";
   if ((client.retryAfterMs?.() || 0) > 0) {
+    busy.value = false;
     if (incremental) throw new Error(t("Hastighetsbegränsad av GitHub."));
-    return;
+    return false;
   }
   const nowMs = Date.now();
   const targets = repos.value.filter(repo => {
@@ -1466,6 +1454,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
   } finally {
     if (current()) busy.value = false;
   }
+  return true;
 }
 
 function toggleRepo(name: string) {
@@ -1597,10 +1586,11 @@ function editRules(lane: Lane) {
   editing.value = lane.repo.full_name;
   rules.value[lane.repo.full_name] ||= {};
 }
-async function applyRules() {
+async function applyRules(): Promise<boolean> {
   editing.value = null;
   save();
-  await refresh();
+  if (refreshQueue.applyRules(busy.value)) return false;
+  return await refresh();
 }
 let previousFocus: HTMLElement | null = null;
 const pickerDialog = ref<HTMLElement | null>(null);

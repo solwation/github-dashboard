@@ -80,9 +80,9 @@ export interface IssueSyncOptions {
   canSync(): boolean;
   hasActiveIssues(): boolean;
   /** Refresh only currently active issue IDs, including their current state and labels. */
-  refreshActive(): Promise<void>;
+  refreshActive(): Promise<boolean | void> | boolean | void;
   /** Incremental repository reconciliation, or a safe full fallback. */
-  reconcile(): Promise<void>;
+  reconcile(): Promise<boolean | void> | boolean | void;
   /** Report failures without clearing lane warnings or existing data. */
   onError?(error: unknown, kind: SyncKind): void;
   onSuccess?(kind: SyncKind): void;
@@ -124,8 +124,12 @@ export function createIssueSync(options: IssueSyncOptions) {
     if (kind === "reconcile") requestedReconcile = false;
     busy = true;
     try {
-      await (kind === "reconcile" ? options.reconcile() : options.refreshActive());
+      const result = await (kind === "reconcile" ? options.reconcile() : options.refreshActive());
       if (!started || runEpoch !== epoch) return;
+      if (result === false) {
+        if (kind === "reconcile") requestedReconcile = true;
+        return;
+      }
       failures = 0;
       retryAt = 0;
       nextActive = now() + ACTIVE_SYNC_MS;
@@ -173,5 +177,80 @@ export function createIssueSync(options: IssueSyncOptions) {
     windowEvents?.removeEventListener("online", wake);
     documentEvents?.removeEventListener("visibilitychange", wake);
   }
-  return { start, stop, wake };
+  return { start, stop, wake, tick: () => tick() };
+}
+
+export class RefreshQueue {
+  private refreshRequested = false;
+  private fullRefreshRunning = false;
+  private readonly requestedRepos = new Set<string>();
+
+  isRefreshRequested(): boolean {
+    return this.refreshRequested;
+  }
+
+  isFullRefreshRunning(): boolean {
+    return this.fullRefreshRunning;
+  }
+
+  getRequestedRepos(): readonly string[] {
+    return [...this.requestedRepos];
+  }
+
+  requestFullRefresh(): void {
+    this.refreshRequested = true;
+  }
+
+  setRunning(options: { incremental?: boolean; only?: readonly string[] }): void {
+    this.refreshRequested = false;
+    if (!options.only && !options.incremental) {
+      this.requestedRepos.clear();
+    }
+    this.fullRefreshRunning = !options.incremental && !options.only;
+  }
+
+  checkBusy(busy: boolean, options: { replacePending?: boolean; manual?: boolean; only?: readonly string[] }): boolean {
+    if (!busy || options.replacePending) {
+      return false;
+    }
+    if (options.manual && options.only) {
+      if (!this.fullRefreshRunning) options.only.forEach(name => this.requestedRepos.add(name));
+    } else if (options.manual && !this.fullRefreshRunning) {
+      this.refreshRequested = true;
+    }
+    return true;
+  }
+
+  applyRules(busy: boolean): boolean {
+    if (busy) {
+      this.refreshRequested = true;
+      return true;
+    }
+    return false;
+  }
+
+  onComplete(options: {
+    runFullRefresh: () => void | Promise<unknown>;
+    runTargetedRefresh: (repos: readonly string[]) => void | Promise<unknown>;
+    onIdle?: () => void | Promise<unknown>;
+  }): void {
+    this.fullRefreshRunning = false;
+    if (this.refreshRequested) {
+      this.refreshRequested = false;
+      this.requestedRepos.clear();
+      void options.runFullRefresh();
+    } else if (this.requestedRepos.size > 0) {
+      const only = [...this.requestedRepos];
+      this.requestedRepos.clear();
+      void options.runTargetedRefresh(only);
+    } else {
+      void options.onIdle?.();
+    }
+  }
+
+  clear(): void {
+    this.refreshRequested = false;
+    this.fullRefreshRunning = false;
+    this.requestedRepos.clear();
+  }
 }
