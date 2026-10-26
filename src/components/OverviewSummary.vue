@@ -130,6 +130,7 @@ const announcement = computed(() => [
     <div class="stat repository-stat" data-stat="repositories">
       <span class="stat-icon repos"><Layers3 :size="20" /></span>
       <div class="stat-content">
+        <!-- Deliberate section label commonly used in Swedish technical UI (#315) -->
         <span class="stat-label">Repositories</span>
         <strong>{{ totalRepositories }}</strong>
         <div class="overview-estimate" role="img" :title="repositoryInfoTitle" :aria-label="repositoryInfoTitle + ' ' + repositoryInfoLabel.join(', ')" data-testid="repository-info">

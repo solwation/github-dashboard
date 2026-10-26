@@ -17,15 +17,15 @@ const reasons: Record<PermissionReason, string> = {
 const statusLabels = { granted: 'Åtkomst bekräftad', missing: 'Åtkomst saknas', unknown: 'Ej verifierad' };
 </script>
 <template>
-  <button class="button small permissions-open" aria-label="GitHub permissions" :aria-describedby="notices ? 'permissions-notices' : undefined"
+  <button class="button small permissions-open" aria-labelledby="permissions-button-label" :aria-describedby="notices ? 'permissions-notices' : undefined"
     @click="dialog?.showModal(); emit('opened'); emit('check')">
-    GitHub permissions
+    <span id="permissions-button-label">{{ t("GitHub-rättigheter") }}</span>
     <NoticeBadge id="permissions-notices" :count="notices ?? 0" :label="t('{count} saknade GitHub-rättigheter', { count: notices ?? 0 })" />
   </button>
   <dialog ref="dialog" class="permissions-dialog" aria-labelledby="github-permissions-title" @close="emit('closed')"
     @click="event => { if (event.target === dialog) dialog?.close(); }">
     <div class="permissions-heading">
-      <h2 id="github-permissions-title">GitHub permissions</h2>
+      <h2 id="github-permissions-title">{{ t("GitHub-rättigheter") }}</h2>
       <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
     </div>
     <div class="permissions-content" :aria-busy="checking">

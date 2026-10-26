@@ -77,6 +77,7 @@ function lastChange(changedAt: string | null) {
 </script>
 <template>
   <div class="sidebar-projects" :aria-busy="restoring || undefined">
+    <!-- Deliberate uppercase section caption (#315) -->
     <div class="repositories-heading"><span class="nav-caption">REPOSITORIES</span>
     <button v-if="canSelect" class="sidebar-add" @click="emit('select')" :aria-label="t('Välj repositories')">
       <Plus :size="16" />

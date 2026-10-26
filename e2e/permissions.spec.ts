@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readSettings } from "./support/settings";
 import { openSettings } from "./support/phone-menu";
-async function setup(page: Page, isPublic = false) {
+async function setup(page: Page, isPublic = false, lang: 'sv' | 'en' = 'sv') {
   let healthy = false, deniedPulls = false, login = 'permissions-test';
   const repos = ['first', 'second'].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: !isPublic,
     description: 'Fixture', html_url: `https://github.com/sample/${name}`, owner: { login: 'sample' } }));
@@ -15,11 +15,11 @@ async function setup(page: Page, isPublic = false) {
       : repos.find(repo => `/repos/${repo.full_name}` === url.pathname) ?? [] });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
+  await page.getByRole('button', { name: lang === 'en' ? 'Connect GitHub' : 'Anslut GitHub', exact: true }).click();
   await page.getByLabel('GitHub personal access token').fill('fixture-permissions-token');
-  await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
+  await page.getByRole('button', { name: lang === 'en' ? 'Connect account' : 'Anslut konto', exact: true }).click();
   for (const repo of repos) await page.getByRole('checkbox', { name: repo.full_name }).check();
-  await page.getByRole('button', { name: 'Visa översikt' }).click();
+  await page.getByRole('button', { name: lang === 'en' ? 'Show overview' : 'Visa översikt' }).click();
   await expect(page.locator('.repo-lane')).toHaveCount(2);
   return { recover() { healthy = true; }, revokeContents() { healthy = false; }, denyPulls() { deniedPulls = true; }, asAccount(name: string) { login = name; } };
 }
@@ -28,12 +28,12 @@ test('Settings counts unique missing permissions, explains repository difference
   const state = await setup(page);
   await openSettings(page);
   const settings = page.getByRole('dialog', { name: 'Inställningar', exact: true });
-  await expect(settings.getByRole('button', { name: 'GitHub permissions', exact: true })).toHaveCount(1);
+  await expect(settings.getByRole('button', { name: 'GitHub-rättigheter', exact: true })).toHaveCount(1);
   await expect(settings).not.toContainText(/<{7}|={7}|>{7}/);
 
   // The Settings total and the submenu it comes from show the same round badge.
   const settingsButton = page.getByRole('button', { name: 'Inställningar', exact: true });
-  const permissionsButton = settings.getByRole('button', { name: 'GitHub permissions', exact: true });
+  const permissionsButton = settings.getByRole('button', { name: 'GitHub-rättigheter', exact: true });
   await expect(page.locator('#settings-notices')).toHaveText('1');
   await expect(settings.locator('#permissions-notices')).toHaveText('1');
   await expect(settingsButton).toHaveAccessibleDescription('1 saknade GitHub-rättigheter');
@@ -45,8 +45,8 @@ test('Settings counts unique missing permissions, explains repository difference
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 900 });
   await permissionsButton.click();
-  const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });
-  await expect(dialog.getByRole('heading', { name: 'GitHub permissions' })).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'GitHub-rättigheter', exact: true });
+  await expect(dialog.getByRole('heading', { name: 'GitHub-rättigheter' })).toBeVisible();
   await expect(dialog.getByRole('table')).toBeVisible();
   await expect(dialog.getByRole('row')).toHaveCount(5);
   expect((await dialog.boundingBox())!.width).toBeGreaterThan(800);
@@ -61,12 +61,12 @@ test('Settings counts unique missing permissions, explains repository difference
   await expect(dialog.locator('.permission-status.granted')).toHaveCount(6);
   await page.keyboard.press('Escape');
   await expect(page.locator('.notice-badge')).toHaveCount(0);
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
   await expect(contents.locator('.missing')).toHaveCount(2);
   await expect(page.locator('.notice-badge')).toHaveCount(0);
   state.recover();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
   await expect(contents.locator('.granted')).toHaveCount(2);
   await expect(page.locator('.notice-badge')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -74,14 +74,14 @@ test('Settings counts unique missing permissions, explains repository difference
   await expect(dialog.getByRole('button', { name: /Problemrapport/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('button', { name: 'GitHub permissions', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'GitHub-rättigheter', exact: true })).toBeFocused();
   await expect(page.getByRole('dialog', { name: 'Inställningar', exact: true })).toBeVisible();
 });
 test('public API readability stays neutral and produces no missing-permission badge', async ({ page }) => {
   await setup(page, true);
   await openSettings(page);
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'GitHub-rättigheter', exact: true });
   await expect(dialog.locator('.permission-status.public-read')).toHaveCount(8);
   await expect(dialog).toContainText('Publik läsåtkomst');
   await expect(dialog.getByRole('button', { name: 'Uppdatera kontrollen' })).toHaveCount(0);
@@ -116,7 +116,7 @@ test('viewed permission notices survive reload and logout/login while another ac
   const state = await setup(page);
   await openSettingsWithMissing(page);
   await expect(page.locator('#settings-notices')).toHaveText('1');
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
   await expect(page.locator('#settings-notices')).toHaveCount(0);
   await expect.poll(() => readSettings(page, 'permissions-test').then(saved => saved?.permissionAcknowledgements)).toEqual(['contents:sample/first', 'contents:sample/second']);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -128,8 +128,8 @@ test('viewed permission notices survive reload and logout/login while another ac
   await signOut(page); await signInAgain(page);
   await openSettingsWithMissing(page);
   await expect(page.locator('#settings-notices')).toHaveCount(0);
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'GitHub permissions', exact: true }).locator('.missing')).toHaveCount(2);
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'GitHub-rättigheter', exact: true }).locator('.missing')).toHaveCount(2);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await signOut(page); state.asAccount('permissions-other'); await signInAgain(page);
   await openSettingsWithMissing(page);
@@ -140,7 +140,7 @@ test('viewed permission notices survive reload and logout/login while another ac
 test('new denials and a denial after confirmed recovery can notify without reviving unchanged viewed problems', async ({ page }) => {
   const state = await setup(page);
   await openSettingsWithMissing(page);
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
   await expect(page.locator('#settings-notices')).toHaveCount(0);
   await expect(page.locator('.permissions-content')).toHaveAttribute('aria-busy', 'false');
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -149,7 +149,7 @@ test('new denials and a denial after confirmed recovery can notify without reviv
   await openSettingsWithMissing(page);
   await expect(page.locator('#settings-notices')).toHaveText('1');
   await expect.poll(() => readSettings(page, 'permissions-test').then(saved => saved?.permissionAcknowledgements)).toEqual([]);
-  await page.getByRole('button', { name: 'GitHub permissions', exact: true }).click();
+  await page.getByRole('button', { name: 'GitHub-rättigheter', exact: true }).click();
   await expect(page.locator('#settings-notices')).toHaveCount(0);
   await expect(page.locator('.permissions-content')).toHaveAttribute('aria-busy', 'false');
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -158,4 +158,20 @@ test('new denials and a denial after confirmed recovery can notify without reviv
   await openSettings(page);
   await expect(page.locator('.permission-status.missing')).toHaveCount(4);
   await expect(page.locator('#settings-notices')).toHaveText('1');
+});
+
+test('Settings → Permissions passes in English language', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("issueflow-language", "en"));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await setup(page, false, 'en');
+  await openSettings(page, 'Settings');
+  const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
+  const permissionsButton = settings.getByRole('button', { name: 'GitHub permissions', exact: true });
+  await expect(permissionsButton).toHaveCount(1);
+  await expect(permissionsButton).toHaveAccessibleDescription('1 missing GitHub permissions');
+  await permissionsButton.click();
+  const dialog = page.getByRole('dialog', { name: 'GitHub permissions', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'GitHub permissions' })).toBeVisible();
+  await expect(dialog.getByRole('table')).toBeVisible();
 });

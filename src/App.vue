@@ -1867,7 +1867,7 @@ onMounted(async () => {
         >issueflow<span class="brand-dot">.</span
         ><small>{{ t("AI-agenter · GitHub-issues") }}</small></span
       ></a
-    ><span class="nav-caption">WORKSPACE</span>
+    ><!-- Deliberate brand/section caption (#315) --><span class="nav-caption">WORKSPACE</span>
     <nav class="workspace-navigation">
     <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')" aria-describedby="overview-unread-count"
       :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined">
@@ -1907,6 +1907,7 @@ onMounted(async () => {
   <div class="workspace">
     <header ref="topbar" class="topbar">
       <div class="breadcrumb">
+        <!-- Deliberate brand/workspace breadcrumb context (#315) -->
         <span class="breadcrumb-context">Workspace <i>/</i></span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>
       </div>
       <nav class="mobile-navigation" :aria-label="t('Navigering')">
