@@ -75,6 +75,47 @@ describe("GitHub transport", () => {
     const unknown = await new GitHub("test-token").request("/user").catch((caught) => caught);
     expect(unknown.message).toBe("GitHub API rate limit reached. Try again later.");
   });
+  it("treats GitHub secondary rate limits and abuse responses as rate limits, not permission errors (#318)", async () => {
+    setLanguage("sv");
+    const client403 = new GitHub("test-token");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ message: "You have exceeded a secondary rate limit. Please wait a few minutes before you try again." }),
+        { status: 403, headers: { "x-ratelimit-remaining": "4999" } },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ message: "You have triggered an abuse detection mechanism." }),
+        { status: 429 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ message: "You have exceeded a secondary rate limit." }),
+        { status: 403, headers: { "retry-after": "120" } },
+      )));
+    const error403 = await client403.request("/repos/owner/test/issues").catch((caught) => caught);
+    expect(error403).toMatchObject({ status: 403, rateLimited: true, permissionDenied: false });
+    expect(error403.message).toMatch(/^GitHubs API-gräns är nådd\./);
+    expect(error403.message).not.toContain("behörigheter");
+    expect(error403.message).not.toContain("Åtkomst nekad");
+    expect(client403.retryAfterMs()).toBeGreaterThan(59000);
+    expect(client403.retryAfterMs()).toBeLessThanOrEqual(60000);
+
+    const client429 = new GitHub("test-token");
+    const error429 = await client429.request("/repos/owner/test/issues").catch((caught) => caught);
+    expect(error429).toMatchObject({ status: 429, rateLimited: true, permissionDenied: false });
+    expect(error429.message).toMatch(/^GitHubs API-gräns är nådd\./);
+    expect(client429.retryAfterMs()).toBeGreaterThan(59000);
+    expect(client429.retryAfterMs()).toBeLessThanOrEqual(60000);
+
+    setLanguage("en");
+    const clientRetry = new GitHub("test-token");
+    const errorRetry = await clientRetry.request("/repos/owner/test/issues").catch((caught) => caught);
+    expect(errorRetry).toMatchObject({ status: 403, rateLimited: true, permissionDenied: false });
+    expect(errorRetry.message).toMatch(/^GitHub API rate limit reached\./);
+    expect(errorRetry.message).not.toContain("permissions");
+    expect(errorRetry.message).not.toContain("Access denied");
+    expect(clientRetry.retryAfterMs()).toBeGreaterThan(119000);
+    expect(clientRetry.retryAfterMs()).toBeLessThanOrEqual(120000);
+  });
   it("distinguishes an empty Git repository from other conflict responses", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: "Git Repository is empty." }), { status: 409 }))

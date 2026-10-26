@@ -177,6 +177,10 @@ export class GitHub {
       return { data: cached.data as T, next: cached.next };
     }
     if (!response.ok) {
+      const body = await response.json().catch(() => null) as { message?: unknown } | null;
+      const isSecondaryRateLimit = (response.status === 403 || response.status === 429) &&
+        typeof body?.message === "string" &&
+        /secondary rate limit|abuse/i.test(body.message);
       const retry = response.headers.get("retry-after");
       const resetAt = response.headers.get("x-ratelimit-reset");
       if (retry)
@@ -186,14 +190,15 @@ export class GitHub {
             ? Date.now() + Number(retry) * 1000
             : Date.parse(retry) || 0,
         );
+      else if (isSecondaryRateLimit)
+        this.limitedUntil = Math.max(this.limitedUntil, Date.now() + 60000);
       if (resetAt && response.headers.get("x-ratelimit-remaining") === "0")
         this.limitedUntil = Math.max(this.limitedUntil, Number(resetAt) * 1000);
-      const rateLimited = response.status === 429 || !!retry || response.headers.get("x-ratelimit-remaining") === "0";
+      const rateLimited = response.status === 429 || !!retry || response.headers.get("x-ratelimit-remaining") === "0" || isSecondaryRateLimit;
       // Only a genuine rate limit shows a retry time; GitHub sends X-RateLimit-Reset on every response (#107).
       const retryAt = rateLimited
         ? this.limitedUntil > Date.now() ? this.limitedUntil : Number(resetAt) * 1000 || 0
         : 0;
-      const body = await response.json().catch(() => null) as { message?: unknown } | null;
       const permissionDenied = response.status === 403 && !rateLimited && typeof body?.message === "string" &&
         /^Resource not accessible by (personal access token|integration)\.?$/i.test(body.message);
       this.observePermission(url.pathname, false, permissionDenied);
