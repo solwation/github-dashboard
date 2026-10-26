@@ -45,7 +45,7 @@ Background checks use Periodic Background Sync and work only in Chromium browser
 
 ## Connect
 
-Use a fine-grained GitHub token with **Issues: read** and **Metadata: read**. Add **Contents: read** and **Pull requests: read** for private closing commit details. Try the demo first—no account required.
+Use a fine-grained GitHub token with **Issues: read** and **Metadata: read**. Add **Contents: read** and **Pull requests: read** for private closing commit details. Try the demo first—no account required. Stored credentials and active sessions are hardened by a Content-Security-Policy (CSP) meta tag in `index.html`; new external origins (such as an OAuth auth worker) must be added to the CSP in `index.html`.
 
 Settings groups permissions, workflow instructions, automatic updates and QR scanning in a consistent button list. Update prompts stack their action buttons vertically and show the ten-second countdown inside Update now (10); opening a dialog pauses the countdown, while Not now defers until tomorrow. The sidebar shows whether a version check confirmed the latest version, found an update, or has not completed. The Issue workflow instructions button opens a compact popup with the full bundled Markdown in a scrollable textarea and a Copy instructions button.
 
