@@ -378,4 +378,50 @@ describe('persistent statistics history reuse', () => {
     expect(commitCalls).toHaveLength(1);
     expect(result.commits!.data.map(c => c.sha)).toContain('c2');
   });
+  it('caps board issues at 300, orders newest updated first, and marks truncated data incomplete (#322)', async () => {
+    // 350 issues generated with ascending IDs and timestamps, but shuffled order
+    const rawIssues = Array.from({ length: 350 }, (_, i) => ({
+      id: i + 1,
+      number: i + 1,
+      created_at: '2026-10-10T00:00:00Z',
+      updated_at: new Date(Date.parse('2026-10-10T00:00:00Z') + (i + 1) * 1000).toISOString(),
+      labels: [{ name: 'bug' }],
+    }));
+    // Include duplicates and a pull request
+    const boardData = [
+      rawIssues[0]!, // duplicate
+      { ...rawIssues[0]!, id: 9999, pull_request: {} }, // pull request should be ignored
+      ...rawIssues.slice().reverse(), // oldest at end, newest at start
+    ];
+
+    const { calls, client } = mockClient(url => baseline(url));
+    client.boardIssues = (_repo, _since) => boardData as never;
+
+    const collector = new StatisticsCollector(client);
+    const result = await collector.load('sample/repo', now);
+
+    // No API calls for issues since board covered it
+    expect(calls.some(url => url.pathname.endsWith('/issues'))).toBe(false);
+    expect(result.issues).not.toBeNull();
+    expect(result.issues!.data).toHaveLength(300);
+    expect(result.issues!.complete).toBe(false);
+    // Ordered newest updated first: issue 350 is newest
+    expect(result.issues!.data[0]!.id).toBe(350);
+    expect(result.issues!.data[299]!.id).toBe(51);
+    // Pull request not included
+    expect(result.issues!.data.some(i => i.id === 9999)).toBe(false);
+
+    // If board has <= 300 issues, marked complete
+    client.boardIssues = () => rawIssues.slice(0, 150) as never;
+    const collector2 = new StatisticsCollector(client);
+    const result2 = await collector2.load('sample/repo', now);
+    expect(result2.issues!.data).toHaveLength(150);
+    expect(result2.issues!.complete).toBe(true);
+
+    // When force: true, board is bypassed and API is called
+    calls.length = 0;
+    const forced = await collector2.load('sample/repo', now, true);
+    expect(calls.some(url => url.pathname.endsWith('/issues'))).toBe(true);
+    expect(forced.issues!.data).toHaveLength(1);
+  });
 });

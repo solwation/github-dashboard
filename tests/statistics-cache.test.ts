@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { load, save } = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock('../src/lib/vault', () => ({ loadStatistics: load, saveStatistics: save }));
 import { parseStatisticsCache, previewStatistics, readStatisticsCache, writeStatisticsCache, STATISTICS_RETENTION_MS } from '../src/lib/statistics-cache';
-import { statisticsCollectionWindow, statisticsWindow, type StatisticsData } from '../src/lib/statistics';
+import { statisticsCollectionWindow, statisticsWindow, summarizeStatistics, type StatisticsData } from '../src/lib/statistics';
+import { StatisticsCollector, type StatisticsClient } from '../src/lib/statistics-client';
 const now = Date.parse('2026-10-16T15:00:00Z');
 function entry(repository = 'sample/repo'): StatisticsData {
   return { repository, ...statisticsCollectionWindow(now), fetchedAt: now, issues: { data: [], complete: true, fetchedAt: now }, events: null, commits: { data: [], complete: true, fetchedAt: now, historyVerifiedAt: now }, changes: null, pulls: null, temporary: [] };
@@ -85,5 +86,49 @@ describe('bounded credential-bound statistics snapshots', () => {
     load.mockResolvedValueOnce(null);
     expect(await readStatisticsCache('token-b', now)).toEqual([]);
     expect(load.mock.calls.map(call => call[0])).toEqual(['token-a', 'token-b']);
+  });
+  it('round-trips snapshot built from more than 300 board issues without dropping issues source (#322)', async () => {
+    const issues = Array.from({ length: 350 }, (_, i) => ({
+      id: i + 1,
+      number: i + 1,
+      created_at: '2026-10-10T00:00:00Z',
+      updated_at: new Date(Date.parse('2026-10-10T00:00:00Z') + i * 1000).toISOString(),
+      labels: [{ name: 'bug' }],
+    }));
+    const client: StatisticsClient = {
+      async request<T>() { return { data: [] as unknown as T, next: null }; },
+      boardIssues() { return issues; },
+    };
+    const collector = new StatisticsCollector(client);
+    const snapshot = await collector.load('sample/repo', now);
+    expect(snapshot.issues).not.toBeNull();
+    expect(snapshot.issues!.data).toHaveLength(300);
+    expect(snapshot.issues!.complete).toBe(false);
+    expect(snapshot.issues!.data[0]!.id).toBe(350);
+
+    await writeStatisticsCache('credential-fixture', [snapshot]);
+    const stored = save.mock.calls[0]![1];
+    const parsed = parseStatisticsCache(stored, now);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]!.issues).not.toBeNull();
+    expect(parsed[0]!.issues!.data).toHaveLength(300);
+    expect(parsed[0]!.issues!.complete).toBe(false);
+    expect(parsed[0]!.issues!.data[0]!.id).toBe(350);
+
+    const summary = summarizeStatistics(parsed, { from: snapshot.from, to: snapshot.to, label: '', contributor: '' });
+    expect(summary.complete.created).toBe(false);
+    expect(summary.complete.netIssues).toBe(false);
+    expect(summary.totals.created).toBe(300);
+
+    // If revalidation fails, restored cached data provides fallback issues
+    const restoredCollector = new StatisticsCollector({
+      async request() { throw new Error('offline'); },
+      boardIssues() { return null; },
+    });
+    restoredCollector.restore(parsed);
+    const fallback = await restoredCollector.load('sample/repo', now + 1000);
+    expect(fallback.issues).not.toBeNull();
+    expect(fallback.issues!.data).toHaveLength(300);
+    expect(fallback.issues!.complete).toBe(false);
   });
 });
