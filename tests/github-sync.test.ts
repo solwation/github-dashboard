@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHub } from "../src/lib/github";
 import type { Issue, Lane, Repo } from "../src/lib/model";
+import { createIssueSync, RepositoryBackoff } from "../src/lib/sync";
 const repo: Repo = {
   id: 1,
   name: "test",
@@ -137,5 +138,210 @@ describe("conditional and incremental synchronization", () => {
     const api = new GitHub("test");
     await expect(api.request("/test")).rejects.toThrow();
     expect(api.retryAfterMs()).toBeGreaterThan(119000);
+  });
+  it("keeps active issue sync every 15s for healthy repos while a failing 404 repo backs off without reload", async () => {
+    vi.useFakeTimers();
+    const healthyRepo: Repo = {
+      id: 1,
+      name: "healthy",
+      full_name: "sample/healthy",
+      description: null,
+      private: true,
+      html_url: "https://github.com/sample/healthy",
+      owner: { login: "sample" },
+    };
+    const failingRepo: Repo = {
+      id: 2,
+      name: "failing",
+      full_name: "sample/failing",
+      description: null,
+      private: true,
+      html_url: "https://github.com/sample/failing",
+      owner: { login: "sample" },
+    };
+    const repos = [healthyRepo, failingRepo];
+    let healthyLaneReloadCount = 0;
+    let healthySyncCount = 0;
+    let failingLaneAttempts = 0;
+    const fetch = vi.fn(async (url: URL, init?: RequestInit) => {
+      const pathname = url.pathname;
+      if (pathname.includes("sample/failing")) {
+        return new Response("Not Found", { status: 404, statusText: "Not Found" });
+      }
+      if (pathname.endsWith("/labels")) {
+        return new Response("[]");
+      }
+      if (pathname.endsWith("/events")) {
+        return new Response("[]");
+      }
+      const headers = (init?.headers as Record<string, string>) || {};
+      if (headers["If-None-Match"] === '"etag-v1"') {
+        return new Response(null, { status: 304 });
+      }
+      return new Response(JSON.stringify([make(1, "open", ["in-progress"])]), {
+        headers: { etag: '"etag-v1"' },
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const api = new GitHub("test");
+    const backoff = new RepositoryBackoff();
+    let lanes: Lane[] = [
+      { repo: healthyRepo, labels: [], issues: [] },
+      { repo: failingRepo, labels: [], issues: [] },
+    ];
+    const lastSynced = new Map<string, number>();
+    const lastFullSynced = new Map<string, number>();
+
+    async function refresh(incremental = false, activeOnly = false) {
+      if ((api.retryAfterMs() || 0) > 0) {
+        if (incremental) throw new Error("Rate limited");
+        return;
+      }
+      const nowMs = Date.now();
+      const targets = repos.filter(repo => {
+        const hasActive = lanes.some(lane => lane.repo.full_name === repo.full_name && lane.issues.some(i => i.labels.some(l => l.name === "in-progress")));
+        return backoff.shouldSync(repo.full_name, {
+          hasActive,
+          reconcile: !activeOnly,
+        }, nowMs);
+      });
+      for (const repo of targets) {
+        if ((api.retryAfterMs() || 0) > 0) break;
+        try {
+          const previous = lanes.find(lane => lane.repo.full_name === repo.full_name);
+          const since = lastSynced.get(repo.full_name);
+          const full = !incremental || !previous || previous.loading || !!previous.error || !since;
+          if (repo.full_name === "sample/healthy") {
+            if (full) healthyLaneReloadCount++;
+            else healthySyncCount++;
+          } else if (repo.full_name === "sample/failing") {
+            failingLaneAttempts++;
+          }
+          const loaded = full
+            ? await api.lane(repo, {}, previous && !previous.loading ? previous : undefined)
+            : await api.syncLane(previous!, {}, lastFullSynced.get(repo.full_name) || 0, { labels: !activeOnly });
+          backoff.recordSuccess(repo.full_name);
+          lastSynced.set(repo.full_name, Date.now());
+          if (full) lastFullSynced.set(repo.full_name, Date.now());
+          lanes = lanes.map(l => l.repo.full_name === repo.full_name ? loaded : l);
+        } catch (cause) {
+          if ((api.retryAfterMs() || 0) === 0) {
+            backoff.recordFailure(repo.full_name);
+          }
+          const old = lanes.find(l => l.repo.full_name === repo.full_name);
+          const failed = { ...old!, loading: false, error: (cause as Error).message };
+          lanes = lanes.map(l => l.repo.full_name === repo.full_name ? failed : l);
+        }
+      }
+      if (incremental && (api.retryAfterMs() || 0) > 0) throw new Error("Rate limited");
+    }
+
+    const sync = createIssueSync({
+      canSync: () => true,
+      hasActiveIssues: () => lanes.some(l => l.issues.some(i => i.labels.some(lbl => lbl.name === "in-progress"))) || repos.some(r => backoff.isDue(r.full_name)),
+      refreshActive: () => refresh(true, true),
+      reconcile: () => refresh(true, false),
+      retryAfterMs: () => api.retryAfterMs(),
+    });
+    sync.start();
+
+    // Initial load: reconcile runs at t = 0
+    await vi.advanceTimersByTimeAsync(0);
+    expect(healthyLaneReloadCount).toBe(1);
+    expect(failingLaneAttempts).toBe(1);
+    expect(lanes.find(l => l.repo.full_name === "sample/failing")?.error).toContain("404");
+    expect(backoff.failureCount("sample/failing")).toBe(1);
+    expect(backoff.isBackingOff("sample/failing")).toBe(true);
+
+    // t = 15s: first active tick. Failing repo backoff (15s) has expired -> retried. Healthy repo uses syncLane.
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(healthySyncCount).toBe(1);
+    expect(healthyLaneReloadCount).toBe(1); // healthy repo was NOT reloaded!
+    expect(failingLaneAttempts).toBe(2);
+    expect(backoff.failureCount("sample/failing")).toBe(2);
+    // Failing repo backed off for 30s
+    expect(backoff.isBackingOff("sample/failing")).toBe(true);
+
+    // t = 30s: second active tick. Failing repo is in 30s backoff -> SKIPPED! Healthy repo still updates!
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(healthySyncCount).toBe(2);
+    expect(healthyLaneReloadCount).toBe(1); // healthy repo still not reloaded
+    expect(failingLaneAttempts).toBe(2); // failing repo was NOT requested!
+    expect(lanes.find(l => l.repo.full_name === "sample/failing")?.error).toContain("404");
+
+    // t = 45s: third active tick. 30s backoff for failing repo has now expired -> retried!
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(healthySyncCount).toBe(3);
+    expect(healthyLaneReloadCount).toBe(1); // still not reloaded
+    expect(failingLaneAttempts).toBe(3); // retried!
+    expect(backoff.failureCount("sample/failing")).toBe(3);
+
+    sync.stop();
+  });
+  it("pauses all synchronization when a genuine rate limit occurs", async () => {
+    vi.useFakeTimers();
+    const repoA: Repo = { id: 1, name: "repoA", full_name: "sample/repoA", description: null, private: true, html_url: "", owner: { login: "sample" } };
+    const repoB: Repo = { id: 2, name: "repoB", full_name: "sample/repoB", description: null, private: true, html_url: "", owner: { login: "sample" } };
+    const repos = [repoA, repoB];
+    let rateLimited = false;
+    let requestCount = 0;
+    const fetch = vi.fn(async (url: URL) => {
+      requestCount++;
+      if (rateLimited) {
+        return new Response("Rate limited", { status: 429, headers: { "retry-after": "60" } });
+      }
+      if (url.pathname.endsWith("/labels") || url.pathname.endsWith("/events")) return new Response("[]");
+      return new Response(JSON.stringify([make(1, "open", ["in-progress"])]), { headers: { etag: '"v1"' } });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const api = new GitHub("test");
+    const backoff = new RepositoryBackoff();
+    let lanes: Lane[] = [
+      { repo: repoA, labels: [], issues: [] },
+      { repo: repoB, labels: [], issues: [] },
+    ];
+    async function refresh(incremental = false, activeOnly = false) {
+      if ((api.retryAfterMs() || 0) > 0) {
+        if (incremental) throw new Error("Rate limited");
+        return;
+      }
+      for (const repo of repos) {
+        if ((api.retryAfterMs() || 0) > 0) break;
+        try {
+          const prev = lanes.find(l => l.repo.full_name === repo.full_name);
+          const full = !incremental || !prev || !prev.issues.length;
+          const loaded = full ? await api.lane(repo, {}) : await api.syncLane(prev!, {}, 0, { labels: !activeOnly });
+          lanes = lanes.map(l => l.repo.full_name === repo.full_name ? loaded : l);
+        } catch (err) {
+          lanes = lanes.map(l => l.repo.full_name === repo.full_name ? { ...l, error: (err as Error).message } : l);
+        }
+      }
+      if (incremental && (api.retryAfterMs() || 0) > 0) throw new Error("Rate limited");
+    }
+    const sync = createIssueSync({
+      canSync: () => true,
+      hasActiveIssues: () => lanes.some(l => l.issues.some(i => i.labels.some(lbl => lbl.name === "in-progress"))),
+      refreshActive: () => refresh(true, true),
+      reconcile: () => refresh(true, false),
+      retryAfterMs: () => api.retryAfterMs(),
+    });
+    sync.start();
+
+    // Initial load: 2 repos succeed
+    await vi.advanceTimersByTimeAsync(0);
+    const initialRequests = requestCount;
+    expect(initialRequests).toBeGreaterThan(0);
+
+    // Simulate rate limit hitting at t = 15s
+    rateLimited = true;
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(api.retryAfterMs()).toBeGreaterThan(0);
+
+    const requestsAfterRateLimit = requestCount;
+    // Advance 30s (during rate limit) -> NO requests should be sent at all!
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(requestCount).toBe(requestsAfterRateLimit);
+
+    sync.stop();
   });
 });
