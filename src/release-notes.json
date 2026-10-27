@@ -8,6 +8,15 @@
     "sections": [
       {
         "text": {
+          "sv": "Listans kommentarsantal visas utan extra +N-badge, håller avstånd till tidskolumnen och behåller tydlig olästindikering.",
+          "en": "List comment counts omit the extra +N badge, stay clear of the time column and retain clear unread feedback."
+        },
+        "issues": [
+          349
+        ]
+      },
+      {
+        "text": {
           "sv": "Listans repository-chip följer texten och fasta metadatafält linjerar utan att klippa story points, kommentarer eller +N-kontroller.",
           "en": "List repository chips hug their text and fixed metadata slots align without clipping story points, comments or +N controls."
         },

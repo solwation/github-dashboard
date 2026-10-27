@@ -1,10 +1,11 @@
 {
   "baseCommit": "e604adebd76a4daccd6f862a646ca6932e839581",
   "summary": {
-    "sv": "Projektens synlighetsikon och externlänk samlas till höger om namnet i sidomenyn. Långa namn och statusräknare behåller tydlig gruppering.",
-    "en": "Repository visibility icons and external links align to the right of sidebar names. Long names and status counts stay clearly grouped."
+    "sv": "Sidomenyns ikoner samlas vid projektnamnen. Listans kommentarsantal visas utan extra +N-badge och håller avstånd till tidsuppgifterna.",
+    "en": "Sidebar icons align beside project names. List comment counts omit the extra +N badge and stay clear of time information."
   },
   "issues": [
-    347
+    347,
+    349
   ]
 }
