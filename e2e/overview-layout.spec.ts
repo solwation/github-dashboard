@@ -28,56 +28,41 @@ async function connect(page: Page) {
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 }
 
-// Returns, per summary card, how far each content part's centre deviates from the card's centre,
-// and how far each bottom cell's text centre deviates from its own cell centre (#152).
-function offsets(page: Page) {
-  return page.locator(".stats .stat").evaluateAll(cards => cards.map(card => {
+// Verifies that summary cards render compactly on phones with consistent left alignment
+// across all content parts, without page horizontal scroll (#152, #332, #338).
+async function expectCompactSummary(page: Page) {
+  const cards = await page.locator(".stats .stat").evaluateAll(items => items.map(card => {
     const box = card.getBoundingClientRect();
-    const centre = box.left + box.width / 2;
-    const contentCentre = (element: Element, target = centre) => {
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      const rect = range.getBoundingClientRect();
-      return rect.left + rect.width / 2 - target;
-    };
-    const parts = [".stat-icon", ".stat-label", "strong"]
-      .map(selector => card.querySelector(selector)).filter((element): element is Element => !!element);
-    const cellsBox = card.querySelector(".stat-cells")?.getBoundingClientRect();
-    const cellOffsets = [...card.querySelectorAll(".stat-cell")].map(cell => {
-      const cellBox = cell.getBoundingClientRect();
-      return contentCentre(cell, cellBox.left + cellBox.width / 2);
-    });
+    const content = card.querySelector(".stat-content")?.getBoundingClientRect();
+    const parts = [".stat-header", ".stat-cells"]
+      .map(selector => card.querySelector(selector)?.getBoundingClientRect())
+      .filter((rect): rect is DOMRect => !!rect);
     return {
-      parts: parts.length + (cellsBox ? 1 : 0),
-      cells: cellOffsets.length,
-      offsets: [
-        ...parts.map(part => contentCentre(part)),
-        ...(cellsBox ? [cellsBox.left + cellsBox.width / 2 - centre] : []),
-        ...cellOffsets,
-      ],
       right: box.right,
+      height: box.height,
+      contentLeft: content?.left ?? 0,
+      partLefts: parts.map(p => p.left),
     };
   }));
-}
-
-async function expectCentred(page: Page) {
-  const cards = await offsets(page);
   expect(cards).toHaveLength(4);
   for (const card of cards) {
-    expect(card.parts).toBe(4);
-    expect(card.cells).toBe(2);
-    for (const offset of card.offsets) expect(Math.abs(offset)).toBeLessThanOrEqual(2);
+    expect(card.height).toBeLessThanOrEqual(85);
     expect(card.right).toBeLessThanOrEqual(375);
+    for (const left of card.partLefts) {
+      expect(Math.abs(left - card.contentLeft)).toBeLessThanOrEqual(2);
+    }
   }
+  const summaryHeight = await page.locator(".stats").evaluate(el => el.getBoundingClientRect().height);
+  expect(summaryHeight).toBeLessThanOrEqual(160);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 }
 
-test("summary cards centre icon, label, number and notes on phones in both languages", async ({ page }) => {
+test("summary cards render compactly with consistent left alignment on phones in both languages", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await connect(page);
   await expect(page.locator('.stats [data-stat="closed"] .stat-today')).toContainText("+1 idag");
   await expect(page.locator(".repository-stat .stat-icon")).toBeVisible();
-  await expectCentred(page);
+  await expectCompactSummary(page);
 
   const card = page.locator(".repository-stat");
   const action = card.getByRole("button", { name: "Välj repositories", exact: true });
@@ -95,5 +80,5 @@ test("summary cards centre icon, label, number and notes on phones in both langu
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator('.stats [data-stat="closed"] .stat-today')).toContainText("+1 today");
   await expect(card.getByRole("button", { name: "Choose repositories", exact: true })).toBeVisible();
-  await expectCentred(page);
+  await expectCompactSummary(page);
 });

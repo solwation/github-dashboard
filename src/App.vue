@@ -2128,15 +2128,9 @@ onMounted(async () => {
         <StatisticsView :navigation="statisticsNavigation" v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" :rules="rules" />
         <div v-show="currentView === 'overview'">
         <section class="page-heading">
-          <div>
-            <div class="eyebrow">{{ t("DITT ARBETE, SAMLAT") }}</div>
-            <h1>
-              {{ t("Projektöversikt") }}<span class="heading-dot">.</span>
-            </h1>
-            <p>
-              {{ t("Från backlog till klart. Håll koll på vad som rör sig.") }}
-            </p>
-          </div>
+          <h1>
+            {{ t("Projektöversikt") }}<span class="heading-dot">.</span>
+          </h1>
         </section>
         <p v-if="publicMode" class="notice">{{ t("Publik vy · Uppdateras manuellt") }}</p>
         <div v-if="isDemo" class="notice demo-notice">

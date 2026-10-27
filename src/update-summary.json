@@ -1,10 +1,10 @@
 {
-  "baseCommit": "e11f6e76700e3dcbebb396238a994d53fd3b43db",
+  "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Labels i listläget krymper inte längre till oläsbara stumpar, och dolda labels visas med ett tillgängligt +N-chip.",
-    "en": "List mode labels no longer shrink to illegible dots, and overflowing labels are accessible via a +N chip."
+    "sv": "Kompaktare sidhuvud och nyckeltalsremsa lyfter upp boarden över vecket på laptops och mobil med bibehållen tillgänglighet och data.",
+    "en": "Compact header and metrics strip elevate the board above the fold on laptops and mobile while preserving accessibility and metrics."
   },
   "issues": [
-    331
+    332
   ]
 }
