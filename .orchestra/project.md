@@ -101,12 +101,17 @@ artifact. Active/owner/blocked claims and missing readiness stop publication; un
 backlog outside the prepared delta does not. The existing three-hour fallback concerns
 claims outside the delta only; it never permits unfinished code on main.
 
-Mark integrated, verified app work `needs-deploy` without active/owner/blocked labels;
-include it in the traceable prepared delta, with truthful bilingual release notes and
-≤180-character update summaries against the actual public build commit. Never mark
-unfinished work ready or close issues to bypass the gate. After an Action actually
-publishes, verify Pages, close delivered issues and remove `needs-deploy`. Distinguish
-successful publication from a successful Action whose deployment was skipped.
+Stories follow **Backlog → In progress → Closed**. After integration on main and
+required local verification/review, post completion evidence and close the story
+immediately, removing active/owner/blocked labels. Publication does not delay closure
+or return finished work to Backlog. For app changes, keep `needs-deploy` only as
+technical metadata on the closed issue and include it in the traceable prepared delta,
+with truthful bilingual release notes and ≤180-character update summaries against the
+actual public build commit. Never mark unfinished work ready or close it to bypass the
+gate. Track pending publication in this session's status. After an Action actually
+publishes, verify Pages, append publication evidence and remove `needs-deploy`; keep
+the story closed unless acceptance is actually unmet. Distinguish successful
+publication from a successful Action whose deployment was skipped.
 
 Instruction-only maintenance and other [technical changes](../AI.md#implementation-and-git)
 (no build or publication inputs touched) are delivered as usable checked-in files after a
@@ -146,9 +151,9 @@ Listed order is execution order.
 | Build | `verification`: every change, before review | `npm run build` (conflict-marker scan, types, production output) | Green build at the reviewed revision |
 | Integration review | `review`: every change, before delivery | Conductor reads the combined diff and evidence, inspects screenshots against acceptance, rechecks conflict markers | Defects corrected and affected checks refreshed |
 | Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
-| Prepare publication | `delivery`: app changes, after integration | Mark `needs-deploy` without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta; never bypass the Actions gate |
+| Prepare publication | `delivery`: app changes, after integration | Keep `needs-deploy` as technical metadata on the completed, closed story without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta and separate publication status; never bypass the Actions gate |
 | Check Action | `delivery`: every push to `main` that includes an app change (skip for technical changes) | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
-| Complete issue | `follow-up`: every tracked change, before closure | [Completion comment](shared/ORCHESTRA.md#follow-up-with-evidence-that-fits-the-change) with outcome, revision, checks, evidence and limits; app work closes only after verified Pages publication and `needs-deploy` removal | All work and own owner labels removed; unmet acceptance stays open with next action and owner |
+| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up-with-evidence-that-fits-the-change) with outcome, revision, local checks, evidence and limits; close immediately. Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
 
 ## Queue intake hooks
 
