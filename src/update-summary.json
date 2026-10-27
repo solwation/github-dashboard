@@ -1,11 +1,10 @@
 {
-  "baseCommit": "e604adebd76a4daccd6f862a646ca6932e839581",
+  "baseCommit": "d7c1f5683d7f383404e8bda181c232d69f783031",
   "summary": {
-    "sv": "Sidomenyns ikoner samlas vid projektnamnen. Listans kommentarsantal visas utan extra +N-badge och håller avstånd till tidsuppgifterna.",
-    "en": "Sidebar icons align beside project names. List comment counts omit the extra +N badge and stay clear of time information."
+    "sv": "Expanderade listrader flyttar kommentarskontrollen under innehållet med tydlig text, utan dubblerad verktygsrad före beskrivningen.",
+    "en": "Expanded list rows place the comment control below content with clear text, omitting the duplicate toolbar above descriptions."
   },
   "issues": [
-    347,
-    349
+    348
   ]
 }

@@ -8,10 +8,11 @@
     "sections": [
       {
         "text": {
-          "sv": "Listans kommentarsantal visas utan extra +N-badge, håller avstånd till tidskolumnen och behåller tydlig olästindikering.",
-          "en": "List comment counts omit the extra +N badge, stay clear of the time column and retain clear unread feedback."
+          "sv": "Listans kommentarsantal visas utan extra +N-badge, och expanderade rader flyttar kommentarskontrollen under innehållet med tydlig text.",
+          "en": "List comment counts omit extra +N badges, and expanded rows place the comment control below content with clear text."
         },
         "issues": [
+          348,
           349
         ]
       },
