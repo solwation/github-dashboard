@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare vyer, läsbarare text och grupperade inställningar; SP-labels ger exakta poäng, listkolumner linjerar och expanderade ärenden visar alla labels.",
-      "en": "Denser views, clearer text and grouped settings; point labels set exact sizes, list columns align and expanded issues show all labels."
+      "sv": "Tätare tavlor, statistik och inställningar ger bättre överblick. Text är tydligare, SP-labels styr poäng och listans labels och kolumner är lättare att följa.",
+      "en": "Denser boards, statistics and settings improve scanning. Text is clearer, point labels set sizes, and list labels and columns are easier to follow."
     },
     "sections": [
       {
@@ -95,6 +95,15 @@
         },
         "issues": [
           337
+        ]
+      },
+      {
+        "text": {
+          "sv": "Statistikens nyckeltal fyller jämna rader, korta perioder får lägre diagram och hopfällda uppdelningar tar mindre plats.",
+          "en": "Statistics metrics fill balanced rows, short periods use shorter charts, and collapsed breakdowns take less space."
+        },
+        "issues": [
+          339
         ]
       }
     ]

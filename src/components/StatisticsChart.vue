@@ -22,10 +22,16 @@ const popoverLeft = computed(() => Math.max(8, Math.min(x(selected.value) + 12, 
 // A second unit's axis needs room for its labels on the right; single-unit charts keep their layout.
 const plotStart = computed(() => dual.value ? 54 : 48);
 const plotTop = 30;
-const plotBottom = 215;
+const viewportHeight = ref(typeof window === "undefined" ? 900 : window.innerHeight);
+// Sparse periods need less vertical space; keep the SVG's coordinate and rendered heights
+// identical so axes and labels retain their readable size at every density.
+const baseHeight = computed(() => Math.max(144, Math.min(dates.value.length <= 7 ? 144 : dates.value.length <= 31 ? 184 : 224, Math.round(viewportHeight.value * .18))));
+const chartHeight = computed(() => baseHeight.value + (props.coverage ? 22 : 0));
+const plotBottom = computed(() => baseHeight.value - 40);
 const plotEnd = computed(() => Math.max(plotStart.value, chartWidth.value - (dual.value ? 54 : 42)));
 let resizeObserver: ResizeObserver | undefined;
 function resizeChart() {
+  viewportHeight.value = window.innerHeight;
   const width = chart.value?.getBoundingClientRect().width;
   if (width && Number.isFinite(width)) chartWidth.value = width;
 }
@@ -34,7 +40,8 @@ onMounted(() => {
   if (typeof ResizeObserver !== "undefined" && chart.value) {
     resizeObserver = new ResizeObserver(resizeChart);
     resizeObserver.observe(chart.value);
-  } else window.addEventListener("resize", resizeChart);
+  }
+  window.addEventListener("resize", resizeChart);
 });
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
@@ -68,7 +75,7 @@ const yTicks = computed(() => axes.value[0]!.ticks);
 function x(index: number) { return plotStart.value + index / Math.max(1, dates.value.length - 1) * (plotEnd.value - plotStart.value); }
 function y(value: number, axis = 0) {
   const bounds = axes.value[axis] || axes.value[0]!;
-  return plotBottom - (value - bounds.min) / Math.max(1e-9, bounds.max - bounds.min) * (plotBottom - plotTop);
+  return plotBottom.value - (value - bounds.min) / Math.max(1e-9, bounds.max - bounds.min) * (plotBottom.value - plotTop);
 }
 const unitTitles: Record<ChartUnit, string> = { count: "Antal", hours: "Timmar", percent: "Procent" };
 /** Tick text; on a two-unit chart every tick carries its unit so each axis reads on its own. */
@@ -147,7 +154,7 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
 </script>
 <template>
   <div class="statistics-chart">
-    <svg ref="chart" :viewBox="`0 0 ${chartWidth} ${coverage ? 277 : 255}`" role="img" :aria-label="title" @pointermove="selectFromPointer" @pointerdown="selectFromPointer" @pointerleave="hidePointer" @click="selectFromPointer">
+    <svg ref="chart" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" :style="{ height: `${chartHeight}px` }" role="img" :aria-label="title" @pointermove="selectFromPointer" @pointerdown="selectFromPointer" @pointerleave="hidePointer" @click="selectFromPointer">
       <title>{{ title }}</title>
       <g v-for="tick in yTicks" :key="tick">
         <line :class="tick === 0 ? 'chart-axis' : 'chart-grid'" :x1="plotStart" :y1="y(tick)" :x2="plotEnd" :y2="y(tick)" />
@@ -158,7 +165,7 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
         <text class="chart-axis-title chart-axis-title-left" x="4" y="14" text-anchor="start">{{ t(unitTitles[units[0]!]) }}</text>
         <text class="chart-axis-title chart-axis-title-right" :x="chartWidth - 4" y="14" text-anchor="end">{{ t(unitTitles[units[1]!]) }}</text>
       </g>
-      <text v-for="tick in xTicks" :key="tick.index" class="chart-x-label" :x="x(tick.index)" y="234" :text-anchor="tick.anchor">
+      <text v-for="tick in xTicks" :key="tick.index" class="chart-x-label" :x="x(tick.index)" :y="plotBottom + 19" :text-anchor="tick.anchor">
         <tspan :x="x(tick.index)">{{ tick.label }}</tspan>
         <tspan v-if="tick.dateLine" :x="x(tick.index)" dy="14">{{ tick.dateLine }}</tspan>
       </text>
@@ -170,8 +177,8 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
         </template>
       </g>
       <g v-if="coverage" class="chart-coverage" role="img" :aria-label="coverage.percent > 0 ? t('Färdighämtat tidsspann: {from} – {to}', { from: new Date(coverage.from).toLocaleString(locale), to: new Date(coverage.to).toLocaleString(locale) }) : t('Tidsspannet är ännu inte bekräftat hämtat')">
-        <line :x1="plotStart" :x2="plotEnd" y1="268" y2="268" class="chart-coverage-track" />
-        <line :x1="plotStart + (plotEnd - plotStart) * coverage.startPercent / 100" :x2="plotStart + (plotEnd - plotStart) * (coverage.startPercent + coverage.percent) / 100" y1="268" y2="268" class="chart-coverage-loaded" />
+        <line :x1="plotStart" :x2="plotEnd" :y1="baseHeight + 13" :y2="baseHeight + 13" class="chart-coverage-track" />
+        <line :x1="plotStart + (plotEnd - plotStart) * coverage.startPercent / 100" :x2="plotStart + (plotEnd - plotStart) * (coverage.startPercent + coverage.percent) / 100" :y1="baseHeight + 13" :y2="baseHeight + 13" class="chart-coverage-loaded" />
       </g>
     </svg>
     <div v-if="showPopover" class="chart-popover" role="tooltip" :style="{ left: `${popoverLeft}px` }">
@@ -193,7 +200,7 @@ svg line { vector-effect: non-scaling-stroke; }
 svg text { fill: var(--chart-text); font: 11px system-ui; }
 .chart-axis { stroke: var(--chart-axis); }
 .chart-grid { stroke: var(--chart-grid); }
-.chart-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px; margin: 10px 0; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: 12px; margin: var(--space-1) 0 0; }
 .chart-legend span { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .chart-axis-title { font-weight: 600; }
 .chart-legend-axis { color: var(--muted); font-size: 11px; }

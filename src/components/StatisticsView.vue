@@ -525,9 +525,10 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
 </template>
 <style scoped>
 .statistics-view { width: 100%; min-width: 0; }
-.statistics-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 25px; }
+.statistics-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-3); }
 .statistics-heading h1 { margin: 6px 0; font-size: 32px; }
-.statistics-time-controls { margin-bottom: 24px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; }
+.statistics-time-controls { margin-bottom: var(--space-3); padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; }
+.statistics-view > .notice { margin-bottom: var(--space-3); }
 .statistics-time-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; min-width: 0; }
 .statistics-time-selects { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; gap: 12px; margin-left: auto; }
 .statistics-time-selects label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
