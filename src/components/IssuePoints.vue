@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
-import { approximatePoints } from "../lib/story-points";
+import { storyPoints } from "../lib/story-points";
 import { estimateLabel } from "../lib/estimates";
 import { useIssueForecast } from "../composables/useIssueForecast";
 import type { Issue } from "../lib/model";
 
 const props = defineProps<{ issue: Issue; repository?: string; inProgress?: boolean; active?: boolean }>();
 const { t } = useLanguage();
-const points = computed(() => approximatePoints(props.issue));
+const size = computed(() => storyPoints(props.issue));
 const { basis, estimate: forecast } = useIssueForecast(props);
 const description = computed(() => {
-  const parts = [t("Uppskattade story points: cirka {points}", { points: points.value })];
+  const parts = [size.value.source === "label"
+    ? t("Story points från label: {points}", { points: size.value.points })
+    : t("Uppskattade story points: cirka {points}", { points: size.value.points })];
   const estimate = forecast.value;
   if (estimate) {
     parts.push(t("Uppskattad tid: {time}", { time: estimateLabel(estimate.totalMs) }));
@@ -23,11 +25,16 @@ const description = computed(() => {
       count: basis.value!.samples, days: basis.value!.windowDays,
     }));
   }
-  parts.push(t("Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet."));
+  if (size.value.source === "local") parts.push(t("Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet."));
   return parts.map(part => part.replace(/[.]$/, "")).join(". ") + ".";
 });
 </script>
 
 <template>
-  <span class="issue-points" role="img" :aria-label="description" :title="description">≈ {{ points }} SP</span>
+  <span class="issue-points" role="img" :aria-label="description" :title="description"><span class="issue-points-value">{{ size.source === "local" ? "≈ " : "" }}{{ size.points }} SP</span></span>
 </template>
+
+<style scoped>
+.issue-points { min-width: 0; max-width: 100%; flex-shrink: 1; }
+.issue-points-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+</style>

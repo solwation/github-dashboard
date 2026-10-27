@@ -75,7 +75,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   // Median 30 min, started 10 min ago: 20 min left; backlog 20 + 2 × 30 min at parallelism 1.
   await expect(progress).toHaveText(/·\s*≈ 20 min kvar/);
   await expect(backlog).toHaveText(/·\s*≈ 1 h 20 min/);
-  await expect(progress).toHaveAttribute('title', /Grov storlek: 1 poäng.*inte uppmätt komplexitet.*Median 30 min per poäng.*3 användbara stängningarna inom 30 dagar \(högst 30\)/);
+  await expect(progress).toHaveAttribute('title', /Grov storlek: cirka 1 poäng.*inte uppmätt komplexitet.*Median 30 min per poäng.*3 användbara stängningarna inom 30 dagar \(högst 30\)/);
   await expect(backlog).toHaveAttribute('title', /Backlog delas med 1\.0 samtidigt pågående i snitt\./);
   await expect(progress).not.toHaveAttribute('aria-live');
   await expect(page.locator('[aria-live] .column-estimate')).toHaveCount(0);
@@ -131,14 +131,14 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await openSettings(page);
   await page.getByLabel('Språk', { exact: true }).selectOption('en');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await expect(backlog).toHaveAttribute('title', /^Rough size: 2 points.*not measured complexity.*Median 25 min per point.*4 usable closures within 30 days.*Backlog is divided by 1\.0/);
+  await expect(backlog).toHaveAttribute('title', /^Rough size: approximately 2 points.*not measured complexity.*Median 25 min per point.*4 usable closures within 30 days.*Backlog is divided by 1\.0/);
   await expect(backlog).toHaveText(/≈ 50 min/);
   // Explicit bounded point labels size individual work while using the same repository calibration.
   state.largeBacklog = true;
   await expect(page.locator('.board-toolbar')).toHaveAttribute('data-busy', 'false');
   await page.keyboard.press('Control+r');
   await expect(backlog).toHaveText(/≈ 2 h 30 min/);
-  await expect(backlog).toHaveAttribute('title', /^Rough size: 6 points.*Median 25 min per point/);
+  await expect(backlog).toHaveAttribute('title', /^Rough size: approximately 6 points.*Median 25 min per point/);
 });
 
 test('backlog-only forecast expires at its evidence window boundary without new issue data', async ({ page }) => {

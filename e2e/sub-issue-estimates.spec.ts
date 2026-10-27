@@ -60,8 +60,8 @@ for (const [name, parentInProgress, expected] of [
   await page.locator(".board-column.progress").first().screenshot({ path: testInfo.outputPath(`column-${parentInProgress ? "progress" : "backlog"}-parent.png`) });
   await page.screenshot({ path: testInfo.outputPath(`board-${parentInProgress ? "progress" : "backlog"}-parent.png`) });
   // Story points follow the same grouping (#281): the whole group's 5 points, not the child's 1.
-  await expect(page.locator('.stats [data-stat="progress"] .overview-points')).toHaveText("≈ 5 SP");
-  await expect(page.locator('.stats [data-stat="open"] .overview-points')).toHaveText("≈ 5 SP");
+  await expect(page.locator('.stats [data-stat="progress"] .overview-points')).toHaveText("5 SP");
+  await expect(page.locator('.stats [data-stat="open"] .overview-points')).toHaveText("5 SP");
   if (!parentInProgress) await expect(page.locator('.stats [data-stat="progress"] .overview-estimate'))
     .toHaveAttribute("aria-label", /räknas en gång, med huvudärendets poäng/);
   // The column header counts cards, the estimate counts the group; the tooltip says so (#287).

@@ -1,6 +1,6 @@
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
-import { approximatePoints } from "./story-points";
+import { sumStoryPoints, type StoryPoints } from "./story-points";
 import { estimateGroups, median, otherRepositoryMembers, repositoryEstimate, type SubIssueWork } from "./estimates";
 
 export interface OverviewEstimateGroup { repository: string; issues: Issue[]; rules: Rules }
@@ -32,21 +32,28 @@ const selected = (group: OverviewEstimateGroup, key: OverviewEstimateColumn) => 
  * group counts the parent's points in the column its time is counted in (In progress as soon as a
  * sub-issue runs), so the points and time beside each other describe the same work.
  */
-export function overviewPoints(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn,
-  children?: ReadonlyMap<number, readonly SubIssueWork[]>, now = Date.now()): number {
+export function overviewPointSummary(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn,
+  children?: ReadonlyMap<number, readonly SubIssueWork[]>, now = Date.now()): StoryPoints {
   // Repositories are estimated side by side, so a sub-issue estimated in its own repository is not walked again (#287).
   const external = otherRepositoryMembers(groups);
-  return groups.reduce((total, group, index) => {
+  const contributors = groups.flatMap((group, index) => {
     const issues = selected(group, key);
     if (!children?.size || repositoryEstimate(group.issues, now, { rules: group.rules }).basis.msPerPoint === null)
-      return total + issues.reduce((sum, issue) => sum + approximatePoints(issue), 0);
+      return issues;
     const grouped = estimateGroups(group.issues, now, { rules: group.rules, children, external: external[index] });
     const members = new Set(group.issues.filter(issue => { const state = column(issue, group.rules); return !issue.pull_request && (state === "progress" || state === "backlog"); }).map(issue => issue.id));
     // Open issues outside the estimated columns keep their own points; absorbed members are part of their root.
-    const own = issues.filter(issue => !members.has(issue.id)).reduce((sum, issue) => sum + approximatePoints(issue), 0);
+    const own = issues.filter(issue => !members.has(issue.id));
     const counted = grouped.filter(entry => key === "open" || entry.inProgress);
-    return total + own + counted.reduce((sum, entry) => sum + approximatePoints(entry.root), 0);
-  }, 0);
+    return [...own, ...counted.map(entry => entry.root)];
+  });
+  return sumStoryPoints(contributors);
+}
+
+/** Numeric API retained for consumers that only need the total. */
+export function overviewPoints(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn,
+  children?: ReadonlyMap<number, readonly SubIssueWork[]>, now = Date.now()): number {
+  return overviewPointSummary(groups, key, children, now).points;
 }
 
 /** Repositories run in parallel; open work includes the backlog horizon after current work. */
@@ -79,15 +86,15 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
  * measured work time of those that have a known start. `medianMs` is null when no duration is known.
  */
 export function overviewClosedSummary(groups: OverviewEstimateGroup[], now: number) {
-  let points = 0;
+  const contributors: Issue[] = [];
   const durations: number[] = [];
   for (const group of groups) for (const issue of group.issues) {
     if (issue.state !== "closed") continue;
-    points += approximatePoints(issue);
+    contributors.push(issue);
     const start = Date.parse(issue.workStartedAt || ""), end = Date.parse(issue.closed_at || "");
     if (Number.isFinite(start) && Number.isFinite(end) && end > start && end <= now) durations.push(end - start);
   }
-  return { points, medianMs: median(durations), measured: durations.length };
+  return { ...sumStoryPoints(contributors), medianMs: median(durations), measured: durations.length };
 }
 
 /** Repository card detail (#291): visibility split and owner count of the loaded repositories, each counted once. */

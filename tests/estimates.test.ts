@@ -499,3 +499,19 @@ describe("consistent sub-issue groups (#287)", () => {
     expect(full).toMatchObject({ remainingMs: hour, overdue: 0, unknownStart: 1 });
   });
 });
+
+
+it("carries arbitrary explicit sizes into calibration, column totals and individual time forecasts (#340)", () => {
+  const history = [1, 2, 3].map(i => ({ ...done(4 * hour, i * day), labels: [{ name: "sp-4", color: "" }] }));
+  const backlog = issue("backlog", { labels: [{ name: "sp-4", color: "" }] });
+  const active = issue("progress", { startedAt: iso(now - hour), labels: [{ name: "in-progress", color: "" }, { name: "SP: 5", color: "" }] });
+  const estimate = repositoryEstimate([...history, backlog, active], now);
+  expect(estimate.basis.msPerPoint).toBe(hour);
+  expect(estimate.progress).toMatchObject({ points: 5, remainingMs: 4 * hour });
+  expect(estimate.backlog?.points).toBe(4);
+  expect(issueEstimate(backlog, estimate.basis.msPerPoint, now, false)?.totalMs).toBe(4 * hour);
+  expect(issueEstimate(active, estimate.basis.msPerPoint, now, true)).toMatchObject({ totalMs: 5 * hour, remainingMs: 4 * hour });
+  const largest = issue("backlog", { labels: [{ name: `sp-${Number.MAX_SAFE_INTEGER}`, color: "" }] });
+  expect(Number.isFinite(issueEstimate(largest, hour, now, false)!.totalMs)).toBe(true);
+  expect(issueEstimate(largest, Number.MAX_VALUE, now, false)).toBeNull();
+});

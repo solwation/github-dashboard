@@ -1,27 +1,46 @@
 import type { Issue } from "./model";
 
 const SCALE = [1, 2, 3, 5, 8, 13] as const;
-export type ApproximatePoints = typeof SCALE[number];
+export type ApproximatePoints = number;
+export interface StoryPoints { points: number; source: "label" | "local" }
 type SizedIssue = Pick<Issue, "title" | "body" | "labels">;
-const cached = new WeakMap<SizedIssue, { title: string; body: string | null | undefined; labels: string; points: ApproximatePoints }>();
+const cached = new WeakMap<SizedIssue, { title: string; body: string | null | undefined; labels: string; result: StoryPoints }>();
 
-/** Local sizing aid, not measured complexity or an AI prediction. Conflicting labels fall back to text. */
-export function approximatePoints(issue: SizedIssue): ApproximatePoints {
+/** Positive integers that JavaScript can represent exactly; reject rounded or infinite label values. */
+export const validPoints = (points: number) => Number.isSafeInteger(points) && points > 0;
+
+/** Preserve the numeric sizing API for time calibration and existing consumers. */
+export function approximatePoints(issue: SizedIssue): number { return storyPoints(issue).points; }
+
+/** An unambiguous label wins. Equivalent labels agree; distinct values fall back to local sizing. */
+export function storyPoints(issue: SizedIssue): StoryPoints {
   const labels = JSON.stringify(issue.labels.map(label => label.name));
   const previous = cached.get(issue);
-  if (previous && previous.title === issue.title && previous.body === issue.body && previous.labels === labels) return previous.points;
-  const points = sizeIssue(issue);
-  cached.set(issue, { title: issue.title, body: issue.body, labels, points });
-  return points;
+  if (previous && previous.title === issue.title && previous.body === issue.body && previous.labels === labels) return previous.result;
+  const explicit = new Set(issue.labels.flatMap(label => {
+    const match = /^(?:story[\s_-]*points?|points?|sp)(?:[\s:=_]+|[ \t]*-[ \t]*)([0-9]+)$/i.exec(label.name.trim());
+    const points = match ? Number(match[1]) : NaN;
+    return validPoints(points) ? [points] : [];
+  }));
+  const result: StoryPoints = explicit.size === 1 ? { points: [...explicit][0]!, source: "label" }
+    : { points: localPoints(issue), source: "local" };
+  cached.set(issue, { title: issue.title, body: issue.body, labels, result });
+  return result;
 }
 
-function sizeIssue(issue: SizedIssue): ApproximatePoints {
-  const explicit = new Set(issue.labels.flatMap(label => {
-    const match = /^(?:story[\s_-]*points?|points?|sp)[\s:=_-]+(1|2|3|5|8|13)$/i.exec(label.name.trim());
-    return match ? [Number(match[1]) as ApproximatePoints] : [];
-  }));
-  if (explicit.size === 1) return [...explicit][0]!;
+/** A total is exact only when every contributing size is explicit and the sum is safely representable. */
+export function sumStoryPoints(issues: readonly SizedIssue[]): StoryPoints {
+  let points = 0, exact = issues.length > 0;
+  for (const issue of issues) {
+    const size = storyPoints(issue);
+    points += size.points;
+    exact &&= size.source === "label" && Number.isSafeInteger(points);
+  }
+  return { points, source: exact ? "label" : "local" };
+}
 
+/** Local sizing aid, not measured complexity or an AI prediction. */
+function localPoints(issue: SizedIssue): number {
   const lines = new Set<string>(), scopes = new Set<string>();
   let fence: string | null = null;
   for (const raw of [issue.title, ...(issue.body || "").slice(0, 65536).replace(/<!--[\s\S]*?(?:-->|$)/g, "").split(/\r?\n/)]) {

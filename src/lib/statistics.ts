@@ -6,7 +6,7 @@ export interface StatisticsIssue {
   labels: { name: string }[]; user?: { login: string } | null; pull_request?: unknown;
   /** Live GitHub responses only; the encrypted cache keeps just the derived `points` (#280). */
   title?: string; body?: string | null;
-  /** Approximate story points (1–13) derived from title/body/labels before compaction (#280). */
+  /** Story points (explicit label or local 1–13 sizing) derived from title/body/labels before compaction (#280). */
   points?: number;
 }
 export interface StatisticsEvent {

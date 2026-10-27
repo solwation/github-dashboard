@@ -1,13 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { approximatePoints } from "../src/lib/story-points";
+import { approximatePoints, storyPoints, sumStoryPoints } from "../src/lib/story-points";
 const score = (title = "Fix button spelling", body = "", labels: string[] = []) => approximatePoints({ title, body, labels: labels.map(name => ({ name, color: "000000" })) });
 
 describe("rough local story points", () => {
-  it("prefers one explicit bounded point label, but ignores ambiguous or unrelated labels", () => {
+  it("prefers one explicit point value, but ignores ambiguous or unrelated labels", () => {
     expect(score("Small fix", "", ["story-points: 13"])).toBe(13);
     expect(score("Small fix", "", ["SP: 3", "points: 3"])).toBe(3);
     expect(score("Small fix", "", ["points: 3", "points: 8"])).toBe(1);
-    expect(score("Small fix", "", ["priority: high", "points: 100", "estimate: 8", "3 hours"])).toBe(1);
+    expect(score("Small fix", "", ["priority: high", "points: 0", "estimate: 8", "3 hours"])).toBe(1);
+  });
+  it("uses positive safe integers and preserves label provenance, including equivalent labels", () => {
+    for (const [label, points] of [["sp-1", 1], ["sp-2", 2], ["sp-4", 4], ["SP: 5", 5], ["points: 100", 100], [`sp-${Number.MAX_SAFE_INTEGER}`, Number.MAX_SAFE_INTEGER]] as const) {
+      expect(storyPoints({ title: "Small fix", body: "", labels: [{ name: label, color: "" }] })).toEqual({ points, source: "label" });
+    }
+    expect(score("Small fix", "", ["SP: 04", "points: 4"])).toBe(4);
+    for (const label of ["sp-0", "sp--1", "points: -2", "sp-1.5", "sp-1e3", "sp-Infinity", "sp-9007199254740992", "sp-" + "9".repeat(400), "estimate: 4", "sp4"]) {
+      expect(storyPoints({ title: "Small fix", labels: [{ name: label, color: "" }] })).toEqual({ points: 1, source: "local" });
+    }
+    expect(score("Small fix", "", ["sp-4", "SP: 5"])).toBe(1);
+  });
+  it("keeps source fresh when label changes leave the numeric score unchanged, and marks mixed/unsafe totals approximate", () => {
+    const issue = { title: "Small fix", labels: [{ name: "sp-1", color: "" }] };
+    expect(storyPoints(issue)).toEqual({ points: 1, source: "label" });
+    issue.labels[0]!.name = "bug";
+    expect(storyPoints(issue)).toEqual({ points: 1, source: "local" });
+    const explicit = (points: number) => ({ title: "Small fix", labels: [{ name: `sp-${points}`, color: "" }] });
+    expect(sumStoryPoints([explicit(2), explicit(4)])).toEqual({ points: 6, source: "label" });
+    expect(sumStoryPoints([explicit(4), issue])).toEqual({ points: 5, source: "local" });
+    expect(sumStoryPoints([explicit(Number.MAX_SAFE_INTEGER), explicit(1)]).source).toBe("local");
+    expect(sumStoryPoints([])).toEqual({ points: 0, source: "local" });
   });
   it("handles absent text and gives additional scope a higher bounded score in both languages", () => {
     expect(score("", "")).toBe(1);

@@ -2,7 +2,8 @@
 import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
 import type { Issue, Rules } from "../lib/model";
-import { combinedEstimate, estimateLabel, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate } from "../lib/estimates";
+import { combinedEstimate, estimateGroups, estimateLabel, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate } from "../lib/estimates";
+import { sumStoryPoints } from "../lib/story-points";
 import { useNow } from "../composables/useNow";
 import { useSubIssueWork } from "../composables/useSubIssueWork";
 
@@ -23,6 +24,9 @@ const external = computed(() => props.groups.length > 1 ? otherRepositoryMembers
 function estimateAt(at: number) {
   const repositories = props.groups.map((group, index) => repositoryEstimate(group.issues, at, { rules: group.rules, children: children.value, external: external.value[index] }));
   // Count and points describe sub-issue groups; when that differs from the cards in the column, say so.
+  const size = sumStoryPoints(props.groups.flatMap((group, index) => repositories[index]?.basis.msPerPoint == null ? []
+    : estimateGroups(group.issues, at, { rules: group.rules, children: children.value, external: external.value[index] })
+      .filter(entry => props.column === "progress" ? entry.inProgress : !entry.inProgress).map(entry => entry.root)));
   const grouped = () => {
     if (!children.value.size) return false;
     const plain = props.groups.map(group => repositoryEstimate(group.issues, at, { rules: group.rules }));
@@ -36,7 +40,7 @@ function estimateAt(at: number) {
     const [only] = repositories;
     const value = only && (props.column === "progress" ? only.progress : only.backlog);
     if (!only || !value || only.basis.msPerPoint === null) return null;
-    return { value, overdue: only.progress?.overdue ?? 0, counting: counting(only.progress), basis: pointBasis(value.points, grouped()) + " " + t("Median {time} per poäng från de senaste {count} användbara stängningarna inom {days} dagar (högst {max}).", {
+    return { value, overdue: only.progress?.overdue ?? 0, counting: counting(only.progress), basis: pointBasis(value.points, grouped(), size.source === "label") + " " + t("Median {time} per poäng från de senaste {count} användbara stängningarna inom {days} dagar (högst {max}).", {
       time: estimateLabel(only.basis.msPerPoint).replace(/^≈\s*/, ""), count: only.basis.samples, days: only.basis.windowDays, max: MAX_HISTORY_SAMPLES,
     }) + (props.column === "backlog" ? " " + t("Backlog delas med {parallel} samtidigt pågående i snitt.", { parallel: only.basis.parallelism.toFixed(1) }) : "") };
   }
@@ -45,12 +49,13 @@ function estimateAt(at: number) {
   if (!combined || !value) return null;
   const rates = repositories.flatMap(repo => repo.basis.msPerPoint === null ? [] : [repo.basis.msPerPoint]);
   const low = estimateLabel(Math.min(...rates)).replace(/^≈\s*/, ""), high = estimateLabel(Math.max(...rates)).replace(/^≈\s*/, "");
-  return { value, overdue: combined.progress?.overdue ?? 0, counting: repositories.some((r) => counting(r.progress)), basis: pointBasis(value.points, grouped()) + " " + t("Median per repository: {time} per poäng från {count} användbara stängningar i {repositories} repositories inom {days} dagar, högst {max} senaste per repository. Långsammaste repository avgör.", {
+  return { value, overdue: combined.progress?.overdue ?? 0, counting: repositories.some((r) => counting(r.progress)), basis: pointBasis(value.points, grouped(), size.source === "label") + " " + t("Median per repository: {time} per poäng från {count} användbara stängningar i {repositories} repositories inom {days} dagar, högst {max} senaste per repository. Långsammaste repository avgör.", {
     time: low === high ? low : low + "–" + high, count: combined.samples, repositories: combined.repositories, days: combined.windowDays, max: MAX_HISTORY_SAMPLES,
   }) };
 }
-function pointBasis(points: number, grouped: boolean) {
-  return t("Grov storlek: {points} poäng från poänglabels eller rensad titel/beskrivning, delmål och risksignaler (1–13 per ärende, inte uppmätt komplexitet).", { points }) + " " + spentBasis()
+function pointBasis(points: number, grouped: boolean, exact: boolean) {
+  return (exact ? t("Story points från labels: {points}", { points })
+    : t("Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3/5/8/13 utan label, inte uppmätt komplexitet).", { points })) + " " + spentBasis()
     + (grouped ? " " + t("Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.") : "");
 }
 function spentBasis() {

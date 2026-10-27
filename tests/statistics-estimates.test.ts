@@ -144,15 +144,15 @@ describe("deviation between actual and estimated time (#280)", () => {
 describe("encrypted statistics cache (#280)", () => {
   it("keeps only the derived story points, never titles or bodies", async () => {
     save.mockResolvedValue(undefined);
-    const subject = { ...issue(1, ["sp: 5"]), body: "Private body" };
+    const subject = { ...issue(1, ["sp: 4"]), body: "Private body" };
     await writeStatisticsCache("token", [snapshot(work(subject, now - HOUR, 1))]);
     const saved = JSON.stringify(save.mock.calls[0]![1]);
     expect(saved).not.toContain("Short title");
     expect(saved).not.toContain("Private body");
     const cached = save.mock.calls[0]![1].repositories[0] as StatisticsData;
-    expect(cached.issues!.data[0]!.points).toBe(5);
-    expect(cached.events!.data[0]!.issue!.points).toBe(5);
-    expect(statisticsIssuePoints(cached.events!.data[0]!.issue)).toBe(5);
-    expect(statisticsIssuePoints({ ...cached.issues!.data[0]!, points: 4 })).toBeNull();
+    expect(cached.issues!.data[0]!.points).toBe(4);
+    expect(cached.events!.data[0]!.issue!.points).toBe(4);
+    expect(statisticsIssuePoints(cached.events!.data[0]!.issue)).toBe(4);
+    expect(statisticsIssuePoints({ ...cached.issues!.data[0]!, points: 0 })).toBeNull();
   });
 });

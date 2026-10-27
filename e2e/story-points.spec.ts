@@ -3,9 +3,14 @@ import { openSettings } from "./support/phone-menu";
 
 const repo = { id: 210, name: "points-fixture", full_name: "sample/points-fixture", private: true, description: "", html_url: "https://github.com/sample/points-fixture", owner: { login: "sample" } };
 const specs = [
-  { title: "Explicitly sized work", labels: ["story points: 13"], points: 13, state: "open" },
-  { title: "Improve database security", labels: ["in-progress"], points: 3, state: "open" },
-  { title: "Small wording adjustment", labels: [], points: 1, state: "closed" },
+  { title: "Explicitly sized work with a long title that should truncate across narrow layouts", labels: ["sp-4", "a-long-workflow-label-with-extra-scope-context"], points: 4, state: "open", exact: true },
+  { title: "One point from a label", labels: ["sp-1"], points: 1, state: "open", exact: true },
+  { title: "Two points from a label", labels: ["sp-2"], points: 2, state: "open", exact: true },
+  { title: "Case insensitive explicit label", labels: ["SP: 5"], points: 5, state: "open", exact: true },
+  { title: "Conflicting sizes use local sizing", labels: ["sp-4", "sp-5"], points: 1, state: "open", exact: false },
+  { title: "Largest safe explicit size", labels: [`sp-${Number.MAX_SAFE_INTEGER}`], points: Number.MAX_SAFE_INTEGER, state: "open", exact: true },
+  { title: "Improve database security", labels: ["in-progress"], points: 3, state: "open", exact: false },
+  { title: "Small wording adjustment", labels: [], points: 1, state: "closed", exact: false },
 ];
 async function fixture(page: Page) {
   const time = new Date(Date.now() - 3600000).toISOString();
@@ -26,23 +31,27 @@ async function fixture(page: Page) {
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
 }
 async function assertSizes(items: Locator) {
-  await expect(items).toHaveCount(3);
+  await expect(items).toHaveCount(specs.length);
   for (const spec of specs) {
     const badge = items.filter({ hasText: spec.title }).locator(".issue-points");
-    await expect(badge).toHaveText(`≈ ${spec.points} SP`);
-    await expect(badge).toHaveAttribute("aria-label", new RegExp(`^Uppskattade story points: cirka ${spec.points}[.]`));
-    await expect(badge).toHaveAttribute("title", /En entydig poängetikett används först.*Inte uppmätt komplexitet/);
+    await expect(badge).toHaveText(`${spec.exact ? "" : "≈ "}${spec.points} SP`);
+    await expect(badge).toHaveAttribute("aria-label", new RegExp(`^${spec.exact ? "Story points från label:" : "Uppskattade story points: cirka"} ${spec.points}[.]`));
+    await expect(badge).toHaveAttribute("title", spec.exact ? /Story points från label:/ : /En entydig poängetikett används först.*Inte uppmätt komplexitet/);
   }
 }
 async function fits(page: Page, badges: Locator) {
   for (const badge of await badges.all()) {
     await expect(badge).toBeVisible();
-    expect(await badge.evaluate(element => {
-      const box = element.getBoundingClientRect(), parent = element.closest(".issue-card, .issue-row")!.getBoundingClientRect();
-      return box.left >= parent.left && box.right <= parent.right && element.scrollWidth <= element.clientWidth + 1;
-    })).toBe(true);
+    const geometry = await badge.evaluate(element => {
+      const box = element.getBoundingClientRect(), parent = element.closest(".row-meta, .row-mobile-summary, .issue-card, .issue-row")!.getBoundingClientRect();
+      return { text: element.textContent, left: box.left, right: box.right, parentLeft: parent.left, parentRight: parent.right,
+        scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+    });
+    expect(geometry.left, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.parentLeft - 1);
+    expect(geometry.right, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.parentRight + 1);
+    expect(geometry.scrollWidth, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.clientWidth + 1);
   }
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
 }
 
 test("cards and rows show explicit and heuristic sizes without timing history in split and combined boards", async ({ page }) => {
@@ -67,28 +76,42 @@ test("cards and rows show explicit and heuristic sizes without timing history in
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   const badge = page.locator(".issue-row").filter({ hasText: specs[0]!.title }).locator(".issue-points");
-  await expect(badge).toHaveAttribute("aria-label", /^Estimated story points: approximately 13\./);
-  await expect(badge).toHaveAttribute("title", /An unambiguous points label takes precedence.*Not measured complexity/);
+  await expect(badge).toHaveAttribute("aria-label", /^Story points from label: 4\./);
+  await expect(badge).toHaveAttribute("title", /Story points from label: 4/);
 });
 
-test("sizes fit phone cards and rows and appear on the full popup card", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 844 });
+for (const scenario of [
+  { name: "wide", width: 1600, height: 1000, mobile: false },
+  { name: "narrow", width: 1000, height: 900, mobile: false },
+  { name: "portrait", width: 390, height: 844, mobile: true },
+  { name: "landscape", width: 844, height: 390, mobile: true },
+  { name: "small-phone", width: 320, height: 568, mobile: true },
+]) test(`label provenance fits cards and list: ${scenario.name}`, async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE", reducedMotion: "reduce" });
+  const page = await context.newPage();
   await fixture(page);
   const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
-  for (const split of [true, false]) {
-    if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
-    for (const width of [320, 390]) {
-      await page.setViewportSize({ width, height: 844 });
-      await mode.getByRole("button", { name: "Kort", exact: true }).click();
-      await assertSizes(page.locator(".issue-card"));
-      await fits(page, page.locator(".issue-card .issue-points"));
-      await mode.getByRole("button", { name: "Lista", exact: true }).click();
-      await assertSizes(page.locator(".issue-row"));
-      await fits(page, page.locator(".issue-row .issue-points"));
-      await page.locator(".row-title").filter({ hasText: specs[0]!.title }).click();
-      await expect(page.getByRole("dialog").locator(".issue-points")).toHaveText("≈ 13 SP");
-      await fits(page, page.getByRole("dialog").locator(".issue-points"));
-      await page.keyboard.press("Escape");
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+    for (const split of [true, false]) {
+      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).setChecked(split);
+      for (const view of ["Kort", "Lista"]) {
+        await mode.getByRole("button", { name: view, exact: true }).click();
+        const items = page.locator(view === "Kort" ? ".issue-card" : ".issue-row");
+        await assertSizes(items);
+        await fits(page, items.locator(".issue-points"));
+        if (view === "Lista") {
+          const edges = await items.evaluateAll(rows => rows.map(row => ({ left: row.getBoundingClientRect().left, right: row.getBoundingClientRect().right, height: row.getBoundingClientRect().height })));
+          for (const row of edges) { expect(Math.abs(row.left - edges[0]!.left)).toBeLessThanOrEqual(1); expect(Math.abs(row.right - edges[0]!.right)).toBeLessThanOrEqual(1); expect(row.height).toBeLessThan(150); }
+        }
+        await page.screenshot({ path: testInfo.outputPath(`${scenario.name}-${theme}-${split ? "split" : "combined"}-${view === "Kort" ? "cards" : "list"}.png`), fullPage: true });
+      }
     }
   }
+  if (scenario.mobile) {
+    await page.locator(".row-title").filter({ hasText: specs[0]!.title }).click();
+    await expect(page.getByRole("dialog").locator(".issue-points")).toHaveText("4 SP");
+    await fits(page, page.getByRole("dialog").locator(".issue-points"));
+  }
+  await context.close();
 });

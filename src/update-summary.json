@@ -1,8 +1,8 @@
 {
   "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Tätare översikt, kort och huvuden ger mer plats; sekundärtext är tydligare och expanderade listärenden visar alla labels.",
-    "en": "Denser overview, cards and headers make more room; secondary text is clearer and expanded list issues show every label."
+    "sv": "Tätare vyer och tydligare text ger mer plats åt ärenden. Expanderade listärenden visar alla labels och SP-labels anger exakta poäng.",
+    "en": "Denser views and clearer text make room for issues. Expanded list issues show every label and point labels set exact sizes."
   },
   "issues": [
     332,
@@ -10,6 +10,7 @@
     334,
     335,
     338,
+    340,
     341
   ]
 }

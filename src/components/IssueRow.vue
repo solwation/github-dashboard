@@ -493,7 +493,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-summary > * { flex: 0 0 auto; }
   .row-mobile-summary > .row-repository { order: 4; flex: 1 1 0; }
   .row-mobile-summary > .row-mobile-priority { order: 2; }
-  .row-mobile-summary > .issue-points { order: 3; }
+  .row-mobile-summary > .issue-points { order: 3; flex-shrink: 1; }
   .row-mobile-summary > .row-mobile-activity { order: 6; }
   .row-mobile-summary > .row-mobile-relation { order: 4; }
   .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; max-width: 9rem; padding: 1px 4px; font-size: 10px; }

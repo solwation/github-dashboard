@@ -163,6 +163,8 @@ test("time explanation is clear in English as well as Swedish", async ({ page })
   const explanation = await openDetails(page, 5, true);
   await explanation.locator("summary").focus();
   await page.keyboard.press("Enter");
+  await expect(explanation.locator("dd").first()).toHaveText("1 SP");
+  await expect(explanation.locator("dd").first()).toHaveAttribute("title", "Story points from label: 1");
   await expect(explanation).toContainText("Story points are a rough size indicator");
   await expect(explanation).toContainText("The time estimate is approximate");
   await expect(explanation).toContainText("Elapsed work time");

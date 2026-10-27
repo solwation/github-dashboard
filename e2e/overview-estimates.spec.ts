@@ -43,12 +43,12 @@ test("summary estimates share the count scope, disclose partial time coverage, u
   const open = tile(page, "open"), progress = tile(page, "progress");
   await expect(open.locator("strong")).toHaveText(/4/);
   await expect(progress.locator("strong")).toHaveText(/2/);
-  await expect(open.locator(".overview-points")).toHaveText("≈ 11 SP");
-  await expect(progress.locator(".overview-points")).toHaveText("≈ 4 SP");
+  await expect(open.locator(".overview-points")).toHaveText("11 SP");
+  await expect(progress.locator(".overview-points")).toHaveText("4 SP");
   await expect(open.locator(".overview-time")).toHaveText("≈ 2 h 20 min kvar");
   await expect(progress.locator(".overview-time")).toHaveText("≈ 1 h 20 min kvar");
   await expect(open.locator(".overview-coverage")).toHaveText("Tid för 1 av 2 repos");
-  await expect(open.locator(".overview-estimate")).toHaveAttribute("aria-label", /cirka 11.*samma filtrerade issues.*Tid för 1 av 2 repos/);
+  await expect(open.locator(".overview-estimate")).toHaveAttribute("aria-label", /Story points från labels: 11.*samma filtrerade issues.*Tid för 1 av 2 repos/);
   await page.locator(".stats").screenshot({ path: testInfo.outputPath("overview-desktop.png") });
   // Prevent normal background synchronization from contributing legitimate root renders.
   await page.evaluate(() => Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false }));
@@ -83,26 +83,27 @@ test("summary estimates share the count scope, disclose partial time coverage, u
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(open.locator(".overview-coverage")).toHaveText("Time for 1 of 2 repos");
-  await expect(open.locator(".overview-estimate")).toHaveAttribute("aria-label", /Estimated story points: approximately 11.*Points cover the same filtered issues.*Time for 1 of 2 repos/);
+  await expect(open.locator(".overview-estimate")).toHaveAttribute("aria-label", /Story points from labels: 11.*Points cover the same filtered issues.*Time for 1 of 2 repos/);
 });
 
 test("summary points follow global and per-repository queries, combined view and hidden coordination", async ({ page }) => {
   await fixture(page);
   const open = tile(page, "open");
+  await page.getByRole("button", { name: "Filtrera issues i sample/calibrated", exact: true }).click();
   const search = page.getByRole("textbox", { name: "Filtrera issues i sample/calibrated", exact: true });
   await search.fill("#5");
-  await expect(open.locator(".overview-points")).toHaveText("≈ 9 SP");
+  await expect(open.locator(".overview-points")).toHaveText("9 SP");
   await expect(open.locator(".overview-time")).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
-  await expect(open.locator(".overview-points")).toHaveText("≈ 11 SP");
+  await expect(open.locator(".overview-points")).toHaveText("11 SP");
   await expect(open.locator(".overview-time")).toHaveText("≈ 2 h 20 min kvar");
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("#5");
   await expect(open.locator("strong")).toHaveText(/1/);
-  await expect(open.locator(".overview-points")).toHaveText("≈ 3 SP");
+  await expect(open.locator(".overview-points")).toHaveText("3 SP");
   await expect(open.locator(".overview-time")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
   await page.getByRole("checkbox", { name: "Dölj koordinationsärenden", exact: true }).uncheck();
-  await expect(open.locator(".overview-points")).toHaveText("≈ 24 SP");
+  await expect(open.locator(".overview-points")).toHaveText("24 SP");
 });
 
 test("expired history removes summary time while retaining summed points", async ({ page }) => {
@@ -113,7 +114,7 @@ test("expired history removes summary time while retaining summed points", async
   await page.clock.fastForward(2000);
   await expect(open.locator(".overview-time")).toHaveCount(0);
   await expect(open.locator(".overview-coverage")).toHaveCount(0);
-  await expect(open.locator(".overview-points")).toHaveText("≈ 11 SP");
+  await expect(open.locator(".overview-points")).toHaveText("11 SP");
 });
 
 

@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { useNow } from "../composables/useNow";
 import { useSubIssueWork } from "../composables/useSubIssueWork";
 import { estimateLabel, nextHistoryExpiry } from "../lib/estimates";
-import { overviewPoints, overviewTimeEstimate, type OverviewEstimateColumn, type OverviewEstimateGroup } from "../lib/overview-estimates";
+import { overviewPoints, overviewPointSummary, overviewTimeEstimate, type OverviewEstimateColumn, type OverviewEstimateGroup } from "../lib/overview-estimates";
 import { useLanguage } from "../lib/i18n";
 const props = defineProps<{ groups: OverviewEstimateGroup[]; column: OverviewEstimateColumn }>();
 const { t } = useLanguage();
@@ -20,14 +20,16 @@ const now = useNow(at => {
 }, { board: true });
 const estimate = computed(() => overviewTimeEstimate(props.groups, props.column, now.value, children.value));
 // Points follow the time's sub-issue grouping (#281); the tooltip says so when that changes them.
-const points = computed(() => overviewPoints(props.groups, props.column, children.value, now.value));
+const size = computed(() => overviewPointSummary(props.groups, props.column, children.value, now.value));
+const points = computed(() => size.value.points);
 const grouped = computed(() => points.value !== overviewPoints(props.groups, props.column, undefined, now.value));
 const time = computed(() => estimate.value.remainingMs === null ? "" : estimate.value.remainingMs === 0 && estimate.value.overdue
   ? t("över uppskattning") : t("{time} kvar", { time: estimateLabel(estimate.value.remainingMs) }));
 const partial = computed(() => estimate.value.knownRepositories > 0 && estimate.value.knownRepositories < estimate.value.repositories);
 const coverage = computed(() => t("Tid för {known} av {total} repos", { known: estimate.value.knownRepositories, total: estimate.value.repositories }));
 const description = computed(() => [
-  t("Uppskattade story points: cirka {points}", { points: points.value }),
+  size.value.source === "label" ? t("Story points från labels: {points}", { points: points.value })
+    : t("Uppskattade story points: cirka {points}", { points: points.value }),
   grouped.value ? t("Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.")
     : t("Poängen omfattar samma filtrerade issues som antalet."),
   ...(time.value ? [
@@ -43,7 +45,7 @@ const description = computed(() => [
 </script>
 <template>
   <div class="overview-estimate" :title="description" role="img" :aria-label="description">
-    <span class="overview-points">≈ {{ points }} SP</span>
+    <span class="overview-points">{{ size.source === "local" ? "≈ " : "" }}{{ points }} SP</span>
     <span v-if="time" class="overview-time">{{ time }}</span>
     <span v-if="partial" class="overview-coverage">{{ coverage }}</span>
   </div>
@@ -51,6 +53,8 @@ const description = computed(() => [
 <style scoped>
 .overview-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; margin: 0; font-size: .7rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .overview-points { color: var(--green); font-weight: 650; white-space: nowrap; }
+.overview-estimate { min-width: 0; max-width: 100%; }
+.overview-points { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .overview-time { color: var(--text); }
 .overview-coverage { flex-basis: 100%; color: var(--muted); font-size: .65rem; }
 </style>

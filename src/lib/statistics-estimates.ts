@@ -2,7 +2,7 @@ import {
   closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, repositoryEstimate, median,
 } from "./estimates";
 import { closedWorkStart, type Issue, type Rules } from "./model";
-import { approximatePoints, type ApproximatePoints } from "./story-points";
+import { approximatePoints, validPoints, type ApproximatePoints } from "./story-points";
 import type { StatisticsData, StatisticsEvent, StatisticsIssue } from "./statistics";
 
 /**
@@ -31,13 +31,12 @@ import type { StatisticsData, StatisticsEvent, StatisticsIssue } from "./statist
  * Completeness: events cover the collection window only. An evaluation whose 30-day lookback
  * starts before that window is partial unless MAX_HISTORY_SAMPLES newer closings already decide it.
  */
-const SCALE: readonly number[] = [1, 2, 3, 5, 8, 13];
 const DAY_MS = 86_400_000;
 
 /** Approximate story points for a statistics issue: a stored score, or computed from live title/body. */
 export function statisticsIssuePoints(issue: StatisticsIssue | undefined): ApproximatePoints | null {
   if (!issue) return null;
-  if (typeof issue.points === "number" && SCALE.includes(issue.points)) return issue.points as ApproximatePoints;
+  if (typeof issue.points === "number" && validPoints(issue.points)) return issue.points as ApproximatePoints;
   if (typeof issue.title !== "string") return null;
   return approximatePoints({ title: issue.title, body: typeof issue.body === "string" ? issue.body : null, labels: issue.labels as Issue["labels"] });
 }

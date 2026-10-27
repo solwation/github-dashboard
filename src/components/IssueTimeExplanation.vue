@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { useIssueForecast } from "../composables/useIssueForecast";
 import { useClosedIssueOutcome } from "../composables/useIssueEstimates";
 import { useIssueClock } from "../composables/useIssueClock";
-import { approximatePoints } from "../lib/story-points";
+import { storyPoints } from "../lib/story-points";
 import { estimateLabel } from "../lib/estimates";
 import { duration } from "../lib/model";
 import { locale, useLanguage } from "../lib/i18n";
@@ -19,7 +19,7 @@ const { basis, estimate } = useIssueForecast({
 });
 const outcome = useClosedIssueOutcome(() => props.issue, () => props.repository);
 const now = useIssueClock(() => props.issue, () => props.column, () => true);
-const points = computed(() => approximatePoints(props.issue));
+const size = computed(() => storyPoints(props.issue));
 const elapsed = computed(() => props.issue.startedAt ? duration(props.issue.startedAt, now.value) : null);
 const actual = computed(() => outcome.value ? estimateLabel(outcome.value.actualMs).replace(/^≈\s*/, "") : null);
 const aggregation = computed(() => {
@@ -43,7 +43,7 @@ const subIssueSpent = computed(() => props.column !== "closed" && estimate.value
     <summary>{{ t("Förklara tid och story points") }}</summary>
     <div class="time-explanation-body">
       <dl>
-        <div><dt>{{ t("Story points") }}</dt><dd>≈ {{ points }} SP</dd></div>
+        <div><dt>{{ t("Story points") }}</dt><dd :title="size.source === 'label' ? t('Story points från label: {points}', { points: size.points }) : undefined">{{ size.source === "local" ? "≈ " : "" }}{{ size.points }} SP</dd></div>
         <div v-if="estimate"><dt>{{ t("Total uppskattning") }}</dt><dd>{{ estimateLabel(estimate.totalMs) }}</dd></div>
         <div v-if="column === 'progress' && elapsed"><dt>{{ t("Förfluten arbetstid") }}</dt><dd>{{ elapsed }}</dd></div>
         <div v-if="subIssueSpent"><dt>{{ t("Tid på underärenden") }}</dt><dd>{{ subIssueSpent }}</dd></div>

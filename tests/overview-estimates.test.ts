@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overviewEstimateGroups, overviewPoints, overviewTimeEstimate } from "../src/lib/overview-estimates";
+import { overviewEstimateGroups, overviewPoints, overviewPointSummary, overviewTimeEstimate } from "../src/lib/overview-estimates";
 import type { Issue, Lane } from "../src/lib/model";
 const minute = 60000, day = 86400000, now = Date.parse("2026-10-20T12:00:00Z");
 const iso = (at: number) => new Date(at).toISOString();
@@ -24,6 +24,15 @@ describe("overview estimate scope", () => {
     expect(overviewPoints(selection, "progress")).toBe(5);
     expect(overviewTimeEstimate(selection, "open", now).remainingMs).toBeNull();
   });
+});
+it("preserves explicit non-Fibonacci sizes and provenance through filtered/grouped totals", () => {
+  const root = issue(90, 4), child = progress(91), local = issue(92, 1, { labels: [] });
+  const selection = groups([lane([...history(), root, child])]);
+  expect(overviewPointSummary(selection, "open")).toEqual({ points: 5, source: "label" });
+  const children = new Map([[root.id, [{ issue: child }]]]);
+  expect(overviewPointSummary(selection, "open", children, now)).toEqual({ points: 4, source: "label" });
+  expect(overviewPointSummary(selection, "progress", children, now)).toEqual({ points: 4, source: "label" });
+  expect(overviewPointSummary(groups([lane([root, local])]), "open")).toEqual({ points: 5, source: "local" });
 });
 describe("overview time model", () => {
   it("uses the backlog horizon for all open work and the maximum across parallel repositories", () => {

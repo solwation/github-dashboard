@@ -97,6 +97,8 @@ export const english: Record<string, string> = {
   "Uppskattad tid kvar: över uppskattning": "Estimated time remaining: over estimate",
   "Baserat på median tid per poäng från {count} användbara stängningar i detta repository inom {days} dagar.": "Based on median time per point from {count} usable closures in this repository within {days} days.",
   "Delvis underlag för {metrics}. Aktivitet i den valda perioden kan saknas.": "Partial data for {metrics}. Activity in the selected period may be missing.",
+  "Story points från label: {points}": "Story points from label: {points}",
+  "Story points från labels: {points}": "Story points from labels: {points}",
   "Uppskattade story points: cirka {points}": "Estimated story points: approximately {points}",
   "Förklara tid och story points": "Explain time and story points",
   "Story points": "Story points",
@@ -806,7 +808,7 @@ export const english: Record<string, string> = {
   "över uppskattning": "over estimate",
   "Median {typical} för {count} stängda ärenden senaste {days} dagarna.":
     "Median {typical} for {count} closed issues in the last {days} days.",
-  "Grov storlek: {points} poäng från poänglabels eller rensad titel/beskrivning, delmål och risksignaler (1–13 per ärende, inte uppmätt komplexitet).": "Rough size: {points} points from point labels or cleaned title/description, scope items and risk signals (1–13 per issue, not measured complexity).",
+  "Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3/5/8/13 utan label, inte uppmätt komplexitet).": "Rough size: approximately {points} points from labels or local sizing (1/2/3/5/8/13 without a label, not measured complexity).",
   "Median {time} per poäng från de senaste {count} användbara stängningarna inom {days} dagar (högst {max}).": "Median {time} per point from the latest {count} usable closures within {days} days (at most {max}).",
   "Median per repository: {time} per poäng från {count} användbara stängningar i {repositories} repositories inom {days} dagar, högst {max} senaste per repository. Långsammaste repository avgör.": "Per-repository median: {time} per point from {count} usable closures in {repositories} repositories within {days} days, at most the latest {max} per repository. The slowest repository decides.",
   "Backlog delas med {parallel} samtidigt pågående i snitt.":

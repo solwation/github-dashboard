@@ -51,6 +51,10 @@ Coordination labels identify coordination issues that the dashboard can hide usi
 
 Repositories can override the work label and labels for high, medium and low in the dashboard's label settings. A custom work label **replaces** the default work labels and uses case-insensitive exact matching (the configured value is trimmed; the issue label itself is not normalized). A matching custom priority label is checked before built-in priorities, in high/medium/low order. Built-in priority detection still applies if no custom priority matches. Settings are local dashboard configuration, not GitHub-wide workflow rules; share them separately if others need the same view. Prefer the canonical labels above for a portable workflow.
 
+### Optional story points
+
+Agents may optionally add one `sp-N` label after estimating an issue’s size, where `N` is a positive integer (for example `sp-1`, `sp-2` or `sp-4`, up to JavaScript’s safe-integer limit 9007199254740991). This value replaces the dashboard’s local size estimate and is shown without `≈`; time forecasts remain approximate. Existing `SP: 5`, `points: N` and `story points N` labels also work. Equivalent labels agree; labels with different valid values fall back to local sizing. Without a valid points label, the dashboard estimates size locally. Totals containing local estimates retain `≈`. Story points do not set priority or work status.
+
 ## Timing, order and limitations
 
 - Backlog sorts by priority and then creation time, oldest first within a priority. In progress sorts by the current start time, oldest first (falling back to creation time for ordering when no start time is known). Closed sorts by GitHub's closure timestamp, newest first.

@@ -85,7 +85,8 @@ const repositoryInfoTitle = computed(() => t("Valda repositories fördelade på 
 const closedSummary = computed(() => overviewClosedSummary(estimateGroups.value, current()));
 const closedMedian = computed(() => closedSummary.value.medianMs === null ? "" : t("median {time}", { time: estimateLabel(closedSummary.value.medianMs) }));
 const closedTitle = computed(() => [
-  t("Uppskattade story points: cirka {points}", { points: closedSummary.value.points }),
+  closedSummary.value.source === "label" ? t("Story points från labels: {points}", { points: closedSummary.value.points })
+    : t("Uppskattade story points: cirka {points}", { points: closedSummary.value.points }),
   t("Poängen omfattar samma filtrerade stängda issues som antalet."),
   ...(closedMedian.value ? [t("Mediantid i arbete för {count} stängda issues med känd starttid: {time}", { count: closedSummary.value.measured, time: estimateLabel(closedSummary.value.medianMs!) })] : []),
 ].map(part => part.replace(/[.]$/, "")).join(". ") + ".");
@@ -156,7 +157,7 @@ const announcement = computed(() => [
         <div class="stat-cells">
           <OverviewEstimate v-if="card.key !== 'closed'" :groups="estimateGroups" :column="card.key" />
           <div v-else class="overview-estimate" role="img" :title="closedTitle" :aria-label="closedTitle" data-testid="closed-info">
-            <span class="overview-points">≈ {{ closedSummary.points }} SP</span>
+            <span class="overview-points">{{ closedSummary.source === "local" ? "≈ " : "" }}{{ closedSummary.points }} SP</span>
             <span v-if="closedMedian" class="overview-time">{{ closedMedian }}</span>
           </div>
           <span v-for="(cell, index) in card.cells" :key="index" class="stat-cell" :class="cell.className" :title="cell.title">{{ cell.text }}<span v-if="cellDeltas[cell.key]" class="cell-delta" :class="cellDeltas[cell.key]! > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas[cell.key]!) }}</span></span>
@@ -208,6 +209,8 @@ const announcement = computed(() => [
 .stat-negative .stat-delta { color: #943d28; }
 .overview-estimate { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; margin: 0; font-size: .7rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .overview-points { color: var(--green); font-weight: 650; white-space: nowrap; }
+.overview-estimate { min-width: 0; max-width: 100%; }
+.overview-points { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .overview-time { color: var(--text); }
 .stat-today { color: #286b51; }
 :root[data-theme="dark"] .stat-today { color: #72c89f; }
