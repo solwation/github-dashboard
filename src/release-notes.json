@@ -2,10 +2,19 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare vyer, läsbarare text och grupperade inställningar förenklar överblicken. SP-labels anger exakta poäng och expanderad lista visar alla labels.",
-      "en": "Denser views, clearer text and grouped settings improve scanning. Point labels set exact sizes and expanded lists show all labels."
+      "sv": "Tätare vyer, läsbarare text och grupperade inställningar; SP-labels ger exakta poäng, listkolumner linjerar och expanderade ärenden visar alla labels.",
+      "en": "Denser views, clearer text and grouped settings; point labels set exact sizes, list columns align and expanded issues show all labels."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Repository-chippet i gemensam listvy följer namnets längd i en fast kolumn så att status, prioritet, SP och kommentarer linjerar mellan rader.",
+          "en": "Repository chips in combined list view fit name length inside a fixed slot so status, priority, story points and comments align across rows."
+        },
+        "issues": [
+          342
+        ]
+      },
       {
         "text": {
           "sv": "Expanderade ärenden i listvyn visar alla labels i full text med radbrytning i den expanderade panelen och mobilens popup.",

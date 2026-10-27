@@ -1,8 +1,8 @@
 {
   "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Tätare vyer, läsbarare text och grupperade inställningar förenklar överblicken. SP-labels anger exakta poäng och expanderad lista visar alla labels.",
-    "en": "Denser views, clearer text and grouped settings improve scanning. Point labels set exact sizes and expanded lists show all labels."
+    "sv": "Tätare vyer, läsbarare text och grupperade inställningar; SP-labels ger exakta poäng, listkolumner linjerar och expanderade ärenden visar alla labels.",
+    "en": "Denser views, clearer text and grouped settings; point labels set exact sizes, list columns align and expanded issues show all labels."
   },
   "issues": [
     332,
@@ -13,6 +13,7 @@
     337,
     338,
     340,
-    341
+    341,
+    342
   ]
 }

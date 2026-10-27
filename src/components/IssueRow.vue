@@ -356,7 +356,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
-      ><span v-if="showRepository" class="row-repository row-meta-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
+      ><span v-if="showRepository" class="row-slot row-slot-repository row-meta-repository"><span class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span
+      ><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
         >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button></span
@@ -467,11 +468,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-comments { display: block; }
 }
 @container issue-list (min-width: 1000px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1.2fr) minmax(25rem, 1.8fr) 5.4rem 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) minmax(32rem, 1.8fr) 5.4rem 6rem 7.25rem; }
   .issue-row .row-meta { grid-column: auto; grid-row: auto; }
 }
 @container issue-list (min-width: 1250px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1.2fr) minmax(25rem, 1.8fr) 5.4rem 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) minmax(32rem, 1.8fr) 5.4rem 6rem 7.25rem; }
   .row-meta { grid-column: auto; grid-row: auto; }
 }
 @media (min-width: 651px) and (max-width: 950px) {

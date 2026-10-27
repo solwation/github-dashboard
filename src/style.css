@@ -2023,8 +2023,9 @@ button.lane-sync.syncing { cursor: progress; }
 .row-close:hover { border-color: #b4c9c1; }
 .row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
-.row-meta > .row-meta-repository { order: 2; flex: 0 1 min(10rem, 30%); max-width: min(10rem, 30%); padding: 1px 6px; font-size: 10px; }
-.row-meta > .row-meta-repository i { width: 7px; height: 7px; }
+.row-slot-repository { display: flex; align-items: center; flex: 0 0 8.5rem; width: 8.5rem; max-width: 8.5rem; min-width: 0; overflow: hidden; }
+.row-slot-repository > .row-repository { display: inline-flex; align-items: center; gap: 4px; width: fit-content; max-width: 100%; flex: 0 1 auto; padding: 1px 6px; font-size: 10px; }
+.row-slot-repository > .row-repository i { width: 7px; height: 7px; }
 /* List badges share text metrics, spacing, and neutral surfaces; custom labels keep their natural width. */
 .row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
 .row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: var(--badge-bg); color: var(--badge-text); }
@@ -2082,14 +2083,18 @@ button.lane-sync.syncing { cursor: progress; }
 .row-comment-marker { font-variant-numeric: tabular-nums; }
 @media (min-width: 951px) {
   .row-slot { display: flex; align-items: center; flex: 0 0 auto; overflow: hidden; }
-  .row-slot-comment { order: 1; width: 5.4rem; }
-  .row-status-group { order: 2; }
+  .row-slot-comment { order: 1; width: 5.4rem; flex: 0 0 5.4rem; }
+  .row-slot-repository { order: 2; width: 8.5rem; flex: 0 0 8.5rem; }
+  .row-status-group { order: 3; }
   .row-meta { flex-wrap: nowrap; }
-  .row-slot-status { order: 3; width: 5.6rem; }
-  .row-slot-priority { order: 4; width: 4.8rem; }
+  .row-slot-movement { width: 5.4rem; flex: 0 0 5.4rem; }
+  .row-slot-timeout { width: 4.7rem; flex: 0 0 4.7rem; }
+  .row-slot-status { order: 3; width: 5.6rem; flex: 0 0 5.6rem; }
+  .row-slot-priority { order: 4; width: 4.8rem; flex: 0 0 4.8rem; }
   .issue-row .row-time { justify-self: stretch; text-align: left; }
-  .row-meta > .row-labels { order: 5; }
-  .row-meta > .row-marker:not(.row-comment-marker) { order: 6; }
+  .row-meta > .issue-points { order: 5; }
+  .row-meta > .row-labels { order: 6; }
+  .row-meta > .row-marker:not(.row-comment-marker) { order: 7; }
 }
 .row-time { justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; text-align: right; white-space: nowrap; }
 .row-time .backlog-age { color: var(--faint); }
