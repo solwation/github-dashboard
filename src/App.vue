@@ -2156,7 +2156,7 @@ onMounted(async () => {
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <OverviewSummary :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
+        <OverviewSummary :repositories="sidebarRepos" :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
           :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn || publicMode"
           @choose-repositories="picker = true" />
         <!-- data-busy (#151): non-visual "sync finished" signal for tests; per-repository and combined headers show status. -->

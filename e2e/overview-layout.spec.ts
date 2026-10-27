@@ -28,41 +28,38 @@ async function connect(page: Page) {
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 }
 
-// Verifies that summary cards render compactly on phones with consistent left alignment
-// across all content parts, without page horizontal scroll (#152, #332, #338).
-async function expectCompactSummary(page: Page) {
+// Preserve #338's responsive alignment and whole-field wrapping with the restored hierarchy.
+async function expectStructuredSummary(page: Page) {
   const cards = await page.locator(".stats .stat").evaluateAll(items => items.map(card => {
     const box = card.getBoundingClientRect();
-    const content = card.querySelector(".stat-content")?.getBoundingClientRect();
-    const parts = [".stat-header", ".stat-cells"]
-      .map(selector => card.querySelector(selector)?.getBoundingClientRect())
-      .filter((rect): rect is DOMRect => !!rect);
+    const centre = box.left + box.width / 2;
+    const parts = [".stat-icon", ".stat-label", "strong", ".overview-estimate", ".stat-cells"]
+      .map(selector => card.querySelector(selector)!.getBoundingClientRect());
     return {
       right: box.right,
       height: box.height,
-      contentLeft: content?.left ?? 0,
-      partLefts: parts.map(p => p.left),
+      offsets: parts.map(rect => rect.left + rect.width / 2 - centre),
+      footerBorder: getComputedStyle(card.querySelector(".stat-cells")!).borderTopWidth,
+      font: getComputedStyle(card.querySelector("strong")!).fontSize,
     };
   }));
   expect(cards).toHaveLength(4);
   for (const card of cards) {
-    expect(card.height).toBeLessThanOrEqual(85);
+    expect(card.height).toBeGreaterThan(140);
     expect(card.right).toBeLessThanOrEqual(375);
-    for (const left of card.partLefts) {
-      expect(Math.abs(left - card.contentLeft)).toBeLessThanOrEqual(2);
-    }
+    expect(card.font).toBe("27px");
+    expect(card.footerBorder).toBe("1px");
+    for (const offset of card.offsets) expect(Math.abs(offset)).toBeLessThanOrEqual(1);
   }
-  const summaryHeight = await page.locator(".stats").evaluate(el => el.getBoundingClientRect().height);
-  expect(summaryHeight).toBeLessThanOrEqual(160);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 }
 
-test("summary cards render compactly with consistent left alignment on phones in both languages", async ({ page }) => {
+test("summary cards restore grouped labels, figures, estimates and footers on phones in both languages", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await connect(page);
   await expect(page.locator('.stats [data-stat="closed"] .stat-today')).toContainText("+1 idag");
   await expect(page.locator(".repository-stat .stat-icon")).toBeVisible();
-  await expectCompactSummary(page);
+  await expectStructuredSummary(page);
 
   const card = page.locator(".repository-stat");
   const action = card.getByRole("button", { name: "Välj repositories", exact: true });
@@ -80,5 +77,5 @@ test("summary cards render compactly with consistent left alignment on phones in
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator('.stats [data-stat="closed"] .stat-today')).toContainText("+1 today");
   await expect(card.getByRole("button", { name: "Choose repositories", exact: true })).toBeVisible();
-  await expectCompactSummary(page);
+  await expectStructuredSummary(page);
 });

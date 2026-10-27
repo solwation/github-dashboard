@@ -1,3 +1,4 @@
+import { countActiveRepositories, summarizeLanes, type SidebarRepository } from "./sidebar";
 import { matchesIssueFilters } from "./issue-filter";
 import { column, isCoordination, priority, type Lane, type Rules } from "./model";
 
@@ -85,25 +86,6 @@ export function countClosedToday(lanes: Lane[], now: number, hideCoordination = 
   return count;
 }
 
-/** Active loaded repositories, independent of text filters and counted once per repository. */
-export function countActiveRepositories(lanes: Lane[], rules: Record<string, Rules>, now: number, hideCoordination = false): number {
-  if (!Number.isFinite(now)) return 0;
-  const active = new Set<string>();
-  const cutoff = now - 30 * 86400000;
-  for (const lane of lanes) {
-    const repo = lane.repo.full_name;
-    if (active.has(repo)) continue;
-    if (lane.issues.some(issue => {
-      if (issue.pull_request || (hideCoordination && isCoordination(issue))) return false;
-      const col = column(issue, rules[repo]);
-      if (col === "backlog" || col === "progress") return true;
-      const closed = Date.parse(issue.closed_at || "");
-      return col === "closed" && closed >= cutoff && closed <= now;
-    })) active.add(repo);
-  }
-  return active.size;
-}
-
 /** Secondary two-cell breakdown for the four overview summary cards (#152). */
 export function summarizeOverviewSecondary(
   lanes: Lane[],
@@ -111,6 +93,7 @@ export function summarizeOverviewSecondary(
   now: number,
   hideCoordination = false,
   filters: { query?: string; repositoryQueries?: Record<string, string> } = {},
+  repositories: readonly SidebarRepository[] = summarizeLanes(lanes, rules, hideCoordination),
 ): OverviewSecondaryCounts {
   const backlogRepos = new Set<string>();
   const progressRepos = new Set<string>();
@@ -151,7 +134,7 @@ export function summarizeOverviewSecondary(
     }
   }
   return {
-    activeRepositories: countActiveRepositories(lanes, rules, now, hideCoordination),
+    activeRepositories: countActiveRepositories(repositories),
     backlogRepositories: backlogRepos.size,
     backlogIssues,
     highPriorityOpen,

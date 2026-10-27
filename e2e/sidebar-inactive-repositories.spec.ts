@@ -52,6 +52,9 @@ test.describe('sidebar inactive repositories', () => {
     const inactiveClosed = page.locator('.sidebar-repository-row[data-repository="Sample/inactive-closed"]');
     const inactiveEmpty = page.locator('.sidebar-repository-row[data-repository="Sample/inactive-empty"]');
 
+    const active = page.locator('.repository-active');
+    await expect(active).toHaveText('2 aktiva');
+
     // Active repositories are visible directly in the main list
     await expect(activeBacklog).toBeVisible();
     await expect(activeProgress).toBeVisible();
@@ -75,6 +78,8 @@ test.describe('sidebar inactive repositories', () => {
     // Now inactive repositories are visible
     await expect(inactiveClosed).toBeVisible();
     await expect(inactiveEmpty).toBeVisible();
+
+    await expect(active).toHaveText('2 aktiva');
 
     // Inactive repositories are selectable
     await inactiveClosed.locator('.sidebar-repository').click();
@@ -102,6 +107,7 @@ test.describe('sidebar inactive repositories', () => {
     movedIssueToProgress = true;
     await page.keyboard.press('Control+R'); // Trigger reload/refresh
     await expect(inactiveEmpty).toBeVisible(); // Now active!
+    await expect(active).toHaveText(/3 aktiva/);
     await expect(toggle.locator('.nav-count')).toHaveText('1'); // Only 1 inactive remains
   });
 
@@ -158,6 +164,14 @@ test.describe('sidebar inactive repositories', () => {
 
     const toggle = page.locator('.sidebar-inactive-toggle');
     await expect(toggle).toBeVisible();
+
+    const active = page.locator('.repository-active');
+    await expect(active).toHaveText('1 aktiva');
+    await expect(page.locator('.sidebar-projects > .sidebar-repository-row')).toHaveCount(1);
+    await toggle.click();
+    await expect(page.locator('.sidebar-inactive-group .sidebar-repository-row')).toHaveCount(3);
+    await expect(active).toHaveText('1 aktiva');
+    await toggle.click();
 
     // Keyboard focus and activation
     await toggle.focus();

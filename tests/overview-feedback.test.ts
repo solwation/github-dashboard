@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { countActiveRepositories, countClosedToday, emptyCounts, OverviewFeedbackTracker, summarizeOverviewSecondary } from "../src/lib/overview-feedback";
+import { countClosedToday, emptyCounts, OverviewFeedbackTracker, summarizeOverviewSecondary } from "../src/lib/overview-feedback";
+import { countActiveRepositories, isInactiveRepository, summarizeLanes } from "../src/lib/sidebar";
 import type { Issue, Lane, Rules } from "../src/lib/model";
 const issue = (id: number, labels: string[] = [], state = "open", closedAt: string | null = null): Issue => ({
   id, number: id, title: "Task", labels: labels.map(name => ({ name, color: "000000" })), state,
@@ -113,33 +114,44 @@ describe("current issues closed today", () => {
 });
 
 
-describe("active repositories", () => {
+describe("shared active repository classification", () => {
   const now = Date.parse("2026-10-16T12:00:00Z");
   const recent = new Date(now - 86400000).toISOString();
-  const old = new Date(now - 31 * 86400000).toISOString();
-  it("counts empty, backlog, progress, recent closure and old closure repositories correctly", () => {
-    expect(countActiveRepositories([lane([])], {}, now)).toBe(0);
-    expect(countActiveRepositories([lane([issue(1)])], {}, now)).toBe(1);
-    expect(countActiveRepositories([lane([issue(1, ["in-progress"])])], {}, now)).toBe(1);
-    expect(countActiveRepositories([lane([issue(1, [], "closed", recent)])], {}, now)).toBe(1);
-    expect(countActiveRepositories([lane([issue(1, [], "closed", old)])], {}, now)).toBe(0);
+  const active = (lanes: Lane[], rules: Record<string, Rules> = {}, hide = true) => {
+    const repositories = summarizeLanes(lanes, rules, hide);
+    const count = countActiveRepositories(repositories);
+    expect(summarizeOverviewSecondary(lanes, rules, now, hide, { query: "no match", repositoryQueries: { "a/b": "also no match" } }, repositories).activeRepositories).toBe(count);
+    expect(repositories.filter(repo => !isInactiveRepository(repo))).toHaveLength(count);
+    return count;
+  };
+  it("counts one active repository beside empty and closed-only repositories", () => {
+    expect(active([lane([issue(1)]), lane([], "a/empty"), lane([issue(2, [], "closed", recent)], "a/closed")])).toBe(1);
+    expect(active([lane([issue(1, ["in-progress"])])])).toBe(1);
+    expect(active([lane([issue(1, ["in-progress"], "closed", recent)])])).toBe(0);
   });
-  it("counts each repository once across categories and duplicate loaded lanes", () => {
-    const mixed = lane([issue(1), issue(2, ["in-progress"]), issue(3, [], "closed", recent)]);
-    expect(countActiveRepositories([mixed, mixed, lane([issue(1)], "a/c"), lane([], "a/empty")], {}, now)).toBe(2);
+  it("keeps loading repositories active until their empty or closed-only snapshot resolves", () => {
+    const loading = { ...lane([]), loading: true };
+    expect(active([loading])).toBe(1);
+    expect(active([{ ...loading, issues: [issue(1, [], "closed", recent)] }])).toBe(1);
+    expect(active([{ ...loading, loading: false, issues: [issue(1, [], "closed", recent)] }])).toBe(0);
+    expect(active([{ ...loading, loading: false }])).toBe(0);
+    expect(active([{ ...loading, loading: false, error: "unavailable" }])).toBe(0);
   });
-  it("honors custom status rules, hidden coordination and excludes pull requests", () => {
-    const lanes = [lane([issue(1, ["working-custom"])]), lane([issue(2, ["orkester"])], "a/coord"), lane([{ ...issue(3), pull_request: {} }], "a/pr")];
-    expect(countActiveRepositories(lanes, { "a/b": { progress: "working-custom" } }, now, true)).toBe(1);
-    expect(countActiveRepositories(lanes, {}, now, false)).toBe(2);
+  it("reacts to backlog, custom work labels, closing and reopening with stale work labels", () => {
+    const rules = { "a/b": { progress: "building" } };
+    expect(active([lane([issue(1)])], rules)).toBe(1);
+    expect(active([lane([issue(1, ["building"])])], rules)).toBe(1);
+    expect(active([lane([issue(1, ["building"], "closed", recent)])], rules)).toBe(0);
+    expect(active([lane([issue(1, ["building"], "open", recent)])], rules)).toBe(1);
   });
-  it("uses the exact 30-day boundary and updates as time passes, excluding invalid and future dates", () => {
-    const boundary = new Date(now - 30 * 86400000).toISOString();
-    const lanes = [lane([issue(1, [], "closed", boundary)])];
-    expect(countActiveRepositories(lanes, {}, now)).toBe(1);
-    expect(countActiveRepositories(lanes, {}, now + 1)).toBe(0);
-    expect(countActiveRepositories([lane([issue(2, [], "closed", "invalid"), issue(3, [], "closed", new Date(now + 1).toISOString())])], {}, now)).toBe(0);
-    expect(countActiveRepositories(lanes, {}, NaN)).toBe(0);
+  it("respects coordination visibility and excludes pull requests", () => {
+    const lanes = [lane([issue(1, ["building", "orkester"])]), lane([{ ...issue(2), pull_request: {} }], "a/pr")];
+    expect(active(lanes, { "a/b": { progress: "building" } })).toBe(0);
+    expect(active(lanes, { "a/b": { progress: "building" } }, false)).toBe(1);
+  });
+  it("deduplicates repository identities", () => {
+    const loaded = lane([issue(1)]);
+    expect(countActiveRepositories(summarizeLanes([loaded, loaded, lane([], "a/empty")], {}, true))).toBe(1);
   });
 });
 

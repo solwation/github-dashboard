@@ -76,3 +76,7 @@ export function isInactiveRepository(repo: Pick<SidebarRepository, "backlog" | "
   return !repo.loading && repo.backlog === 0 && repo.progress === 0;
 }
 
+/** Count the same active group rendered by the sidebar, independent of expansion and search. */
+export function countActiveRepositories(repositories: readonly SidebarRepository[]): number {
+  return new Set(repositories.filter(repo => !isInactiveRepository(repo)).map(repo => repo.fullName)).size;
+}

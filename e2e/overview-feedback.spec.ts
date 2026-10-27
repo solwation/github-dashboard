@@ -135,6 +135,7 @@ test("filtered badges animate real changes even when hidden changes cancel the g
   await expect(page.locator(".stat-delta")).toHaveCount(0, { timeout: 5000 });
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
   await expect(page.locator(".stat-delta")).toHaveCount(0);
+  await page.getByRole("button", { name: "Filtrera issues i sample/alpha", exact: true }).click();
   await page.getByRole("textbox", { name: "Filtrera issues i sample/alpha", exact: true }).fill("Fixture 2");
   await expect(page.locator(".stat-delta")).toHaveCount(0);
   api.setStage(0);

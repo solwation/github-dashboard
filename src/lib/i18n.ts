@@ -198,7 +198,7 @@ export const english: Record<string, string> = {
 
   "{count} aktiva": "{count} active",
   "{count} aktiva projekt. {definition}": "{count} active projects. {definition}",
-  "Aktiva projekt har minst ett issue i Backlog eller In progress, eller ett issue stängt under de senaste 30 dagarna. Dolda koordinationsärenden räknas inte. Fritextfilter påverkar inte antalet.": "Active projects have at least one issue in Backlog or In progress, or an issue closed in the last 30 days. Hidden coordination issues are excluded. Text filters do not affect this count.",
+  "Aktiva projekt har minst ett issue i Backlog eller In progress, eller håller på att laddas. Färdigladdade projekt med enbart stängda issues är inaktiva. Samma indelning används i sidomenyn. Anpassade arbetslabels och koordinationsfiltret respekteras. Fritextfilter påverkar inte antalet.": "Active projects have at least one issue in Backlog or In progress, or are still loading. Fully loaded projects with only closed issues are inactive. The sidebar uses the same grouping. Custom work labels and the coordination filter are respected. Text filters do not affect this count.",
   "{count} backlog": "{count} backlog",
   "{count} hög prio": "{count} high priority",
   "{count} repos": "{count} repos",
