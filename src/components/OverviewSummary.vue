@@ -128,16 +128,18 @@ const announcement = computed(() => [
 <template>
   <section class="stats" :aria-label="t('Sammanfattning')">
     <div class="stat repository-stat" data-stat="repositories">
-      <span class="stat-icon repos"><Layers3 :size="20" /></span>
+      <span class="stat-icon repos"><Layers3 :size="16" /></span>
       <div class="stat-content">
-        <!-- Deliberate section label commonly used in Swedish technical UI (#315) -->
-        <span class="stat-label">Repositories</span>
-        <strong>{{ totalRepositories }}</strong>
-        <div class="overview-estimate" role="img" :title="repositoryInfoTitle" :aria-label="repositoryInfoTitle + ' ' + repositoryInfoLabel.join(', ')" data-testid="repository-info">
-          <span class="overview-points">{{ repositoryInfoLabel[0] }}</span>
-          <span v-for="part in repositoryInfoLabel.slice(1)" :key="part" class="overview-time">{{ part }}</span>
+        <div class="stat-header">
+          <strong>{{ totalRepositories }}</strong>
+          <!-- Deliberate section label commonly used in Swedish technical UI (#315) -->
+          <span class="stat-label">Repositories</span>
         </div>
         <div class="stat-cells">
+          <div class="overview-estimate" role="img" :title="repositoryInfoTitle" :aria-label="repositoryInfoTitle + ' ' + repositoryInfoLabel.join(', ')" data-testid="repository-info">
+            <span class="overview-points">{{ repositoryInfoLabel[0] }}</span>
+            <span v-for="part in repositoryInfoLabel.slice(1)" :key="part" class="overview-time">{{ part }}</span>
+          </div>
           <span class="stat-cell repository-active" tabindex="0" :title="activeDefinition" :aria-label="t('{count} aktiva projekt. {definition}', { count: secondary.activeRepositories, definition: activeDefinition })">{{ repositoryCells[0].text }}<span v-if="cellDeltas.activeRepositories" class="cell-delta" :class="cellDeltas.activeRepositories > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas.activeRepositories) }}</span></span>
           <span class="stat-cell">{{ repositoryCells[1].text }}<span v-if="cellDeltas.backlogRepositories" class="cell-delta" :class="cellDeltas.backlogRepositories > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas.backlogRepositories) }}</span></span>
         </div>
@@ -145,16 +147,18 @@ const announcement = computed(() => [
       <button v-if="loggedIn" class="icon-button repository-stat-action" :aria-label="t('Välj repositories')" :title="t('Välj repositories')" @click="emit('chooseRepositories')"><Plus :size="16" aria-hidden="true" /></button>
     </div>
     <div v-for="card in cards" :key="card.key" class="stat" :data-stat="card.key" :class="{ 'stat-positive': deltas[card.key] && outcomes[card.key] === 'positive', 'stat-negative': deltas[card.key] && outcomes[card.key] === 'negative' }">
-      <span class="stat-icon" :class="card.style"><component :is="card.icon" :size="20" /></span>
+      <span class="stat-icon" :class="card.style"><component :is="card.icon" :size="16" /></span>
       <div class="stat-content">
-        <span class="stat-label">{{ card.label }}</span>
-        <strong>{{ counts[card.key] }}<span v-if="deltas[card.key]" class="stat-delta" aria-hidden="true">{{ signedDelta(deltas[card.key]) }}</span><small>{{ card.hint }}</small></strong>
-        <OverviewEstimate v-if="card.key !== 'closed'" :groups="estimateGroups" :column="card.key" />
-        <div v-else class="overview-estimate" role="img" :title="closedTitle" :aria-label="closedTitle" data-testid="closed-info">
-          <span class="overview-points">≈ {{ closedSummary.points }} SP</span>
-          <span v-if="closedMedian" class="overview-time">{{ closedMedian }}</span>
+        <div class="stat-header">
+          <strong>{{ counts[card.key] }}<span v-if="deltas[card.key]" class="stat-delta" aria-hidden="true">{{ signedDelta(deltas[card.key]) }}</span><small v-if="card.hint" class="stat-hint">{{ card.hint }}</small></strong>
+          <span class="stat-label">{{ card.label }}</span>
         </div>
         <div class="stat-cells">
+          <OverviewEstimate v-if="card.key !== 'closed'" :groups="estimateGroups" :column="card.key" />
+          <div v-else class="overview-estimate" role="img" :title="closedTitle" :aria-label="closedTitle" data-testid="closed-info">
+            <span class="overview-points">≈ {{ closedSummary.points }} SP</span>
+            <span v-if="closedMedian" class="overview-time">{{ closedMedian }}</span>
+          </div>
           <span v-for="(cell, index) in card.cells" :key="index" class="stat-cell" :class="cell.className" :title="cell.title">{{ cell.text }}<span v-if="cellDeltas[cell.key]" class="cell-delta" :class="cellDeltas[cell.key]! > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas[cell.key]!) }}</span></span>
         </div>
       </div>
@@ -165,22 +169,31 @@ const announcement = computed(() => [
 <style scoped>
 .stat { transition: background-color .25s, border-color .25s; }
 .repository-active:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 3px; }
-.stat-content { min-width: 0; flex: 1 1 auto; align-self: stretch; display: flex; flex-direction: column; }
-.stat strong { flex-wrap: wrap; row-gap: 6px; margin-bottom: .55rem; }
-.stat strong small { white-space: normal; }
+.stat-content { min-width: 0; flex: 1 1 auto; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.stat-header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; min-width: 0; }
+.stat strong { flex-wrap: wrap; row-gap: 4px; margin-bottom: 0; }
+.stat strong small,
+.stat-hint { white-space: normal; }
 .stat-cells {
   display: flex;
   flex-wrap: wrap;
-  gap: .35rem .9rem;
-  margin-top: auto;
-  padding-top: .45rem;
-  border-top: 1px solid var(--line);
+  align-items: center;
+  gap: 2px 6px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
   font-size: .72rem;
   line-height: 1.3;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.stat-cell { flex: 1 1 max-content; min-width: 0; max-width: 100%; overflow-wrap: normal; position: relative; }
+.stat-cell { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow-wrap: normal; position: relative; }
+.overview-estimate:has(+ .stat-cell)::after,
+.stat-cell:not(:last-child)::after {
+  content: "·";
+  margin-left: 6px;
+  color: var(--line);
+}
 /* Floats over the cell (absolute) so it never shifts layout (#188). */
 .cell-delta { position: absolute; top: 0; right: .2rem; font-size: .7rem; font-weight: 700; pointer-events: none; animation: cell-delta-float 2s ease-out forwards; }
 .cell-delta.up { color: #19643c; }
@@ -193,10 +206,10 @@ const announcement = computed(() => [
 .stat-delta { font-size: .75rem; font-weight: 600; color: #53636d; }
 .stat-positive .stat-delta { color: #19643c; }
 .stat-negative .stat-delta { color: #943d28; }
-.overview-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -.1rem 0 .6rem; font-size: .7rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.overview-estimate { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; margin: 0; font-size: .7rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .overview-points { color: var(--green); font-weight: 650; white-space: nowrap; }
 .overview-time { color: var(--text); }
-@media (max-width: 650px) { .overview-estimate { justify-content: center; } }
 .stat-today { color: #286b51; }
+:root[data-theme="dark"] .stat-today { color: #72c89f; }
 @media (prefers-reduced-motion: reduce) { .stat { transition: none; } .cell-delta { animation: none; transform: none; } }
 </style>

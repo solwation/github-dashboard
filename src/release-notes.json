@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Labels i listläget krymper inte längre till oläsbara stumpar, och dolda labels visas med ett tillgängligt +N-chip.",
-      "en": "List mode labels no longer shrink to illegible dots, and overflowing labels are accessible via a +N chip."
+      "sv": "Tätare översikt med nyckeltalsremsa och kompakt sidhuvud lyfter boarden över vecket, och labels i listläget trunkeras med +N-chip.",
+      "en": "Denser overview with compact metrics strip lifts board above the fold, and list mode labels truncate with a +N chip."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           331
+        ]
+      },
+      {
+        "text": {
+          "sv": "Översikten har fått ett kompaktare sidhuvud och en tätare nyckeltalsremsa så att boarden syns direkt över vecket på vanliga laptops och mobil.",
+          "en": "Overview features a more compact header and denser metrics strip so the board appears above the fold on laptops and mobile."
+        },
+        "issues": [
+          332
         ]
       }
     ]

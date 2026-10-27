@@ -49,9 +49,8 @@ const description = computed(() => [
   </div>
 </template>
 <style scoped>
-.overview-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -.1rem 0 .6rem; font-size: .7rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.overview-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; margin: 0; font-size: .7rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .overview-points { color: var(--green); font-weight: 650; white-space: nowrap; }
 .overview-time { color: var(--text); }
 .overview-coverage { flex-basis: 100%; color: var(--muted); font-size: .65rem; }
-@media (max-width: 650px) { .overview-estimate { justify-content: center; } }
 </style>
