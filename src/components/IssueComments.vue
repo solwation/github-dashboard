@@ -13,15 +13,24 @@ const props = withDefaults(defineProps<{
   count: number;
   newComments?: number;
   showNewBadge?: boolean;
+  showCountText?: boolean;
   demo?: boolean;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   session?: number;
-}>(), { showNewBadge: true });
+}>(), { showNewBadge: true, showCountText: false });
 const emit = defineEmits<{ read: [] }>();
 const { t, locale } = useLanguage();
 const hasNew = computed(() => Boolean(props.newComments && props.newComments > 0));
+const countLabel = computed(() => {
+  if (!props.showCountText) return props.count;
+  return props.count === 1
+    ? t("1 kommentar")
+    : t("{count} kommentarer", { count: props.count });
+});
 const buttonLabel = computed(() => {
-  if (!hasNew.value) return t("{count} kommentarer", { count: props.count });
+  if (!hasNew.value) {
+    return props.count === 1 ? t("1 kommentar") : t("{count} kommentarer", { count: props.count });
+  }
   return props.newComments === 1
     ? t("{count} kommentarer, 1 ny", { count: props.count })
     : t("{count} kommentarer, {unread} nya", { count: props.count, unread: props.newComments! });
@@ -128,13 +137,13 @@ onBeforeUnmount(clear);
     ref="trigger"
     type="button"
     class="comment-count"
-    :class="{ 'has-new-comments': hasNew }"
+    :class="{ 'has-new-comments': hasNew, 'comment-count-text': showCountText }"
     :aria-label="buttonLabel"
     aria-haspopup="dialog"
     @click="show"
   >
     <MessageCircle :size="13" aria-hidden="true" :class="['comment-icon', { 'comment-icon-animated': hasNew }]" />
-    <span class="comment-count-value">{{ count }}</span>
+    <span class="comment-count-value">{{ countLabel }}</span>
     <span v-if="hasNew && showNewBadge !== false" class="new-comments-badge" aria-hidden="true">+{{ newComments }}</span>
   </button>
   <dialog ref="dialog" class="comments-dialog" :aria-labelledby="titleId" @cancel.prevent="close" @close="clear" @keydown.esc.stop.prevent="close">
@@ -175,6 +184,33 @@ onBeforeUnmount(clear);
 <style scoped>
 .comment-count { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem; border: 0; background: transparent; color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 32px; border-radius: .4rem; }
 .comment-count.has-new-comments { color: var(--green); font-weight: 600; }
+.comment-count.comment-count-text {
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  gap: 6px;
+}
+.comment-count.comment-count-text:hover {
+  background: var(--hover);
+  border-color: #b4c9c1;
+}
+:root[data-theme="dark"] .comment-count.comment-count-text {
+  background: var(--card);
+  border-color: #30424a;
+}
+:root[data-theme="dark"] .comment-count.comment-count-text:hover {
+  background: var(--hover);
+  border-color: #4f6d66;
+}
+.comment-count.comment-count-text.has-new-comments {
+  color: var(--green);
+  font-weight: 600;
+}
 .comment-icon { flex-shrink: 0; transition: transform .2s ease; }
 .comment-icon-animated {
   animation: comment-bounce 1.6s ease-in-out infinite;

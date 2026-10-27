@@ -296,7 +296,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
       </span>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" @parent-select="(repo, number) => emit('parentSelect', repo, number)" />
-    <IssueDetails :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" @child-select="(repo, number) => emit('childSelect', repo, number)">
+    <IssueDetails :row-details="rowDetails" :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" @child-select="(repo, number) => emit('childSelect', repo, number)">
       <template #metadata>
     <div v-if="!rowDetails || issue.assignees.length" class="card-bottom">
       <template v-if="!rowDetails">

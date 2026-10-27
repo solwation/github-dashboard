@@ -392,6 +392,7 @@ export const english: Record<string, string> = {
   "Läs mer": "Read more",
   "Visa mindre": "Show less",
   "{count} kommentarer": "{count} comments",
+  "1 kommentar": "1 comment",
   "{count} kommentarer, 1 ny": "{count} comments, 1 new",
   "{count} kommentarer, {unread} nya": "{count} comments, {unread} new",
   "1 ny kommentar. Markera som läst": "1 new comment. Mark as read",

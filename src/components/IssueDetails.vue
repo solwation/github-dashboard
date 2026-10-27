@@ -10,7 +10,7 @@ import { useLanguage } from "../lib/i18n";
 import { imageGalleryKey, type ImageSource } from "../lib/comment-images";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; rowDetails?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
 const emit = defineEmits<{ read: []; childSelect: [repository: string, number: number] }>();
 function toggle() {
   expanded.value = !expanded.value;
@@ -24,20 +24,24 @@ watch(() => props.defaultExpanded, value => { if (value) expanded.value = true; 
 watch([expanded, () => props.body], ([open, body]) => { if (open && body?.trim()) void markdown.load(); }, { immediate: true });
 const panelId = useId();
 const count = computed(() => Math.max(0, Math.floor(props.comments ?? 0)));
+const showTopToolbar = computed(() => {
+  if (!props.rowDetails) return true;
+  return !props.hideToggle || (props.issue.assignees && props.issue.assignees.length > 0);
+});
 const rendered = computed(() => markdown.renderer.value ? markdown.renderer.value(props.body) : "");
 const commentImages = ref<ImageSource[]>([]);
 provide(imageGalleryKey, { description: rendered, comments: commentImages });
 </script>
 <template>
   <div class="issue-details">
-    <div class="details-toolbar">
+    <div v-if="showTopToolbar" class="details-toolbar">
       <slot name="metadata" />
       <button v-if="!hideToggle" type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>
-      <IssueComments :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
+      <IssueComments v-if="!rowDetails" :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
-    <section v-if="expanded" :id="panelId" class="details-panel" :aria-label="t('Beskrivning')">
+    <section v-if="expanded" :id="panelId" class="details-panel" :class="{ 'details-panel-first': !showTopToolbar }" :aria-label="t('Beskrivning')">
       <template v-if="body?.trim()">
         <CommentImages v-if="markdown.renderer.value" gallery-source="description" content-class="issue-markdown" :html="rendered" />
         <!-- Without the Markdown chunk (offline before it was cached), show the source as safe plain text. -->
@@ -47,6 +51,9 @@ provide(imageGalleryKey, { description: rendered, comments: commentImages });
       <p v-else class="empty-description">{{ t("Ingen beskrivning har lagts till.") }}</p>
       <IssueSubIssues v-if="!demo" :progress="subIssueProgress" :issue="issue" :session="commentsSession" @child-select="(repo, number) => emit('childSelect', repo, number)" />
       <slot name="additional" />
+      <div v-if="rowDetails" class="details-footer">
+        <IssueComments :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" :show-count-text="true" @read="emit('read')" />
+      </div>
     </section>
   </div>
 </template>
@@ -57,6 +64,8 @@ provide(imageGalleryKey, { description: rendered, comments: commentImages });
 .details-toggle { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem 0; border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: .72rem; font-weight: 600; }
 .details-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 .details-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); min-width: 0; max-width: 100%; }
+.details-panel.details-panel-first { margin-top: 0; padding-top: 0; border-top: 0; }
+.details-footer { margin-top: .75rem; display: flex; align-items: center; }
 :deep(.issue-markdown), .empty-description { font-size: .78rem; line-height: 1.6; overflow-wrap: anywhere; }
 .empty-description { color: var(--muted); margin: 0; }
 .plain-description { margin: 0; white-space: pre-wrap; }

@@ -14,9 +14,15 @@ describe("language selection", () => {
     setLanguage("sv");
     expect(locale.value).toBe("sv-SE");
     expect(t("Översikt")).toBe("Översikt");
+    expect(t("1 kommentar")).toBe("1 kommentar");
+    expect(t("{count} kommentarer", { count: 0 })).toBe("0 kommentarer");
+    expect(t("{count} kommentarer", { count: 5 })).toBe("5 kommentarer");
     setLanguage("en");
     expect(useLanguage().locale.value).toBe("en-GB");
     expect(t("Översikt")).toBe("Overview");
+    expect(t("1 kommentar")).toBe("1 comment");
+    expect(t("{count} kommentarer", { count: 0 })).toBe("0 comments");
+    expect(t("{count} kommentarer", { count: 5 })).toBe("5 comments");
     expect(useLanguage().preference.value).toBe("en");
     expect(setItem).toHaveBeenLastCalledWith("issueflow-language", "en");
   });
