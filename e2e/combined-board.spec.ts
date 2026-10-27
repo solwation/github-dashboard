@@ -64,12 +64,18 @@ test("split defaults on; combined columns use only the main search, keep colors,
   }
   await sidebarProject.press("Enter");
   await expect(sidebarProject).toBeFocused();
-  await expect(designCards.first()).toHaveClass(/repository-navigation-highlight/);
+  await expect(designCards.first()).not.toHaveClass(/repository-selected/);
+  await expect(sidebarProject).not.toHaveAttribute("aria-current");
+  await sidebarProject.press("Enter");
+  await expect(designCards.first()).toHaveClass(/repository-selected/);
 
   await page.getByRole("button", { name: "Lista", exact: true }).click();
   const designRows = board.locator('.issue-row[data-repository="demo/design-system"]');
   const otherRows = board.locator('.issue-row:not([data-repository="demo/design-system"])');
   await expect(designRows).not.toHaveCount(0);
+  await expect(designRows.first()).toHaveClass(/repository-selected/);
+  await sidebarProject.click();
+  await expect(designRows.first()).not.toHaveClass(/repository-selected/);
   await sidebarProject.click();
   await expect(sidebarProject).toBeFocused();
   for (const row of await designRows.all()) {
@@ -81,10 +87,12 @@ test("split defaults on; combined columns use only the main search, keep colors,
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await sidebarProject.click();
+  await expect(designRows.first()).not.toHaveClass(/repository-selected/);
+  await sidebarProject.click();
   await expect(sidebarProject).toBeFocused();
   const reducedRow = designRows.first();
   await expect(reducedRow).toHaveClass(/repository-navigation-highlight/);
-  expect(await reducedRow.evaluate(element => getComputedStyle(element).animationName)).toBe("none");
+  expect(await reducedRow.evaluate(element => getComputedStyle(element, "::before").animationName)).toBe("none");
   await page.emulateMedia({ reducedMotion: "no-preference" });
 
   await page.getByRole("button", { name: "Kort", exact: true }).click();

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare tavlor, statistik och inställningar ger bättre överblick. Text är tydligare, SP-labels styr poäng och listans labels och kolumner är lättare att följa.",
-      "en": "Denser boards, statistics and settings improve scanning. Text is clearer, point labels set sizes, and list labels and columns are easier to follow."
+      "sv": "Projektval får kvarvarande färgade ramar i Kort och Lista. Tätare vyer, tydligare text och bättre labels och SP-estimat förbättrar överblicken.",
+      "en": "Project selection keeps matching colour frames in Cards and List. Denser views, clearer text, labels and exact point sizes improve scanning."
     },
     "sections": [
       {
@@ -113,6 +113,15 @@
         },
         "issues": [
           343
+        ]
+      },
+      {
+        "text": {
+          "sv": "I gemensam board behåller valt projekt sin färgade ram i Kort och Lista; sidomenyn visar valet och ett nytt klick avmarkerar.",
+          "en": "Selected projects keep matching colour frames in combined Cards and List; the sidebar shows the selection and a second click clears it."
+        },
+        "issues": [
+          345
         ]
       }
     ]

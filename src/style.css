@@ -649,8 +649,17 @@ h1 {
 .board-navigation-highlight { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--green) 68%, transparent); }
 .issue-navigation-highlight { outline: 2px solid var(--green); outline-offset: -2px; animation: issue-navigation-pulse 1.5s ease-out; }
 @keyframes issue-navigation-pulse { 0%, 55% { outline-color: var(--green); } 30%, 100% { outline-color: transparent; } }
-.repository-navigation-highlight { outline: 2px solid var(--green); outline-offset: -2px; animation: repository-navigation-pulse 1.2s ease-out; }
+.repository-navigation-highlight:not(.repository-selected) { outline: 2px solid var(--green); outline-offset: -2px; animation: repository-navigation-pulse 1.2s ease-out; }
 @keyframes repository-navigation-pulse { 0%, 55% { outline-color: var(--green); } 30%, 100% { outline-color: transparent; } }
+/* Selection uses a separate inner frame so status borders, unread rings and focus remain visible. */
+.sidebar-repository, .issue-card, .issue-row { --repository-indicator-color: var(--repository-color); }
+:is(.issue-card, .issue-row).repository-selected { position: relative; }
+:is(.issue-card, .issue-row).repository-selected::before { content: ""; position: absolute; inset: 2px; border: 2px solid var(--repository-indicator-color); border-radius: inherit; pointer-events: none; }
+.repository-selected.repository-navigation-highlight::before { animation: repository-selection-pulse 1.2s ease-out; }
+@keyframes repository-selection-pulse { 0%, 55%, 100% { opacity: 1; } 30% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .repository-selected.repository-navigation-highlight::before { animation: none; }
+}
 .board-column + .board-column {
   border-left: 1px solid var(--line);
 }
@@ -2203,6 +2212,7 @@ button.lane-sync.syncing { cursor: progress; }
   --diff-del: var(--accent-red);
 }
 /* Repository palette colors are lifted toward white so every hue keeps at least 4:1 on dark surfaces. */
+:root[data-theme="dark"] :is(.sidebar-repository, .issue-card, .issue-row) { --repository-indicator-color: color-mix(in srgb, var(--repository-color) 75%, white); }
 :root[data-theme="dark"] .sidebar-repository .repo-dot,
 :root[data-theme="dark"] .card-repository i,
 :root[data-theme="dark"] .issue-card.has-repository::after {

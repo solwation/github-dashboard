@@ -73,6 +73,7 @@ const props = withDefaults(
     showEmpty?: boolean;
     filtered?: boolean;
     showRepository?: boolean;
+    selectedRepository?: string | null;
     cardProps: (lane: Lane, issue: Issue, showRepository?: boolean) => CardPropsResult;
     rowProps: (lane: Lane, issue: Issue, showRepository?: boolean) => RowPropsResult;
   }>(),
@@ -90,6 +91,7 @@ const props = withDefaults(
     showEmpty: undefined,
     filtered: false,
     showRepository: false,
+    selectedRepository: null,
   },
 );
 
@@ -161,6 +163,7 @@ const shouldShowEmpty = computed(() => {
           :key="boardEntryKey({ lane, issue }, column.key)"
           :id="issueDomId(lane.repo.full_name, issue.number)"
           :data-repository="lane.repo.full_name"
+          :class="{ 'repository-selected': lane.repo.full_name === selectedRepository }"
           v-bind="rowProps(lane, issue, showRepository)"
           @read="emit('read', lane.repo.full_name, issue)"
           v-slot="{ inPopup }"
@@ -182,6 +185,7 @@ const shouldShowEmpty = computed(() => {
           :key="boardEntryKey({ lane, issue }, column.key)"
           :id="issueDomId(lane.repo.full_name, issue.number)"
           :data-repository="lane.repo.full_name"
+          :class="{ 'repository-selected': lane.repo.full_name === selectedRepository }"
           v-bind="cardProps(lane, issue, showRepository)"
           show-time-explanation
           @read="emit('read', lane.repo.full_name, issue)"

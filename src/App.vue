@@ -203,6 +203,8 @@ function clearRepositoryHighlight() {
   repositoryNavigationTarget = null;
 }
 const focusedSidebarRepository = ref<string | null>(null);
+// User selection outlives the navigation pulse, view changes and data refreshes.
+const selectedCombinedRepository = ref<string | null>(null);
 const statisticsNavigation = ref<{ name: string; toggle: boolean; sequence: number }>();
 let sidebarNavigationSequence = 0;
 const mobileBoardNavigatorOpen = ref(false);
@@ -266,7 +268,8 @@ async function navigateToBoardStatus(key: string) {
 function activateSidebarRepository(name: string) {
   const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
   if (!repo) return;
-  const toggle = focusedSidebarRepository.value === name;
+  const toggle = currentView.value === "overview" && !splitByRepository.value
+    ? selectedCombinedRepository.value === name : focusedSidebarRepository.value === name;
   focusedSidebarRepository.value = name;
   const hash = (currentView.value === "statistics" ? "#statistics-repo-" : "#repo-") + repo.id;
   // Explicit activation owns this navigation; a hashchange would also reveal collapsed content.
@@ -282,9 +285,13 @@ async function revealRepository(name: string, toggle = false) {
   const targetId = (currentView.value === "statistics" ? "statistics-repo-" : "repo-") + repo.id;
   repositoryNavigationTarget = targetId;
   if (currentView.value === "overview" && splitByRepository.value && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
+  if (currentView.value === "overview" && !splitByRepository.value) {
+    selectedCombinedRepository.value = toggle && selectedCombinedRepository.value === name ? null : name;
+  }
   await nextTick();
   if (run !== repositoryNavigationRun) return;
   if (currentView.value === "overview" && !splitByRepository.value) {
+    if (selectedCombinedRepository.value !== name) return;
     const combinedBoard = document.querySelector<HTMLElement>(".combined-board");
     combinedBoard?.scrollIntoView({ block: "start" });
     const matchingElements = Array.from(
@@ -637,6 +644,10 @@ watch([currentView, splitByRepository, sessionToken, () => lanes.value.map(lane 
 });
 
 watch([currentView, splitByRepository, sessionToken], clearRepositoryHighlight);
+watch([sessionToken, isDemo, publicMode, () => user.value?.login], () => { selectedCombinedRepository.value = null; });
+watch([authBusy, () => lanes.value.map(lane => lane.repo.full_name)], ([connecting, names]) => {
+  if (!connecting && selectedCombinedRepository.value && !names.includes(selectedCombinedRepository.value)) selectedCombinedRepository.value = null;
+});
 watch([restoring, () => lanes.value.map(lane => `${lane.repo.id}:${lane.loading}`).join("\n")], consumeIssueNavigation, { immediate: true });
 const logoutPrompt = ref(false);
 const logoutBusy = ref(false);
@@ -1894,6 +1905,7 @@ onMounted(async () => {
       :statistics="currentView === 'statistics'"
       :repos="sidebarRepos"
       :repository-colors="workspaceRepositoryColors"
+      :selected-repository="currentView === 'overview' && !splitByRepository ? selectedCombinedRepository : null"
       :can-select="loggedIn || publicMode"
       :restoring="restoring && !workspaceOpen"
       :show-inactive="showInactiveRepos"
@@ -2307,6 +2319,7 @@ onMounted(async () => {
               :aria-label="t('{status} i alla repositories', { status: mobileStatusLabel(col.key) })"
               :column="col"
               :items="combinedColumns[col.key]!"
+              :selected-repository="selectedCombinedRepository"
               :show-repository="true"
               :list-mode="listMode"
               :limit="combinedLimit(col.key)"
@@ -2508,7 +2521,7 @@ onMounted(async () => {
 .repository-properties .modal-heading > button { flex-shrink: 0; }
 .repository-properties .modal-footer { flex-wrap: wrap; }
 .repository-properties .modal-footer > button { margin-left: auto; }
-.repository-navigation-highlight {
+.repository-navigation-highlight:not(.repository-selected) {
   outline: 2px solid var(--green);
   outline-offset: -2px;
   animation: repository-navigation-pulse 1.2s ease-out;
@@ -2518,6 +2531,6 @@ onMounted(async () => {
   30%, 100% { outline-color: transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .repository-navigation-highlight { animation: none; }
+  .repository-navigation-highlight:not(.repository-selected) { animation: none; }
 }
 </style>

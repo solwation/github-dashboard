@@ -11,6 +11,7 @@ const props = withDefaults(
   defineProps<{
     repos: SidebarRepository[];
     repositoryColors?: Record<string, string>;
+    selectedRepository?: string | null;
     canSelect: boolean;
     restoring?: boolean;
     statistics?: boolean;
@@ -74,8 +75,8 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100 }" :data-repository="repo.fullName">
     <div class="repo-body">
-    <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-      <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
+    <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+      <span class="repo-dot" aria-hidden="true" />
       <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
       <!-- Fixed metadata slots: unread · visibility · Pages stay aligned below the full-width name. -->
       <span class="repo-slots">
@@ -118,8 +119,8 @@ function lastChange(changedAt: string | null) {
     <div v-if="inactiveRepos.length > 0" v-show="showInactive" id="sidebar-inactive-repositories" class="sidebar-inactive-group">
       <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100 }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-        <span class="repo-dot" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" aria-hidden="true" />
+      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+        <span class="repo-dot" aria-hidden="true" />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <!-- Fixed metadata slots: unread · visibility · Pages stay aligned below the full-width name. -->
         <span class="repo-slots">
@@ -169,6 +170,8 @@ function lastChange(changedAt: string | null) {
   padding: var(--space-1) var(--row-pad-end) var(--space-1) var(--space-2);
   border-radius: 4px;
 }
+.sidebar-repository.repository-selected { background: color-mix(in srgb, var(--repository-indicator-color) 10%, var(--surface)); box-shadow: inset 0 0 0 2px var(--repository-indicator-color); }
+.sidebar-repository.repository-selected .repository-label { font-weight: 700; }
 .sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
 .repo-body svg { width: var(--icon-xs); height: var(--icon-xs); stroke-width: 2; flex-shrink: 0; }
 .repo-dot { width: var(--space-2); height: var(--space-2); box-shadow: none; background-color: var(--repository-color); }
