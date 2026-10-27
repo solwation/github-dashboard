@@ -393,6 +393,16 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       <IssueTimeEstimate v-else :issue="issue" :repository="repository" :active="visible" />
     </span>
     <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
+      <div v-if="allLabels.length" class="row-expanded-labels" role="group" :aria-label="t('Labels')">
+        <span
+          v-for="label in allLabels"
+          :key="label.name"
+          class="label"
+        >
+          <i :style="{ background: '#' + label.color }" aria-hidden="true" />
+          <span class="label-text">{{ label.name }}</span>
+        </span>
+      </div>
       <slot :in-popup="false" />
       <button type="button" class="row-close" @click="setExpanded(false, true)"><X :size="13" aria-hidden="true" />{{ t("Stäng") }}</button>
     </div>
@@ -409,6 +419,16 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
           >
             <X :size="20" aria-hidden="true" />
           </button>
+          <div v-if="allLabels.length" class="row-expanded-labels row-popup-labels" role="group" :aria-label="t('Labels')">
+            <span
+              v-for="label in allLabels"
+              :key="label.name"
+              class="label"
+            >
+              <i :style="{ background: '#' + label.color }" aria-hidden="true" />
+              <span class="label-text">{{ label.name }}</span>
+            </span>
+          </div>
           <slot :in-popup="true" />
         </div>
       </div>
