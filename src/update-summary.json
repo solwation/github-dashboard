@@ -1,10 +1,10 @@
 {
-  "baseCommit": "31dffc1a9c8408a84f57086c4799ae632e9cc671",
+  "baseCommit": "e604adebd76a4daccd6f862a646ca6932e839581",
   "summary": {
-    "sv": "Större översiktskort ger tydligare gruppering. Antalet aktiva repositories följer nu samma indelning som sidomenyn.",
-    "en": "Larger overview cards group information more clearly. Active repository counts now use the same classification as the sidebar."
+    "sv": "Projektens synlighetsikon och externlänk samlas till höger om namnet i sidomenyn. Långa namn och statusräknare behåller tydlig gruppering.",
+    "en": "Repository visibility icons and external links align to the right of sidebar names. Long names and status counts stay clearly grouped."
   },
   "issues": [
-    346
+    347
   ]
 }

@@ -91,11 +91,12 @@
       },
       {
         "text": {
-          "sv": "Inställningarna grupperas i kompakta sektioner med enhetliga fält och kryssrutor, så desktopdialogen ryms utan scroll och mobilen behåller tydliga tryckytor.",
-          "en": "Settings use compact groups with consistent fields and checkboxes, fitting the desktop dialog without scrolling while retaining clear mobile touch targets."
+          "sv": "Sidomenyn visar längre projektnamn med synlighet och externlänk högerjusterade på namnraden, separata statusräknare och en kompakt versionsfot.",
+          "en": "The sidebar shows longer project names with visibility and external links aligned right on the name row, separate status counts and a compact version footer."
         },
         "issues": [
-          337
+          337,
+          347
         ]
       },
       {
