@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { writeFileSync } from "node:fs";
 
 const repos = [
   { id: 911, name: "booster-ai", full_name: "sample/booster-ai", description: "Short name", private: false, html_url: "https://github.com/sample/booster-ai", owner: { login: "sample" } },
@@ -13,7 +14,7 @@ const recent = new Date(now - 3_600_000).toISOString();
 const closed = new Date(now - 1_800_000).toISOString();
 
 const issues = [
-  { id: 1, number: 101, title: "Booster backlog task", state: "open", repo: repos[0]!, labels: [{ name: "enhancement", color: "a2eeef" }] },
+  { id: 1, number: 101, title: "Booster backlog task", state: "open", repo: repos[0]!, labels: ["sp-4", "a-very-long-label-that-must-share-space-with-the-more-control", "another-long-workflow-label", "third-workflow-label", "fourth-workflow-label"].map(name => ({ name, color: "a2eeef" })) },
   { id: 2, number: 201, title: "Untappd active progress task", state: "open", repo: repos[1]!, labels: [{ name: "in progress", color: "fbca04" }], startedAt: new Date(now - 1_800_000).toISOString() },
   { id: 3, number: 301, title: "Dashboard timeout overrun task", state: "open", repo: repos[2]!, labels: [{ name: "in progress", color: "fbca04" }], startedAt: new Date(now - 7_200_000).toISOString() },
   { id: 4, number: 401, title: "Lunden finished work task", state: "closed", repo: repos[3]!, labels: [{ name: "bug", color: "d73a4a" }], closed_at: closed, startedAt: new Date(now - 3_600_000).toISOString() },
@@ -107,6 +108,40 @@ for (const scenario of scenarios) {
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
         const rows = page.locator(".issue-row");
+
+        // Visible control bounds must survive every clipping ancestor, not merely
+        // have a bounding box somewhere outside the metadata region (#342).
+        const geometry = await rows.evaluateAll(elements => elements.map(row => {
+          const bounds = row.getBoundingClientRect();
+          const clipped = [...row.querySelectorAll<HTMLElement>(".issue-points,.row-status,.priority,.row-marker,.row-repository,.row-meta .label,.row-time,.row-outcome,.row-comments")].flatMap(item => {
+            const box = item.getBoundingClientRect();
+            if (!box.width || !box.height) return [];
+            const failures = [];
+            for (let ancestor = item.parentElement; ancestor && ancestor !== row.parentElement; ancestor = ancestor.parentElement) {
+              const style = getComputedStyle(ancestor), parent = ancestor.getBoundingClientRect();
+              if ([style.overflowX, style.overflowY].some(value => /hidden|clip|auto|scroll/.test(value)) &&
+                (box.left < parent.left - 1 || box.right > parent.right + 1 || box.top < parent.top - 1 || box.bottom > parent.bottom + 1)) {
+                failures.push(`${item.className} outside ${ancestor.className}`);
+              }
+            }
+            return failures;
+          });
+          const meta = row.querySelector(".row-meta")?.getBoundingClientRect();
+          const points = row.querySelector(".issue-points")!.getBoundingClientRect();
+          const chip = row.querySelector<HTMLElement>(".row-repository");
+          const name = chip?.querySelector<HTMLElement>(".row-repository-name");
+          const trailing = chip && name && name.getBoundingClientRect().width && name.scrollWidth <= name.clientWidth
+            ? chip.getBoundingClientRect().right - name.getBoundingClientRect().right : null;
+          return { trailing, height: bounds.height, meta: meta && { left: meta.left, right: meta.right }, points: { left: points.left, right: points.right }, clipped };
+        }));
+        for (const row of geometry) {
+          expect(row.clipped).toEqual([]);
+          if (row.trailing !== null) expect(row.trailing).toBeLessThanOrEqual(8);
+        }
+        if (process.env.EVIDENCE_DIR) {
+          writeFileSync(`${process.env.EVIDENCE_DIR}/geometry-${scenario.name}-${split ? "split" : "combined"}.json`, JSON.stringify(geometry, null, 2));
+          await page.screenshot({ path: `${process.env.EVIDENCE_DIR}/alignment-${scenario.name}-${split ? "split" : "combined"}.png` });
+        }
 
         if (!split && !scenario.mobile) {
           // Acceptance Criterion 1:

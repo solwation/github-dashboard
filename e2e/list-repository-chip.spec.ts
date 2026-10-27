@@ -124,7 +124,7 @@ test("combined-list repository chips keep row content aligned at every card/list
         const priorityBox = (await row.locator(".row-slot-priority").boundingBox())!;
         expect(chipBox.x).toBeLessThan(statusBox.x);
         expect(statusBox.x).toBeLessThanOrEqual(priorityBox.x);
-      } else await expect(row.locator(".row-mobile-summary > .row-repository")).toHaveCount(1);
+      } else await expect(row.locator(".row-mobile-summary .row-repository")).toHaveCount(1);
 
       if (scenario.theme === "light") {
         const sidebarColor = await contextPage.locator(`[data-repository="${repository.full_name}"] .repo-dot`).evaluate(node => getComputedStyle(node).backgroundColor);

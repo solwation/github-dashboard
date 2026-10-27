@@ -8,8 +8,8 @@
     "sections": [
       {
         "text": {
-          "sv": "Repository-chippet i gemensam listvy följer namnets längd i en fast kolumn så att status, prioritet, SP och kommentarer linjerar mellan rader.",
-          "en": "Repository chips in combined list view fit name length inside a fixed slot so status, priority, story points and comments align across rows."
+          "sv": "Listans repository-chip följer texten och fasta metadatafält linjerar utan att klippa story points, kommentarer eller +N-kontroller.",
+          "en": "List repository chips hug their text and fixed metadata slots align without clipping story points, comments or +N controls."
         },
         "issues": [
           342

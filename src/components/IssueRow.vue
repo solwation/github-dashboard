@@ -227,9 +227,8 @@ const partitionedLabels = computed(() => {
     }
   }
 
-  if (count === 0 && list.length > 0) {
-    count = 1;
-  }
+  // Preserve the +N control when even a readable first label cannot share the line.
+  if (count === 0 && avail >= MORE_WIDTH + GAP + 40) count = 1;
 
   return {
     visible: list.slice(0, count),
@@ -313,7 +312,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
       </span>
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
-      <span v-if="showRepository" class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
+      <span v-if="showRepository" class="row-mobile-repository-slot"><span class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span>
       <!-- A moved row's highlighted border already shows the move on phones; screen readers still hear it (#275). -->
       <span v-if="recentMove === true" class="row-mobile-move-note sr-only">{{ t('Flyttad till {column}', { column: status }) }}</span>
       <button v-if="recentMove === 'created'" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
@@ -452,28 +451,27 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     font-size: 10px; font-family: inherit; font-weight: inherit; font-style: normal; line-height: inherit;
   }
 }
+/* Keep a full metadata line until title, fixed slots and both time columns fit. */
 @media (min-width: 951px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1.2fr) minmax(0, 1.8fr) 6rem 7.25rem; }
-}
-/* Keep title and both time values readable; metadata gets its own line until all columns fit. */
-@media (min-width: 951px) {
-  @container issue-list (max-width: 849px) {
-    .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 6rem 7.25rem; }
-    .row-meta { grid-column: 1 / -1; grid-row: 2; }
-  }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 6rem 7.25rem; padding: var(--space-1) var(--space-2); row-gap: 0; }
+  .row-meta { grid-column: 1 / -1; grid-row: 2; }
+  .row-meta :deep(.issue-points), .row-meta :deep(.row-repository),
+  .row-meta :deep(.label), .row-meta :deep(.priority), .row-meta :deep(.row-status),
+  .row-meta :deep(.row-timeout), .row-meta :deep(.row-marker) { padding-block: 0; }
 }
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 5.4rem 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 3.5rem 6rem 7.25rem; }
   .row-meta { grid-column: 1 / -1; grid-row: 2; }
-  .row-comments { display: block; }
+  .row-comments { display: flex; align-items: center; }
 }
-@container issue-list (min-width: 1000px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) minmax(32rem, 1.8fr) 5.4rem 6rem 7.25rem; }
-  .issue-row .row-meta { grid-column: auto; grid-row: auto; }
+@media (min-width: 951px) and (pointer: fine) {
+  @container issue-list (850px <= width < 1250px) {
+    .row-comments :deep(.comment-count) { min-height: var(--space-4); padding: 0 var(--space-1); font-size: 10px; line-height: 1.4; }
+  }
 }
 @container issue-list (min-width: 1250px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) minmax(32rem, 1.8fr) 5.4rem 6rem 7.25rem; }
-  .row-meta { grid-column: auto; grid-row: auto; }
+  .issue-row { grid-template-columns: 4.6rem minmax(12rem, 1fr) minmax(38rem, 1.8fr) 3.5rem 6rem 7.25rem; }
+  .issue-row .row-meta { grid-column: auto; grid-row: auto; }
 }
 @media (min-width: 651px) and (max-width: 950px) {
   .issue-row { grid-template-columns: auto minmax(0, 1fr) auto 7.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; }
@@ -492,12 +490,13 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
   .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; min-height: 24px; overflow: hidden; }
   .row-mobile-summary > * { flex: 0 0 auto; }
-  .row-mobile-summary > .row-repository { order: 4; flex: 1 1 0; }
+  .row-mobile-summary > .row-mobile-repository-slot { display: flex; align-items: center; order: 4; flex: 1 1 0; }
   .row-mobile-summary > .row-mobile-priority { order: 2; }
   .row-mobile-summary > .issue-points { order: 3; flex-shrink: 1; }
   .row-mobile-summary > .row-mobile-activity { order: 6; }
   .row-mobile-summary > .row-mobile-relation { order: 4; }
-  .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; max-width: 9rem; padding: 1px 4px; font-size: 10px; }
+  .row-mobile-summary > .row-mobile-repository-slot { order: 5; min-width: 0; max-width: 9rem; }
+  .row-mobile-repository-slot > .row-repository { width: fit-content; max-width: 100%; padding: 1px 4px; font-size: 10px; }
   .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 10px; line-height: 1; white-space: nowrap; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
@@ -514,7 +513,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     min-height: 56px;
   }
   .row-mobile-summary { gap: 1px; }
-  .row-mobile-summary > .row-repository { flex: 0 0 auto; padding: 1px; }
+  .row-mobile-summary > .row-mobile-repository-slot { flex: 0 0 auto; }
+  .row-mobile-repository-slot > .row-repository { padding: 1px; }
   .row-mobile-summary .row-repository-name { display: none; }
   .row-mobile-summary > .issue-points { padding: 1px; font-size: 10px; }
   .row-mobile-priority svg { width: 9px; height: 9px; }

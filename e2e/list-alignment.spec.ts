@@ -386,7 +386,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
         await expect(row.locator('.row-time')).toBeVisible();
         await expect(row.locator('.row-meta')).toHaveCount(0);
         const overlapping = await row.evaluate(element => {
-          const boxes = [...element.querySelectorAll('.row-number,.row-title,.issue-points,.row-mobile-priority,.row-mobile-summary > .row-repository,.row-movement-marker,.row-comment-marker,.row-time,.row-outcome > *')]
+          const boxes = [...element.querySelectorAll('.row-number,.row-title,.issue-points,.row-mobile-priority,.row-mobile-summary .row-repository,.row-movement-marker,.row-comment-marker,.row-time,.row-outcome > *')]
             .map(item => ({ name: item.className, box: item.getBoundingClientRect() })).filter(item => item.box.width && item.box.height);
           return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left) > 1 && Math.min(a.box.bottom, b.box.bottom) - Math.max(a.box.top, b.box.top) > 1).map(b => `${a.name}/${b.name}`));
         });

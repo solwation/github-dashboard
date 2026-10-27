@@ -2031,7 +2031,7 @@ button.lane-sync.syncing { cursor: progress; }
 .row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: var(--badge-bg); color: var(--badge-text); }
 .row-meta .label i { width: 9px; height: 9px; }
 .row-meta > .row-labels { display: flex; align-items: center; gap: 5px; flex: 1 1 0; min-width: 0; overflow: hidden; }
-.row-labels .label { flex: 0 0 auto; max-width: 14rem; }
+.row-labels .label { flex: 0 1 auto; max-width: 14rem; }
 .row-labels .label-more {
   display: inline-flex;
   align-items: center;
@@ -2083,18 +2083,22 @@ button.lane-sync.syncing { cursor: progress; }
 .row-comment-marker { font-variant-numeric: tabular-nums; }
 @media (min-width: 951px) {
   .row-slot { display: flex; align-items: center; flex: 0 0 auto; overflow: hidden; }
-  .row-slot-comment { order: 1; width: 5.4rem; flex: 0 0 5.4rem; }
+  .row-slot-comment { order: 1; width: 3rem; flex: 0 0 3rem; }
   .row-slot-repository { order: 2; width: 8.5rem; flex: 0 0 8.5rem; }
   .row-status-group { order: 3; }
   .row-meta { flex-wrap: nowrap; }
-  .row-slot-movement { width: 5.4rem; flex: 0 0 5.4rem; }
-  .row-slot-timeout { width: 4.7rem; flex: 0 0 4.7rem; }
-  .row-slot-status { order: 3; width: 5.6rem; flex: 0 0 5.6rem; }
-  .row-slot-priority { order: 4; width: 4.8rem; flex: 0 0 4.8rem; }
+  .row-slot-movement { width: 4rem; flex: 0 0 4rem; }
+  .row-slot-timeout { width: 3.5rem; flex: 0 0 3.5rem; }
+  .row-slot-status { order: 3; width: 4.5rem; flex: 0 0 4.5rem; }
+  .row-slot-priority { order: 4; width: 4rem; flex: 0 0 4rem; }
   .issue-row .row-time { justify-self: stretch; text-align: left; }
-  .row-meta > .issue-points { order: 5; }
-  .row-meta > .row-labels { order: 6; }
-  .row-meta > .row-marker:not(.row-comment-marker) { order: 7; }
+  .row-meta > .issue-points { order: 5; flex: 0 0 3.2rem; width: 3.2rem; }
+  .row-meta > .row-labels { order: 7; }
+  .row-meta > .row-marker:not(.row-comment-marker) { order: 6; flex: 0 1 auto; max-width: 3rem; min-width: 0; overflow: hidden; }
+  .row-meta .row-parent-label, .row-meta .row-subtask-text { display: none; }
+  .row-slot > * { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .row-status-group { gap: var(--space-1); }
+  .row-slot-timeout, .row-slot-comment { min-height: var(--space-4); }
 }
 .row-time { justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; text-align: right; white-space: nowrap; }
 .row-time .backlog-age { color: var(--faint); }
