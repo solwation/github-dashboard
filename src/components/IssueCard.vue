@@ -13,7 +13,7 @@ import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
 import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
 const { t, locale } = useLanguage();
-import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref, useId, watch } from "vue";
 import { repositoryColor } from "../lib/repository-color";
 import type { ClosingCommit } from "../lib/commits";
 import type { ActivityMarker } from "../lib/activity";
@@ -84,6 +84,12 @@ const { progress, isSubtask, parent } = useIssueRelations(
 const commit = ref<ClosingCommit | null>(null);
 const commitState = ref<"idle" | "loading" | "loaded" | "error">("idle");
 let observer: IntersectionObserver | undefined;
+const labelsContainer = ref<HTMLElement>();
+const labelsWidth = ref(0);
+const labelsOpen = ref(false);
+const labelsTooltipId = useId();
+watch(() => props.issue.id, () => { labelsOpen.value = false; });
+let labelsObserver: ResizeObserver | undefined;
 let revision = 0;
 async function loadClosingCommit() {
   if (
@@ -133,6 +139,12 @@ watch(() => props.commitRetry, () => {
   }
 });
 onMounted(() => {
+  if (labelsContainer.value && typeof ResizeObserver !== "undefined") {
+    labelsObserver = new ResizeObserver(([entry]) => {
+      if (entry) labelsWidth.value = entry.contentRect.width;
+    });
+    labelsObserver.observe(labelsContainer.value);
+  }
   if (!("IntersectionObserver" in window)) {
     visible.value = true;
     return;
@@ -145,6 +157,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   revision++;
   observer?.disconnect();
+  labelsObserver?.disconnect();
 });
 const col = computed(() => column(props.issue, props.rules));
 // The card's own clock: per second only while its label shows seconds, and only while on screen (#120).
@@ -162,9 +175,36 @@ const typeTitle = computed(() => {
   return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
 });
 const rank = computed(() => priority(props.issue, props.rules));
-const visibleLabels = computed(() =>
-  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))).slice(0, 4),
+const allLabels = computed(() =>
+  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))),
 );
+let labelCanvas: HTMLCanvasElement | undefined;
+function labelWidth(name: string) {
+  labelCanvas ??= document.createElement("canvas");
+  const context = labelCanvas.getContext("2d");
+  if (context) context.font = '650 9px "DM Sans", system-ui, sans-serif';
+  // Chip border/padding, colour dot and gap; match .card-labels .label below.
+  return Math.min(176, Math.ceil(context?.measureText(name).width ?? name.length * 6) + 27);
+}
+const visibleLabelCount = computed(() => {
+  const labels = allLabels.value;
+  const available = labelsWidth.value;
+  if (!available) return Math.min(1, labels.length);
+  const widths = labels.map(label => labelWidth(label.name));
+  if (widths.reduce((sum, width) => sum + width, 0) + Math.max(0, labels.length - 1) * 4 <= available) return labels.length;
+  let used = 0, count = 0;
+  for (const width of widths) {
+    // Reserve the +N target, including its 44px touch hit area, before adding a chip.
+    if (used + width + (count ? 4 : 0) + 48 > available) break;
+    used += width + (count ? 4 : 0);
+    count++;
+  }
+  return Math.max(1, count);
+});
+const visibleLabels = computed(() => allLabels.value.slice(0, visibleLabelCount.value));
+const hiddenLabels = computed(() => allLabels.value.slice(visibleLabelCount.value));
+const hiddenLabelsTitle = computed(() => hiddenLabels.value.map(label => label.name).join(", "));
+const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { count: hiddenLabels.value.length, names: hiddenLabelsTitle.value }));
 </script>
 <template>
   <article
@@ -193,16 +233,7 @@ const visibleLabels = computed(() =>
         #{{ issue.number }}</span
       >
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
-      <span v-if="(repository && showRepository) || visibleLabels.length" class="labels">
-        <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
-        <span
-          v-for="label in visibleLabels"
-          :key="label.name"
-          class="label"
-          :title="label.name"
-          ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
-        >
-      </span>
+      <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
       </div>
       <div class="card-top-meta">
         <span v-if="isSubtask && parent" class="subtask-badge"
@@ -233,19 +264,29 @@ const visibleLabels = computed(() =>
       target="_blank"
       rel="noopener noreferrer"
       class="issue-title"
+      :title="issue.title"
       @click="emit('read')" @auxclick="emit('read')"
       >{{ issue.title }}<ArrowUpRight :size="13"
     /></a>
+      <span v-show="!rowDetails && allLabels.length" class="card-label-line">
+        <span ref="labelsContainer" class="card-labels">
+        <span
+          v-for="label in visibleLabels"
+          :key="label.name"
+          class="label"
+          :title="label.name"
+          ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
+        >
+        <span v-if="hiddenLabels.length" class="card-label-overflow" @keydown.esc="labelsOpen = false" @focusout="labelsOpen = false">
+          <button type="button" class="label-more" :title="hiddenLabelsTitle" :aria-label="hiddenLabelsAria" :aria-expanded="labelsOpen" :aria-controls="labelsTooltipId" @click="labelsOpen = !labelsOpen">+{{ hiddenLabels.length }}</button>
+          <span v-if="labelsOpen" :id="labelsTooltipId" class="card-label-tooltip" role="tooltip">{{ hiddenLabelsTitle }}</span>
+        </span>
+        </span>
+      </span>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" @parent-select="(repo, number) => emit('parentSelect', repo, number)" />
     <IssueDetails :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" @child-select="(repo, number) => emit('childSelect', repo, number)">
-      <template v-if="showTimeExplanation && !demo" #additional>
-        <IssueTimeExplanation :issue="issue" :repository="repository" :column="col" />
-      </template>
-    </IssueDetails>
-    <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
-      <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
-    </div>
+      <template #metadata>
     <div v-if="!rowDetails || issue.assignees.length" class="card-bottom">
       <template v-if="!rowDetails">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
@@ -289,6 +330,15 @@ const visibleLabels = computed(() =>
       <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
       <IssueTimeRemaining v-if="!rowDetails && (col === 'progress' || (col === 'backlog' && issue.sub_issues_summary?.total))" :issue="issue" :repository="repository" :active="visible" :in-progress="col === 'progress'" bar />
     </div>
+      </template>
+      <template v-if="showTimeExplanation && !demo" #additional>
+        <IssueTimeExplanation :issue="issue" :repository="repository" :column="col" />
+      </template>
+    </IssueDetails>
+    <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
+      <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
+    </div>
+
     <div
       v-if="col === 'closed' && !demo && loadCommit && (commitState === 'loading' || (commitState === 'loaded' && commit))"
       class="closing-commit"

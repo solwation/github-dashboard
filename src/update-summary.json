@@ -1,11 +1,12 @@
 {
   "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Tätare översikt och repositoryhuvuden ger boarden mer plats. Repositorysökning öppnas vid behov, och synktiderna har förklarande tooltips.",
-    "en": "Denser overview and repository headers make more room for the board. Repository search opens on demand, with clearer sync-time tooltips."
+    "sv": "Tätare översikt, issue-kort och repositoryhuvuden ger boarden mer plats. Kort visar titeln före labels och samlar metadata på färre rader.",
+    "en": "Denser overview, issue cards and repository headers make more room for the board. Card titles precede labels, with metadata on fewer rows."
   },
   "issues": [
     332,
+    333,
     334
   ]
 }

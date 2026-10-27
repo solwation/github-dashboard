@@ -31,6 +31,7 @@ provide(imageGalleryKey, { description: rendered, comments: commentImages });
 <template>
   <div class="issue-details">
     <div class="details-toolbar">
+      <slot name="metadata" />
       <button v-if="!hideToggle" type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>

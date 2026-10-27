@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare översikt och repositoryhuvuden visar boarden tidigare; listlabels behåller läsbar bredd och dolda labels samlas i +N.",
-      "en": "Denser overview and repository headers bring the board into view sooner; list labels stay readable with +N for overflow."
+      "sv": "Tätare översikt, kort och repositoryhuvuden ger mer plats åt ärenden; listlabels förblir läsbara och dolda labels samlas i +N.",
+      "en": "Denser overview, cards and repository headers make room for issues; list labels stay readable and overflow is shown with +N."
     },
     "sections": [
       {
@@ -31,6 +31,15 @@
         },
         "issues": [
           334
+        ]
+      },
+      {
+        "text": {
+          "sv": "Issue-kort visar titeln före en rad labels med +N och samlar tid, kommentarer och expandering på en kompakt metadatarad.",
+          "en": "Issue cards show titles before one line of labels with +N and combine time, comments and expansion in a compact metadata row."
+        },
+        "issues": [
+          333
         ]
       }
     ]
