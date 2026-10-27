@@ -80,9 +80,9 @@ test("status sounds follow repository opt-in and live transitions without replay
   await openSettings(page);
   await page.getByLabel("Språk", { exact: true }).selectOption("en");
   const soundChoice = page.getByLabel("Notification sounds", { exact: true });
-  await expect(soundChoice).toHaveValue("true");
-  await soundChoice.focus(); await page.keyboard.press("End"); await page.keyboard.press("Tab");
-  await expect(soundChoice).toHaveValue("false");
+  await expect(soundChoice).toBeChecked();
+  await soundChoice.focus(); await page.keyboard.press("Space"); await page.keyboard.press("Tab");
+  await expect(soundChoice).not.toBeChecked();
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await repositoryNotification(page, "alpha", async toggle => { await expect(toggle).toBeChecked(); });
   await expect.poll(() => readSettings(page, "sound-test").then(saved => saved?.preferences?.notificationSounds)).toBe(false);
@@ -100,15 +100,15 @@ test("status sounds follow repository opt-in and live transitions without replay
   await page.reload();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   await openSettings(page, "Settings");
-  await expect(soundChoice).toHaveValue("false");
+  await expect(soundChoice).not.toBeChecked();
   expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("notificationSounds");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   states.alpha = { state: "open", labels: [] };
   await refreshWhenIdle();
   await expect(page.locator("#repo-1 .backlog .issue-card")).toHaveCount(1);
   await openSettings(page, "Settings");
-  await soundChoice.focus(); await page.keyboard.press("Home"); await page.keyboard.press("Tab");
-  await expect(soundChoice).toHaveValue("true");
+  await soundChoice.focus(); await page.keyboard.press("Space"); await page.keyboard.press("Tab");
+  await expect(soundChoice).toBeChecked();
   await page.getByRole("button", { name: "Done", exact: true }).click();
   expect(await notes()).toEqual([]);
   states.alpha!.labels = ["in-progress"];
@@ -129,7 +129,7 @@ test("status sounds follow repository opt-in and live transitions without replay
   expect(await notes()).toEqual([]);
   // Muting belongs to the signed-in account and survives explicit logout.
   await openSettings(page);
-  await page.getByLabel("Notifikationsljud", { exact: true }).selectOption("false");
+  await page.getByLabel("Notifikationsljud", { exact: true }).uncheck();
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await expect.poll(() => readSettings(page, "sound-test").then(saved => saved?.preferences?.notificationSounds)).toBe(false);
   const signOut = async () => {
@@ -145,12 +145,12 @@ test("status sounds follow repository opt-in and live transitions without replay
   await page.getByRole("checkbox", { name: "sample/alpha" }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
   await openSettings(page);
-  await expect(page.getByLabel("Notifikationsljud", { exact: true })).toHaveValue("true");
+  await expect(page.getByLabel("Notifikationsljud", { exact: true })).toBeChecked();
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await signOut(); login = "sound-test"; await signIn();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   await openSettings(page);
-  await expect(page.getByLabel("Notifikationsljud", { exact: true })).toHaveValue("false");
+  await expect(page.getByLabel("Notifikationsljud", { exact: true })).not.toBeChecked();
 });
 
 for (const audioMode of ['unsupported', 'denied'] as const) {

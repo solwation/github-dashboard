@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare vyer, tydligare text och rymligare repositorynamn förbättrar överblicken. SP-labels styr exakta poäng och expanderad lista visar alla labels.",
-      "en": "Denser views, clearer text and longer repository names improve scanning. Point labels set exact sizes and expanded lists show all labels."
+      "sv": "Tätare vyer, läsbarare text och grupperade inställningar förenklar överblicken. SP-labels anger exakta poäng och expanderad lista visar alla labels.",
+      "en": "Denser views, clearer text and grouped settings improve scanning. Point labels set exact sizes and expanded lists show all labels."
     },
     "sections": [
       {
@@ -77,6 +77,15 @@
         },
         "issues": [
           336
+        ]
+      },
+      {
+        "text": {
+          "sv": "Inställningarna grupperas i kompakta sektioner med enhetliga fält och kryssrutor, så desktopdialogen ryms utan scroll och mobilen behåller tydliga tryckytor.",
+          "en": "Settings use compact groups with consistent fields and checkboxes, fitting the desktop dialog without scrolling while retaining clear mobile touch targets."
+        },
+        "issues": [
+          337
         ]
       }
     ]

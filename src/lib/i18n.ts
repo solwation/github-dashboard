@@ -35,6 +35,9 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Utseende": "Appearance",
+  "Board": "Board",
+  "Tidsestimat": "Time estimates",
   "Bild": "Image",
   "{count} fler labels: {names}": "{count} more labels: {names}",
   "{count} fler labels": "{count} more labels",
