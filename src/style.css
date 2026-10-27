@@ -1926,6 +1926,62 @@ button.lane-sync.syncing { cursor: progress; }
   }
 }
 
+.row-expanded-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  margin-bottom: 4px;
+}
+.row-expanded-labels .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.4;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  border: 1px solid var(--line);
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.row-expanded-labels .label i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.row-expanded-labels .label-text {
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.row-popup-labels {
+  margin-bottom: 0;
+  padding: 12px 48px 10px 14px;
+  background: var(--surface);
+  border: 1px solid #e4e9ec;
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+}
+.row-popup:has(.row-popup-labels) > .issue-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
+}
+.row-popup .issue-card .card-top .labels > .label {
+  display: none;
+}
+
 .row-popup-backdrop { padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
 .row-popup { position: relative; width: 100%; max-width: 440px; max-height: calc(100dvh - max(16px, env(safe-area-inset-top) + env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; scrollbar-gutter: stable; }
 .row-popup > .issue-card { margin: 0; box-shadow: 0 20px 60px #10263138; }
@@ -2295,6 +2351,8 @@ button.lane-sync.syncing { cursor: progress; }
 :root[data-theme="dark"] .row-popup-close { color: var(--muted); }
 :root[data-theme="dark"] .row-popup-close:hover { background: var(--hover); color: var(--text-strong); }
 :root[data-theme="dark"] .row-close { background: var(--card); border-color: #30424a; }
+:root[data-theme="dark"] .row-popup-labels { background: var(--card); border-color: #30424a; }
+:root[data-theme="dark"] .row-expanded-labels .label { background: var(--surface-sunken); border-color: var(--line); color: var(--text); }
 /* Row badge and state colours come from tokens. These dark selectors stay only for the cascade:
    .row-meta .label must outrank the dark .label rules, .row-comment-marker the phone
    .row-mobile-activity chip, and the row states the dark .issue-row base and :hover rules. */

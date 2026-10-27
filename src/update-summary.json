@@ -1,12 +1,10 @@
 {
-  "baseCommit": "9f707016817965d994bf36c625ea574677946489",
+  "baseCommit": "5b21a27e7f867086053e1a8ad6799fc4d7a8ceef",
   "summary": {
-    "sv": "Tätare översikt, issue-kort och repositoryhuvuden ger boarden mer plats. Kort visar titeln före labels och samlar metadata på färre rader.",
-    "en": "Denser overview, issue cards and repository headers make more room for the board. Card titles precede labels, with metadata on fewer rows."
+    "sv": "Expanderade ärenden i listvyn visar alla labels i full text med radbrytning i stället för trunkering i desktop-panelen och mobilens popup.",
+    "en": "Expanded issues in list mode display all labels in full text with word wrap instead of truncation in desktop panel and mobile popup."
   },
   "issues": [
-    332,
-    333,
-    334
+    341
   ]
 }

@@ -2,10 +2,19 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare översikt, kort och repositoryhuvuden ger mer plats åt ärenden; listlabels förblir läsbara och dolda labels samlas i +N.",
-      "en": "Denser overview, cards and repository headers make room for issues; list labels stay readable and overflow is shown with +N."
+      "sv": "Tätare översikt, kort och huvuden ger mer plats åt ärenden; expanderade listärenden visar alla labels och övriga har +N.",
+      "en": "Denser overview, cards and headers leave more room for issues; expanded list issues show full labels and overflow uses +N."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Expanderade ärenden i listvyn visar alla labels i full text med radbrytning i den expanderade panelen och mobilens popup.",
+          "en": "Expanded issues in list mode display all labels in full text with word wrap in the expanded panel and mobile popup."
+        },
+        "issues": [
+          341
+        ]
+      },
       {
         "text": {
           "sv": "Labels i listläget behåller läsbar bredd, långa labels trunkeras vid maxbredd och dolda labels samlas i ett tillgängligt +N-chip med tooltip.",
