@@ -29,11 +29,11 @@ for (const scenario of [1366, 1600, 1250, 950, 390].map(width => ({ width, large
     await expect(page.locator(".sidebar-repository .status-count")).toHaveCount(27);
     if (large) {
       await expect(page.locator(".has-wide-counts")).toHaveCount(1);
-      const measured = await page.locator(".sidebar-repository").evaluateAll(rows => rows.map(row => {
+      const measured = await page.locator(".sidebar-repository-row").evaluateAll(rows => rows.map(row => {
         const counts = row.querySelector(".repository-counts")!.getBoundingClientRect();
-        const slots = row.querySelector(".repo-slots")!.getBoundingClientRect();
+        const label = row.querySelector(".repository-label")!.getBoundingClientRect();
         const values = [...row.querySelectorAll<HTMLElement>(".status-count-value")];
-        return { separate: counts.bottom <= slots.top + 1, full: values.every(value => value.scrollWidth <= value.clientWidth + 1),
+        return { separate: counts.top >= label.bottom, full: values.every(value => value.scrollWidth <= value.clientWidth + 1),
           lefts: [...row.querySelectorAll(".status-count")].map(value => value.getBoundingClientRect().left) };
       }));
       for (const row of measured) {
@@ -66,8 +66,8 @@ for (const scenario of [1366, 1600, 1250, 950, 390].map(width => ({ width, large
           expect(metrics.footerHeight).toBeLessThanOrEqual(80);
           if (width === 1366) {
             expect(metrics.sidebarWidth).toBe(226);
-            expect(metrics.rows.find(row => row.name === names[0])!.clipped).toBe(false);
-            expect(metrics.rows.find(row => row.name === names[1])!.clipped).toBe(false);
+            // Name-line icons reserve space; long names retain their tooltip when truncated.
+            await expect(page.locator(`[data-repository="density/${names[0]}"] .repository-label`)).toHaveAttribute("title", `density/${names[0]}`);
             if (process.env.EVIDENCE_DIR && existsSync(`${process.env.EVIDENCE_DIR}/baseline-1366.json`)) {
               const baseline = JSON.parse(readFileSync(`${process.env.EVIDENCE_DIR}/baseline-1366.json`, "utf8"));
               expect(metrics.visible).toBeGreaterThan(baseline[0].visible);

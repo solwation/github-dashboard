@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
 import { revealPhoneMenu } from './support/phone-menu';
 
 const long = 'a-very-long-repository-name-that-must-keep-its-ellipsis-in-the-slim-sidebar';
@@ -8,6 +9,8 @@ const repositories = [
   { id: 3, name: long, full_name: `Sample/${long}`, private: true, has_pages: true },
   { id: 4, name: 'unknown', full_name: 'Sample/unknown' },
   { id: 5, name: 'notes', full_name: 'Sample/notes', private: true, has_pages: false },
+  { id: 6, name: 'pages-only', full_name: 'Sample/pages-only', has_pages: true },
+  { id: 7, name: 'private-only', full_name: 'Sample/private-only', private: true, has_pages: false },
 ].map(repo => ({ ...repo, description: 'Fixture', html_url: `https://github.com/${repo.full_name}`, owner: { login: 'Sample' } }));
 
 // Repositories that receive a status move after the first load, so their unread marker shows.
@@ -17,10 +20,15 @@ const scenarios = [
   { name: 'narrow', viewport: { width: 1000, height: 900 }, mobile: false, theme: 'light' as const },
   { name: 'desktop-dark', viewport: { width: 1600, height: 1000 }, mobile: false, theme: 'dark' as const },
   { name: 'narrow-dark', viewport: { width: 1000, height: 900 }, mobile: false, theme: 'dark' as const },
+  { name: 'touch-tablet', viewport: { width: 1000, height: 1100 }, mobile: true, theme: 'light' as const },
+  { name: 'touch-tablet-dark', viewport: { width: 1000, height: 1100 }, mobile: true, theme: 'dark' as const },
+  { name: 'rail', viewport: { width: 950, height: 700 }, mobile: false, theme: 'light' as const },
+  { name: 'rail-dark', viewport: { width: 950, height: 700 }, mobile: false, theme: 'dark' as const },
+  { name: 'phone-dark', viewport: { width: 390, height: 844 }, mobile: true, theme: 'dark' as const },
   { name: 'phone', viewport: { width: 390, height: 844 }, mobile: true, theme: 'light' as const },
 ];
 for (const scenario of scenarios) test.describe(scenario.name, () => {
-  test.use({ viewport: scenario.viewport, isMobile: scenario.mobile, hasTouch: scenario.mobile, colorScheme: scenario.theme, ...(scenario.mobile ? {} : { deviceScaleFactor: 2 }) });
+  test.use({ viewport: scenario.viewport, isMobile: scenario.mobile, hasTouch: scenario.mobile, colorScheme: scenario.theme, reducedMotion: "reduce", ...(scenario.mobile ? {} : { deviceScaleFactor: 2 }) });
   test('sidebar shows visibility and a separate Pages link without activating the row', async ({ page }, testInfo) => {
   const created = new Date(Date.now() - 86_400_000).toISOString();
   let moved = false, updated = created;
@@ -38,6 +46,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     }
     await route.fulfill({ json: data });
   });
+  await page.route('https://sample.github.io/**', route => route.fulfill({ body: '<title>Fixture Pages</title>' }));
   await page.goto('/');
   await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
   await page.getByLabel('GitHub personal access token').fill('fixture-sidebar-pages-token');
@@ -46,7 +55,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', scenario.theme);
   await revealPhoneMenu(page);
-  if (scenario.mobile) { // The repository sidebar is not part of the phone layout (<=650px / <=950px).
+  if (scenario.viewport.width <= 950) { // The repository sidebar is hidden at rail/phone widths.
     await expect(page.locator('.sidebar-projects')).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
     await page.screenshot({ path: testInfo.outputPath('sidebar-pages-phone.png') });
@@ -54,9 +63,9 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   }
   const rows = page.locator('.sidebar-repository-row');
   const row = (name: string) => page.locator(`.sidebar-repository-row[data-repository="Sample/${name}"]`);
-  await expect(rows).toHaveCount(5);
+  await expect(rows).toHaveCount(7);
   // A status move after the first load marks two repositories as recently active.
-  await expect(page.locator('.repo-lane')).toHaveCount(5);
+  await expect(page.locator('.repo-lane')).toHaveCount(7);
   for (const name of ['site', 'notes']) await expect(row(name).locator('.backlog')).toContainText('1');
   const toggle = page.locator('.sidebar-inactive-toggle');
   if (await toggle.isVisible()) await toggle.click();
@@ -88,38 +97,65 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     return { clipped: label.scrollWidth > label.clientWidth, over: document.documentElement.scrollWidth > innerWidth, bodyOver: body.scrollWidth > body.clientWidth };
   });
   expect(box).toEqual({ clipped: true, over: false, bodyOver: false });
-  // Grid (#295): each trailing icon type shares one x in every row, is centred on the name line,
-  // the name spans the slots, and counts and optional icons share the line below it.
+  // Name-line groups are right-aligned, with only present icons taking space.
   const grid = await rows.evaluateAll(list => list.map(row => {
-    const rect = (selector: string) => { const el = row.querySelector(selector); return el ? el.getBoundingClientRect() : null; };
-    const label = rect('.repository-label')!, slots = rect('.repo-slots')!, counts = rect('.repository-counts'), dot = rect('.repo-dot')!;
-    const icon = (selector: string) => { const r = rect(selector); return r && { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
+    const rect = (selector: string) => row.querySelector(selector)?.getBoundingClientRect() ?? null;
+    const label = rect('.repository-label')!, counts = rect('.repository-counts')!, dot = rect('.repo-dot')!;
+    const trailing = rect('.repo-pages svg') ?? rect('.repo-visibility svg');
+    const visibility = rect('.repo-visibility'), pages = rect('.repo-pages'), unread = rect('.recent-activity');
+    const group = visibility || pages;
+    const centre = (r: DOMRect) => r.top + r.height / 2;
     return {
-      label: { left: label.left, right: label.right, y: label.top + label.height / 2 }, slotsLeft: slots.left, slotsY: slots.top + slots.height / 2, dotY: dot.top + dot.height / 2,
-      counts: counts && { left: counts.left, height: counts.height },
-      unread: icon('.recent-activity'), visibility: icon('.repo-visibility svg'), pages: icon('.repo-pages svg'),
+      lastIconX: trailing && trailing.left + trailing.width / 2,
+      name: row.getAttribute('data-repository'), labelLeft: label.left, labelRight: label.right, labelY: centre(label),
+      dotY: centre(dot), countsLeft: counts.left, countsTop: counts.top, countsBottom: counts.bottom, labelBottom: label.bottom,
+      group: group && { left: visibility?.left ?? pages!.left, right: pages?.right ?? visibility!.right, y: centre(group) },
+      visibility: visibility && { right: visibility.right, y: centre(visibility) },
+      pages: pages && { left: pages.left, right: pages.right, y: centre(pages), width: pages.width, height: pages.height },
+      unread: unread && { y: centre(unread) },
+      fullCounts: [...row.querySelectorAll<HTMLElement>('.status-count-value')].every(el => el.scrollWidth <= el.clientWidth + 1),
     };
   }));
-  for (const key of ['unread', 'visibility', 'pages'] as const) {
-    const present = grid.map(item => item[key]).filter(Boolean) as { x: number; y: number; w: number }[];
-    expect(present.length, key).toBeGreaterThanOrEqual(2);
-    const xs = present.map(item => item.x);
-    expect(Math.max(...xs) - Math.min(...xs), `${key} column`).toBeLessThanOrEqual(1);
-  }
-  const iconWidths = grid.flatMap(item => [item.visibility, item.pages]).filter(Boolean).map(item => Math.round(item!.w));
-  expect(new Set(iconWidths).size, 'one icon size').toBe(1);
-  // Slot order is unread, visibility, Pages; one shared right edge.
-  const columns = (['unread', 'visibility', 'pages'] as const).map(key => grid.find(item => item[key])![key]!.x);
-  expect(columns[0]).toBeLessThan(columns[1]);
-  expect(columns[1]).toBeLessThan(columns[2]);
+  const rightEdges = grid.flatMap(item => item.group ? [item.group.right] : []);
+  expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThanOrEqual(1);
+  const lastIcons = grid.flatMap(item => item.lastIconX === null ? [] : [item.lastIconX]);
+  expect(Math.max(...lastIcons) - Math.min(...lastIcons)).toBeLessThanOrEqual(1);
   for (const item of grid) {
-    expect(item.label.right).toBeGreaterThan(item.slotsLeft);
-    expect(Math.abs(item.dotY - item.label.y)).toBeLessThanOrEqual(1);
-    for (const key of ['unread', 'visibility', 'pages'] as const) if (item[key]) expect(Math.abs(item[key]!.y - item.slotsY), `${key} centred`).toBeLessThanOrEqual(1);
-    expect(item.counts).not.toBeNull();
-    expect(Math.abs(item.counts!.left - item.label.left)).toBeLessThanOrEqual(1);
-    expect(item.counts!.height).toBeLessThan(24);
+    expect(Math.abs(item.labelLeft - grid[0]!.labelLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(item.countsLeft - item.labelLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(item.dotY - item.labelY)).toBeLessThanOrEqual(1);
+    expect(item.countsTop).toBeGreaterThanOrEqual(item.labelBottom);
+    expect(item.countsBottom - item.countsTop).toBeLessThan(24);
+    expect(item.fullCounts).toBe(true);
+    if (item.group) {
+      expect(item.labelRight).toBeLessThanOrEqual(item.group.left - 7);
+      expect(Math.abs(item.group.y - item.labelY)).toBeLessThanOrEqual(1);
+    }
+    if (item.visibility) expect(Math.abs(item.visibility.y - item.labelY)).toBeLessThanOrEqual(1);
+    if (item.pages) {
+      expect(Math.abs(item.pages.y - item.labelY)).toBeLessThanOrEqual(1);
+      if (scenario.mobile) { expect(item.pages.width).toBeGreaterThanOrEqual(44); expect(item.pages.height).toBeGreaterThanOrEqual(44); }
+    }
+    if (item.visibility && item.pages) expect(item.pages.left - item.visibility.right).toBe(4);
+    if (item.unread) expect(item.unread.y).toBeGreaterThanOrEqual(item.countsTop);
   }
+  await expect(row('unknown').locator('.repo-icons')).toHaveCount(0);
+  await expect(row('pages-only').locator('.repo-visibility')).toHaveCount(0);
+  await expect(row('pages-only').locator('.repo-pages')).toHaveCount(1);
+  await expect(row('private-only').locator('.repo-icons > *')).toHaveCount(1);
+  await expect(row(long).locator('.repository-label')).toHaveAttribute('title', `Sample/${long}`);
+  // Pages is the next keyboard stop after project selection and opens independently.
+  await row('site').locator('.sidebar-repository').focus();
+  await page.keyboard.press('Tab');
+  await expect(row('site').locator('.repo-pages')).toBeFocused();
+  const [keyboardPopup] = await Promise.all([page.waitForEvent('popup'), page.keyboard.press('Enter')]);
+  await keyboardPopup.close();
+  expect(await page.evaluate(() => location.hash)).toBe(hash);
+  await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+  await row('site').locator('.sidebar-repository').click();
+  await expect(row('site').locator('.sidebar-repository')).toHaveClass(/repository-selected/);
+  await expect(row('site').locator('.repo-dot')).toBeVisible();
+  writeFileSync(testInfo.outputPath('sidebar-geometry.json'), JSON.stringify(grid, null, 2));
   await page.mouse.move(scenario.viewport.width - 20, scenario.viewport.height - 20);
   await page.locator('.sidebar-projects').screenshot({ path: testInfo.outputPath(`sidebar-${scenario.name}.png`) });
   await page.screenshot({ path: testInfo.outputPath(`sidebar-pages-${scenario.name}.png`) });
