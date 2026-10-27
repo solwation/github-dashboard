@@ -1,10 +1,13 @@
 {
-  "baseCommit": "5b21a27e7f867086053e1a8ad6799fc4d7a8ceef",
+  "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Expanderade ärenden i listvyn visar alla labels i full text med radbrytning i stället för trunkering i desktop-panelen och mobilens popup.",
-    "en": "Expanded issues in list mode display all labels in full text with word wrap instead of truncation in desktop panel and mobile popup."
+    "sv": "Tätare översikt, kort och huvuden ger mer plats åt ärenden; expanderade listärenden visar alla labels och övriga har +N.",
+    "en": "Denser overview, cards and headers leave more room for issues; expanded list issues show full labels and overflow uses +N."
   },
   "issues": [
+    332,
+    333,
+    334,
     341
   ]
 }
