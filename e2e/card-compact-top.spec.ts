@@ -20,7 +20,7 @@ async function fixture(page: Page) {
   const issues = Array.from({ length: 8 }, (_, index) => {
     const number = index + 1, closed = number >= 6;
     return { id: number, number, title: number <= 2 ? `Plain task ${number}` : number === 3 ? "A long issue title that remains the first readable content before labels and still wraps safely on a narrow phone" : number === 4 ? "Running task" : number === 5 ? "Overdue task" : `Completed task ${number}`,
-      body: "## Task details\n\nFictional issue description for keyboard and responsive checks.", comments: number === 3 ? (refreshed ? 3 : 2) : 0,
+      body: "## Task details\n\nFictional issue description for keyboard and responsive checks.", comments: number === 3 ? (refreshed ? 1357 : 1234) : 0,
       state: closed ? "closed" : "open", labels: number === 3 ? labels.map(name => ({ name, color: "aabbcc" })) : number === 4 || number === 5 ? [{ name: "in-progress", color: "147d69" }] : [], assignees: [],
       created_at: iso(now - 10 * day), updated_at: iso(refreshed ? now : now - day), closed_at: closed ? iso(now - day) : null,
       workStartedAt: closed ? iso(now - day - 30 * minute) : undefined, html_url: `${repo.html_url}/issues/${number}` };
@@ -29,7 +29,7 @@ async function fixture(page: Page) {
     const url = new URL(route.request().url());
     const event = url.pathname.match(/\/issues\/(\d+)\/events$/);
     const number = Number(event?.[1]);
-    const current = issues.map(issue => ({ ...issue, comments: issue.number === 3 ? (refreshed ? 3 : 2) : 0,
+    const current = issues.map(issue => ({ ...issue, comments: issue.number === 3 ? (refreshed ? 1357 : 1234) : 0,
       labels: refreshed && issue.number === 2 ? [{ name: "in-progress", color: "147d69" }] : issue.labels,
       updated_at: refreshed ? iso(now) : issue.updated_at }));
     await route.fulfill({ json: url.pathname === "/user" ? { login: "compact-cards-test", avatar_url: "" }
@@ -65,6 +65,20 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
       if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
       for (const view of ["Kort", "Lista"]) {
         await mode.getByRole("button", { name: view, exact: true }).click();
+        if (view === "Lista") {
+          await expect(page.locator('.row-comments .new-comments-badge')).toHaveCount(0);
+          const geometry = await page.locator('.issue-row').evaluateAll(rows => rows.map(row => {
+            const slot = row.querySelector('.row-comments'), button = slot?.querySelector('.comment-count');
+            if (!button || !button.getBoundingClientRect().width) return null;
+            const rect = button.getBoundingClientRect(), slotBox = slot!.getBoundingClientRect();
+            const time = row.querySelector('.row-time')!.getBoundingClientRect();
+            return { contained: rect.right <= slotBox.right + 1, gap: time.left - rect.right, overflow: button.scrollWidth - button.clientWidth };
+          }).filter(Boolean));
+          for (const item of geometry) { expect(item!.contained).toBe(true); expect(item!.gap).toBeGreaterThanOrEqual(4); expect(item!.overflow).toBeLessThanOrEqual(1); }
+          await writeFile(info.outputPath(`${split ? "split" : "combined"}-comments-geometry.json`), JSON.stringify(geometry, null, 2));
+        } else {
+          await expect(page.locator('.new-comments-badge')).toHaveText('+123');
+        }
         const item = page.locator(view === "Kort" ? ".issue-card" : ".issue-row").first();
         await item.scrollIntoViewIfNeeded();
         await expect(item).toBeVisible();

@@ -372,7 +372,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         >+{{ hiddenLabels.length }}</button></span>
     </span>
     <div v-if="!isPhone" class="row-comments" @click.stop>
-      <IssueComments :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
+      <IssueComments :show-new-badge="false" :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <span class="row-time">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
@@ -442,6 +442,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-elapsed-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .row-comments { display: none; min-width: 0; }
+.row-comments :deep(.comment-count) { max-width: 100%; gap: var(--space-1); padding-inline: var(--space-1); }
+.row-comments :deep(.comment-count-value) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-mobile-summary { display: none; }
 .row-outcome { display: flex; align-items: center; justify-content: flex-end; min-width: 0; grid-column: -2 / -1; }
 @media (min-width: 951px) {

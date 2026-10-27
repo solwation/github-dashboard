@@ -8,14 +8,15 @@ import { useMarkdown } from "../lib/lazy-markdown";
 import { commentTimeLabel } from "../lib/time";
 import type { Issue, IssueComment } from "../lib/model";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   issue: Issue;
   count: number;
   newComments?: number;
+  showNewBadge?: boolean;
   demo?: boolean;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   session?: number;
-}>();
+}>(), { showNewBadge: true });
 const emit = defineEmits<{ read: [] }>();
 const { t, locale } = useLanguage();
 const hasNew = computed(() => Boolean(props.newComments && props.newComments > 0));
@@ -134,7 +135,7 @@ onBeforeUnmount(clear);
   >
     <MessageCircle :size="13" aria-hidden="true" :class="['comment-icon', { 'comment-icon-animated': hasNew }]" />
     <span class="comment-count-value">{{ count }}</span>
-    <span v-if="hasNew" class="new-comments-badge" aria-hidden="true">+{{ newComments }}</span>
+    <span v-if="hasNew && showNewBadge !== false" class="new-comments-badge" aria-hidden="true">+{{ newComments }}</span>
   </button>
   <dialog ref="dialog" class="comments-dialog" :aria-labelledby="titleId" @cancel.prevent="close" @close="clear" @keydown.esc.stop.prevent="close">
     <template v-if="open">
