@@ -30,6 +30,36 @@ async function fixture(page: Page) {
   await page.getByRole("checkbox", { name: repo.full_name }).check();
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
 }
+// ResizeObserver loop notifications are native window errors, not necessarily pageerror (#343).
+async function trackLabelObservers(page: Page) {
+  await page.addInitScript(() => {
+    const state = { errors: [] as string[], deliveries: 0 };
+    Object.assign(window, { labelObserverCheck: state });
+    window.addEventListener("error", event => { if (event.message) state.errors.push(event.message); });
+    const NativeObserver = window.ResizeObserver;
+    window.ResizeObserver = class extends NativeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        super((entries, observer) => {
+          if (entries.some(entry => entry.target.matches(".card-labels, .row-labels"))) state.deliveries++;
+          callback(entries, observer);
+        });
+      }
+    };
+  });
+}
+async function assertLabelObserversSettled(page: Page) {
+  const result = await page.evaluate(async () => {
+    const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    // Allow deferred measurement, Vue rendering and the resulting height-only delivery to finish.
+    for (let i = 0; i < 4; i++) await frame();
+    const state = (window as Window & { labelObserverCheck: { errors: string[]; deliveries: number } }).labelObserverCheck;
+    const before = state.deliveries;
+    for (let i = 0; i < 4; i++) await frame();
+    return { errors: [...state.errors], settledDeliveries: state.deliveries - before };
+  });
+  expect(result.errors).toEqual([]);
+  expect(result.settledDeliveries).toBe(0);
+}
 async function assertSizes(items: Locator) {
   await expect(items).toHaveCount(specs.length);
   for (const spec of specs) {
@@ -89,7 +119,15 @@ for (const scenario of [
 ]) test(`label provenance fits cards and list: ${scenario.name}`, async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE", reducedMotion: "reduce" });
   const page = await context.newPage();
+  await trackLabelObservers(page);
   await fixture(page);
+  // Cross label-fit thresholds before the mode changes unmount the measured cards.
+  if (scenario.name === "wide" || scenario.name === "portrait") {
+    for (const width of [scenario.width - 100, scenario.mobile ? 320 : 1000, scenario.width]) {
+      await page.setViewportSize({ width, height: scenario.height });
+      await assertLabelObserversSettled(page);
+    }
+  }
   const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
   for (const theme of ["light", "dark"]) {
     await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
@@ -100,6 +138,7 @@ for (const scenario of [
         const items = page.locator(view === "Kort" ? ".issue-card" : ".issue-row");
         await assertSizes(items);
         await fits(page, items.locator(".issue-points"));
+        await assertLabelObserversSettled(page);
         if (view === "Lista") {
           const edges = await items.evaluateAll(rows => rows.map(row => ({ left: row.getBoundingClientRect().left, right: row.getBoundingClientRect().right, height: row.getBoundingClientRect().height })));
           for (const row of edges) { expect(Math.abs(row.left - edges[0]!.left)).toBeLessThanOrEqual(1); expect(Math.abs(row.right - edges[0]!.right)).toBeLessThanOrEqual(1); expect(row.height).toBeLessThan(150); }
@@ -113,5 +152,11 @@ for (const scenario of [
     await expect(page.getByRole("dialog").locator(".issue-points")).toHaveText("4 SP");
     await fits(page, page.getByRole("dialog").locator(".issue-points"));
   }
+  // Mode and repository collapse remove observed nodes, including pending frame updates.
+  if (scenario.mobile) await page.keyboard.press("Escape");
+  for (const view of ["Kort", "Lista", "Kort"]) await mode.getByRole("button", { name: view, exact: true }).click();
+  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).check();
+  await page.locator(".repo-lane .collapse-project").click();
+  await assertLabelObserversSettled(page);
   await context.close();
 });

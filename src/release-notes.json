@@ -105,6 +105,15 @@
         "issues": [
           339
         ]
+      },
+      {
+        "text": {
+          "sv": "Labelbredder uppdateras stabilt vid byte av vy, tema och skärmbredd utan att utlösa observerfel.",
+          "en": "Label widths update reliably when changing views, themes and viewport widths without triggering observer errors."
+        },
+        "issues": [
+          343
+        ]
       }
     ]
   },

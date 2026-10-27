@@ -90,6 +90,8 @@ const labelsOpen = ref(false);
 const labelsTooltipId = useId();
 watch(() => props.issue.id, () => { labelsOpen.value = false; });
 let labelsObserver: ResizeObserver | undefined;
+let labelsFrame: number | undefined;
+let pendingLabelsWidth = 0;
 let revision = 0;
 async function loadClosingCommit() {
   if (
@@ -141,7 +143,15 @@ watch(() => props.commitRetry, () => {
 onMounted(() => {
   if (labelsContainer.value && typeof ResizeObserver !== "undefined") {
     labelsObserver = new ResizeObserver(([entry]) => {
-      if (entry) labelsWidth.value = entry.contentRect.width;
+      if (!entry) return;
+      pendingLabelsWidth = entry.contentRect.width;
+      if (labelsFrame !== undefined || pendingLabelsWidth === labelsWidth.value) return;
+      // Label count changes can change this observed row's height. Apply the latest width
+      // after observer delivery so Vue cannot resize the row again in the same delivery (#343).
+      labelsFrame = requestAnimationFrame(() => {
+        labelsFrame = undefined;
+        labelsWidth.value = pendingLabelsWidth;
+      });
     });
     labelsObserver.observe(labelsContainer.value);
   }
@@ -158,6 +168,7 @@ onBeforeUnmount(() => {
   revision++;
   observer?.disconnect();
   labelsObserver?.disconnect();
+  if (labelsFrame !== undefined) cancelAnimationFrame(labelsFrame);
 });
 const col = computed(() => column(props.issue, props.rules));
 // The card's own clock: per second only while its label shows seconds, and only while on screen (#120).
