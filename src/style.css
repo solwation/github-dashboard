@@ -1971,7 +1971,32 @@ button.lane-sync:focus-visible::after {
 .row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: var(--badge-bg); color: var(--badge-text); }
 .row-meta .label i { width: 9px; height: 9px; }
 .row-meta > .row-labels { display: flex; align-items: center; gap: 5px; flex: 1 1 0; min-width: 0; overflow: hidden; }
-.row-labels .label { flex: 0 1 auto; }
+.row-labels .label { flex: 0 0 auto; max-width: 14rem; }
+.row-labels .label-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--badge-bg);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.row-labels .label-more:hover,
+.row-labels .label-more:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+.row-labels .label-more:focus-visible {
+  outline: 2px solid var(--accent-green, #147d69);
+  outline-offset: 1px;
+}
 .row-status { background: var(--badge-bg); color: var(--badge-text); }
 .row-status.progress { background: var(--badge-progress-bg); color: var(--badge-progress-text); }
 .row-status.closed { background: var(--badge-closed-bg); color: var(--badge-closed-text); }

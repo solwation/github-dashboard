@@ -36,6 +36,8 @@ export const locale = computed(() =>
 );
 export const english: Record<string, string> = {
   "Bild": "Image",
+  "{count} fler labels: {names}": "{count} more labels: {names}",
+  "{count} fler labels": "{count} more labels",
   "Öppna bild: {name}": "Open image: {name}",
   "Bildnavigering": "Image navigation",
   "Föregående bild": "Previous image",
