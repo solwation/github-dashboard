@@ -1,22 +1,10 @@
 {
-  "baseCommit": "9f707016817965d994bf36c625ea574677946489",
+  "baseCommit": "31dffc1a9c8408a84f57086c4799ae632e9cc671",
   "summary": {
-    "sv": "Projektval får kvarvarande färgade ramar i Kort och Lista. Tätare vyer, tydligare text och bättre labels och SP-estimat förbättrar överblicken.",
-    "en": "Project selection keeps matching colour frames in Cards and List. Denser views, clearer text, labels and exact point sizes improve scanning."
+    "sv": "Större översiktskort ger tydligare gruppering. Antalet aktiva repositories följer nu samma indelning som sidomenyn.",
+    "en": "Larger overview cards group information more clearly. Active repository counts now use the same classification as the sidebar."
   },
   "issues": [
-    332,
-    333,
-    334,
-    335,
-    336,
-    337,
-    338,
-    339,
-    340,
-    341,
-    342,
-    343,
-    345
+    346
   ]
 }

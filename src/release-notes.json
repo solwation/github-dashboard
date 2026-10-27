@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Projektval får kvarvarande färgade ramar i Kort och Lista. Tätare vyer, tydligare text och bättre labels och SP-estimat förbättrar överblicken.",
-      "en": "Project selection keeps matching colour frames in Cards and List. Denser views, clearer text, labels and exact point sizes improve scanning."
+      "sv": "Större översiktskort och samstämmiga active-tal ger tydligare överblick. Projektval, kort och listor har förbättrad läsbarhet och gruppering.",
+      "en": "Larger overview cards and consistent active counts improve the overview. Project selection, cards and lists have clearer text and grouping."
     },
     "sections": [
       {
@@ -35,12 +35,13 @@
       },
       {
         "text": {
-          "sv": "Översikten har fått ett kompaktare sidhuvud och en tätare nyckeltalsremsa så att boarden syns direkt över vecket på vanliga laptops och mobil.",
-          "en": "Overview features a more compact header and denser metrics strip so the board appears above the fold on laptops and mobile."
+          "sv": "Översiktens kompakta sidhuvud kombineras med större, tydligt grupperade översiktskort och aktiva repositories som följer sidomenyn.",
+          "en": "The compact overview header combines with larger, clearly grouped summary cards and active repositories classified like the sidebar."
         },
         "issues": [
           332,
-          338
+          338,
+          346
         ]
       },
       {
