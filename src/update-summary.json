@@ -1,10 +1,10 @@
 {
-  "baseCommit": "e54c556b91e387a7808e21895847027a9d0847ce",
+  "baseCommit": "e11f6e76700e3dcbebb396238a994d53fd3b43db",
   "summary": {
-    "sv": "Draghandtagen i sidomenyn har tagits bort för att ge mer plats åt projektnamn och statusikoner; repositories ordnas via inställningar.",
-    "en": "Sidebar drag handles are removed to free up horizontal space for project names and status icons; repositories are reordered in settings."
+    "sv": "Labels i listläget krymper inte längre till oläsbara stumpar, och dolda labels visas med ett tillgängligt +N-chip.",
+    "en": "List mode labels no longer shrink to illegible dots, and overflowing labels are accessible via a +N chip."
   },
   "issues": [
-    329
+    331
   ]
 }

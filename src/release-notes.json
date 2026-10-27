@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-27",
+    "summary": {
+      "sv": "Labels i listläget krymper inte längre till oläsbara stumpar, och dolda labels visas med ett tillgängligt +N-chip.",
+      "en": "List mode labels no longer shrink to illegible dots, and overflowing labels are accessible via a +N chip."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Labels i listläget behåller läsbar bredd, långa labels trunkeras vid maxbredd och dolda labels samlas i ett tillgängligt +N-chip med tooltip.",
+          "en": "List mode labels preserve legible widths, long labels truncate at max width, and overflowing labels gather in an accessible +N chip with tooltip."
+        },
+        "issues": [
+          331
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-26",
     "summary": {
       "sv": "Draghandtag i sidomenyn har tagits bort för mer plats, inaktiva repositories kan fällas ihop och gemensam tavla, synkning och grind har härdats.",

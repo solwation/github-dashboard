@@ -123,15 +123,28 @@ function rowClick(event: MouseEvent) {
   setExpanded(!expanded.value);
 }
 let observer: IntersectionObserver | undefined;
+const labelsContainer = ref<HTMLElement>();
+const labelsWidth = ref(0);
+let labelsObserver: ResizeObserver | undefined;
 onMounted(() => {
   syncViewport();
   phoneViewport?.addEventListener("change", syncViewport);
   window.addEventListener("keydown", onKeydown);
+  if (labelsContainer.value) {
+    labelsWidth.value = Math.round(labelsContainer.value.clientWidth);
+    if (typeof ResizeObserver !== "undefined") {
+      labelsObserver = new ResizeObserver(([entry]) => {
+        if (entry) labelsWidth.value = Math.round(entry.contentRect.width);
+      });
+      labelsObserver.observe(labelsContainer.value);
+    }
+  }
   if (!("IntersectionObserver" in window)) { visible.value = true; return; }
   observer = new IntersectionObserver(([entry]) => { visible.value = Boolean(entry?.isIntersecting); });
   if (row.value) observer.observe(row.value);
 });
 onBeforeUnmount(() => {
+  labelsObserver?.disconnect();
   unlockPage();
   phoneViewport?.removeEventListener("change", syncViewport);
   window.removeEventListener("keydown", onKeydown);
@@ -152,7 +165,86 @@ const typeTitle = computed(() => {
   }[type.value];
   return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
 });
-const labels = computed(() => props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))).slice(0, expanded.value && !isPhone.value ? 4 : 3));
+let labelCanvas: HTMLCanvasElement | null = null;
+function measureLabelWidth(text: string): number {
+  if (typeof document === "undefined") return Math.min(224, text.length * 6 + 25);
+  if (!labelCanvas) {
+    labelCanvas = document.createElement("canvas");
+  }
+  const ctx = labelCanvas.getContext("2d");
+  const textWidth = ctx
+    ? (() => {
+        ctx.font = '650 9px "DM Sans", system-ui, sans-serif';
+        return ctx.measureText(text).width;
+      })()
+    : text.length * 5.8;
+  return Math.min(Math.ceil(textWidth + 25), 224);
+}
+const allLabels = computed(() =>
+  props.issue.labels.filter(
+    (l) =>
+      !/^priority\s*:/i.test(l.name) &&
+      l !== typeLabel.value &&
+      !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))
+  )
+);
+const partitionedLabels = computed(() => {
+  const list = allLabels.value;
+  if (!list.length) return { visible: [], hidden: [] };
+  if (list.length === 1) return { visible: list, hidden: [] };
+
+  const avail = labelsWidth.value;
+  if (!avail) {
+    const limit = expanded.value && !isPhone.value ? 4 : 2;
+    return {
+      visible: list.slice(0, limit),
+      hidden: list.slice(limit),
+    };
+  }
+
+  const GAP = 5;
+  let totalAll = 0;
+  for (let i = 0; i < list.length; i++) {
+    totalAll += measureLabelWidth(list[i]!.name) + (i > 0 ? GAP : 0);
+  }
+  if (totalAll <= avail) {
+    return { visible: list, hidden: [] };
+  }
+
+  const MORE_WIDTH = 28;
+  let used = 0;
+  let count = 0;
+  for (let i = 0; i < list.length; i++) {
+    const remainingCount = list.length - (count + 1);
+    const moreWidth = remainingCount > 0 ? MORE_WIDTH + GAP : 0;
+    const w = measureLabelWidth(list[i]!.name);
+    const needed = (count > 0 ? GAP : 0) + w;
+    if (used + needed + moreWidth <= avail) {
+      used += needed;
+      count++;
+    } else {
+      break;
+    }
+  }
+
+  if (count === 0 && list.length > 0) {
+    count = 1;
+  }
+
+  return {
+    visible: list.slice(0, count),
+    hidden: list.slice(count),
+  };
+});
+const visibleLabels = computed(() => partitionedLabels.value.visible);
+const hiddenLabels = computed(() => partitionedLabels.value.hidden);
+const hiddenLabelsTitle = computed(() => hiddenLabels.value.map((l) => l.name).join(", "));
+const hiddenLabelsAria = computed(() =>
+  t("{count} fler labels: {names}", {
+    count: hiddenLabels.value.length,
+    names: hiddenLabelsTitle.value,
+  })
+);
 const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 const backlogAge = computed(() => {
@@ -274,9 +366,10 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span class="row-slot row-slot-status"><span class="row-status" :class="col">{{ status }}</span></span></span
       ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
         ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
-      ></span><span class="row-labels"><span v-for="label in labels" :key="label.name" class="label" :title="label.name"
+      ></span><span ref="labelsContainer" class="row-labels"><span v-for="label in visibleLabels" :key="label.name" class="label" :title="label.name"
         ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
-      ></span>
+      ><button v-if="hiddenLabels.length > 0" type="button" class="label label-more" :title="hiddenLabelsTitle" :aria-label="hiddenLabelsAria" @click.stop="setExpanded(true)"
+        >+{{ hiddenLabels.length }}</button></span>
     </span>
     <div v-if="!isPhone" class="row-comments" @click.stop>
       <IssueComments :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
@@ -339,7 +432,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   }
 }
 @media (min-width: 951px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(0, 1.4fr) 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1.2fr) minmax(0, 1.8fr) 6rem 7.25rem; }
 }
 /* Keep title and both time values readable; metadata gets its own line until all columns fit. */
 @media (min-width: 951px) {
@@ -353,12 +446,12 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-meta { grid-column: 1 / -1; grid-row: 2; }
   .row-comments { display: block; }
 }
-@container issue-list (min-width: 1100px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
+@container issue-list (min-width: 1000px) {
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1.2fr) minmax(25rem, 1.8fr) 5.4rem 6rem 7.25rem; }
   .issue-row .row-meta { grid-column: auto; grid-row: auto; }
 }
 @container issue-list (min-width: 1250px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 2.2fr) minmax(37.1rem, 1.4fr) 5.4rem 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 4.6rem minmax(0, 1.2fr) minmax(25rem, 1.8fr) 5.4rem 6rem 7.25rem; }
   .row-meta { grid-column: auto; grid-row: auto; }
 }
 @media (min-width: 651px) and (max-width: 950px) {
