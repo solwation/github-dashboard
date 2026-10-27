@@ -49,7 +49,7 @@ Verification is part of the [AI.md project rules](AI.md#project-and-verification
 
   | Token | Size | Context |
   | --- | --- | --- |
-  | `--icon-xs` | 12px | Inline metadata beside 9–11px text: counts, visibility, dates, labels |
+  | `--icon-xs` | 12px | Inline metadata beside 10–11px text: counts, visibility, dates, labels |
   | `--icon-sm` | 16px | Buttons and controls beside 12–14px text, row type slot, sidebar actions |
   | `--icon-md` | 20px | Primary navigation, toolbar and header actions, empty states |
 
@@ -74,13 +74,17 @@ Verification is part of the [AI.md project rules](AI.md#project-and-verification
 
   | Use | Size / weight |
   | --- | --- |
-  | Captions, eyebrows (uppercase, letter-spaced) | 9–10px, 700 |
-  | Card metadata, labels, issue numbers | 8–11px |
+  | Captions, eyebrows (uppercase, letter-spaced) | 10px, 700 |
+  | Compact chips, labels, issue numbers | 10px minimum |
+  | Readable metadata (dates, times, supporting text) | 11px where space allows |
   | Body and row text | 12–13px, titles 550–600 |
   | Lead text, coarse-pointer menus | 14px |
   | Dialog headings (`.modal h2`) / page `h1` | Manrope 22px / 33px |
   | Stat figures (`.stat strong`) | Manrope 27px, 700 |
 
+- **Text floor: 10px** in every theme and breakpoint, including chips, generated text and
+  repository initials. There are no text-size exceptions. At narrow widths, truncate or hide
+  secondary metadata rather than shrinking it below the floor.
 - Line height: 1.4–1.5 for UI text, 1 for single-line figures. Weights 400–800 as loaded
   from Google Fonts in `style.css`.
 - **Truncation:** single-line names and titles in repeated rows use `min-width: 0;
@@ -103,6 +107,10 @@ Verification is part of the [AI.md project rules](AI.md#project-and-verification
   token with both a light value (`:root`) and a dark value (`:root[data-theme="dark"]`).
   Repository colours come from `--repository-color` mixed with `color-mix()`.
 - **Light/dark parity:** every new surface, border and text colour is checked in both themes.
+- Secondary text tokens: light `--muted: #536267`, `--faint: #59666b`; dark
+  `--muted: #9db0b4`, `--faint: #8fa2a6`. Both are text colours and must retain AA
+  contrast on the actual surface, including hover, badge, unread and timeout backgrounds
+  and translucent `color-mix()` layers; do not reduce their opacity for secondary text.
 - **Contrast:** text ≥ 4.5:1 (WCAG AA) on its background; meaningful icons, borders and chart
   marks ≥ 3:1. Do not rely on colour alone; pair status colour with an icon or text.
 

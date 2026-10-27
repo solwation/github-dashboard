@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
+import { textAccessibility } from "./support/text-accessibility";
 
 const sizes = [
   { width: 1600, height: 1000, mobile: false },
@@ -56,6 +58,8 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
     await fixture(page);
     await page.evaluate(value => { document.documentElement.dataset.theme = value; }, theme);
     await page.evaluate(() => document.fonts.ready);
+    // Theme surfaces transition for 250ms; measure the settled theme, not the blend.
+    await expect(page.locator(".stat").first()).toHaveCSS("background-color", theme === "dark" ? "rgb(23, 33, 36)" : "rgb(255, 255, 255)");
     const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
     for (const split of [true, false]) {
       if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
@@ -64,6 +68,8 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
         const item = page.locator(view === "Kort" ? ".issue-card" : ".issue-row").first();
         await item.scrollIntoViewIfNeeded();
         await expect(item).toBeVisible();
+        const text = await textAccessibility(page);
+        await writeFile(info.outputPath(`${split ? "split" : "combined"}-${view}-text.json`), JSON.stringify(text, null, 2));
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
         if (view === "Kort") {
           const plain = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Plain task 1", exact: true }) });
@@ -91,7 +97,7 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
           if (size.mobile) {
             for (const selector of [".details-toggle", ".comment-count", ".label-more", ".movement-marker"]) {
               const bounds = (await page.locator(`.issue-card ${selector}`).first().boundingBox())!;
-              expect(bounds.width).toBeGreaterThanOrEqual(44); expect(bounds.height).toBeGreaterThanOrEqual(44);
+              expect(Math.round(bounds.width)).toBeGreaterThanOrEqual(44); expect(Math.round(bounds.height)).toBeGreaterThanOrEqual(44);
             }
           }
           await labeled.screenshot({ path: info.outputPath(`${split ? "split" : "combined"}-labels.png`) });

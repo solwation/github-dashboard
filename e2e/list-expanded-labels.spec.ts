@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { textAccessibility } from "./support/text-accessibility";
 
 const repo = {
   id: 341,
@@ -95,6 +96,7 @@ test.describe("List expanded labels (#341)", () => {
 
     const desktopLabelsGroup = rowCard.locator(".row-expanded-labels");
     await expect(desktopLabelsGroup).toBeVisible();
+    await textAccessibility(page);
     await expect(desktopLabelsGroup).toHaveAttribute("role", "group");
     await expect(desktopLabelsGroup).toHaveAttribute("aria-label", "Labels");
 
@@ -124,6 +126,7 @@ test.describe("List expanded labels (#341)", () => {
 
     const mobileLabelsGroup = popup.locator(".row-expanded-labels");
     await expect(mobileLabelsGroup).toBeVisible();
+    await textAccessibility(page);
     await expect(mobileLabelsGroup).toHaveAttribute("role", "group");
     await expect(mobileLabelsGroup).toHaveAttribute("aria-label", "Labels");
 

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare översikt, kort och huvuden ger mer plats åt ärenden; expanderade listärenden visar alla labels och övriga har +N.",
-      "en": "Denser overview, cards and headers leave more room for issues; expanded list issues show full labels and overflow uses +N."
+      "sv": "Tätare översikt, kort och huvuden ger mer plats; sekundärtext är tydligare och expanderade listärenden visar alla labels.",
+      "en": "Denser overview, cards and headers make more room; secondary text is clearer and expanded list issues show every label."
     },
     "sections": [
       {
@@ -50,6 +50,15 @@
         },
         "issues": [
           333
+        ]
+      },
+      {
+        "text": {
+          "sv": "Sekundärtext får högre kontrast i ljust tema och all synlig text är minst 10 pixlar, även på smala skärmar.",
+          "en": "Secondary text gains stronger light-theme contrast, and all visible text is at least 10 pixels, including on narrow screens."
+        },
+        "issues": [
+          335
         ]
       }
     ]

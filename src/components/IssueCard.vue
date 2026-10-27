@@ -182,7 +182,7 @@ let labelCanvas: HTMLCanvasElement | undefined;
 function labelWidth(name: string) {
   labelCanvas ??= document.createElement("canvas");
   const context = labelCanvas.getContext("2d");
-  if (context) context.font = '650 9px "DM Sans", system-ui, sans-serif';
+  if (context) context.font = '650 10px "DM Sans", system-ui, sans-serif';
   // Chip border/padding, colour dot and gap; match .card-labels .label below.
   return Math.min(176, Math.ceil(context?.measureText(name).width ?? name.length * 6) + 27);
 }
@@ -389,7 +389,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
   gap: var(--space-1);
   padding: 2px var(--space-1);
   border-radius: 4px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 12px;
   white-space: nowrap;
@@ -409,12 +409,12 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
 }
 .issue-card.has-repository { position: relative; }
 .issue-card.has-repository::after { content: ""; position: absolute; top: 6px; bottom: 6px; right: 0; width: 3px; border-radius: 3px; background: var(--repository-color); pointer-events: none; }
-.card-repository { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 9px; line-height: 1.4; }
+.card-repository { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--repository-color) 50%, white); border-radius: 5px; background: color-mix(in srgb, var(--repository-color) 18%, white); color: var(--text); font-size: 10px; line-height: 1.4; }
 .card-repository-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-repository i { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: var(--repository-color); }
 
 .backlog-age {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--faint);
 }
 .issue-card.unread-move { border-color: var(--unread-move-border); box-shadow: 0 0 0 2px var(--unread-move-ring); background: var(--unread-move-bg); }

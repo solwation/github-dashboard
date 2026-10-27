@@ -77,7 +77,7 @@ function openNotesFromKeyboard(event: KeyboardEvent) {
 }
 .sidebar-version-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
 .sidebar-version-open { flex-shrink: 0; }
-.sidebar-version-caption { margin-right: auto; font-size: 10px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: #909b9f; transition: color .15s ease; }
+.sidebar-version-caption { margin-right: auto; font-size: 10px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: var(--faint); transition: color .15s ease; }
 .sidebar-version-build { margin: 4px 0 8px; font-size: 11px; color: var(--muted); transition: color .15s ease; }
 .sidebar-version-status { display: flex; align-items: center; gap: 5px; margin: 0; overflow-wrap: anywhere; }
 .sidebar-version-icon { flex-shrink: 0; }

@@ -11,7 +11,7 @@
   --text: #273a3c;
   --green: #147d69;
   --on-green: #fff;
-  --muted: #758286;
+  --muted: #536267;
   --line: #e4e8eb;
   --input-border: #dce3e5;
   --code-bg: #f1f5f4;
@@ -25,13 +25,13 @@
   --chart-axis: #aab6b7;
   --chart-grid: #e4e8eb;
   --chart-text: #56696b;
-  /* Light values for tokens that started dark-only (#302). --card and --faint match what light
-     rules already use; --accent-red/--accent-amber match the existing light fallbacks. --tint-* and
+  /* Light values for tokens that started dark-only (#302). --card uses the light surface;
+     --faint is AA-safe secondary text. --accent-red/--accent-amber match light fallbacks. --tint-* and
      --accent-green/-blue/-purple have no single light equivalent (light rules use several
      different greens, blues and tints), so they stay dark-only: outside dark rules use them as
      var(--accent-green, <light value>) or use a semantic token below. */
   --card: var(--surface);
-  --faint: #87929a;
+  --faint: #59666b;
   --accent-red: #b42332;
   --accent-amber: #946000;
   /* Semantic state colours (#302); dark values in the theme section. */
@@ -153,7 +153,7 @@ input[type="checkbox"] {
   font-size: 10px;
   letter-spacing: 1.7px;
   font-weight: 700;
-  color: #909b9f;
+  color: var(--faint);
   padding-left: 13px;
 }
 .nav-item {
@@ -357,9 +357,9 @@ main {
   line-height: 1.2;
 }
 .eyebrow {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 1.8px;
-  color: #7c898b;
+  color: var(--faint);
   font-weight: 700;
 }
 h1 {
@@ -619,7 +619,7 @@ h1 {
   color: #c7cccf;
 }
 .private-badge {
-  font-size: 9px;
+  font-size: 10px;
   padding: 2px 6px;
   border: 1px solid #dde2e4;
   border-radius: 4px;
@@ -684,7 +684,7 @@ h1 {
   background: #328c74;
 }
 .column-count {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 16px;
   min-width: 18px;
   text-align: center;
@@ -716,13 +716,13 @@ h1 {
   white-space: nowrap;
 }
 .column-hint {
-  font-size: 8px;
-  color: #9ca6ab;
+  font-size: 10px;
+  color: var(--faint);
   margin-top: 3px;
   text-align: right;
 }
 .column-sort { position: relative; flex: 0 1 auto; min-width: 0; max-width: 100%; }
-.column-sort-button { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; margin-top: 0; padding: 3px 4px; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: 8px; color: var(--muted); text-align: right; cursor: pointer; }
+.column-sort-button { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; margin-top: 0; padding: 3px 4px; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: 10px; color: var(--muted); text-align: right; cursor: pointer; }
 .column-sort-button:hover { background: color-mix(in srgb, var(--green) 10%, transparent); }
 .column-sort-button svg { flex: 0 0 auto; }
 .column-sort-menu { position: absolute; z-index: 30; top: 100%; right: 0; display: flex; flex-direction: column; min-width: 190px; max-width: min(260px, calc(100vw - 24px)); padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px #20394b26; }
@@ -774,8 +774,8 @@ h1 {
 }
 .card-top-main .issue-number { flex-shrink: 0; margin-right: 2px; }
 .issue-number {
-  font-size: 9px;
-  color: #99a3a7;
+  font-size: 10px;
+  color: var(--faint);
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -790,7 +790,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 8px;
+  font-size: 10px;
   border-radius: 4px;
   padding: 2px 5px;
 }
@@ -831,8 +831,8 @@ h1 {
   gap: 4px;
   background: #f7f8fa;
   border: 1px solid #eef0f3;
-  font-size: 8px;
-  color: #87929a;
+  font-size: 10px;
+  color: var(--faint);
   border-radius: 4px;
   padding: 2px 5px;
   max-width: 100%;
@@ -865,8 +865,8 @@ h1 {
   gap: 5px;
 }
 .closed-date {
-  font-size: 9px;
-  color: #99a8a3;
+  font-size: 10px;
+  color: var(--faint);
 }
 .assignees {
   display: flex;
@@ -902,8 +902,8 @@ h1 {
 .board-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
-  color: #9ba7ab;
+  font-size: 10px;
+  color: var(--faint);
   margin-top: 33px;
 }
 .board-footer span {
@@ -1050,7 +1050,7 @@ h1 {
 }
 .intro-tag {
   display: inline-block;
-  font-size: 9px;
+  font-size: 10px;
   color: #6c9384;
   background: #eff6f2;
   padding: 4px 7px;
@@ -1060,7 +1060,7 @@ h1 {
 .intro-description {
   display: block;
   font-size: 10px;
-  color: #8f9c9f;
+  color: var(--faint);
   margin-top: 20px;
   text-align: center;
 }
@@ -1209,7 +1209,7 @@ h1 {
     font-size: 13px;
   }
   .column-hint {
-    font-size: 9px;
+    font-size: 10px;
   }
   .cards {
     padding: 16px;
@@ -1470,11 +1470,11 @@ h1 {
   .repo-avatar {
     width: 30px;
     height: 30px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .repo-owner {
     max-width: 190px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .swimlane {
     grid-template-columns: minmax(0, 1fr);
@@ -1489,7 +1489,7 @@ h1 {
     padding: 15px;
   }
   .column-hint {
-    font-size: 8px;
+    font-size: 10px;
     padding: 0;
   }
   .column-sort-button { padding: 3px 4px; text-align: right; font-size: 10px; min-height: 32px; }
@@ -1771,9 +1771,9 @@ h1 {
 .brand-copy small {
   display: block;
   margin-top: 7px;
-  color: #7c8c8b;
+  color: var(--faint);
   font:
-    400 8px/1.2 "DM Sans",
+    400 10px/1.2 "DM Sans",
     system-ui,
     sans-serif;
   letter-spacing: 0.1px;
@@ -1821,7 +1821,7 @@ button.lane-sync.syncing { cursor: progress; }
 .lane-title h2 a svg { flex-shrink: 0; }
 .repository-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repo-lane:not(.statistics-repository) .repository-badges { flex-wrap: nowrap; gap: var(--space-1); }
-.repo-lane:not(.statistics-repository) .repo-avatar { width: var(--space-6); height: var(--space-6); border-radius: var(--space-1); font-size: 9px; }
+.repo-lane:not(.statistics-repository) .repo-avatar { width: var(--space-6); height: var(--space-6); border-radius: var(--space-1); font-size: 10px; }
 .repo-lane:not(.statistics-repository) .repo-owner { flex: 1 1 0; min-width: 0; max-width: none; color: var(--text); }
 .repo-lane:not(.statistics-repository) .repo-owner span { margin: 0 var(--space-1); }
 .lane-title .private-badge { flex-shrink: 0; }
@@ -2021,10 +2021,10 @@ button.lane-sync.syncing { cursor: progress; }
 .row-close:hover { border-color: #b4c9c1; }
 .row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; overflow: hidden; }
 .row-meta > * { flex-shrink: 0; }
-.row-meta > .row-meta-repository { order: 2; flex: 0 1 min(10rem, 30%); max-width: min(10rem, 30%); padding: 1px 6px; font-size: 9px; }
+.row-meta > .row-meta-repository { order: 2; flex: 0 1 min(10rem, 30%); max-width: min(10rem, 30%); padding: 1px 6px; font-size: 10px; }
 .row-meta > .row-meta-repository i { width: 7px; height: 7px; }
 /* List badges share text metrics, spacing, and neutral surfaces; custom labels keep their natural width. */
-.row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+.row-meta .label, .row-meta .priority, .row-status, .row-timeout, .row-marker { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
 .row-meta .label { flex-shrink: 0; min-width: 0; max-width: 100%; border: 0; overflow: hidden; background: var(--badge-bg); color: var(--badge-text); }
 .row-meta .label i { width: 9px; height: 9px; }
 .row-meta > .row-labels { display: flex; align-items: center; gap: 5px; flex: 1 1 0; min-width: 0; overflow: hidden; }
@@ -2038,7 +2038,7 @@ button.lane-sync.syncing { cursor: progress; }
   border-radius: 4px;
   background: var(--badge-bg);
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 650;
   line-height: 1.4;
   white-space: nowrap;
@@ -2735,7 +2735,7 @@ a.sidebar-repository:focus-visible {
 .card-label-line { display: flex; align-items: center; gap: var(--space-1); min-width: 0; margin-top: var(--space-1); }
 .card-top-main > .card-repository { flex: 0 1 auto; max-width: 60%; }
 .card-labels { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; min-width: 0; }
-.card-labels .label { flex: 0 1 auto; max-width: 11rem; gap: var(--space-1); padding: 1px var(--space-2); border: 0; border-radius: 4px; background: var(--badge-bg); color: var(--badge-text); font-size: 9px; font-weight: 650; line-height: 1.4; }
+.card-labels .label { flex: 0 1 auto; max-width: 11rem; gap: var(--space-1); padding: 1px var(--space-2); border: 0; border-radius: 4px; background: var(--badge-bg); color: var(--badge-text); font-size: 10px; font-weight: 650; line-height: 1.4; }
 .card-labels .label i { width: 7px; height: 7px; }
 .card-label-overflow { position: relative; flex: 0 0 auto; margin-left: auto; }
 .card-labels .label-more { display: inline-flex; align-items: center; justify-content: center; padding: 2px var(--space-1); border: 0; border-radius: 4px; background: var(--badge-bg); color: var(--badge-text); font-size: 10px; line-height: 1.4; cursor: pointer; }
@@ -2836,7 +2836,7 @@ a.sidebar-repository:focus-visible {
 }
 
 /* Per-issue sizing shares the column forecast's local heuristic (#210). */
-.issue-points { display: inline-flex; align-items: center; flex-shrink: 0; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: var(--green); font-size: 9px; font-weight: 650; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.issue-points { display: inline-flex; align-items: center; flex-shrink: 0; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: var(--green); font-size: 10px; font-weight: 650; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .row-meta > .issue-points { order: 5; min-width: 3.2rem; justify-content: center; }
 
 /* The estimate is elapsed time against historical duration, never measured task completion (#213). */

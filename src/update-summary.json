@@ -1,13 +1,14 @@
 {
   "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Tätare översikt, kort och huvuden ger mer plats åt ärenden; expanderade listärenden visar alla labels och övriga har +N.",
-    "en": "Denser overview, cards and headers leave more room for issues; expanded list issues show full labels and overflow uses +N."
+    "sv": "Tätare översikt, kort och huvuden ger mer plats; sekundärtext är tydligare och expanderade listärenden visar alla labels.",
+    "en": "Denser overview, cards and headers make more room; secondary text is clearer and expanded list issues show every label."
   },
   "issues": [
     332,
     333,
     334,
+    335,
     338,
     341
   ]

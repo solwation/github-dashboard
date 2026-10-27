@@ -174,7 +174,7 @@ function measureLabelWidth(text: string): number {
   const ctx = labelCanvas.getContext("2d");
   const textWidth = ctx
     ? (() => {
-        ctx.font = '650 9px "DM Sans", system-ui, sans-serif';
+        ctx.font = '650 10px "DM Sans", system-ui, sans-serif';
         return ctx.measureText(text).width;
       })()
     : text.length * 5.8;
@@ -496,11 +496,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-summary > .issue-points { order: 3; }
   .row-mobile-summary > .row-mobile-activity { order: 6; }
   .row-mobile-summary > .row-mobile-relation { order: 4; }
-  .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; max-width: 9rem; padding: 1px 4px; font-size: 9px; }
-  .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 9px; line-height: 1; white-space: nowrap; }
+  .row-mobile-summary > .row-repository { order: 5; grid-area: auto; min-width: 0; max-width: 9rem; padding: 1px 4px; font-size: 10px; }
+  .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 10px; line-height: 1; white-space: nowrap; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
-  .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: var(--marker-move-bg); color: var(--marker-move-text); font-size: 9px; cursor: pointer; }
+  .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: var(--marker-move-bg); color: var(--marker-move-text); font-size: 10px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
   .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
   .row-time > .timer { flex: 1 1 auto; min-width: 0; }
@@ -515,12 +515,12 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-summary { gap: 1px; }
   .row-mobile-summary > .row-repository { flex: 0 0 auto; padding: 1px; }
   .row-mobile-summary .row-repository-name { display: none; }
-  .row-mobile-summary > .issue-points { padding: 1px; font-size: 7px; }
+  .row-mobile-summary > .issue-points { padding: 1px; font-size: 10px; }
   .row-mobile-priority svg { width: 9px; height: 9px; }
   .row-mobile-activity { padding: 0; }
   .row-time { max-width: 2.75rem; }
-  .row-outcome { width: 5rem; max-width: 5rem; overflow: hidden; font-size: 8px; }
+  .row-outcome { width: 5rem; max-width: 5rem; overflow: hidden; font-size: 10px; }
   .row-outcome .issue-time-estimate,
-  .row-outcome :deep(.issue-time-remaining-label) { font-size: 8px; }
+  .row-outcome :deep(.issue-time-remaining-label) { font-size: 10px; }
 }
 </style>
