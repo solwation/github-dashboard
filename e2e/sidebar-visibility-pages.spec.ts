@@ -89,13 +89,13 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   });
   expect(box).toEqual({ clipped: true, over: false, bodyOver: false });
   // Grid (#295): each trailing icon type shares one x in every row, is centred on the name line,
-  // the name ends before the slots, and the counts start under the name text on one line.
+  // the name spans the slots, and counts and optional icons share the line below it.
   const grid = await rows.evaluateAll(list => list.map(row => {
     const rect = (selector: string) => { const el = row.querySelector(selector); return el ? el.getBoundingClientRect() : null; };
     const label = rect('.repository-label')!, slots = rect('.repo-slots')!, counts = rect('.repository-counts'), dot = rect('.repo-dot')!;
     const icon = (selector: string) => { const r = rect(selector); return r && { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; };
     return {
-      label: { left: label.left, right: label.right, y: label.top + label.height / 2 }, slotsLeft: slots.left, dotY: dot.top + dot.height / 2,
+      label: { left: label.left, right: label.right, y: label.top + label.height / 2 }, slotsLeft: slots.left, slotsY: slots.top + slots.height / 2, dotY: dot.top + dot.height / 2,
       counts: counts && { left: counts.left, height: counts.height },
       unread: icon('.recent-activity'), visibility: icon('.repo-visibility svg'), pages: icon('.repo-pages svg'),
     };
@@ -113,9 +113,9 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   expect(columns[0]).toBeLessThan(columns[1]);
   expect(columns[1]).toBeLessThan(columns[2]);
   for (const item of grid) {
-    expect(item.label.right).toBeLessThanOrEqual(item.slotsLeft + 0.5);
+    expect(item.label.right).toBeGreaterThan(item.slotsLeft);
     expect(Math.abs(item.dotY - item.label.y)).toBeLessThanOrEqual(1);
-    for (const key of ['unread', 'visibility', 'pages'] as const) if (item[key]) expect(Math.abs(item[key]!.y - item.label.y), `${key} centred`).toBeLessThanOrEqual(1);
+    for (const key of ['unread', 'visibility', 'pages'] as const) if (item[key]) expect(Math.abs(item[key]!.y - item.slotsY), `${key} centred`).toBeLessThanOrEqual(1);
     expect(item.counts).not.toBeNull();
     expect(Math.abs(item.counts!.left - item.label.left)).toBeLessThanOrEqual(1);
     expect(item.counts!.height).toBeLessThan(24);

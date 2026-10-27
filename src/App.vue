@@ -1904,8 +1904,8 @@ onMounted(async () => {
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
-    <a class="sidebar-footer" href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
-      <Github :size="20" aria-hidden="true" />
+    <a class="sidebar-footer" title="Olof Wingren · MIT License" href="https://github.com/solwation/github-dashboard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+      <Github :size="16" aria-hidden="true" />
       <span class="sidebar-credits">
         <span>Olof Wingren</span>
         <small class="sidebar-license-label">MIT License</small>

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare vyer och tydligare text ger mer plats åt ärenden. Expanderade listärenden visar alla labels och SP-labels anger exakta poäng.",
-      "en": "Denser views and clearer text make room for issues. Expanded list issues show every label and point labels set exact sizes."
+      "sv": "Tätare vyer, tydligare text och rymligare repositorynamn förbättrar överblicken. SP-labels styr exakta poäng och expanderad lista visar alla labels.",
+      "en": "Denser views, clearer text and longer repository names improve scanning. Point labels set exact sizes and expanded lists show all labels."
     },
     "sections": [
       {
@@ -68,6 +68,15 @@
         },
         "issues": [
           340
+        ]
+      },
+      {
+        "text": {
+          "sv": "Sidomenyn visar längre repositorynamn och fler projekt samtidigt; versions- och licensfoten är kompakt med detaljer kvar i tooltips och dialoger.",
+          "en": "The sidebar shows longer repository names and more projects at once; its compact version and license footer keeps details in tooltips and dialogs."
+        },
+        "issues": [
+          336
         ]
       }
     ]

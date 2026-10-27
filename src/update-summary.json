@@ -1,14 +1,15 @@
 {
   "baseCommit": "9f707016817965d994bf36c625ea574677946489",
   "summary": {
-    "sv": "Tätare vyer och tydligare text ger mer plats åt ärenden. Expanderade listärenden visar alla labels och SP-labels anger exakta poäng.",
-    "en": "Denser views and clearer text make room for issues. Expanded list issues show every label and point labels set exact sizes."
+    "sv": "Tätare vyer, tydligare text och rymligare repositorynamn förbättrar överblicken. SP-labels styr exakta poäng och expanderad lista visar alla labels.",
+    "en": "Denser views, clearer text and longer repository names improve scanning. Point labels set exact sizes and expanded lists show all labels."
   },
   "issues": [
     332,
     333,
     334,
     335,
+    336,
     338,
     340,
     341

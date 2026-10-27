@@ -24,7 +24,8 @@ test("the whole sidebar license badge opens LICENSE, while the version badge kee
   }
   // Both stacked badges' open icons share one right edge (DESIGN.md alignment).
   expect(Math.abs(iconRights[0] - iconRights[1])).toBeLessThanOrEqual(1);
-  await expect(version).toHaveAttribute("title", "Klicka för att visa versionsnyheter");
+  await expect(version).toHaveAttribute("title", /Klicka för att visa versionsnyheter/);
+  await expect(license).toHaveAttribute("title", "Olof Wingren · MIT License");
   // The new version icon remains decorative: the existing keyboard action opens a local dialog.
   await version.focus();
   await page.keyboard.press("Enter");
