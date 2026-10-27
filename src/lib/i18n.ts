@@ -484,6 +484,8 @@ export const english: Record<string, string> = {
   "just nu": "right now",
   Stängda: "Closed",
   "senaste 30 dagarna": "in the last 30 days",
+  "Identifierat labelflöde för prioritering och status": "Detected label workflow for priority and status",
+  "Aktivt filter: {query}": "Active filter: {query}",
   "Sök issues": "Search issues",
   "Sök issues, labels eller nummer…": "Search issues, labels or numbers…",
   "Dölj koordinationsärenden": "Hide coordination issues",

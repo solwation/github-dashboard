@@ -27,6 +27,7 @@ import LanguageSettings from "./components/LanguageSettings.vue";
 import RepositorySection from "./components/RepositorySection.vue";
 import BoardColumn from "./components/BoardColumn.vue";
 import RepositoryHeading from "./components/RepositoryHeading.vue";
+import RepositoryFilter from "./components/RepositoryFilter.vue";
 import OverviewSummary from "./components/OverviewSummary.vue";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
@@ -2157,7 +2158,25 @@ onMounted(async () => {
             ><input type="checkbox" v-model="hideCoordination" />
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
-          ><BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
+          >
+          <template v-if="!splitByRepository && orderedLanes.length">
+          <span v-if="isDemo" class="lane-sync combined-sync">
+            <time v-if="refreshed" :datetime="new Date(refreshed).toISOString()"
+              :title="t('Senast uppdaterad {time}', { time: statusTime(refreshed) })">{{ statusTime(refreshed) }}</time>
+          </span>
+          <button v-else-if="combinedSyncing || refreshed" type="button" class="lane-sync combined-sync"
+            :class="{ syncing: combinedSyncing }" :aria-disabled="combinedSyncing"
+            :aria-label="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
+              : t('Senast uppdaterad {time} · Klicka för att uppdatera alla repositories nu', { time: statusTime(refreshed!) })"
+            :data-tooltip="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
+              : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(refreshed!) })"
+            :title="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
+              : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(refreshed!) })"
+            @click="refreshFromStatus()"
+            ><span v-if="combinedSyncing" class="lane-sync-spinner" aria-hidden="true"
+            /><time v-else :datetime="new Date(refreshed!).toISOString()">{{ statusTime(refreshed!) }}</time></button>
+          </template>
+          <BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
         /></div>
         <div v-if="loggedIn && syncError && !lanes.some(lane => lane.error === syncError)" class="notice error sync-error" role="alert">
           {{ syncError }} {{ t("Tidigare data visas om de finns.") }}
@@ -2187,39 +2206,30 @@ onMounted(async () => {
           :collapsed="collapsedRepos.includes(lane.repo.full_name)"
         >
           <template #header>
-            <span v-if="isDemo" class="lane-sync">
-              <time v-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"
-                :title="t('Senast uppdaterad {time}', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
-                >{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time>
-            </span>
-            <button v-else-if="syncingRepos.has(lane.repo.full_name) || repoSyncedAt[lane.repo.full_name]" type="button" class="lane-sync"
-              :class="{ syncing: syncingRepos.has(lane.repo.full_name) }" :aria-disabled="syncingRepos.has(lane.repo.full_name)"
-              :aria-label="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
-                : t('Senast uppdaterad {time} · Klicka för att uppdatera {name} nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!), name: lane.repo.full_name })"
-              :data-tooltip="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
-                : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
-              @click="refreshFromStatus(lane.repo.full_name)"
-              ><span v-if="syncingRepos.has(lane.repo.full_name)" class="lane-sync-spinner" aria-hidden="true"
-              /><time v-else :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()">{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time></button>
             <RepositoryHeading :repository="lane.repo" :collapsed="collapsedRepos.includes(lane.repo.full_name)"
               :controls="'lane-content-' + lane.repo.id" :toggle-name="lane.repo.name" @toggle="toggleCollapsed(lane.repo.full_name)">
-              <template #badges><span v-if="!lane.loading" class="private-badge workflow-badge">{{ workflow(lane.labels) }}</span></template>
+              <template #badges><span v-if="!lane.loading" class="private-badge workflow-badge" :title="t('Identifierat labelflöde för prioritering och status')">{{ workflow(lane.labels) }}</span></template>
             </RepositoryHeading>
             <div class="lane-meta">
+              <span v-if="isDemo" class="lane-sync">
+                <time v-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"
+                  :title="t('Senast uppdaterad {time}', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
+                  >{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time>
+              </span>
+              <button v-else-if="syncingRepos.has(lane.repo.full_name) || repoSyncedAt[lane.repo.full_name]" type="button" class="lane-sync"
+                :class="{ syncing: syncingRepos.has(lane.repo.full_name) }" :aria-disabled="syncingRepos.has(lane.repo.full_name)"
+                :aria-label="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
+                  : t('Senast uppdaterad {time} · Klicka för att uppdatera {name} nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!), name: lane.repo.full_name })"
+                :data-tooltip="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
+                  : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
+                :title="syncingRepos.has(lane.repo.full_name) ? t('Hämtar issues för {name}…', { name: lane.repo.full_name })
+                  : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(repoSyncedAt[lane.repo.full_name]!) })"
+                @click="refreshFromStatus(lane.repo.full_name)"
+                ><span v-if="syncingRepos.has(lane.repo.full_name)" class="lane-sync-spinner" aria-hidden="true"
+                /><time v-else :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()">{{ statusTime(repoSyncedAt[lane.repo.full_name]!) }}</time></button>
               <span v-if="!lane.loading && (!lane.error || lane.issues.length)" class="repository-issue-count">{{ laneIssues(lane).length }} issues</span>
               <span v-else-if="lane.loading" class="repository-issue-count">{{ t("Hämtar…") }}</span>
-              <div class="repository-filter">
-                <label class="sr-only" :for="'repository-filter-' + lane.repo.id">{{ t("Filtrera issues i {name}", { name: lane.repo.full_name }) }}</label>
-                <div class="repository-search">
-                  <Search :size="14" aria-hidden="true" />
-                  <input :id="'repository-filter-' + lane.repo.id" v-model="repositoryQueries[lane.repo.full_name]"
-                    :placeholder="t('Sök issues, labels eller nummer…')" />
-                  <button class="icon-button repository-filter-clear" :disabled="!repositoryQueries[lane.repo.full_name]"
-                    :aria-label="t('Rensa filtret för {name}', { name: lane.repo.full_name })"
-                    :title="t('Rensa filtret för {name}', { name: lane.repo.full_name })"
-                    @click="repositoryQueries[lane.repo.full_name] = ''"><X :size="13" aria-hidden="true" /></button>
-                </div>
-              </div>
+              <RepositoryFilter v-model="repositoryQueries[lane.repo.full_name]" :repository="lane.repo.full_name" :id="'repository-filter-' + lane.repo.id" />
               <div class="lane-actions">
               <button
                 v-if="!isDemo"
@@ -2284,21 +2294,6 @@ onMounted(async () => {
         </RepositorySection>
         </template>
         <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
-          <div class="combined-board-head">
-          <span v-if="isDemo" class="lane-sync combined-sync">
-            <time v-if="refreshed" :datetime="new Date(refreshed).toISOString()"
-              :title="t('Senast uppdaterad {time}', { time: statusTime(refreshed) })">{{ statusTime(refreshed) }}</time>
-          </span>
-          <button v-else-if="combinedSyncing || refreshed" type="button" class="lane-sync combined-sync"
-            :class="{ syncing: combinedSyncing }" :aria-disabled="combinedSyncing"
-            :aria-label="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
-              : t('Senast uppdaterad {time} · Klicka för att uppdatera alla repositories nu', { time: statusTime(refreshed!) })"
-            :data-tooltip="combinedSyncing ? t('Hämtar issues för den gemensamma boarden…')
-              : t('Senast uppdaterad {time} · Klicka för att uppdatera nu', { time: statusTime(refreshed!) })"
-            @click="refreshFromStatus()"
-            ><span v-if="combinedSyncing" class="lane-sync-spinner" aria-hidden="true"
-            /><time v-else :datetime="new Date(refreshed!).toISOString()">{{ statusTime(refreshed!) }}</time></button>
-          </div>
           <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
             <p v-if="lane.error" class="notice error" role="alert"><strong>{{ lane.repo.full_name }}</strong> {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}</p>
@@ -2503,19 +2498,11 @@ onMounted(async () => {
 @media (max-width: 950px) {
   .repository-issue-count { display: none; }
 }
-.repository-filter { flex: 0 1 220px; min-width: 0; max-width: 100%; font-size: 11px; color: var(--muted); }
-.repository-search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding-left: 8px; min-width: 0; }
-.repository-search > svg { flex-shrink: 0; }
-.repository-filter-clear { flex-shrink: 0; width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
-.repository-search input { width: 100%; min-width: 0; padding-block: 7px; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
-.repository-search:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
 .repository-filter-empty { margin: 0; padding: 0 18px 14px; color: var(--muted); font-size: 13px; }
 
 .repository-loading { display: flex; align-items: center; gap: 10px; padding: 30px 18px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .repository-loading svg { flex-shrink: 0; }
 .combined-board { margin-bottom: 25px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
-.combined-board-head { display: flex; align-items: center; justify-content: flex-end; border-bottom: 1px solid var(--line); }
-.combined-board-head > .combined-sync { position: relative; flex: 0 0 auto; top: 0; right: 0; margin: 15px 15px 15px auto; height: 16px; line-height: 16px; }
 .repository-properties { overflow-wrap: anywhere; }
 .repository-properties .modal-heading h2 { min-width: 0; }
 .repository-properties .modal-heading > button { flex-shrink: 0; }

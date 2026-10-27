@@ -8,7 +8,8 @@ for (const viewport of phones) {
     await page.goto("/");
     await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
     const board = page.locator("#repo-1");
-    const search = board.getByLabel("Filtrera issues i demo/design-system", { exact: true });
+    const search = board.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true });
+    await board.getByRole("button", { name: "Filtrera issues i demo/design-system", exact: true }).click();
     await search.fill("zz-no-match");
     await board.getByRole("button", { name: "Kollapsa design-system", exact: true }).click();
     await expect(search).toBeHidden();
@@ -27,6 +28,7 @@ test("desktop keeps the search field on collapsed repositories", async ({ page }
   await page.goto("/");
   await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
   const board = page.locator("#repo-1");
+  await board.getByRole("button", { name: "Filtrera issues i demo/design-system", exact: true }).click();
   await board.getByRole("button", { name: "Kollapsa design-system", exact: true }).click();
-  await expect(board.getByLabel("Filtrera issues i demo/design-system", { exact: true })).toBeVisible();
+  await expect(board.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true })).toBeVisible();
 });

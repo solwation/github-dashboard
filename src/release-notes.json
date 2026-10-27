@@ -2,8 +2,8 @@
   {
     "date": "2026-10-27",
     "summary": {
-      "sv": "Tätare översikt med nyckeltalsremsa och kompakt sidhuvud lyfter boarden över vecket, och labels i listläget trunkeras med +N-chip.",
-      "en": "Denser overview with compact metrics strip lifts board above the fold, and list mode labels truncate with a +N chip."
+      "sv": "Tätare översikt och repositoryhuvuden visar boarden tidigare; listlabels behåller läsbar bredd och dolda labels samlas i +N.",
+      "en": "Denser overview and repository headers bring the board into view sooner; list labels stay readable with +N for overflow."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           332
+        ]
+      },
+      {
+        "text": {
+          "sv": "Repository- och kolumnhuvuden är kompaktare, sökningen öppnas vid behov och synktiden förklaras utan en extra rad i gemensam board.",
+          "en": "Repository and column headers are more compact, search opens on demand, and explained sync times need no extra combined-board row."
+        },
+        "issues": [
+          334
         ]
       }
     ]

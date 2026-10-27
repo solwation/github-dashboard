@@ -11,6 +11,8 @@ test("repository filters stay independent and combine with the global filter in 
   const weekendFilter = page.getByRole("textbox", { name: "Filtrera issues i demo/weekend-project", exact: true });
   const globalFilter = page.getByRole("textbox", { name: "Sök issues", exact: true });
 
+  await design.getByRole("button", { name: "Filtrera issues i demo/design-system", exact: true }).click();
+  await weekend.getByRole("button", { name: "Filtrera issues i demo/weekend-project", exact: true }).click();
   await expect(design.locator('.lane-header').getByRole('textbox', { name: 'Filtrera issues i demo/design-system', exact: true })).toBeVisible();
   await expect(weekend.locator('.lane-header').getByRole('textbox', { name: 'Filtrera issues i demo/weekend-project', exact: true })).toBeVisible();
   await designFilter.fill("BUG");
@@ -46,6 +48,9 @@ test("repository controls work with keyboard on mobile and translate into Englis
   await page.getByRole("button", { name: "Utforska en demo" }).click();
   const filter = page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true });
   const header = page.locator('#repo-1 .lane-header');
+  await header.getByRole('button', { name: 'Filtrera issues i demo/design-system', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(filter).toBeFocused();
   await expect(header.getByRole('textbox', { name: 'Filtrera issues i demo/design-system', exact: true })).toBeVisible();
   await header.getByRole('button', { name: 'Kollapsa design-system', exact: true }).click();
   // Collapsed repositories show no issues on phones, so their search is hidden (#265).

@@ -64,20 +64,15 @@ async function connect(page: Page, text: (typeof copy)["sv"]) {
 const measure = (page: Page) => page.evaluate(() => {
   const header = document.querySelector(".lane-header")!.getBoundingClientRect();
   const status = document.querySelector(".lane-header .lane-sync")!.getBoundingClientRect();
-  const title = document.querySelector(".lane-header .lane-title")!.getBoundingClientRect();
   const actions = document.querySelector(".lane-header .lane-actions")!.getBoundingClientRect();
   const spinner = document.querySelector(".lane-header .lane-sync-spinner")?.getBoundingClientRect();
-  const marginTop = Math.round(status.top - header.top);
-  const marginRight = Math.round(header.right - status.right);
-  const spinnerMarginTop = spinner ? Math.round(spinner.top - header.top) : null;
-  const spinnerMarginRight = spinner ? Math.round(header.right - spinner.right) : null;
   return {
     board: Math.round(document.querySelector(".repo-lane")!.getBoundingClientRect().top + scrollY),
     headerHeight: Math.round(header.height),
     statusInside: status.right <= header.right + 0.5 && status.top >= header.top - 0.5,
-    statusAboveContent: status.bottom <= Math.min(title.top, actions.top) + 0.5,
-    statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
-    spinnerMarginsEqual: spinner ? Math.abs(spinnerMarginTop! - spinnerMarginRight!) <= 1 : true,
+    statusClearContent: status.right <= actions.left + 0.5 && Math.abs((status.top + status.bottom) / 2 - (actions.top + actions.bottom) / 2) <= 1,
+    statusMarginsEqual: status.top >= header.top && status.bottom <= header.bottom,
+    spinnerMarginsEqual: spinner ? Math.abs((spinner.top + spinner.bottom) / 2 - (status.top + status.bottom) / 2) <= 1 : true,
     actionsWidth: Math.round(actions.width),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     headerOverflow: [...document.querySelectorAll(".lane-header")].some(element => element.scrollWidth > element.clientWidth),
@@ -121,10 +116,10 @@ for (const [language, text] of Object.entries(copy)) {
           expect.soft(sample.headerHeight, `header height at ${width}px (${state})`).toBe(idle.headerHeight);
           expect.soft(sample.actionsWidth, `header buttons at ${width}px (${state})`).toBe(idle.actionsWidth);
           expect.soft(sample.statusInside, `status inside header at ${width}px (${state})`).toBe(true);
-          expect.soft(sample.statusAboveContent, `status clear of header content at ${width}px (${state})`).toBe(true);
-          // #161: status and spinner have equal top and right margins
-          expect.soft(sample.statusMarginsEqual, `status top/right margins equal at ${width}px (${state})`).toBe(true);
-          expect.soft(sample.spinnerMarginsEqual, `spinner top/right margins equal at ${width}px (${state})`).toBe(true);
+          expect.soft(sample.statusClearContent, `status clear of header content at ${width}px (${state})`).toBe(true);
+          // Status stays contained; the spinner is vertically centred in its slot.
+          expect.soft(sample.statusMarginsEqual, `status contained at ${width}px (${state})`).toBe(true);
+          expect.soft(sample.spinnerMarginsEqual, `spinner centred at ${width}px (${state})`).toBe(true);
           expect.soft(sample.headerOverflow, `header overflow at ${width}px (${state})`).toBe(false);
           if (width <= 650) expect.soft(sample.overflow, `horizontal scroll at ${width}px (${state})`).toBeLessThanOrEqual(0);
         }
@@ -132,10 +127,10 @@ for (const [language, text] of Object.entries(copy)) {
       // The status is not a live region, so background syncs are not announced every cycle.
       expect(await alpha.locator(".lane-sync").evaluate(element => Boolean(element.closest("[aria-live], [role=status]")))).toBe(false);
 
-      // The combined board aggregates all repositories in its header.
+      // The combined board aggregates all repositories in the filter toolbar.
       await page.setViewportSize({ width: 375, height: 800 });
       await page.getByRole("checkbox", { name: text.split }).uncheck();
-      const head = page.locator(".combined-board-head");
+      const head = page.locator(".board-toolbar");
       const combinedSpinner = head.getByRole("button", { name: text.combined });
       await expect(head.locator(".lane-sync")).toHaveText(text.updated);
       api.pause();
@@ -145,17 +140,13 @@ for (const [language, text] of Object.entries(copy)) {
         const headBox = element.getBoundingClientRect();
         const status = element.querySelector<HTMLElement>(".combined-sync")!.getBoundingClientRect();
         const spinner = element.querySelector<HTMLElement>(".lane-sync-spinner")!.getBoundingClientRect();
-        const marginTop = Math.round(status.top - headBox.top);
-        const marginRight = Math.round(headBox.right - status.right);
-        const spinnerMarginTop = Math.round(spinner.top - headBox.top);
-        const spinnerMarginRight = Math.round(headBox.right - spinner.right);
         return {
-          statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
-          spinnerMarginsEqual: Math.abs(spinnerMarginTop - spinnerMarginRight) <= 1,
+          statusMarginsEqual: status.top >= headBox.top && status.bottom <= headBox.bottom,
+          spinnerMarginsEqual: Math.abs((spinner.top + spinner.bottom) / 2 - (status.top + status.bottom) / 2) <= 1,
         };
       });
-      expect.soft(spinnerSample.statusMarginsEqual, "combined spinner status margins equal").toBe(true);
-      expect.soft(spinnerSample.spinnerMarginsEqual, "combined spinner icon margins equal").toBe(true);
+      expect.soft(spinnerSample.statusMarginsEqual, "combined status contained").toBe(true);
+      expect.soft(spinnerSample.spinnerMarginsEqual, "combined spinner centred").toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       api.release();
       await expect(combinedSpinner).toHaveCount(0);
@@ -176,10 +167,10 @@ test("the sync spinner is static with reduced motion", async ({ page }) => {
   await expect(spinner).toHaveCount(0);
 });
 
-test("the combined board status stays inside the header in both display modes", async ({ page }) => {
+test("the combined board status stays inside the toolbar in both display modes", async ({ page }) => {
   await connect(page, copy.sv);
   await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
-  const head = page.locator(".combined-board-head");
+  const head = page.locator(".board-toolbar");
   await expect(head.locator(".lane-sync")).toHaveText(copy.sv.updated);
   for (const mode of copy.sv.modes) {
     await page.getByRole("button", { name: mode, exact: true }).click();
@@ -190,16 +181,14 @@ test("the combined board status stays inside the header in both display modes", 
         const headBox = element.getBoundingClientRect();
         const box = status.getBoundingClientRect();
         const height = headBox.height;
-        const marginTop = Math.round(box.top - headBox.top);
-        const marginRight = Math.round(headBox.right - box.right);
         return {
           height,
           right: box.right <= headBox.right,
-          statusMarginsEqual: Math.abs(marginTop - marginRight) <= 1,
+          statusMarginsEqual: box.top >= headBox.top && box.bottom <= headBox.bottom,
         };
       });
       expect.soft(sample.right, `status inside the header at ${width}px (${mode})`).toBe(true);
-      expect.soft(sample.statusMarginsEqual, `combined status margins equal at ${width}px (${mode})`).toBe(true);
+      expect.soft(sample.statusMarginsEqual, `combined status contained at ${width}px (${mode})`).toBe(true);
     }
   }
 });
@@ -216,8 +205,8 @@ test("the header status refreshes its repository on click and keyboard, ignoring
   // The tooltip explains the time and the action on keyboard focus as well as hover.
   await page.keyboard.press("Shift"); // Keyboard modality, so focus is visible.
   await alphaStatus.focus();
-  expect(await alphaStatus.evaluate(element => getComputedStyle(element, "::after").content)).toMatch(copy.sv.tooltip);
-  expect(await alphaStatus.evaluate(element => getComputedStyle(element).boxShadow)).not.toBe("none");
+  await expect(alphaStatus).toHaveAttribute("title", /Senast uppdaterad/);
+  expect(await alphaStatus.evaluate(element => getComputedStyle(element).outlineStyle)).toBe("solid");
 
   let before = api.requests();
   api.pause();
@@ -256,12 +245,12 @@ test("the header status refreshes its repository on click and keyboard, ignoring
 
   // The combined board refreshes every repository at once, showing the spinner until all are done.
   await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
-  const combined = page.locator(".combined-board-head button.lane-sync");
+  const combined = page.locator(".board-toolbar button.lane-sync");
   await expect(combined).toHaveAccessibleName(copy.sv.refreshAll);
   before = api.requests();
   api.pause();
   await combined.click();
-  const combinedSpinner = page.locator(".combined-board-head").getByRole("button", { name: copy.sv.combined });
+  const combinedSpinner = page.locator(".board-toolbar").getByRole("button", { name: copy.sv.combined });
   await expect(combinedSpinner).toBeVisible();
   await expect.poll(api.requests).toEqual({ alpha: before.alpha + 1, beta: before.beta + 1 });
   await combinedSpinner.click({ force: true });

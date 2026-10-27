@@ -33,7 +33,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }
     expect(headerBox.x + headerBox.width - settingsBox.x - settingsBox.width).toBeLessThan(25);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await header.getByRole("button", { name: `Expandera ${repo.name}` }).click();
-    await expect(header.getByLabel(`Filtrera issues i ${repo.full_name}`, { exact: true })).toBeVisible();
+    await expect(header.getByRole("button", { name: `Filtrera issues i ${repo.full_name}`, exact: true })).toBeVisible();
     await context.close();
   });
 }

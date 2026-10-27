@@ -1778,103 +1778,84 @@ h1 {
   white-space: nowrap;
 }
 
-/* Per-repository sync status (#146, #149): only the time or a round spinner, pinned to the header's
-   top-right corner inside its padding, so it never adds a row or squeezes the header buttons. It is a
-   button that refreshes now; its explanation appears as a tooltip on hover and keyboard focus. */
+/* Sync lives with the count and actions, in normal header/toolbar flow. */
 .lane-sync {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+  position: relative;
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 5px;
+  min-width: var(--space-8);
+  min-height: var(--space-8);
+  padding: var(--space-1);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--space-1);
   background: transparent;
+  font: inherit;
   font-size: 10px;
-  line-height: 16px;
-  color: var(--muted);
+  color: var(--text);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 button.lane-sync:hover { background: var(--hover); color: var(--text); }
-button.lane-sync:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); color: var(--text); }
-button.lane-sync.syncing {
-  width: 16px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0;
-  border-radius: 50%;
-  cursor: progress;
-}
-/* A slightly larger hit area without making the header taller. */
-button.lane-sync::before { content: ""; position: absolute; inset: -3px -4px; }
-button.lane-sync:hover::after,
-button.lane-sync:focus-visible::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 5;
-  width: max-content;
-  max-width: min(260px, calc(100vw - 40px));
-  padding: 5px 8px;
-  border-radius: 6px;
-  background: var(--text);
-  color: var(--surface);
-  font-size: 11px;
-  line-height: 1.35;
-  white-space: normal;
-  text-align: left;
-  pointer-events: none;
-  box-shadow: 0 3px 8px #0002;
-}
+button.lane-sync:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button.lane-sync.syncing { cursor: progress; }
 .lane-sync-spinner {
   display: block;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid #48a98f;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  border: 2px solid var(--green);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }
-@media (max-width: 650px) {
-  .lane-sync { top: 4px; right: 4px; height: 16px; line-height: 16px; }
-}
-
-/* Repository collapse controls and summaries adapt to narrow screens. */
-.lane-header { flex-wrap: wrap; }
-.lane-title { flex: 1 1 220px; }
+/* Compact board headers; Statistics keeps its separate filter layout. */
+.repo-lane:not(.statistics-repository) .lane-header { flex-wrap: nowrap; padding: var(--space-2) var(--space-3); gap: var(--space-3); align-items: center; }
+.repo-lane:not(.statistics-repository) .lane-title { flex: 1 1 0; gap: var(--space-2); }
 .lane-title > div { min-width: 0; }
-.lane-title h2 a { min-width: 0; overflow-wrap: anywhere; }
+.repo-lane:not(.statistics-repository) .lane-title > div { display: flex; align-items: center; gap: var(--space-3); flex: 1 1 auto; }
+.repo-lane:not(.statistics-repository) .lane-title h2 { flex: 0 1 auto; min-width: 0; margin: 0; flex-wrap: nowrap; gap: var(--space-2); font-size: 12px; }
+.lane-title h2 a { min-width: 0; }
 .lane-title h2 a svg { flex-shrink: 0; }
 .repository-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo-lane:not(.statistics-repository) .repository-badges { flex-wrap: nowrap; gap: var(--space-1); }
+.repo-lane:not(.statistics-repository) .repo-avatar { width: var(--space-6); height: var(--space-6); border-radius: var(--space-1); font-size: 9px; }
+.repo-lane:not(.statistics-repository) .repo-owner { flex: 1 1 0; min-width: 0; max-width: none; color: var(--text); }
+.repo-lane:not(.statistics-repository) .repo-owner span { margin: 0 var(--space-1); }
 .lane-title .private-badge { flex-shrink: 0; }
-.lane-meta { flex: 1 1 320px; flex-wrap: nowrap; justify-content: flex-end; min-width: 0; }
-.lane-actions { display: flex; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 10px; }
+.lane-meta { order: 2; display: flex; flex: 0 1 auto; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; color: var(--text); }
+.lane-actions { display: flex; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: var(--space-2); }
 .lane-actions > button { flex-shrink: 0; }
-.lane-summary { width: 100%; display: none; flex-wrap: wrap; gap: 5px 12px; font-size: 10px; white-space: normal; }
+.lane-summary { order: 1; display: none; flex: 0 1 auto; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: 10px; color: var(--text); }
 .repo-lane.is-collapsed .lane-summary { display: flex; }
+.repo-lane.is-collapsed .repo-owner { display: none; }
 .is-collapsed .lane-header { border-bottom: 0; }
 .collapse-project { flex-shrink: 0; }
-@media (max-width: 650px) {
-  .lane-header { gap: 8px; }
-  .lane-title { width: 100%; flex-basis: 100%; }
-  .lane-meta { width: 100%; flex-basis: 100%; gap: 8px; }
-  .lane-actions { gap: 8px; }
-  .collapse-project { min-width: 44px; min-height: 44px; }
-  .lane-summary { width: 100%; order: 1; }
+/* Sorting remains legible without using a second header row on narrow desktops. */
+.column-header, .swimlane.list-mode .column-header { flex-direction: row; align-items: center; padding: var(--space-2) var(--space-3); gap: var(--space-2); min-height: 40px; }
+.column-heading { gap: var(--space-2); min-width: 0; }
+.column-heading:has(.column-estimate) { row-gap: var(--space-1); }
+.column-sort { max-width: 50%; }
+.column-sort-button { gap: var(--space-1); padding: var(--space-1); font-size: 10px; color: var(--text); text-align: right; line-height: 1.4; }
+.column-sort-button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.column-sort-menu { left: auto; right: 0; }
+@media (max-width: 950px) {
+  .repo-lane:not(.statistics-repository) .lane-title > div { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 }
-/* Collapsed repositories show no issues on phones, so their search field is hidden; the query is kept. */
 @media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
+  .repo-lane:not(.statistics-repository) .lane-header { flex-wrap: wrap; gap: var(--space-2); }
+  .repo-lane:not(.statistics-repository) .lane-title { width: 100%; flex-basis: 100%; }
+  .repo-lane:not(.statistics-repository) .lane-title > div { overflow: hidden; }
+  .repo-lane:not(.statistics-repository) .lane-title h2 { max-width: 100%; }
+  .repo-lane:not(.statistics-repository) .repo-owner { flex-basis: auto; width: 100%; }
+  .lane-meta { width: 100%; flex: 1 1 100%; }
+  .collapse-project, .lane-actions > .icon-button, button.lane-sync, .column-sort-button { min-width: 44px; min-height: 44px; }
   .repo-lane.is-collapsed .repository-filter { display: none; }
-  /* The remaining actions share the summary row instead of leaving an empty row. */
-  .repo-lane.is-collapsed .lane-meta { order: 2; flex: 0 0 auto; width: auto; margin-left: auto; align-self: center; }
-  .repo-lane.is-collapsed .lane-summary { order: 1; flex: 1 1 0; width: auto; min-width: 0; align-self: center; }
-  .lane-actions > .icon-button { min-width: 44px; min-height: 44px; }
+  .repo-lane.is-collapsed .lane-meta { order: 2; flex: 0 0 auto; width: auto; margin-left: auto; }
+  .repo-lane.is-collapsed .lane-summary { order: 1; flex: 1 1 0; width: auto; min-width: 0; }
+}
+@media (pointer: coarse) {
+  button.lane-sync, .collapse-project, .lane-actions > .icon-button, .column-sort-button { min-width: 44px; min-height: 44px; }
 }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
@@ -1893,7 +1874,7 @@ button.lane-sync:focus-visible::after {
 .swimlane.list-mode { grid-template-columns: minmax(0, 1fr); }
 .swimlane.list-mode .board-column { min-height: 0; }
 .swimlane.list-mode .board-column + .board-column { border-left: 0; border-top: 1px solid var(--line); }
-.swimlane.list-mode .column-header { align-items: center; padding: 10px 18px 8px; }
+
 .swimlane.list-mode .cards { gap: 4px; padding: 6px 10px 8px; }
 .swimlane.list-mode .column-empty { min-height: 0; flex-direction: row; padding: 10px; }
 .issue-rows { container: issue-list / inline-size; display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
@@ -2077,7 +2058,7 @@ button.lane-sync:focus-visible::after {
 @media (max-width: 650px) {
   .board-mode-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .board-mode-toggle button { min-width: 38px; min-height: 36px; padding: 0 8px; }
-  .swimlane.list-mode .column-header { padding: 10px 12px 8px; }
+
   .swimlane.list-mode .cards { padding: 6px 8px 8px; }
   /* Phones: the time label moves beside the status line so the title keeps the width. */
   .issue-row { grid-template-areas: "number title title" "meta meta time"; }

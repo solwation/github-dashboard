@@ -28,6 +28,7 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("5");
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   const openStat = page.locator('[data-stat="open"] strong');
+  await page.getByRole("button", { name: "Filtrera issues i demo/design-system", exact: true }).click();
   await page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true }).fill("missing");
   await expect(openStat).not.toHaveText(/^9(?!\d)/);
   await split.focus(); await page.keyboard.press("Space");
