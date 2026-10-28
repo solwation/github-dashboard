@@ -43,6 +43,15 @@
           354,
           358
         ]
+      },
+      {
+        "text": {
+          "sv": "Listans etiketter mäts samlat när rader monteras, med bevarad etikettmeny och responsiv layout.",
+          "en": "List labels use batched sizing when rows mount, preserving the label menu and responsive layout."
+        },
+        "issues": [
+          360
+        ]
       }
     ]
   },

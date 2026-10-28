@@ -1,10 +1,10 @@
 {
-  "baseCommit": "2ce0a734e489ea09c2537e88478ef5378ec52f29",
+  "baseCommit": "7f652c4b533e4356d8b5b977569c072e8acf923c",
   "summary": {
-    "sv": "Tomma projektrubriker döljs under statistikens gemensamma graf. Projektfilter finns kvar där de är tillgängliga.",
-    "en": "Empty project headings are hidden below the combined statistics chart. Available project filters are retained."
+    "sv": "Listans etiketter mäts samlat när rader monteras. Etikettmenyn och den responsiva layouten bevaras.",
+    "en": "List labels use batched sizing when rows mount, preserving the label menu and responsive layout."
   },
   "issues": [
-    358
+    360
   ]
 }
