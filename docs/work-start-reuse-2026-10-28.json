@@ -1,0 +1,367 @@
+{
+  "issue": 359,
+  "beforeApplication": "2ce0a734e489ea09c2537e88478ef5378ec52f29",
+  "afterBase": "3e33f84",
+  "afterGithubSourceSHA256": "bc08fd9730b7a10f30e72fe4220633c4a6183e554e6085408ef73adb23852288",
+  "afterAppBundleSHA256": "ea02a39dc6c945af81d937149443646ce0181850097946eeb391073c5d4e82d7",
+  "method": "Reuse committed357before measurements; same synthetic production harness/data/limits/metadata, one Chromium worker, no CPU throttle. Manual refresh elapsed values include driver keyboard/poll overhead. After includes360row-sizing change and different host contention; no isolated/native-device speedup claim.",
+  "attempts": [
+    "First attempt:2small cases passed; large desktop exceeded240s case bound during refresh after3UI cycles; large phone deliberately interrupted. Partial/failure artifacts retained.",
+    "One retained large desktop/phone rerun at480s case bound; functional60s waits and clocks unchanged; both passed."
+  ],
+  "cases": [
+    {
+      "case": "small-desktop",
+      "viewport": "1600x1000 desktop",
+      "dataset": {
+        "repositories": 1,
+        "issuesPerRepository": 60,
+        "totalIssues": 60,
+        "progressIssues": 20,
+        "initialVisibleCards": 18,
+        "apiLatencyMs": 0
+      },
+      "before": {
+        "hostLoad": [
+          16.2,
+          18.52,
+          19.75
+        ],
+        "refresh": {
+          "driverInclusiveMs": {
+            "median": 405.2,
+            "min": 361.1,
+            "max": 449.2,
+            "samples": 2
+          },
+          "requests": [
+            34,
+            35
+          ],
+          "notModified": [
+            23,
+            23
+          ],
+          "timelineRequests": [
+            20,
+            20
+          ]
+        }
+      },
+      "after": {
+        "revision": "3e33f84-plus-restored-work-start-reuse",
+        "browser": "156.0.8078.4",
+        "hostLoad": [
+          24.57,
+          21.06,
+          19.9
+        ],
+        "refreshMs": {
+          "min": 552.2,
+          "median": 598.4,
+          "max": 644.6
+        },
+        "refreshRequests": [
+          12,
+          16
+        ],
+        "refreshNotModified": [
+          3,
+          3
+        ],
+        "refreshTimelineRequests": [
+          0,
+          0
+        ],
+        "refreshRequestKinds": [
+          {
+            "issue-list-open": 1,
+            "issue-list-closed": 1,
+            "labels": 1,
+            "graphql": 9
+          },
+          {
+            "issue-list-open": 1,
+            "issue-list-closed": 1,
+            "labels": 1,
+            "graphql": 12,
+            "issue-list-all": 1
+          }
+        ],
+        "coldTimelineRequests": 20,
+        "cacheRestore": {
+          "firstCardFromNavigationMs": 2738.9000000059605,
+          "longestTaskMs": 788,
+          "heldRequests": 11,
+          "cards": 18
+        },
+        "cacheCiphertextBytes": 54025
+      }
+    },
+    {
+      "case": "small-phone",
+      "viewport": "390x844 touch/mobile",
+      "dataset": {
+        "repositories": 1,
+        "issuesPerRepository": 60,
+        "totalIssues": 60,
+        "progressIssues": 20,
+        "initialVisibleCards": 18,
+        "apiLatencyMs": 0
+      },
+      "before": {
+        "hostLoad": [
+          16.26,
+          18.49,
+          19.74
+        ],
+        "refresh": {
+          "driverInclusiveMs": {
+            "median": 448.0,
+            "min": 388,
+            "max": 507.9,
+            "samples": 2
+          },
+          "requests": [
+            24,
+            24
+          ],
+          "notModified": [
+            23,
+            23
+          ],
+          "timelineRequests": [
+            20,
+            20
+          ]
+        }
+      },
+      "after": {
+        "revision": "3e33f84-plus-restored-work-start-reuse",
+        "browser": "156.0.8078.4",
+        "hostLoad": [
+          28.7,
+          22.29,
+          20.34
+        ],
+        "refreshMs": {
+          "min": 767.3,
+          "median": 983.75,
+          "max": 1200.2
+        },
+        "refreshRequests": [
+          5,
+          4
+        ],
+        "refreshNotModified": [
+          4,
+          3
+        ],
+        "refreshTimelineRequests": [
+          0,
+          0
+        ],
+        "refreshRequestKinds": [
+          {
+            "issue-list-open": 1,
+            "issue-list-closed": 1,
+            "labels": 1,
+            "graphql": 1,
+            "issue-list-all": 1
+          },
+          {
+            "issue-list-open": 1,
+            "issue-list-closed": 1,
+            "labels": 1,
+            "graphql": 1
+          }
+        ],
+        "coldTimelineRequests": 20,
+        "cacheRestore": {
+          "firstCardFromNavigationMs": 1788.800000011921,
+          "longestTaskMs": 477,
+          "heldRequests": 5,
+          "cards": 18
+        },
+        "cacheCiphertextBytes": 54025
+      }
+    },
+    {
+      "case": "large-desktop",
+      "viewport": "1600x1000 desktop",
+      "dataset": {
+        "repositories": 12,
+        "issuesPerRepository": 120,
+        "totalIssues": 1440,
+        "progressIssues": 480,
+        "initialVisibleCards": 216,
+        "apiLatencyMs": 0
+      },
+      "before": {
+        "hostLoad": [
+          21.72,
+          20.02,
+          20.16
+        ],
+        "refresh": {
+          "driverInclusiveMs": {
+            "median": 12496.1,
+            "min": 11643.3,
+            "max": 13348.9,
+            "samples": 2
+          },
+          "requests": [
+            540,
+            528
+          ],
+          "notModified": [
+            516,
+            516
+          ],
+          "timelineRequests": [
+            480,
+            480
+          ]
+        }
+      },
+      "after": {
+        "revision": "3e33f84-plus-restored-work-start-reuse",
+        "browser": "156.0.8078.4",
+        "hostLoad": [
+          24.28,
+          26.73,
+          24.06
+        ],
+        "refreshMs": {
+          "min": 20426.9,
+          "median": 31099.05,
+          "max": 41771.2
+        },
+        "refreshRequests": [
+          66,
+          60
+        ],
+        "refreshNotModified": [
+          42,
+          48
+        ],
+        "refreshTimelineRequests": [
+          0,
+          0
+        ],
+        "refreshRequestKinds": [
+          {
+            "issue-list-all": 18,
+            "issue-list-open": 12,
+            "issue-list-closed": 12,
+            "labels": 12,
+            "graphql": 12
+          },
+          {
+            "issue-list-open": 12,
+            "issue-list-closed": 12,
+            "labels": 12,
+            "graphql": 12,
+            "issue-list-all": 12
+          }
+        ],
+        "coldTimelineRequests": 480,
+        "cacheRestore": {
+          "firstCardFromNavigationMs": 4076.5999999940395,
+          "longestTaskMs": 1808,
+          "heldRequests": 11,
+          "cards": 216
+        },
+        "cacheCiphertextBytes": 1129865
+      }
+    },
+    {
+      "case": "large-phone",
+      "viewport": "390x844 touch/mobile",
+      "dataset": {
+        "repositories": 12,
+        "issuesPerRepository": 120,
+        "totalIssues": 1440,
+        "progressIssues": 480,
+        "initialVisibleCards": 216,
+        "apiLatencyMs": 0
+      },
+      "before": {
+        "hostLoad": [
+          24.9,
+          22.5,
+          21.14
+        ],
+        "refresh": {
+          "driverInclusiveMs": {
+            "median": 20021.7,
+            "min": 13605,
+            "max": 26438.4,
+            "samples": 2
+          },
+          "requests": [
+            529,
+            517
+          ],
+          "notModified": [
+            516,
+            516
+          ],
+          "timelineRequests": [
+            480,
+            480
+          ]
+        }
+      },
+      "after": {
+        "revision": "3e33f84-plus-restored-work-start-reuse",
+        "browser": "156.0.8078.4",
+        "hostLoad": [
+          22.07,
+          25.44,
+          23.97
+        ],
+        "refreshMs": {
+          "min": 8906.7,
+          "median": 12242.55,
+          "max": 15578.4
+        },
+        "refreshRequests": [
+          49,
+          37
+        ],
+        "refreshNotModified": [
+          36,
+          36
+        ],
+        "refreshTimelineRequests": [
+          0,
+          0
+        ],
+        "refreshRequestKinds": [
+          {
+            "issue-list-open": 12,
+            "issue-list-closed": 12,
+            "labels": 12,
+            "graphql": 1,
+            "issue-list-all": 12
+          },
+          {
+            "issue-list-open": 12,
+            "issue-list-closed": 12,
+            "labels": 12,
+            "graphql": 1
+          }
+        ],
+        "coldTimelineRequests": 480,
+        "cacheRestore": {
+          "firstCardFromNavigationMs": 3245.9000000059605,
+          "longestTaskMs": 1448,
+          "heldRequests": 5,
+          "cards": 216
+        },
+        "cacheCiphertextBytes": 1129865
+      }
+    }
+  ]
+}

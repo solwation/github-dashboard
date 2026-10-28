@@ -160,7 +160,7 @@ describe("GitHub transport", () => {
     const lane = await new GitHub("test-token").lane(repo, {});
     expect(lane.issues).toHaveLength(1);
     expect(lane.timerWarning).toBe(true);
-    expect(lane.issues[0]?.startedAt).toBeUndefined();
+    expect(lane.issues[0]?.startedAt).toBeNull();
   });
   it("does not keep a transient timeline error in cached issues across 304 responses", async () => {
     let timelineFails = true;

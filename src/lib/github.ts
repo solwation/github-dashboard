@@ -314,6 +314,30 @@ export class GitHub {
       throw new Error(t("Ogiltig API-adress."));
     return this.all<IssueComment>(`/repos/${repoFullName}/issues/${issueNumber}/comments?per_page=100`);
   }
+  // Evidence belongs to this authenticated client only; never persist it with issue data.
+  // Weak keys preserve it while the shown issue is alive without retaining old boards/accounts.
+  private readonly workStarts = new WeakMap<Issue, { repository: string; rule: string; version: string; start: string }>();
+  private workVersion(issue: Issue) {
+    return JSON.stringify([issue.id, issue.number, issue.state, issue.closed_at, issue.updated_at, issue.labels.map(label => label.name).sort()]);
+  }
+  private workRule(rules: Rules) { return rules.progress ? `custom:${rules.progress.trim().toLowerCase()}` : "default"; }
+  private reusableStart(repo: Repo, issue: Issue, rules: Rules, old?: Issue): string | null {
+    if (!old?.startedAt || old.timerError) return null;
+    // Public lane history has its existing bounded repository path; do not turn it into a fan-out.
+    if (!this.token) return old.updated_at === issue.updated_at ? old.startedAt : null;
+    const evidence = this.workStarts.get(old);
+    const start = Date.parse(old.startedAt);
+    return evidence && evidence.repository === repo.full_name && evidence.rule === this.workRule(rules)
+      && evidence.version === this.workVersion(issue) && evidence.version === this.workVersion(old)
+      && evidence.start === old.startedAt && Number.isFinite(start) && start <= Date.now()
+      && Number.isFinite(Date.parse(issue.updated_at)) ? evidence.start : null;
+  }
+  private rememberStart(repo: Repo, issue: Issue, rules: Rules): Issue {
+    if (this.token && issue.startedAt && !issue.timerError) this.workStarts.set(issue, {
+      repository: repo.full_name, rule: this.workRule(rules), version: this.workVersion(issue), start: issue.startedAt,
+    });
+    return issue;
+  }
   private async startTime(
     repo: Repo,
     issue: Issue,
@@ -325,21 +349,17 @@ export class GitHub {
       const workStartedAt = carriedWorkStart(issue, old, rules);
       return workStartedAt ? { ...issue, workStartedAt } : issue;
     }
-    if (
-      old?.updated_at === issue.updated_at &&
-      old.startedAt &&
-      !old.timerError
-    )
-      return { ...issue, startedAt: old.startedAt };
+    const reused = this.reusableStart(repo, issue, rules, old);
+    if (reused) return this.rememberStart(repo, { ...issue, startedAt: reused, timerError: false }, rules);
     try {
       const events = await this.all<Event>(
         `/repos/${repo.full_name}/issues/${issue.number}/events?per_page=100`,
       );
-      return {
+      return this.rememberStart(repo, {
         ...issue,
         startedAt: progressStart(events, rules),
         timerError: false,
-      };
+      }, rules);
     } catch {
       return { ...issue, startedAt: null, timerError: true };
     }
@@ -422,8 +442,8 @@ export class GitHub {
     };
   }
   /**
-   * Full lane load. `previous` (the shown lane, if any) only carries local closing work starts
-   * (#141) for issues it held in progress or already closed with a known start; it adds no requests.
+   * Full lane load: revalidate issue/label lists, carry local closing work starts (#141), and
+   * reuse current-client work-start evidence only when metadata and work rules still match.
    */
   async lane(repo: Repo, rules: Rules, previous?: Pick<Lane, "issues">): Promise<Lane> {
     const root = `/repos/${repo.full_name}`;
@@ -468,24 +488,14 @@ export class GitHub {
         ? { ...issue, startedAt: progressStart(events.filter(event => event.issue?.id === issue.id), rules) ?? (known?.get(issue.id)?.updated_at === issue.updated_at ? known?.get(issue.id)?.startedAt : null) ?? null }
         : issue) };
     }
-    const active = issues.filter((i) => column(i, rules) === "progress");
+    const active = issues.map((issue, index) => ({ issue, index })).filter(({ issue }) => column(issue, rules) === "progress");
     // Limit simultaneous timeline requests; each timeline is fully paginated.
     let cursor = 0;
     await Promise.all(
       Array.from({ length: Math.min(4, active.length) }, async () => {
         while (cursor < active.length) {
-          const issue = active[cursor++]!;
-          try {
-            issue.startedAt = progressStart(
-              await this.all<Event>(
-                `${root}/issues/${issue.number}/events?per_page=100`,
-              ),
-              rules,
-            );
-            issue.timerError = false;
-          } catch {
-            issue.timerError = true;
-          }
+          const { issue, index } = active[cursor++]!;
+          issues[index] = await this.startTime(repo, issue, rules, known?.get(issue.id));
         }
       }),
     );
@@ -493,7 +503,7 @@ export class GitHub {
       repo,
       issues,
       labels,
-      timerWarning: active.some((i) => i.timerError),
+      timerWarning: issues.some(issue => column(issue, rules) === "progress" && issue.timerError),
     };
   }
 }

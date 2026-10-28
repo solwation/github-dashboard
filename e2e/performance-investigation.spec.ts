@@ -79,7 +79,8 @@ async function ciphertextBytes(page: Page) {
 }
 for (const size of [{ name: "small", repos: 1, issues: 60 }, { name: "large", repos: 12, issues: 120 }]) {
   for (const mobile of [false, true]) test(`production performance investigation ${size.name} ${mobile ? "phone" : "desktop"}`, async ({ browser }, info) => {
-    test.setTimeout(240000);
+    // Loaded shared hosts can spend minutes descheduled; retain functional waits and clocks (#359).
+    test.setTimeout(480000);
     const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1600, height: 1000 }, isMobile: mobile, hasTouch: mobile, locale: "sv-SE", reducedMotion: "reduce" });
     const page = await context.newPage(), cdp = await context.newCDPSession(page);
     const { repos, state } = await fixture(page, size.repos, size.issues);

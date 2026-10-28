@@ -15,7 +15,7 @@ PERF_INVESTIGATION=1 PERF_REVISION=$(git rev-parse HEAD) \
   --output=/tmp/issueflow-performance
 ```
 
-The normal suite skips this measurement file. Timings are not pass/fail budgets. Tests assert functional completion, issue counts, actual filtering, restored cache data and mode switching. Each case has a four-minute safety bound; source readiness can wait up to 60 seconds. An earlier 15-second functional wait was insufficient for the large fixture and was corrected, rather than classifying a slow completion as broken functionality.
+The normal suite skips this measurement file. Timings are not pass/fail budgets. Tests assert functional completion, issue counts, actual filtering, restored cache data and mode switching. Each case has an eight-minute safety bound (increased for shared-host contention during #359); source readiness can wait up to 60 seconds. An earlier 15-second functional wait was insufficient for the large fixture and was corrected, rather than classifying a slow completion as broken functionality.
 
 ## Inputs and method
 
