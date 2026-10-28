@@ -2,8 +2,8 @@
   {
     "date": "2026-10-28",
     "summary": {
-      "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna. Pågående arbete utan synlig aktivitet markeras.",
-      "en": "Conservative automatic sizing improves forecasts. In-progress work without visible activity is flagged."
+      "sv": "Tydligare överblick över aktuellt arbete. Försiktigare poäng och aktivitetsmarkeringar hjälper prognoser och uppföljning.",
+      "en": "Clearer overview of recent work. Conservative sizing and activity indicators improve forecasts and follow-up."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           352
+        ]
+      },
+      {
+        "text": {
+          "sv": "Repositoryheaders visar färsk arbetsaktivitet med tidsstämpel och länk till samordningsissue när underlag finns.",
+          "en": "Repository headers show recent work activity with timestamps and coordination links when evidence is available."
+        },
+        "issues": [
+          355
         ]
       }
     ]

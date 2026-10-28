@@ -1,11 +1,10 @@
 {
-  "baseCommit": "478dbaf74faeb649ecd84508f25903676accfce0",
+  "baseCommit": "c17e288d806d1f7d7f5c969d12b1793c60e8a04f",
   "summary": {
-    "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna. Pågående arbete utan synlig aktivitet på en timme får en försiktig varning.",
-    "en": "Conservative automatic sizing improves time forecasts. In-progress work without visible activity for an hour gets a cautious warning."
+    "sv": "Repositoryheaders visar färsk arbetsaktivitet med tidsstämpel och länk till samordningsissue när underlag finns.",
+    "en": "Repository headers show recent work activity with timestamps and coordination links when evidence is available."
   },
   "issues": [
-    351,
-    352
+    355
   ]
 }
