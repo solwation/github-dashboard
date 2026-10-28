@@ -60,8 +60,15 @@ Use [.orchestra/project.md](.orchestra/project.md), which loads the versioned,
 model-independent [shared core](.orchestra/shared/ORCHESTRA.md) and queue coordination.
 The existing [skill](.agents/skills/orkester/SKILL.md) and
 [slash command](.claude/commands/orkester.md) are thin adapters; other file-reading
-agents use the same files directly. `/orkester`, `$orkester` or an explicit request
-starts the workflow; reading or maintaining these files does not start a queue session.
+agents use the same files directly.
+The user has given standing approval (2026-10-28, #356) to automatically adopt newly
+detected stable versions of the official shared orchestra. Follow the reviewed subtree
+update procedure in [.orchestra/project.md](.orchestra/project.md#upstream-update-discovery),
+retain project overrides, track the upgrade in an issue and run the required checks; do
+not ask for approval again or label routine upgrades `user question`.
+
+`/orkester`, `$orkester` or an explicit request starts the workflow; reading or
+maintaining these files does not start a queue session.
 
 The user authorizes parallel subagents when useful. The local policy retains measured
 capacity including conductor work, one issue per worker, isolated ownership, fresh queue

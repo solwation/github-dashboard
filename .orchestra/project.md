@@ -189,12 +189,13 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.4.1**,
-commit **5e48d8370f051f5a15bbb740881dbf51187316a9** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.6.0**,
+commit **aecd631907c3374800e562c98125d905863ff925** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
-the subtree, improve generic behavior in the shared repository, and explicitly adopt
-reviewed releases here. Do not subtree-push this project's files/history upstream.
+the subtree, improve generic behavior in the shared repository, and adopt
+reviewed stable releases here under the standing authorization below.
+Do not subtree-push this project's files/history upstream.
 The subtree also carries the shared repository's own maintainer files (`AGENTS.md`,
 `AI.md`, `CONTRIBUTING.md`, `docs/`) and its example adapter
 (`.claude/commands/orkester.md`); they govern upstream maintenance only, not this
@@ -211,13 +212,23 @@ orchestra bug requires a fresh check. The conductor owns this check; workers and
 polls do not repeat it. Ignore drafts/prereleases, compare version numbers, and read
 changelogs plus the full instruction diff at exact resolved commits.
 
-Relevant bug/regression fixes always get a proposal issue in this repository (or an
-update to an existing one), with installed/target versions and SHAs, source links,
-applicability, host-policy effects, checks and next action, prioritized under AI.md.
-Other upgrades are optional and proposed only for a clear project benefit. Reuse
-existing proposals or recorded deferrals; unreleased main changes are pending, not
-targets. Never import automatically or interrupt current work: an import is an ordinary
-issue through the reviewed subtree update procedure.
+Standing user authorization (2026-10-28, [#356](https://github.com/solwation/github-dashboard/issues/356)):
+automatically adopt newly detected stable orchestra versions from the official upstream,
+without asking for approval again or adding `user question` just for the upgrade.
+This overrides the shared core's proposal-only/optional-adoption default. The existing
+startup/resume discovery cadence remains; no background scheduler is installed.
+
+Create or reuse an ordinary tracked upgrade issue with installed/target versions and
+exact SHAs, source links, applicability, host-policy effects, checks and next action,
+prioritized under AI.md. Review the full diff including skipped versions, perform any
+needed migration while preserving this project's overrides, import the exact reviewed
+commit through the squashed subtree update procedure, update the host pin and README,
+and complete local build, integration review and technical delivery. Do not interrupt
+active work or start unrelated queue work merely to update the instructions. A newer
+stable version needs no additional user decision; any real technical blocker remains
+tracked with the installed pin retained until it can be resolved. Reuse existing upgrade
+issues and honor any later explicit user deferral. Drafts, prereleases and unreleased
+main commits are not automatic update targets.
 
 Record UTC check time, upstream/pin, examined targets and outcome in private state or
 the #97 status. If the read fails or is incomplete, keep the pin, disclose it once,
