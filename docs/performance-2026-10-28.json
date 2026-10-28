@@ -1,0 +1,732 @@
+{
+  "baseline": "2ce0a734e489ea09c2537e88478ef5378ec52f29",
+  "date": "2026-10-28",
+  "browser": "156.0.8078.4",
+  "method": "Production Chromium, generated authenticated fixtures, one worker, 1x CPU, zero added API latency. In-page UI timing ends after two requestAnimationFrame callbacks; timings are observations, not budgets.",
+  "cases": [
+    {
+      "case": "small-desktop",
+      "viewport": "1600x1000 desktop",
+      "hostLoad": [
+        16.2,
+        18.52,
+        19.75
+      ],
+      "dataset": {
+        "repositories": 1,
+        "issuesPerRepository": 60,
+        "totalIssues": 60,
+        "progressIssues": 20,
+        "initialVisibleCards": 18,
+        "apiLatencyMs": 0
+      },
+      "coldBoard": {
+        "name": "cold-board",
+        "firstCardWithinStageMs": 1064.9000000059605,
+        "elapsedMs": 1509.5,
+        "mainThreadMs": 926.0729999999998,
+        "scriptMs": 51.798999999999985,
+        "layoutMs": 48.92199999999997,
+        "longTasks": 5,
+        "longestTaskMs": 177,
+        "mutations": 85,
+        "domNodes": 6092,
+        "heapMiB": 10.325813293457031,
+        "requests": 44,
+        "notModified": 0,
+        "responseBytes": 49621,
+        "requestKinds": {
+          "issue-list-open": 1,
+          "issue-list-closed": 1,
+          "labels": 1,
+          "identity/repositories": 3,
+          "issue-list-null": 1,
+          "issue-timeline": 20,
+          "graphql": 16,
+          "issue-list-all": 1
+        }
+      },
+      "actions": {
+        "filter": {
+          "inPageMs": {
+            "median": 125.4,
+            "min": 58.2,
+            "max": 205.2,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 179.7,
+            "min": 96.5,
+            "max": 354.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 0.5,
+          "medianLayoutMs": 7.5
+        },
+        "clear-filter": {
+          "inPageMs": {
+            "median": 100.4,
+            "min": 73.2,
+            "max": 151.7,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 151,
+            "min": 148.3,
+            "max": 208.9,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 2.1,
+          "medianLayoutMs": 6.5
+        },
+        "list": {
+          "inPageMs": {
+            "median": 116.6,
+            "min": 101.5,
+            "max": 161.5,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 190.4,
+            "min": 141.8,
+            "max": 269.9,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 1.0,
+          "medianLayoutMs": 11.8
+        },
+        "combined": {
+          "inPageMs": {
+            "median": 122.2,
+            "min": 116,
+            "max": 132.6,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 168.4,
+            "min": 150.9,
+            "max": 182.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 0.4,
+          "medianLayoutMs": 10.8
+        },
+        "split": {
+          "inPageMs": {
+            "median": 139.6,
+            "min": 114.5,
+            "max": 175.3,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 171.2,
+            "min": 156.8,
+            "max": 217,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 0.5,
+          "medianLayoutMs": 20.1
+        },
+        "cards": {
+          "inPageMs": {
+            "median": 159.4,
+            "min": 103.4,
+            "max": 217.3,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 233.5,
+            "min": 130,
+            "max": 299.5,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 83,
+          "medianScriptMs": 0.6,
+          "medianLayoutMs": 19.8
+        }
+      },
+      "manualRefresh": {
+        "driverInclusiveMs": {
+          "median": 405.2,
+          "min": 361.1,
+          "max": 449.2,
+          "samples": 2
+        },
+        "requests": [
+          34,
+          35
+        ],
+        "notModified": [
+          23,
+          23
+        ],
+        "timelineRequests": [
+          20,
+          20
+        ]
+      },
+      "encryptedCache": {
+        "ciphertextBytes": 54025,
+        "firstCardFromNavigationMs": 801.1000000238419,
+        "longestTaskMs": 188,
+        "heldRequests": 11,
+        "cards": 18
+      },
+      "heapAfterGC": {
+        "beforeCyclesMiB": 7.380428314208984,
+        "afterCyclesMiB": 8.644882202148438
+      },
+      "contentWritesBeforeReload": 4,
+      "observedTransientHeapPeakMiB": 28.5,
+      "observedCDPNodePeakIncludingDetached": 25549
+    },
+    {
+      "case": "small-phone",
+      "viewport": "390x844 touch/mobile",
+      "hostLoad": [
+        16.26,
+        18.49,
+        19.74
+      ],
+      "dataset": {
+        "repositories": 1,
+        "issuesPerRepository": 60,
+        "totalIssues": 60,
+        "progressIssues": 20,
+        "initialVisibleCards": 18,
+        "apiLatencyMs": 0
+      },
+      "coldBoard": {
+        "name": "cold-board",
+        "firstCardWithinStageMs": 618,
+        "elapsedMs": 950.4000000059605,
+        "mainThreadMs": 761.0619999999999,
+        "scriptMs": 34.609,
+        "layoutMs": 32.612,
+        "longTasks": 4,
+        "longestTaskMs": 170,
+        "mutations": 69,
+        "domNodes": 6076,
+        "heapMiB": 9.93185806274414,
+        "requests": 29,
+        "notModified": 0,
+        "responseBytes": 46687,
+        "requestKinds": {
+          "issue-list-open": 1,
+          "issue-list-closed": 1,
+          "labels": 1,
+          "identity/repositories": 3,
+          "issue-list-null": 1,
+          "issue-timeline": 20,
+          "graphql": 1,
+          "issue-list-all": 1
+        }
+      },
+      "actions": {
+        "filter": {
+          "inPageMs": {
+            "median": 92.3,
+            "min": 73.6,
+            "max": 103,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 140.8,
+            "min": 130.4,
+            "max": 157.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 0.6,
+          "medianLayoutMs": 5.4
+        },
+        "clear-filter": {
+          "inPageMs": {
+            "median": 109.7,
+            "min": 107,
+            "max": 137.1,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 165.5,
+            "min": 138.2,
+            "max": 172.7,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 0,
+          "medianScriptMs": 0.7,
+          "medianLayoutMs": 6.5
+        },
+        "list": {
+          "inPageMs": {
+            "median": 95,
+            "min": 72.7,
+            "max": 101.2,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 142.8,
+            "min": 134.6,
+            "max": 160.1,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 56,
+          "medianScriptMs": 0.3,
+          "medianLayoutMs": 10.1
+        },
+        "combined": {
+          "inPageMs": {
+            "median": 135.7,
+            "min": 96.9,
+            "max": 211.3,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 178.3,
+            "min": 157.1,
+            "max": 277,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 81,
+          "medianScriptMs": 0.5,
+          "medianLayoutMs": 9.6
+        },
+        "split": {
+          "inPageMs": {
+            "median": 127.3,
+            "min": 65.9,
+            "max": 158.2,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 164.3,
+            "min": 114.8,
+            "max": 212.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 53,
+          "medianScriptMs": 0.3,
+          "medianLayoutMs": 10.6
+        },
+        "cards": {
+          "inPageMs": {
+            "median": 159.2,
+            "min": 118.3,
+            "max": 195.2,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 214.9,
+            "min": 186.6,
+            "max": 251.1,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 60,
+          "medianScriptMs": 0.4,
+          "medianLayoutMs": 10.7
+        }
+      },
+      "manualRefresh": {
+        "driverInclusiveMs": {
+          "median": 448.0,
+          "min": 388,
+          "max": 507.9,
+          "samples": 2
+        },
+        "requests": [
+          24,
+          24
+        ],
+        "notModified": [
+          23,
+          23
+        ],
+        "timelineRequests": [
+          20,
+          20
+        ]
+      },
+      "encryptedCache": {
+        "ciphertextBytes": 54025,
+        "firstCardFromNavigationMs": 487.5,
+        "longestTaskMs": 160,
+        "heldRequests": 5,
+        "cards": 18
+      },
+      "heapAfterGC": {
+        "beforeCyclesMiB": 7.34869384765625,
+        "afterCyclesMiB": 8.506202697753906
+      },
+      "contentWritesBeforeReload": 4,
+      "observedTransientHeapPeakMiB": 28.8,
+      "observedCDPNodePeakIncludingDetached": 20987
+    },
+    {
+      "case": "large-desktop",
+      "viewport": "1600x1000 desktop",
+      "hostLoad": [
+        21.72,
+        20.02,
+        20.16
+      ],
+      "dataset": {
+        "repositories": 12,
+        "issuesPerRepository": 120,
+        "totalIssues": 1440,
+        "progressIssues": 480,
+        "initialVisibleCards": 216,
+        "apiLatencyMs": 0
+      },
+      "coldBoard": {
+        "name": "cold-board",
+        "firstCardWithinStageMs": 1549,
+        "elapsedMs": 23699.20000001788,
+        "mainThreadMs": 21438.741,
+        "scriptMs": 87.977,
+        "layoutMs": 231.90800000000002,
+        "longTasks": 37,
+        "longestTaskMs": 1823,
+        "mutations": 558,
+        "domNodes": 22986,
+        "heapMiB": 83.29933547973633,
+        "requests": 590,
+        "notModified": 0,
+        "responseBytes": 1120116,
+        "requestKinds": {
+          "issue-list-open": 12,
+          "issue-list-closed": 12,
+          "labels": 12,
+          "identity/repositories": 36,
+          "issue-list-null": 10,
+          "issue-timeline": 480,
+          "graphql": 16,
+          "issue-list-all": 12
+        }
+      },
+      "actions": {
+        "filter": {
+          "inPageMs": {
+            "median": 1654.8,
+            "min": 835.2,
+            "max": 3708.1,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 1868.8,
+            "min": 1084.5,
+            "max": 4976.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 1157,
+          "medianScriptMs": 2.2,
+          "medianLayoutMs": 71.3
+        },
+        "clear-filter": {
+          "inPageMs": {
+            "median": 1878.8,
+            "min": 741.9,
+            "max": 2114.3,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 2173.5,
+            "min": 812.8,
+            "max": 2412.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 482,
+          "medianScriptMs": 6.0,
+          "medianLayoutMs": 86.1
+        },
+        "list": {
+          "inPageMs": {
+            "median": 1768.4,
+            "min": 743.8,
+            "max": 2382.6,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 1947.3,
+            "min": 861.9,
+            "max": 2572.4,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 267,
+          "medianScriptMs": 4.6,
+          "medianLayoutMs": 230.7
+        },
+        "combined": {
+          "inPageMs": {
+            "median": 886.5,
+            "min": 423.1,
+            "max": 1189,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 952.7,
+            "min": 461.7,
+            "max": 1291.2,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 103,
+          "medianScriptMs": 1.1,
+          "medianLayoutMs": 11.9
+        },
+        "split": {
+          "inPageMs": {
+            "median": 2467.8,
+            "min": 1023.2,
+            "max": 2962.1,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 8309.4,
+            "min": 1126.2,
+            "max": 11368.1,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 316,
+          "medianScriptMs": 8.8,
+          "medianLayoutMs": 305.0
+        },
+        "cards": {
+          "inPageMs": {
+            "median": 812.1,
+            "min": 793.2,
+            "max": 3188,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 928,
+            "min": 884.9,
+            "max": 3453.7,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 1343,
+          "medianScriptMs": 1.9,
+          "medianLayoutMs": 105.6
+        }
+      },
+      "manualRefresh": {
+        "driverInclusiveMs": {
+          "median": 12496.1,
+          "min": 11643.3,
+          "max": 13348.9,
+          "samples": 2
+        },
+        "requests": [
+          540,
+          528
+        ],
+        "notModified": [
+          516,
+          516
+        ],
+        "timelineRequests": [
+          480,
+          480
+        ]
+      },
+      "encryptedCache": {
+        "ciphertextBytes": 1129865,
+        "firstCardFromNavigationMs": 2231.0999999940395,
+        "longestTaskMs": 1391,
+        "heldRequests": 11,
+        "cards": 216
+      },
+      "heapAfterGC": {
+        "beforeCyclesMiB": 25.03380584716797,
+        "afterCyclesMiB": 26.446529388427734
+      },
+      "contentWritesBeforeReload": 4,
+      "observedTransientHeapPeakMiB": 144.2,
+      "observedCDPNodePeakIncludingDetached": 116147
+    },
+    {
+      "case": "large-phone",
+      "viewport": "390x844 touch/mobile",
+      "hostLoad": [
+        24.9,
+        22.5,
+        21.14
+      ],
+      "dataset": {
+        "repositories": 12,
+        "issuesPerRepository": 120,
+        "totalIssues": 1440,
+        "progressIssues": 480,
+        "initialVisibleCards": 216,
+        "apiLatencyMs": 0
+      },
+      "coldBoard": {
+        "name": "cold-board",
+        "firstCardWithinStageMs": 2426.0999999940395,
+        "elapsedMs": 21106.79999998212,
+        "mainThreadMs": 17493.822,
+        "scriptMs": 213.534,
+        "layoutMs": 281.127,
+        "longTasks": 35,
+        "longestTaskMs": 1365,
+        "mutations": 494,
+        "domNodes": 22986,
+        "heapMiB": 83.23216247558594,
+        "requests": 575,
+        "notModified": 0,
+        "responseBytes": 1117182,
+        "requestKinds": {
+          "issue-list-open": 12,
+          "issue-list-closed": 12,
+          "labels": 12,
+          "identity/repositories": 36,
+          "issue-list-null": 10,
+          "issue-timeline": 480,
+          "graphql": 1,
+          "issue-list-all": 12
+        }
+      },
+      "actions": {
+        "filter": {
+          "inPageMs": {
+            "median": 1948,
+            "min": 1020.2,
+            "max": 2472.9,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 2667.4,
+            "min": 2142.2,
+            "max": 6941.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 760,
+          "medianScriptMs": 22.2,
+          "medianLayoutMs": 72.5
+        },
+        "clear-filter": {
+          "inPageMs": {
+            "median": 1931.9,
+            "min": 1930.2,
+            "max": 2629.2,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 2087.9,
+            "min": 2080.7,
+            "max": 2825.5,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 399,
+          "medianScriptMs": 5.8,
+          "medianLayoutMs": 151.6
+        },
+        "list": {
+          "inPageMs": {
+            "median": 1444.6,
+            "min": 1111.4,
+            "max": 1548.9,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 1600.3,
+            "min": 1234.8,
+            "max": 1665.3,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 568,
+          "medianScriptMs": 9.4,
+          "medianLayoutMs": 157.1
+        },
+        "combined": {
+          "inPageMs": {
+            "median": 1482.5,
+            "min": 481.1,
+            "max": 1721.2,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 1573.3,
+            "min": 531.4,
+            "max": 1859.9,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 109,
+          "medianScriptMs": 1.0,
+          "medianLayoutMs": 15.7
+        },
+        "split": {
+          "inPageMs": {
+            "median": 2600.4,
+            "min": 2489.4,
+            "max": 2963,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 2699.8,
+            "min": 2582.5,
+            "max": 3142.5,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 669,
+          "medianScriptMs": 0.5,
+          "medianLayoutMs": 268.4
+        },
+        "cards": {
+          "inPageMs": {
+            "median": 2582.8,
+            "min": 2118.1,
+            "max": 2817.6,
+            "samples": 3
+          },
+          "driverInclusiveMs": {
+            "median": 3074.9,
+            "min": 2339.7,
+            "max": 7109.2,
+            "samples": 3
+          },
+          "maxInPageLongTaskMs": 748,
+          "medianScriptMs": 2.9,
+          "medianLayoutMs": 231.3
+        }
+      },
+      "manualRefresh": {
+        "driverInclusiveMs": {
+          "median": 20021.7,
+          "min": 13605,
+          "max": 26438.4,
+          "samples": 2
+        },
+        "requests": [
+          529,
+          517
+        ],
+        "notModified": [
+          516,
+          516
+        ],
+        "timelineRequests": [
+          480,
+          480
+        ]
+      },
+      "encryptedCache": {
+        "ciphertextBytes": 1129865,
+        "firstCardFromNavigationMs": 1986.9000000059605,
+        "longestTaskMs": 897,
+        "heldRequests": 5,
+        "cards": 216
+      },
+      "heapAfterGC": {
+        "beforeCyclesMiB": 25.00687026977539,
+        "afterCyclesMiB": 26.046707153320312
+      },
+      "contentWritesBeforeReload": 4,
+      "observedTransientHeapPeakMiB": 125.0,
+      "observedCDPNodePeakIncludingDetached": 83612
+    }
+  ]
+}
