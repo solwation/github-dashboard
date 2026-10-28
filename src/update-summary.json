@@ -1,10 +1,10 @@
 {
-  "baseCommit": "c17e288d806d1f7d7f5c969d12b1793c60e8a04f",
+  "baseCommit": "6fd6931621ca026858acf2c92a7379f275e484c8",
   "summary": {
-    "sv": "Repositoryheaders visar färsk arbetsaktivitet med tidsstämpel och länk till samordningsissue när underlag finns.",
-    "en": "Repository headers show recent work activity with timestamps and coordination links when evidence is available."
+    "sv": "Statistikvyn visar graf och projektfilter utan de expanderbara listorna för labels och bidragsgivare.",
+    "en": "Statistics keeps charts and repository filters without the expandable label and contributor lists."
   },
   "issues": [
-    355
+    353
   ]
 }

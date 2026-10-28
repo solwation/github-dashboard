@@ -32,6 +32,15 @@
         "issues": [
           355
         ]
+      },
+      {
+        "text": {
+          "sv": "Statistikvyn visar graf och projektfilter utan de expanderbara listorna för labels och bidragsgivare.",
+          "en": "Statistics keeps charts and repository filters without the expandable label and contributor lists."
+        },
+        "issues": [
+          353
+        ]
       }
     ]
   },
