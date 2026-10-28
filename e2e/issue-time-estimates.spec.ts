@@ -173,6 +173,7 @@ test("issue time calibration follows repository filters and ignores them on comb
   await fixture(page);
   const point = () => badge(page, ".issue-card", 5);
   await expect(point()).toHaveAttribute("title", /Uppskattad tid:/);
+  await page.getByRole("button", { name: `Filtrera issues i ${repo.full_name}`, exact: true }).click();
   await page.getByRole("textbox", { name: `Filtrera issues i ${repo.full_name}`, exact: true }).fill("#5");
   await expect(point()).not.toHaveAttribute("title", /Uppskattad tid:/);
   await expect(page.locator(".issue-time-remaining")).toHaveCount(0);
