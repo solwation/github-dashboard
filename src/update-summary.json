@@ -1,11 +1,10 @@
 {
-  "baseCommit": "6fd6931621ca026858acf2c92a7379f275e484c8",
+  "baseCommit": "fa723a1d477ef3c01a1b314fcee451c798f489f2",
   "summary": {
-    "sv": "Statistik kan visas gemensamt eller per repository med bevarade projektfilter och tidsperiod. De expanderbara detaljlistorna har tagits bort.",
-    "en": "Statistics can be combined or split by repository with filters and period preserved. Expandable detail lists have been removed."
+    "sv": "Statistik kan visas gemensamt eller per repository, med bevarade projektfilter och tidsperiod.",
+    "en": "Statistics can be combined or split by repository while preserving project filters and the selected period."
   },
   "issues": [
-    353,
     354
   ]
 }
