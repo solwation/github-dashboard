@@ -110,3 +110,22 @@ Card and list UI changes follow the [four-scenario verification requirement in A
 Issue descriptions and comments hide HTML comments as GitHub does, while code examples remain visible and source HTML stays escaped.
 
 Overview summary footer values wrap as whole fields when space is limited, keeping short words readable on narrow screens.
+
+### Observed repository work activity
+
+Repository headers and the Repositories overview show an optional work-activity indicator
+when an open, non-coordination issue carries the repository's configured work label
+(default: the existing In progress detection) and its GitHub `updated_at` is less than
+60 minutes old. Future or invalid timestamps, failed/loading repositories, PRs and closed
+issues do not qualify. The indicator expires on the next minute tick and recomputes on
+ordinary refresh; removing the work label or closing the issue removes its evidence.
+It uses all selected repository data, including coordination issues hidden by board filters.
+
+Open the indicator by keyboard or touch to see recent issue counts, the latest observed
+change and a link to the most recently updated open coordination issue, if present.
+An owner claim (`orkester: <session>`) on qualifying work plus that coordination issue
+changes the header caption to Orchestra activity. Neither a coordination update nor an
+owner claim qualifies alone. GitHub metadata/comments are only an estimate of activity,
+not proof of a live process. There is no machine-readable heartbeat identifying individual
+agents in the available issue data, so no agent count is inferred or deduplicated from
+issues, claims, commenters or sessions. The overview counts repositories with evidence.

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, watch } from "vue";
 import { Activity, CircleCheck, Layers3, LayoutDashboard, Plus } from "@lucide/vue";
+import RepositoryActivity from "./RepositoryActivity.vue";
+import { repositoryActivity } from "../lib/repository-activity";
 import OverviewEstimate from "./OverviewEstimate.vue";
 import { overviewClosedSummary, overviewEstimateGroups, overviewRepositoryInfo } from "../lib/overview-estimates";
 import { useLanguage } from "../lib/i18n";
@@ -78,6 +80,10 @@ watch(clock, () => secondaryTracker.rebaseline(summarizeOverviewSecondary(props.
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); for (const key of secondaryKeys) clearCell(key); });
 const estimateGroups = computed(() => overviewEstimateGroups(props.lanes, props.rules, props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
 const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
+const activities = computed(() => props.lanes.flatMap(lane => {
+  const activity = repositoryActivity(lane, props.rules[lane.repo.full_name] || {}, current());
+  return activity ? [activity] : [];
+}));
 const repositoryInfo = computed(() => overviewRepositoryInfo(props.lanes));
 const repositoryInfoLabel = computed(() => [
   t("Privata: {count}", { count: repositoryInfo.value.private }), t("Publika: {count}", { count: repositoryInfo.value.public }),
@@ -140,6 +146,7 @@ const announcement = computed(() => [
           <span class="overview-points">{{ repositoryInfoLabel[0] }}</span>
           <span v-for="part in repositoryInfoLabel.slice(1)" :key="part" class="overview-time">{{ part }}</span>
         </div>
+        <RepositoryActivity :activities="activities" aggregate />
         <div class="stat-cells">
           <span class="stat-cell repository-active" tabindex="0" :title="activeDefinition" :aria-label="t('{count} aktiva projekt. {definition}', { count: secondary.activeRepositories, definition: activeDefinition })">{{ repositoryCells[0].text }}<span v-if="cellDeltas.activeRepositories" class="cell-delta" :class="cellDeltas.activeRepositories > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas.activeRepositories) }}</span></span>
           <span class="stat-cell">{{ repositoryCells[1].text }}<span v-if="cellDeltas.backlogRepositories" class="cell-delta" :class="cellDeltas.backlogRepositories > 0 ? 'up' : 'down'" aria-hidden="true">{{ signedDelta(cellDeltas.backlogRepositories) }}</span></span>

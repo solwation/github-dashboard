@@ -24,6 +24,8 @@ import {
   X,
 } from "@lucide/vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
+import RepositoryActivity from "./components/RepositoryActivity.vue";
+import { repositoryActivity } from "./lib/repository-activity";
 import RepositorySection from "./components/RepositorySection.vue";
 import BoardColumn from "./components/BoardColumn.vue";
 import RepositoryHeading from "./components/RepositoryHeading.vue";
@@ -41,7 +43,7 @@ import { PUBLIC_CONTENT_LIFETIME_MS, readPublicContent, writePublicContent, type
 import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
-import { setBoardVisible } from "./composables/useNow";
+import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
@@ -1028,6 +1030,11 @@ provideSubIssues({
   known: (repository, id) => subIssueBoardIndex.value.get(repository.toLowerCase())?.get(id),
   revision: repository => relationsRevisions.value[repository] ?? 0,
 });
+const activityClock = useNow(at => untilNext(at, 60000), { board: true });
+function observedRepositoryActivity(lane: Lane) {
+  const activity = repositoryActivity(lane, rules.value[lane.repo.full_name] || {}, Math.max(activityClock.value, Date.now()));
+  return activity ? [activity] : [];
+}
 const statisticsRepositories = computed(() => orderedLanes.value.map(lane => lane.repo));
 const unreadOverviewCount = computed(() => {
   activityRevision.value;
@@ -2222,6 +2229,7 @@ onMounted(async () => {
               :controls="'lane-content-' + lane.repo.id" :toggle-name="lane.repo.name" @toggle="toggleCollapsed(lane.repo.full_name)">
               <template #badges><span v-if="!lane.loading" class="private-badge workflow-badge" :title="t('Identifierat labelflöde för prioritering och status')">{{ workflow(lane.labels) }}</span></template>
             </RepositoryHeading>
+            <RepositoryActivity :activities="observedRepositoryActivity(lane)" />
             <div class="lane-meta">
               <span v-if="isDemo" class="lane-sync">
                 <time v-if="repoSyncedAt[lane.repo.full_name]" :datetime="new Date(repoSyncedAt[lane.repo.full_name]!).toISOString()"

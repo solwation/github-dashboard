@@ -35,6 +35,18 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "{count} med arbetsaktivitet": "{count} with work activity",
+  "Orkesteraktivitet": "Orchestra activity",
+  "Arbetsaktivitet": "Work activity",
+  "Visa underlag: {activity}": "Show evidence: {activity}",
+  "Observerad arbetsaktivitet": "Observed work activity",
+  "Öppna issues med arbetslabel och en GitHub-uppdatering senaste 60 minuterna. Kommentarer och metadata räknas; detta är en indikation, inte säker realtidsstatus.": "Open issues with a work label and a GitHub update within the last 60 minutes. Comments and metadata count; this is an indication, not certain real-time status.",
+  "{count} nyligen uppdaterade issues i arbete": "{count} recently updated issues in progress",
+  "Senaste observerade ändring": "Latest observed change",
+  "Ägaranspråk finns på aktuellt arbete.": "An owner claim exists on recent work.",
+  "Öppna samordningsissue": "Open coordination issue",
+  "Agentantal visas inte: issues, ägaranspråk och sessioner identifierar inte enskilda körande agenter.": "Agent counts are omitted: issues, owner claims and sessions do not identify individual running agents.",
+
   "Möjligen avstannat": "Possibly stalled",
   "{duration} utan synlig aktivitet": "{duration} without visible activity",
   "Möjligen avstannat. Ingen synlig aktivitet på ärendet på {duration}. Agenten kan ha fastnat eller kopplats från. Arbete kan också pågå utan GitHub-uppdateringar; kontrollera agenten eller samordningstråden.": "Possibly stalled. No visible issue activity for {duration}. The agent may be stuck or disconnected. Work may also continue without GitHub updates; check the agent or coordination thread.",
