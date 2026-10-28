@@ -8,6 +8,7 @@ import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
 import IssueImplementationTime from "./IssueImplementationTime.vue";
 import IssueTimeExplanation from "./IssueTimeExplanation.vue";
+import IssueWorkActivity from "./IssueWorkActivity.vue";
 import { backlogAgeLabel, closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useLanguage } from "../lib/i18n";
@@ -346,6 +347,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
         <IssueTimeExplanation :issue="issue" :repository="repository" :column="col" />
       </template>
     </IssueDetails>
+    <IssueWorkActivity :issue="issue" :rules="rules" :now="now" />
     <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
       <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
     </div>

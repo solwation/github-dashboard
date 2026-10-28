@@ -35,6 +35,9 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Möjligen avstannat": "Possibly stalled",
+  "{duration} utan synlig aktivitet": "{duration} without visible activity",
+  "Möjligen avstannat. Ingen synlig aktivitet på ärendet på {duration}. Agenten kan ha fastnat eller kopplats från. Arbete kan också pågå utan GitHub-uppdateringar; kontrollera agenten eller samordningstråden.": "Possibly stalled. No visible issue activity for {duration}. The agent may be stuck or disconnected. Work may also continue without GitHub updates; check the agent or coordination thread.",
   "Utseende": "Appearance",
   "Board": "Board",
   "Tidsestimat": "Time estimates",

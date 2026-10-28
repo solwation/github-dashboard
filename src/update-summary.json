@@ -1,10 +1,11 @@
 {
   "baseCommit": "478dbaf74faeb649ecd84508f25903676accfce0",
   "summary": {
-    "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna. Manuella poäng gäller som tidigare.",
-    "en": "Conservative automatic sizing improves time forecasts. Explicit point labels keep their values."
+    "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna. Pågående arbete utan synlig aktivitet på en timme får en försiktig varning.",
+    "en": "Conservative automatic sizing improves time forecasts. In-progress work without visible activity for an hour gets a cautious warning."
   },
   "issues": [
-    351
+    351,
+    352
   ]
 }

@@ -2,8 +2,8 @@
   {
     "date": "2026-10-28",
     "summary": {
-      "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna.",
-      "en": "Conservative automatic sizing improves time forecasts."
+      "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna. Pågående arbete utan synlig aktivitet markeras.",
+      "en": "Conservative automatic sizing improves forecasts. In-progress work without visible activity is flagged."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           351
+        ]
+      },
+      {
+        "text": {
+          "sv": "Kort och Lista markerar möjligen avstannat arbete efter en timme utan synlig aktivitet, separat från överskridet estimat.",
+          "en": "Cards and List flag possibly stalled work after one hour without visible activity, separately from estimate overruns."
+        },
+        "issues": [
+          352
         ]
       }
     ]

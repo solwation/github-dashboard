@@ -6,6 +6,7 @@ import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
 import IssueTimeEstimate from "./IssueTimeEstimate.vue";
+import IssueWorkActivity from "./IssueWorkActivity.vue";
 import IssueImplementationTime from "./IssueImplementationTime.vue";
 import { useLanguage } from "../lib/i18n";
 import { closedTimeLabel } from "../lib/time";
@@ -303,7 +304,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       :aria-controls="panelId"
       :title="issue.title"
       @click="setExpanded(!expanded)"
-      ><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
+      ><IssueWorkActivity :issue="issue" :rules="rules" :now="now" compact /><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     </span>
     <span v-if="isPhone" class="row-mobile-summary">
