@@ -1,0 +1,384 @@
+{
+  "issue": 360,
+  "baseline": "683b3339397e324f142b2948f84f643edb00b858",
+  "afterIssueRowSourceSHA256": "403e9f8e7f2d20da77fe2e89a94f7bff2d590e7f01c537e203801b26cb28de36",
+  "afterAppBundleSHA256": "3478648beaeabf1a0e1c20896d79ee0b4b8b5b3ae101bcc39db6e37a2e97dfb0",
+  "method": "CDP Profiler.start/stop, default sampling interval, three identical synthetic large-desktop filter/layout cycles; aggregate sample timeDeltas by call frame location. In-page action through two frames; timing observations have no pass/fail budget.",
+  "results": {
+    "before": {
+      "revision": "683b333",
+      "hostLoad": [
+        17.88,
+        16.72,
+        17.73
+      ],
+      "browser": "156.0.8078.4",
+      "dataset": {
+        "repositories": 12,
+        "issuesPerRepository": 120,
+        "totalIssues": 1440,
+        "progressIssues": 480,
+        "initialVisibleCards": 216,
+        "apiLatencyMs": 0
+      },
+      "profile": {
+        "elapsedMs": 24304.42,
+        "sampleCount": 17281,
+        "sampledMs": 24302.569,
+        "rowMountedSampledSelfMs": 1587.457,
+        "largestSelfFrames": [
+          {
+            "name": "(program)",
+            "bundle": "",
+            "zeroBasedLine": -1,
+            "zeroBasedColumn": -1,
+            "sampledSelfMs": 4088.738
+          },
+          {
+            "name": "(anonymous)",
+            "bundle": "index-o__ypyis.js",
+            "zeroBasedLine": 9,
+            "zeroBasedColumn": 64736,
+            "sampledSelfMs": 1587.457
+          },
+          {
+            "name": "(garbage collector)",
+            "bundle": "",
+            "zeroBasedLine": -1,
+            "zeroBasedColumn": -1,
+            "sampledSelfMs": 1552.304
+          },
+          {
+            "name": "(anonymous)",
+            "bundle": "index-o__ypyis.js",
+            "zeroBasedLine": 9,
+            "zeroBasedColumn": 56438,
+            "sampledSelfMs": 1350.664
+          },
+          {
+            "name": "l",
+            "bundle": "statistics-DFEwEA_o.js",
+            "zeroBasedLine": 0,
+            "zeroBasedColumn": 2369,
+            "sampledSelfMs": 934.048
+          },
+          {
+            "name": "(idle)",
+            "bundle": "",
+            "zeroBasedLine": -1,
+            "zeroBasedColumn": -1,
+            "sampledSelfMs": 780.653
+          }
+        ]
+      },
+      "stages": {
+        "filter": {
+          "nativeActionMs": [
+            775.7,
+            927.2,
+            968.1
+          ],
+          "mainThreadMs": [
+            1046.599,
+            1340.62,
+            4246.014
+          ],
+          "layoutMs": [
+            47.775,
+            52.452,
+            59.146
+          ]
+        },
+        "clear-filter": {
+          "nativeActionMs": [
+            862.7,
+            991.8,
+            1141.8
+          ],
+          "mainThreadMs": [
+            983.511,
+            1074.426,
+            1309.797
+          ],
+          "layoutMs": [
+            47.623,
+            50.079,
+            71.612
+          ]
+        },
+        "list": {
+          "nativeActionMs": [
+            964.1,
+            1070,
+            1182.6
+          ],
+          "mainThreadMs": [
+            1224.837,
+            1226.682,
+            1276.04
+          ],
+          "layoutMs": [
+            96.714,
+            124.938,
+            131.309
+          ]
+        },
+        "combined": {
+          "nativeActionMs": [
+            447.7,
+            561.7,
+            589.5
+          ],
+          "mainThreadMs": [
+            466.15,
+            593.542,
+            631.61
+          ],
+          "layoutMs": [
+            9.816,
+            11.662,
+            11.821
+          ]
+        },
+        "split": {
+          "nativeActionMs": [
+            1111.1,
+            1184,
+            1497.3
+          ],
+          "mainThreadMs": [
+            1156.542,
+            1216.94,
+            1613.057
+          ],
+          "layoutMs": [
+            111.735,
+            112.091,
+            132.251
+          ]
+        },
+        "cards": {
+          "nativeActionMs": [
+            843.7,
+            886.2,
+            994.6
+          ],
+          "mainThreadMs": [
+            950.293,
+            960.478,
+            1128.644
+          ],
+          "layoutMs": [
+            74.347,
+            91.077,
+            100.195
+          ]
+        }
+      },
+      "cacheRestore": {
+        "firstCardFromNavigationMs": 1445.800000011921,
+        "longestTaskMs": 903,
+        "heldRequests": 11,
+        "cards": 216
+      },
+      "heapAfterGC": {
+        "beforeCyclesMiB": 25.037063598632812,
+        "afterCyclesMiB": 26.606403350830078
+      }
+    },
+    "after": {
+      "revision": "683b333-plus-row-observer-initial-delivery",
+      "hostLoad": [
+        23.62,
+        19.9,
+        18.57
+      ],
+      "browser": "156.0.8078.4",
+      "dataset": {
+        "repositories": 12,
+        "issuesPerRepository": 120,
+        "totalIssues": 1440,
+        "progressIssues": 480,
+        "initialVisibleCards": 216,
+        "apiLatencyMs": 0
+      },
+      "profile": {
+        "elapsedMs": 60696.68,
+        "sampleCount": 24454,
+        "sampledMs": 60695.483,
+        "rowMountedSampledSelfMs": 0.562,
+        "largestSelfFrames": [
+          {
+            "name": "(program)",
+            "bundle": "",
+            "zeroBasedLine": -1,
+            "zeroBasedColumn": -1,
+            "sampledSelfMs": 13556.148
+          },
+          {
+            "name": "(anonymous)",
+            "bundle": "index-MWS9kwBE.js",
+            "zeroBasedLine": 9,
+            "zeroBasedColumn": 67602,
+            "sampledSelfMs": 3332.385
+          },
+          {
+            "name": "(garbage collector)",
+            "bundle": "",
+            "zeroBasedLine": -1,
+            "zeroBasedColumn": -1,
+            "sampledSelfMs": 3045.871
+          },
+          {
+            "name": "(anonymous)",
+            "bundle": "index-MWS9kwBE.js",
+            "zeroBasedLine": 9,
+            "zeroBasedColumn": 56438,
+            "sampledSelfMs": 2826.828
+          },
+          {
+            "name": "l",
+            "bundle": "statistics-DFEwEA_o.js",
+            "zeroBasedLine": 0,
+            "zeroBasedColumn": 2369,
+            "sampledSelfMs": 2372.064
+          },
+          {
+            "name": "(idle)",
+            "bundle": "",
+            "zeroBasedLine": -1,
+            "zeroBasedColumn": -1,
+            "sampledSelfMs": 1883.589
+          }
+        ]
+      },
+      "stages": {
+        "filter": {
+          "nativeActionMs": [
+            1175.5,
+            1465.3,
+            2208.1
+          ],
+          "mainThreadMs": [
+            1369.757,
+            1772.466,
+            2751.83
+          ],
+          "layoutMs": [
+            47.01,
+            74.034,
+            144.525
+          ]
+        },
+        "clear-filter": {
+          "nativeActionMs": [
+            1437.1,
+            1596.1,
+            2398.2
+          ],
+          "mainThreadMs": [
+            1553.178,
+            1805.233,
+            2622.275
+          ],
+          "layoutMs": [
+            54.686,
+            64.636,
+            154.719
+          ]
+        },
+        "list": {
+          "nativeActionMs": [
+            1663.1,
+            2145.2,
+            2398.9
+          ],
+          "mainThreadMs": [
+            1884.038,
+            2558.26,
+            2564.528
+          ],
+          "layoutMs": [
+            156.478,
+            229.936,
+            264.809
+          ]
+        },
+        "combined": {
+          "nativeActionMs": [
+            1148.5,
+            1345.4,
+            1506.8
+          ],
+          "mainThreadMs": [
+            1187.246,
+            1487.352,
+            1638.569
+          ],
+          "layoutMs": [
+            46.334,
+            49.238,
+            61.765
+          ]
+        },
+        "split": {
+          "nativeActionMs": [
+            3118.1,
+            3409.5,
+            3696.8
+          ],
+          "mainThreadMs": [
+            3371.762,
+            3624.24,
+            12496.406
+          ],
+          "layoutMs": [
+            159.1,
+            441.188,
+            533.104
+          ]
+        },
+        "cards": {
+          "nativeActionMs": [
+            1528.9,
+            2057,
+            2126
+          ],
+          "mainThreadMs": [
+            2476.405,
+            3620.32,
+            7450.339
+          ],
+          "layoutMs": [
+            86.414,
+            128.482,
+            248.09
+          ]
+        }
+      },
+      "cacheRestore": {
+        "firstCardFromNavigationMs": 1984.2999999821186,
+        "longestTaskMs": 1252,
+        "heldRequests": 11,
+        "cards": 216
+      },
+      "heapAfterGC": {
+        "beforeCyclesMiB": 25.073848724365234,
+        "afterCyclesMiB": 26.4510498046875
+      }
+    }
+  },
+  "attribution": {
+    "baselineFrame": "index-o__ypyis.js:10:64737",
+    "afterFrame": "index-MWS9kwBE.js:10:64737",
+    "source": "src/components/IssueRow.vue onMounted, labelsContainer sizing",
+    "operation": "onMounted reads labelsContainer.clientWidth after row insertion, before registering ResizeObserver; changed path receives initial width in observer callback",
+    "limits": "Sampling locates a callback, not per-statement CPU duration. timeDeltas and task durations include descheduling. Other host work varied. Zero synchronous reads with initial/resize observation and original fallback are portable browser assertions; no aggregate wall-time speedup claimed.",
+    "remainingWork": "After frame index-MWS9kwBE.js:10:67603 is the broad IssueRow render function (3332ms sampled self), including metadata/date labels and vnode creation. ResizeObserver callback sampled self: before2.140ms, after0.248ms. Layout/render work still occurs later; callback disappearance does not establish reduced total layout or elapsed time."
+  },
+  "stageValueOrder": [
+    "minimum",
+    "median",
+    "maximum"
+  ]
+}

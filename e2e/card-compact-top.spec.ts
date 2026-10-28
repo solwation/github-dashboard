@@ -51,6 +51,49 @@ async function fixture(page: Page) {
   await expect(page.locator(".new-comments-badge")).toHaveCount(1);
 }
 
+// Assert the scaling mechanism, rather than a hardware-dependent duration budget (#360).
+for (const resizeObserver of [true, false]) test(`list label sizing ${resizeObserver ? "uses batched initial observation" : "retains the observer fallback"}`, async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: "sv-SE", reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.addInitScript(({ resizeObserver }) => {
+    const sizing = { reads: 0, deliveries: 0 };
+    Object.assign(window, { rowSizingProbe: sizing });
+    const width = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth")!;
+    Object.defineProperty(Element.prototype, "clientWidth", { ...width, get() {
+      if ((this as Element).classList.contains("row-labels")) sizing.reads++;
+      return width.get!.call(this);
+    } });
+    if (!resizeObserver) Object.defineProperty(window, "ResizeObserver", { value: undefined });
+    else {
+      const Observer = window.ResizeObserver;
+      window.ResizeObserver = class extends Observer {
+        constructor(callback: ResizeObserverCallback) { super((entries, observer) => {
+          sizing.deliveries += entries.filter(entry => entry.target.classList.contains("row-labels")).length;
+          callback(entries, observer);
+        }); }
+      };
+    }
+  }, { resizeObserver });
+  try {
+    await fixture(page);
+    await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
+    await expect(page.locator(".issue-row")).toHaveCount(8);
+    const samples = () => page.evaluate(() => (window as unknown as { rowSizingProbe: { reads: number; deliveries: number } }).rowSizingProbe);
+    if (resizeObserver) await expect.poll(async () => (await samples()).deliveries).toBeGreaterThanOrEqual(8);
+    expect((await samples()).reads).toBe(resizeObserver ? 0 : 8);
+    const labeled = page.locator(".issue-row").filter({ hasText: "A long issue title" });
+    await expect(labeled.locator(".row-labels .label-more")).toBeVisible();
+    await expect(labeled.locator(".row-labels .label-more")).toHaveAttribute("title", /touch target audit/);
+    if (resizeObserver) {
+      const before = (await samples()).deliveries;
+      await page.setViewportSize({ width: 1000, height: 900 });
+      await expect.poll(async () => (await samples()).deliveries).toBeGreaterThan(before);
+      expect((await samples()).reads).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    }
+  } finally { await context.close(); }
+});
+
 for (const size of sizes) for (const theme of ["light", "dark"]) {
   test(`compact cards and list ${size.width}x${size.height} ${theme}`, async ({ browser }, info) => {
     const context = await browser.newContext({ viewport: size, isMobile: size.mobile, hasTouch: size.mobile, locale: "sv-SE" });

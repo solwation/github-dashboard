@@ -127,6 +127,7 @@ for (const size of [{ name: "small", repos: 1, issues: 60 }, { name: "large", re
       const cacheBytes = await ciphertextBytes(page);
       await cdp.send("HeapProfiler.collectGarbage");
       const heapBeforeCycles = (await metrics(cdp)).JSHeapUsedSize! / 1048576;
+      if (process.env.PERF_CPU_PROFILE === "1") { await cdp.send("Profiler.enable"); await cdp.send("Profiler.start"); }
       for (let repeat = 0; repeat < 3; repeat++) {
         await measure(`filter-${repeat}`, async () => { const timing = await nativeAction("filter", "needle"); await expect(page.locator(".issue-card").filter({ hasText: "ordinary" })).toHaveCount(0); return timing; });
         await measure(`clear-filter-${repeat}`, async () => { const timing = await nativeAction("filter"); await expect(page.locator(".issue-card")).toHaveCount(size.repos * 18); return timing; });
@@ -135,6 +136,7 @@ for (const size of [{ name: "small", repos: 1, issues: 60 }, { name: "large", re
         await measure(`split-${repeat}`, async () => { const timing = await nativeAction("split"); await expect(page.locator(".issue-row")).toHaveCount(size.repos * 18); return timing; });
         await measure(`cards-${repeat}`, async () => { const timing = await nativeAction("cards"); await expect(page.locator(".issue-card")).toHaveCount(size.repos * 18); return timing; });
       }
+      if (process.env.PERF_CPU_PROFILE === "1") { const { profile } = await cdp.send("Profiler.stop"); writeFileSync(info.outputPath("scene.cpuprofile"), JSON.stringify(profile)); }
       await cdp.send("HeapProfiler.collectGarbage");
       const heapAfterCycles = (await metrics(cdp)).JSHeapUsedSize! / 1048576;
       for (let repeat = 0; repeat < 2; repeat++) await measure(`manual-refresh-${repeat}`, async () => {

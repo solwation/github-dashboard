@@ -132,12 +132,15 @@ onMounted(() => {
   phoneViewport?.addEventListener("change", syncViewport);
   window.addEventListener("keydown", onKeydown);
   if (labelsContainer.value) {
-    labelsWidth.value = Math.round(labelsContainer.value.clientWidth);
+    // ResizeObserver delivers the initial size after layout. Reading clientWidth for every
+    // freshly mounted row interleaves DOM writes and forced layouts on large boards (#360).
     if (typeof ResizeObserver !== "undefined") {
       labelsObserver = new ResizeObserver(([entry]) => {
         if (entry) labelsWidth.value = Math.round(entry.contentRect.width);
       });
       labelsObserver.observe(labelsContainer.value);
+    } else {
+      labelsWidth.value = Math.round(labelsContainer.value.clientWidth);
     }
   }
   if (!("IntersectionObserver" in window)) { visible.value = true; return; }
