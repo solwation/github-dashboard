@@ -1,10 +1,11 @@
 {
   "baseCommit": "7f652c4b533e4356d8b5b977569c072e8acf923c",
   "summary": {
-    "sv": "Listans etiketter mäts samlat när rader monteras. Etikettmenyn och den responsiva layouten bevaras.",
-    "en": "List labels use batched sizing when rows mount, preserving the label menu and responsive layout."
+    "sv": "Oförändrade uppdateringar återanvänder kända arbetsstarter. Listans etiketter mäts samlat när rader monteras.",
+    "en": "Unchanged refreshes reuse known work starts. List labels use batched sizing when rows mount."
   },
   "issues": [
+    359,
     360
   ]
 }

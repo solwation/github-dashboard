@@ -46,10 +46,11 @@
       },
       {
         "text": {
-          "sv": "Listans etiketter mäts samlat när rader monteras, med bevarad etikettmeny och responsiv layout.",
-          "en": "List labels use batched sizing when rows mount, preserving the label menu and responsive layout."
+          "sv": "Oförändrade uppdateringar återanvänder kända arbetsstarter; listans etiketter mäts samlat när rader monteras.",
+          "en": "Unchanged refreshes reuse known work starts; list labels use batched sizing when rows mount."
         },
         "issues": [
+          359,
           360
         ]
       }
