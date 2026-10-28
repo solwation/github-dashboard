@@ -114,7 +114,7 @@ export const english: Record<string, string> = {
   "Om en pil visas betyder ↑ längre och ↓ kortare faktisk arbetstid än ett estimat som räknas nu från andra nyligen stängda ärenden. Det är inte ett sparat ursprungligt löfte.": "When an arrow is shown, ↑ means actual work took longer and ↓ shorter than an estimate calculated now from other recently closed issues. It is not a saved original promise.",
   "Förfluten tid räknas från den registrerade starten. Kvar är total uppskattning minus förfluten tid; när den passerats visas över uppskattning.": "Elapsed time starts at the recorded start. Remaining is the total estimate minus elapsed time; once it is exceeded, the display says over estimate.",
   "Faktisk arbetstid räknas från registrerad arbetsstart till stängning.": "Actual work time runs from the recorded work start to closure.",
-  "Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet.": "Rough size on the 1/2/3/5/8/13 scale. An unambiguous points label takes precedence, otherwise a local estimate from the title and description is used. Not measured complexity.",
+  "Grov storlek på skalan 1/2/3. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet.": "Rough size on the 1/2/3 scale. An unambiguous points label takes precedence, otherwise a local estimate from the title and description is used. Not measured complexity.",
   "Typ: {type}": "Type: {type}",
   "Bugg": "Bug",
   "Säkerhet": "Security",
@@ -812,7 +812,7 @@ export const english: Record<string, string> = {
   "över uppskattning": "over estimate",
   "Median {typical} för {count} stängda ärenden senaste {days} dagarna.":
     "Median {typical} for {count} closed issues in the last {days} days.",
-  "Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3/5/8/13 utan label, inte uppmätt komplexitet).": "Rough size: approximately {points} points from labels or local sizing (1/2/3/5/8/13 without a label, not measured complexity).",
+  "Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3 utan label, inte uppmätt komplexitet).": "Rough size: approximately {points} points from labels or local sizing (1/2/3 without a label, not measured complexity).",
   "Median {time} per poäng från de senaste {count} användbara stängningarna inom {days} dagar (högst {max}).": "Median {time} per point from the latest {count} usable closures within {days} days (at most {max}).",
   "Median per repository: {time} per poäng från {count} användbara stängningar i {repositories} repositories inom {days} dagar, högst {max} senaste per repository. Långsammaste repository avgör.": "Per-repository median: {time} per point from {count} usable closures in {repositories} repositories within {days} days, at most the latest {max} per repository. The slowest repository decides.",
   "Backlog delas med {parallel} samtidigt pågående i snitt.":

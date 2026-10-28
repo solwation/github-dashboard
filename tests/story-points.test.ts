@@ -36,7 +36,7 @@ describe("rough local story points", () => {
     const swedish = "- Lägg till kontoval\n- Återställ sparade kontoinställningar\n- Kontrollera användarens behörigheter\n- Migrera databasens schema\n- Integrera extern autentisering";
     expect(score("Expand account support", english)).toBeGreaterThan(1);
     expect(score("Utöka kontostöd", swedish)).toBeGreaterThan(1);
-    for (const body of [english, swedish]) expect(score("Account support", body)).toBeLessThanOrEqual(13);
+    for (const body of [english, swedish]) expect(score("Account support", body)).toBeLessThanOrEqual(3);
   });
   it("does not inflate scores from repeated scope, template boilerplate or pasted logs/code", () => {
     const substantive = "- Update the button label\n- Preserve the existing focus";
@@ -56,8 +56,8 @@ describe("rough local story points", () => {
   it("caps even large distinct scopes and text, rather than treating length as unlimited effort", () => {
     const words = Array.from({ length: 400 }, (_, i) => "word" + String.fromCharCode(97 + i % 26, 97 + Math.floor(i / 26)));
     const paragraphs = Array.from({ length: 16 }, (_, i) => words.slice(i * 25, (i + 1) * 25).join(" ")).join("\n");
-    expect(score("Document example", paragraphs)).toBe(5);
-    expect(score("Migrate database authentication API", words.map(word => "- Implement " + word + " support").join("\n"))).toBe(13);
+    expect(score("Document example", paragraphs)).toBe(3);
+    expect(score("Migrate database authentication API", words.map(word => "- Implement " + word + " support").join("\n"))).toBe(3);
   });
   it("invalidates the in-memory cache when mutable text or point labels change", () => {
     const issue = { title: "Fix button spelling", body: "", labels: [] as { name: string; color: string }[] };

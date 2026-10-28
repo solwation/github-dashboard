@@ -31,6 +31,13 @@ const day = (offset: number) => Date.parse("2026-10-16T00:00:00Z") - offset * 86
 const filter = { from: "2026-10-14T00:00", to: "2026-10-17T00:00", label: "", contributor: "", resolution: "1d" as const, now };
 
 describe("historical time per story point (#280)", () => {
+  it("migrates legacy cached local sizes while preserving explicit point labels", () => {
+    const cached = { ...issue(1), title: undefined, points: 13 };
+    expect(statisticsIssuePoints(cached)).toBe(3);
+    expect(statisticsIssuePoints({ ...cached, points: 2 })).toBe(2);
+    expect(statisticsIssuePoints({ ...cached, labels: [{ name: "sp-13" }] })).toBe(13);
+    expect(statisticsIssuePoints({ ...cached, labels: [{ name: "sp-8" }, { name: "sp-13" }] })).toBe(3);
+  });
   it("equals the board's calibrated msPerPoint at each moment, from the closings known then", () => {
     const subjects = [1, 2, 3, 4].map(id => issue(id));
     const events = [

@@ -9,7 +9,7 @@ import { column, type Issue, type Rules } from "./model";
  * Model:
  * - History: the most recent 30 positive start → close durations within 30 days, with a known
  *   workStartedAt (falling back to startedAt). Unknown/future/invalid closures never calibrate.
- * - Size: approximatePoints supplies explicit label values or bounded local 1–13 point scores, not measured complexity.
+ * - Size: approximatePoints supplies explicit label values or conservative local 1–3 point scores, not measured complexity.
  * - Calibration: discard durations per point above 4× the raw sample median, then use the
  *   retained median per repository; fewer than MIN_SAMPLES retained gives no estimate.
  * - In progress: max(0, points × calibrated time per point − spent). The longest remaining item

@@ -25,7 +25,7 @@ const description = computed(() => {
       count: basis.value!.samples, days: basis.value!.windowDays,
     }));
   }
-  if (size.value.source === "local") parts.push(t("Grov storlek på skalan 1/2/3/5/8/13. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet."));
+  if (size.value.source === "local") parts.push(t("Grov storlek på skalan 1/2/3. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet."));
   return parts.map(part => part.replace(/[.]$/, "")).join(". ") + ".";
 });
 </script>

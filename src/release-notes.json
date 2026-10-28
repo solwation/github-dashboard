@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-28",
+    "summary": {
+      "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna.",
+      "en": "Conservative automatic sizing improves time forecasts."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Automatiska poäng begränsas till 1–3 efter historisk utvärdering; manuella poäng och tidigare statistik bevaras.",
+          "en": "Automatic sizing is limited to 1–3 after historical evaluation; explicit points and existing activity history are preserved."
+        },
+        "issues": [
+          351
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-27",
     "summary": {
       "sv": "Större översiktskort och samstämmiga active-tal ger tydligare överblick. Projektval, kort och listor har förbättrad läsbarhet och gruppering.",

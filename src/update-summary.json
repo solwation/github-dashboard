@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d7c1f5683d7f383404e8bda181c232d69f783031",
+  "baseCommit": "478dbaf74faeb649ecd84508f25903676accfce0",
   "summary": {
-    "sv": "Expanderade listrader flyttar kommentarskontrollen under innehållet med tydlig text, utan dubblerad verktygsrad före beskrivningen.",
-    "en": "Expanded list rows place the comment control below content with clear text, omitting the duplicate toolbar above descriptions."
+    "sv": "Försiktigare automatiska poäng förbättrar tidsprognoserna. Manuella poäng gäller som tidigare.",
+    "en": "Conservative automatic sizing improves time forecasts. Explicit point labels keep their values."
   },
   "issues": [
-    348
+    351
   ]
 }

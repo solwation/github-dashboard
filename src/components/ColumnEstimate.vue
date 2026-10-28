@@ -55,7 +55,7 @@ function estimateAt(at: number) {
 }
 function pointBasis(points: number, grouped: boolean, exact: boolean) {
   return (exact ? t("Story points från labels: {points}", { points })
-    : t("Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3/5/8/13 utan label, inte uppmätt komplexitet).", { points })) + " " + spentBasis()
+    : t("Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3 utan label, inte uppmätt komplexitet).", { points })) + " " + spentBasis()
     + (grouped ? " " + t("Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.") : "");
 }
 function spentBasis() {

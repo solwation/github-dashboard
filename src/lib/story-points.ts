@@ -1,6 +1,9 @@
 import type { Issue } from "./model";
 
-const SCALE = [1, 2, 3, 5, 8, 13] as const;
+// Free text is weak evidence for proportional effort. Historical replay (#351) showed
+// that the old 5/8/13 buckets inflated differences without corresponding work durations.
+export const MAX_LOCAL_POINTS = 3;
+const SCALE = [1, 2, MAX_LOCAL_POINTS] as const;
 export type ApproximatePoints = number;
 export interface StoryPoints { points: number; source: "label" | "local" }
 type SizedIssue = Pick<Issue, "title" | "body" | "labels">;
@@ -70,7 +73,7 @@ function localPoints(issue: SizedIssue): number {
     /\b(?:integrat\w*|api|arkitektur\w*|architect\w*|distribut\w*)\b/i,
   ].filter(pattern => pattern.test(prose)).length;
   // Scale index = vocabulary thresholds (30/80/160 distinct words) + scope thresholds
-  // (2/5/10 distinct list items) + at most two risk categories, capped at Fibonacci 13.
+  // (2/5/10 distinct list items) + at most two risk categories, conservatively capped at 3.
   const size = [30, 80, 160].filter(limit => vocabulary >= limit).length
     + [2, 5, 10].filter(limit => scopes.size >= limit).length + Math.min(2, risks);
   return SCALE[Math.min(SCALE.length - 1, size)]!;

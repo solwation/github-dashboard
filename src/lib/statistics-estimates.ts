@@ -2,7 +2,7 @@ import {
   closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, repositoryEstimate, median,
 } from "./estimates";
 import { closedWorkStart, type Issue, type Rules } from "./model";
-import { approximatePoints, validPoints, type ApproximatePoints } from "./story-points";
+import { approximatePoints, MAX_LOCAL_POINTS, storyPoints, validPoints, type ApproximatePoints } from "./story-points";
 import type { StatisticsData, StatisticsEvent, StatisticsIssue } from "./statistics";
 
 /**
@@ -36,7 +36,13 @@ const DAY_MS = 86_400_000;
 /** Approximate story points for a statistics issue: a stored score, or computed from live title/body. */
 export function statisticsIssuePoints(issue: StatisticsIssue | undefined): ApproximatePoints | null {
   if (!issue) return null;
-  if (typeof issue.points === "number" && validPoints(issue.points)) return issue.points as ApproximatePoints;
+  if (typeof issue.points === "number" && validPoints(issue.points)) {
+    // Old encrypted snapshots retain sizes, not private title/body text. The new local
+    // model is exactly min(old size, 3), so migrate it without discarding cached activity.
+    // Explicit labels must keep their full values, including sizes above the local cap.
+    const labeled = storyPoints({ title: "", labels: issue.labels as Issue["labels"] });
+    return labeled.source === "label" ? labeled.points : Math.min(issue.points, MAX_LOCAL_POINTS);
+  }
   if (typeof issue.title !== "string") return null;
   return approximatePoints({ title: issue.title, body: typeof issue.body === "string" ? issue.body : null, labels: issue.labels as Issue["labels"] });
 }
