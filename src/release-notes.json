@@ -35,12 +35,13 @@
       },
       {
         "text": {
-          "sv": "Statistik kan samlas i en gemensam graf med bevarade projektfilter och tidsperiod, utan expanderbara detaljlistor.",
-          "en": "Statistics can share one graph while retaining repository filters and time range, without expandable detail lists."
+          "sv": "Statistik kan samlas i en gemensam graf med bevarade projektfilter och tidsperiod, utan tomma projektrubriker eller expanderbara detaljlistor.",
+          "en": "Statistics can share one graph while retaining repository filters and time range, without empty project headings or expandable detail lists."
         },
         "issues": [
           353,
-          354
+          354,
+          358
         ]
       }
     ]

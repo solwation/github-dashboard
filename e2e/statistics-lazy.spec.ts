@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readSettings } from './support/settings';
 function gate() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done; }); return { promise, resolve }; }
-async function fixture(page: Page) {
+async function fixture(page: Page, emptyThird = false) {
   const repos = ['one', 'two', 'three'].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: true, description: null, html_url: `https://github.com/sample/${name}`, owner: { login: 'sample' } }));
   const state = { login: 'lazy-first', blockTwo: true, second: gate(), requests: [] as URL[] };
   const date = new Date().toISOString();
@@ -13,6 +13,7 @@ async function fixture(page: Page) {
     const issue = { id: 1, number: 1, title: 'Lazy fixture', created_at: date, updated_at: date, labels: [], user: { login: 'sample' }, state: 'open', closed_at: null, assignees: [], html_url: 'https://github.com/sample/one/issues/1' };
     if (url.pathname === '/user') data = { login: state.login, avatar_url: '' };
     else if (url.pathname === '/user/repos') data = repos;
+    else if (emptyThird && url.pathname.startsWith('/repos/sample/three/')) data = [];
     else if (url.pathname.endsWith('/issues/events')) {
       if (url.pathname.includes('/two/') && state.blockTwo) {
         if (url.searchParams.get('page') === '2') { await state.second.promise; headers = { 'Access-Control-Expose-Headers': 'Link', Link: `<https://api.github.com${url.pathname}?per_page=100&page=3>; rel="next"` }; }
@@ -128,4 +129,44 @@ test('combined mode collects split-collapsed selected repositories and restores 
   await expect(refresh).toBeEnabled();
   await refresh.click(); await expect(refresh).toBeEnabled();
   expect(state.requests.filter(url => !url.pathname.includes('/one/'))).toHaveLength(before);
+});
+
+for (const scenario of [
+  { name: 'wide', width: 1600, height: 1000, mobile: false },
+  { name: 'rail', width: 950, height: 900, mobile: false },
+  { name: 'phone', width: 390, height: 844, mobile: true },
+]) test(`combined statistics hides empty project sections: ${scenario.name}`, async ({ browser }, info) => {
+  const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: 'sv-SE', reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  try {
+    const { state, signIn, stats } = await fixture(page, true);
+    state.blockTwo = false;
+    await page.goto('/'); await signIn(); await stats();
+    const split = page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true });
+    await expect(page.locator('#statistics-repo-3 .statistics-repository-toggle')).toBeVisible();
+    await split.uncheck();
+    const combined = page.locator('.statistics-combined-chart');
+    await expect(combined.locator('[data-metric="closed"] strong')).toHaveText('2');
+    await expect(page.getByRole('button', { name: 'Uppdatera statistik', exact: true })).toBeEnabled();
+    await expect(page.locator('#statistics-repo-3')).toHaveCount(0);
+    await expect(page.locator('.statistics-repository')).toHaveCount(3);
+    await expect(page.locator('.statistics-chart')).toHaveCount(1);
+    const contributor = page.locator('#statistics-repo-1').getByRole('combobox', { name: 'Bidragsgivare', exact: true });
+    await contributor.selectOption('sample');
+    await expect(contributor).toHaveValue('sample');
+    await expect(combined.locator('[data-metric="closed"] strong')).toHaveText('1');
+    const edges = await page.locator('.statistics-repo-filters').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().left));
+    expect(Math.max(...edges) - Math.min(...edges)).toBeLessThanOrEqual(1);
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.locator('.statistics-repositories').screenshot({ path: info.outputPath(`empty-project-${scenario.name}-${theme}.png`) });
+    }
+    await split.check();
+    await expect(page.locator('#statistics-repo-3 .statistics-repository-toggle')).toHaveAttribute('aria-expanded', 'false');
+    await expect(contributor).toHaveValue('sample');
+    await split.uncheck();
+    await expect(page.locator('#statistics-repo-3')).toHaveCount(0);
+    await expect(page.locator('.statistics-chart')).toHaveCount(1);
+  } finally { await context.close(); }
 });

@@ -208,7 +208,7 @@ function clearFilters() {
 }
 </script>
 <template>
-  <RepositorySection v-if="!combined || loading || anyData || temporary" :id="'statistics-repo-' + repository.id" class="statistics-repository" :collapsed="collapsed" heading-class="statistics-repository-heading" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
+  <RepositorySection v-if="filtersOnly ? showFilters : (!combined || loading || anyData || temporary)" :id="'statistics-repo-' + repository.id" class="statistics-repository" :collapsed="collapsed" heading-class="statistics-repository-heading" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
     <template #header>
       <div v-if="combined" class="statistics-combined-heading"><h2 :id="'statistics-repository-' + repository.id">{{ t("Alla valda repositories") }}</h2></div>
       <div v-else-if="filtersOnly" class="statistics-combined-heading"><h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" :title="repository.full_name" :aria-label="repository.full_name" target="_blank" rel="noopener noreferrer">{{ repositoryLabel }}</a></h2></div>

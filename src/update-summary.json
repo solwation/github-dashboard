@@ -1,10 +1,10 @@
 {
-  "baseCommit": "fa723a1d477ef3c01a1b314fcee451c798f489f2",
+  "baseCommit": "2ce0a734e489ea09c2537e88478ef5378ec52f29",
   "summary": {
-    "sv": "Statistik kan visas gemensamt eller per repository, med bevarade projektfilter och tidsperiod.",
-    "en": "Statistics can be combined or split by repository while preserving project filters and the selected period."
+    "sv": "Tomma projektrubriker döljs under statistikens gemensamma graf. Projektfilter finns kvar där de är tillgängliga.",
+    "en": "Empty project headings are hidden below the combined statistics chart. Available project filters are retained."
   },
   "issues": [
-    354
+    358
   ]
 }
