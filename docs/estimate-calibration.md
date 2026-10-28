@@ -18,6 +18,8 @@ the comparison segment. These are historical replays with current title/body and
 point labels, **not stored original forecasts**. Titles, descriptions and labels
 may have changed since work began. Alternative models were explored in the same
 audit, so this comparison is not independent prospective validation.
+The replay uses the currently closed issues and their latest closure; it does not
+reconstruct every earlier closure/reopening cycle as a separate historical sample.
 
 The pooled development segment has 2,439 predictions; the comparison segment has
 1,050. Success means estimated duration is between half and twice recorded elapsed

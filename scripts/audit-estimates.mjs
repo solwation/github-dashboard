@@ -73,7 +73,7 @@ try {
       return [{issue,startedMs,closedMs,durationMs:closedMs-startedMs,points:approximatePoints(issue),explicit:storyPoints(issue).source==='label',
         reopened:timeline.some(e=>e.event==='reopened'),labelRemoved:timeline.some(e=>e.event==='unlabeled' && e.created_at>issue.workStartedAt && e.created_at<issue.closed_at)}];
     }).sort((a,b)=>a.closedMs-b.closedMs || a.issue.id-b.issue.id);
-    // Forecast at work start, with strictly earlier closures only (no self/future leakage).
+    // Forecast at work start using strictly earlier durations, with current sizing content.
     const variants = {
       current:s=>s.points,
       flat:()=>1,
@@ -102,7 +102,7 @@ try {
       rows.push(numeric);
     }
     const score = subset => Object.fromEntries(Object.keys(variants).map(key=>[key,{
-      medianFactor:Number(Math.exp(median(subset.map(r=>Math.abs(Math.log(r.actual/r[key]))))??0).toFixed(3)),
+      medianFactor:subset.length?Number(Math.exp(median(subset.map(r=>Math.abs(Math.log(r.actual/r[key]))))).toFixed(3)):null,
       within2Count:subset.filter(r=>r.actual/r[key]>=.5&&r.actual/r[key]<=2).length,
       within2:subset.length?Number((subset.filter(r=>r.actual/r[key]>=.5&&r.actual/r[key]<=2).length/subset.length*100).toFixed(1)):null,
       medianBiasPercent:subset.length?Number(((median(subset.map(r=>r.actual/r[key]))-1)*100).toFixed(1)):null,
