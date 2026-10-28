@@ -20,6 +20,12 @@ import { activityHeadings, limitChartUnits, seriesColor, seriesDash, statisticsM
 const { t, locale } = useLanguage();
 const props = defineProps<{
   repository: Repo;
+  /** Combined mode reuses the same totals/metric controls and chart. */
+  datasets?: StatisticsData[];
+  repositoryFilters?: Record<string, Pick<StatisticsFilter, "label" | "contributor">>;
+  allRules?: Record<string, Rules>;
+  combined?: boolean;
+  filtersOnly?: boolean;
   data: StatisticsData | null;
   loading: boolean;
   loadStatus?: StatisticsLoadStatus;
@@ -54,17 +60,17 @@ const metricGroups: { id: string; title: string; metrics: StatisticsMetric[] }[]
   { id: "code", title: "Kod", metrics: ["commits", "additions", "deletions", "netLines", "files"] },
   { id: "estimates", title: "Estimat", metrics: ["timePerPoint", "estimateDeviation"] },
 ];
-const datasets = computed(() => props.data ? [props.data] : []);
+const datasets = computed(() => props.datasets ?? (props.data ? [props.data] : []));
 const dimensions = computed(() => statisticsDimensions(datasets.value));
 let cachedData: StatisticsData[] | null = null;
 const summaryCache = new Map<string, ReturnType<typeof summarizeStatistics>>();
 function summarize(filter: StatisticsFilter) {
   const data = datasets.value;
   if (cachedData !== data) { cachedData = data; summaryCache.clear(); }
-  const key = JSON.stringify([filter.from, filter.to, filter.label, filter.contributor, filter.range || "", filter.resolution || "", filter.calendar || "", browserTimeZone(), props.rules || {}]);
+  const key = JSON.stringify([filter.from, filter.to, filter.label, filter.contributor, filter.range || "", filter.resolution || "", filter.calendar || "", browserTimeZone(), props.rules || {}, props.allRules, props.repositoryFilters]);
   let cached = summaryCache.get(key);
   if (!cached) {
-    cached = summarizeStatistics(data, filter, props.rules ? { rules: { [props.repository.full_name]: props.rules } } : {});
+    cached = summarizeStatistics(data, filter, { rules: props.allRules ?? (props.rules ? { [props.repository.full_name]: props.rules } : {}), repositoryFilters: props.repositoryFilters });
     summaryCache.set(key, cached);
   }
   return cached;
@@ -103,7 +109,7 @@ const state = ref<StatisticsPreference>(normalize(props.preference));
 const summary = computed(() => summarize(windowFilter(state.value.label, state.value.contributor)));
 const availableMetrics = computed(() => statisticsMetrics.filter(key => summary.value.totals[key] !== undefined));
 const anyData = computed(() => availableMetrics.value.length > 0);
-const temporary = computed(() => props.loadFailed || !!props.data?.temporary.length);
+const temporary = computed(() => props.loadFailed || datasets.value.some(data => !!data.temporary.length));
 const selectedMetrics = computed<StatisticsMetric[]>(() => {
   const raw = state.value.metrics?.length ? state.value.metrics : [state.value.metric];
   const valid = raw.filter(key => availableMetrics.value.includes(key));
@@ -148,9 +154,9 @@ function metricStyle(metric: StatisticsMetric) {
 }
 // Only label/contributor count as filters; the selected chart metrics are not (#172).
 const filtersActive = computed(() => !!state.value.label || !!state.value.contributor);
-const showFilters = computed(() => !!props.data && (dimensions.value.labels.length > 0 || dimensions.value.contributors.length > 0));
+const showFilters = computed(() => !props.combined && !!props.data && (dimensions.value.labels.length > 0 || dimensions.value.contributors.length > 0));
 const lastFetched = computed(() => {
-  const values = props.data ? [props.data.issues, props.data.events, props.data.commits, props.data.changes, props.data.pulls].filter(value => !!value).map(value => value!.fetchedAt) : [];
+  const values = datasets.value.flatMap(data => [data.issues, data.events, data.commits, data.changes, data.pulls].filter(value => !!value).map(value => value!.fetchedAt));
   return values.length ? Math.min(...values) : 0;
 });
 function number(value: number) { return value.toLocaleString(locale.value); }
@@ -166,7 +172,7 @@ function descriptionId(key: StatisticsMetric) { return metricDescriptions[key] ?
 function publish(value: StatisticsPreference) {
   if (JSON.stringify(value) !== JSON.stringify(props.preference)) emit("update:preference", { ...value });
 }
-watch([() => props.preference, () => props.data, () => props.period, () => props.timeSpan, () => props.loading], () => {
+watch([() => props.preference, () => props.data, () => props.period, () => props.timeSpan, () => props.loading, () => props.datasets, () => props.repositoryFilters, () => props.allRules], () => {
   const normalized = normalize(props.preference);
   if (JSON.stringify(state.value) !== JSON.stringify(normalized)) state.value = normalized;
   publish(normalized);
@@ -202,9 +208,11 @@ function clearFilters() {
 }
 </script>
 <template>
-  <RepositorySection :id="'statistics-repo-' + repository.id" class="statistics-repository" :collapsed="collapsed" heading-class="statistics-repository-heading" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
+  <RepositorySection v-if="!combined || loading || anyData || temporary" :id="'statistics-repo-' + repository.id" class="statistics-repository" :collapsed="collapsed" heading-class="statistics-repository-heading" :data-repository="repository.full_name" :aria-labelledby="'statistics-repository-' + repository.id">
     <template #header>
-      <RepositoryHeading :repository="repository" :collapsed="collapsed" :label="repositoryLabel"
+      <div v-if="combined" class="statistics-combined-heading"><h2 :id="'statistics-repository-' + repository.id">{{ t("Alla valda repositories") }}</h2></div>
+      <div v-else-if="filtersOnly" class="statistics-combined-heading"><h2 :id="'statistics-repository-' + repository.id"><a :href="repository.html_url" :title="repository.full_name" :aria-label="repository.full_name" target="_blank" rel="noopener noreferrer">{{ repositoryLabel }}</a></h2></div>
+      <RepositoryHeading v-else :repository="repository" :collapsed="collapsed" :label="repositoryLabel"
         :controls="'statistics-repository-body-' + repository.id" :heading-id="'statistics-repository-' + repository.id"
         toggle-class="statistics-repository-toggle" @toggle="emit('update:collapsed', !collapsed)" />
       <div v-if="showFilters" class="statistics-repo-filters" role="group" :aria-label="t('Filter för {name}', { name: repository.full_name })">
@@ -214,12 +222,13 @@ function clearFilters() {
     </template>
     <div v-show="!collapsed" :id="'statistics-repository-body-' + repository.id" class="statistics-repository-body">
     <template v-if="hasOpened">
-    <StatisticsLoadingProgress v-if="loading && loadStatus" :status="loadStatus" />
+    <StatisticsLoadingProgress v-if="!filtersOnly && loading && loadStatus" :status="loadStatus" />
     <div v-if="showFilters && filtersActive" class="statistics-filter-chips">
       <button v-if="state.label" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Label: {name}', { name: state.label }) })" @click="clearFilter('label')">{{ t("Label: {name}", { name: state.label }) }}<X :size="12" aria-hidden="true" /></button>
       <button v-if="state.contributor" type="button" class="statistics-filter-chip" :aria-label="t('Ta bort filter {filter}', { filter: t('Bidragsgivare: {name}', { name: state.contributor }) })" @click="clearFilter('contributor')">{{ t("Bidragsgivare: {name}", { name: state.contributor }) }}<X :size="12" aria-hidden="true" /></button>
       <button type="button" class="statistics-filter-clear" @click="clearFilters">{{ t("Rensa filter") }}</button>
     </div>
+    <template v-if="!filtersOnly">
     <div v-if="loading && !data" class="statistics-repository-loading" role="status" aria-live="polite">
       <RefreshCw class="statistics-loading-spinner" :size="26" aria-hidden="true" />
       <div><strong>{{ t("Hämtar och sammanställer statistik") }}</strong><p>{{ t("Vänta medan underlaget för {name} hämtas.", { name: repository.full_name }) }}</p></div>
@@ -257,11 +266,16 @@ function clearFilters() {
     <div v-else-if="!loading && !temporary" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
     </div>
     </template>
+    </template>
     </div>
   </RepositorySection>
 </template>
 <style scoped>
 .statistics-repository { min-width: 0; }
+.statistics-combined-heading { min-width: 0; }
+.statistics-combined-heading h2 { margin: 0; font-size: 14px; line-height: 1.5; }
+.statistics-combined-heading a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.statistics-repository-body:empty { display: none; }
 .statistics-repository :deep(.statistics-repository-heading) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 29rem); gap: 8px 16px; }
 .statistics-repository :deep(.lane-title:only-child) { grid-column: 1 / -1; }
 .statistics-repository-body { padding: var(--space-3); min-width: 0; }

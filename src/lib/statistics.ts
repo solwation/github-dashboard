@@ -313,7 +313,7 @@ export function statisticsDimensions(data: StatisticsData[]) {
  * the same range/resolution as the chart; without them the window is the full
  * from–to span in day buckets.
  */
-export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFilter, options: { rules?: Record<string, Rules> } = {}): StatisticsSummary {
+export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFilter, options: { rules?: Record<string, Rules>; repositoryFilters?: Record<string, Pick<StatisticsFilter, "label" | "contributor">> } = {}): StatisticsSummary {
   const days: StatisticsDay[] = [];
   /** Exclusive end of the last bucket, for level metrics evaluated at bucket ends (#280). */
   let windowEnd = NaN;
@@ -418,8 +418,9 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
   const closures: number[] = [];
   const contributors = new Map<string, { name: string; commits: number; additions: number | null; deletions: number | null }>();
   const labels = new Map<string, number>();
-  const labelMatches = (record: { labels: { name: string }[] }) => !filter.label || record.labels.some(label => label.name === filter.label);
-  const personMatches = (person?: string) => !filter.contributor || person === filter.contributor;
+  const repositoryFilter = (repository: string) => options.repositoryFilters?.[repository] ?? filter;
+  const labelMatches = (record: { labels: { name: string }[] }, selected: Pick<StatisticsFilter, "label">) => !selected.label || record.labels.some(label => label.name === selected.label);
+  const personMatches = (person: string | undefined, selected: Pick<StatisticsFilter, "contributor">) => !selected.contributor || person === selected.contributor;
   function enable(metric: StatisticsMetric, isComplete: boolean) {
     complete[metric] = (complete[metric] ?? true) && isComplete;
     for (const day of days) day.values[metric] ??= 0;
@@ -428,10 +429,11 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     if (values && values[metric] !== undefined) values[metric]! += value;
   }
   for (const snapshot of data) {
+    const selected = repositoryFilter(snapshot.repository);
     if (snapshot.issues) {
       enable("created", snapshot.issues.complete);
       for (const issue of snapshot.issues.data) {
-        if (!labelMatches(issue) || !personMatches(issue.user?.login)) continue;
+        if (!labelMatches(issue, selected) || !personMatches(issue.user?.login, selected)) continue;
         const values = bucketFor(issue.created_at);
         add("created", values);
         if (values) for (const label of issue.labels) labels.set(label.name, (labels.get(label.name) || 0) + 1);
@@ -440,7 +442,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     if (snapshot.events) {
       for (const metric of ["closed", "reopened"] as const) enable(metric, snapshot.events.complete);
       for (const event of snapshot.events.data) {
-        if (!event.issue || event.issue.pull_request || !labelMatches(event.issue) || !personMatches(event.actor?.login)) continue;
+        if (!event.issue || event.issue.pull_request || !labelMatches(event.issue, selected) || !personMatches(event.actor?.login, selected)) continue;
         if (event.event !== "closed" && event.event !== "reopened") continue;
         const values = bucketFor(event.created_at);
         add(event.event, values);
@@ -451,11 +453,11 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
       }
     }
     // Labels describe issues/PRs. They have no reliable relationship to commits.
-    if (snapshot.commits && !filter.label) {
+    if (snapshot.commits && !selected.label) {
       enable("commits", snapshot.commits.complete);
       for (const commit of snapshot.commits.data) {
         const author = commitContributor(commit);
-        if (!personMatches(author)) continue;
+        if (!personMatches(author, selected)) continue;
         const values = bucketFor(commitDate(commit));
         add("commits", values);
         if (!values) continue;
@@ -464,12 +466,12 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
         contributors.set(author, existing);
       }
     }
-    if (snapshot.changes && !filter.label) {
+    if (snapshot.changes && !selected.label) {
       enable("additions", snapshot.changes.complete); enable("deletions", snapshot.changes.complete);
       enable("netLines", snapshot.changes.complete);
       enable("files", snapshot.changes.complete && snapshot.changes.data.every(change => change.filesComplete));
       for (const change of snapshot.changes.data) {
-        if (!personMatches(change.contributor)) continue;
+        if (!personMatches(change.contributor, selected)) continue;
         const values = bucketFor(change.date);
         if (!values) continue;
         add("additions", values, change.additions); add("deletions", values, change.deletions);
@@ -481,7 +483,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     if (snapshot.pulls) {
       for (const metric of ["prsOpened", "prsMerged", "prsClosed"] as const) enable(metric, snapshot.pulls.complete);
       for (const pull of snapshot.pulls.data) {
-        if (!labelMatches(pull) || !personMatches(pull.user?.login)) continue;
+        if (!labelMatches(pull, selected) || !personMatches(pull.user?.login, selected)) continue;
         add("prsOpened", bucketFor(pull.created_at));
         if (pull.merged_at) add("prsMerged", bucketFor(pull.merged_at));
         else if (pull.closed_at) add("prsClosed", bucketFor(pull.closed_at));
@@ -496,7 +498,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
   // Hide combined metrics when any selected repository cannot supply that source.
   // Access is never presented as a zero or as a coverage warning.
   const requirements = statisticsMetricSources;
-  for (const metric of statisticsMetrics) if (complete[metric] !== undefined && data.some(snapshot => requirements[metric].some(source => !snapshot[source]))) {
+  for (const metric of statisticsMetrics) if (complete[metric] !== undefined && data.some(snapshot => requirements[metric].some(source => !snapshot[source]) || (["commits", "additions", "deletions", "netLines", "files"].includes(metric) && !!repositoryFilter(snapshot.repository).label))) {
     delete complete[metric];
     for (const day of days) delete day.values[metric];
   }
@@ -511,7 +513,7 @@ export function summarizeStatistics(data: StatisticsData[], filter: StatisticsFi
     const estimates = statisticsEstimateMetrics(data, buckets, time => {
       const values = bucketFor(new Date(time).toISOString());
       return values ? indexOf.get(values) ?? -1 : -1;
-    }, { now, rules: options.rules, matches: closing => labelMatches(closing) && personMatches(closing.closer) });
+    }, { now, rules: options.rules, matches: (closing, repository) => labelMatches(closing, repositoryFilter(repository)) && personMatches(closing.closer, repositoryFilter(repository)) });
     for (const metric of statisticsLevelMetrics as ("timePerPoint" | "estimateDeviation")[]) {
       if (estimates.totals[metric] === undefined) continue;
       totals[metric] = estimates.totals[metric];

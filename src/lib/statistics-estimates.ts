@@ -138,13 +138,13 @@ const percent = (ratio: number) => Math.round(ratio * 100) || 0; // never -0
  */
 export function statisticsEstimateMetrics(
   data: StatisticsData[], buckets: EstimateBucket[], bucketOf: (time: number) => number,
-  options: { now: number; rules?: Record<string, Rules>; matches?: (closing: StatisticsClosing) => boolean },
+  options: { now: number; rules?: Record<string, Rules>; matches?: (closing: StatisticsClosing, repository: string) => boolean },
 ): EstimateMetrics {
   const result: EstimateMetrics = { timePerPoint: buckets.map(() => undefined), estimateDeviation: buckets.map(() => undefined), totals: {}, complete: { timePerPoint: true, estimateDeviation: true } };
   const ratios = buckets.map(() => [] as number[]), all: number[] = [];
   for (const snapshot of data) {
     if (!snapshot.events) continue;
-    const closings = statisticsClosings(snapshot, options.rules?.[snapshot.repository] ?? {}).filter(options.matches ?? (() => true));
+    const closings = statisticsClosings(snapshot, options.rules?.[snapshot.repository] ?? {}).filter(closing => options.matches?.(closing, snapshot.repository) ?? true);
     const collectionStart = Date.parse(`${snapshot.from}T00:00:00Z`);
     const complete = (at: number, limit?: number) => snapshot.events!.complete && decided(closings, at, collectionStart, limit);
     if (data.length === 1) {

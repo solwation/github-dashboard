@@ -107,3 +107,25 @@ test('background prefetch follows the same default and saved collapsed repositor
   await page.clock.runFor(1000);
   expect(state.requests).toHaveLength(count);
 });
+
+test('combined mode collects split-collapsed selected repositories and restores lazy split collection', async ({ page }) => {
+  const { state, signIn, stats } = await fixture(page);
+  state.blockTwo = false;
+  await page.goto('/'); await signIn(); await stats();
+  const refresh = page.getByRole('button', { name: 'Uppdatera statistik', exact: true });
+  await expect(refresh).toBeEnabled();
+  expect(state.requests.every(url => url.pathname.includes('/one/'))).toBe(true);
+  const split = page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true });
+  await split.uncheck();
+  await expect(page.locator('.statistics-combined-chart [data-metric="closed"] strong')).toHaveText('3');
+  expect(state.requests.some(url => url.pathname.includes('/two/'))).toBe(true);
+  expect(state.requests.some(url => url.pathname.includes('/three/'))).toBe(true);
+  await expect(page.locator('.statistics-chart')).toHaveCount(1);
+  await split.check();
+  await expect(page.locator('#statistics-repo-2 .statistics-repository-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#statistics-repo-3 .statistics-repository-toggle')).toHaveAttribute('aria-expanded', 'false');
+  const before = state.requests.filter(url => !url.pathname.includes('/one/')).length;
+  await expect(refresh).toBeEnabled();
+  await refresh.click(); await expect(refresh).toBeEnabled();
+  expect(state.requests.filter(url => !url.pathname.includes('/one/'))).toHaveLength(before);
+});

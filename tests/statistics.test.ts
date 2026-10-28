@@ -61,6 +61,21 @@ describe("statistics calculations", () => {
     expect(combined.complete).toEqual({ created: true });
     expect(summarizeStatistics([{ ...restricted, issues: source([]) }], filter).totals.created).toBe(0);
   });
+  it("combines each repository's own filters without averaging medians or leaking code from a label-filtered project", () => {
+    const other = { ...snapshot(), repository: "sample/other" };
+    const repositoryFilters = {
+      "sample/repo": { label: "bug", contributor: "alice" },
+      "sample/other": { label: "", contributor: "bob" },
+    };
+    const result = summarizeStatistics([snapshot(), other], filter, { repositoryFilters });
+    expect(result.totals).toMatchObject({ created: 1, closed: 2, reopened: 1, netIssues: 0 });
+    expect(result.closureAgeDays).toBe(2); // underlying closing ages 3 and 1 days
+    expect(result.totals.commits).toBeUndefined();
+    expect(result.totals.additions).toBeUndefined();
+    expect(result.days.reduce((sum, day) => sum + (day.values.closed || 0), 0)).toBe(2);
+    expect(summarizeStatistics([snapshot(), other], filter).totals.closed).toBe(4);
+    expect(summarizeStatistics([snapshot()], filter).totals.closed).toBe(2); // source snapshots remain untouched
+  });
   it("marks capped pages and truncated commit files without disguising them as totals", () => {
     const data = snapshot(); data.events!.complete = false; data.changes!.data[0]!.filesComplete = false;
     const result = summarizeStatistics([data], filter);

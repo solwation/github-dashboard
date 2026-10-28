@@ -35,6 +35,7 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Alla valda repositories": "All selected repositories",
   "{count} med arbetsaktivitet": "{count} with work activity",
   "Orkesteraktivitet": "Orchestra activity",
   "Arbetsaktivitet": "Work activity",

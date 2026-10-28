@@ -130,6 +130,22 @@ describe("deviation between actual and estimated time (#280)", () => {
     expect(today.complete.estimateDeviation).toBe(true);
   });
 
+  it("pools deviation observations with independent project filters and omits incomparable multi-project time-per-point", () => {
+    const bugs = [1, 2, 3, 4].map(id => issue(id, ["bug"]));
+    const features = [5, 6, 7, 8].map(id => issue(id, ["feature"]));
+    const events = [
+      ...bugs.flatMap((subject, index) => work(subject, now - (10 - index) * HOUR, index === 3 ? 4 : 2, "alice")),
+      ...features.flatMap((subject, index) => work(subject, now - (6 - index) * HOUR, 1, "bob")),
+    ];
+    const data = [snapshot(events), { ...snapshot(events), repository: "sample/other" }];
+    const result = summarizeStatistics(data, filter, { repositoryFilters: {
+      "sample/repo": { label: "bug", contributor: "alice" },
+      "sample/other": { label: "feature", contributor: "bob" },
+    } });
+    expect(result.totals.estimateDeviation).toBe(50); // median of per-closing deviations 100% and 0%
+    expect(result.totals.timePerPoint).toBeUndefined();
+    expect(result.days.every(day => day.values.timePerPoint === undefined)).toBe(true);
+  });
   it("follows label and contributor filters", () => {
     const bugs = [1, 2, 3, 4].map(id => issue(id, ["bug"]));
     const features = [5, 6, 7, 8].map(id => issue(id, ["feature"]));

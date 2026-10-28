@@ -28,6 +28,10 @@ provideRepositoryDisplayNames(() => props.repositories.map(repo => repo.full_nam
 const emit = defineEmits<{ "update:preferences": [value: StatisticsPreferences] }>();
 const period = ref(statisticsCalendarWindow());
 const preferencesState = ref<StatisticsPreferences>({ ...props.preferences });
+// View-local layout choice: start split without adding account or plaintext storage.
+const splitByRepository = ref(true);
+const combinedPreference = ref<StatisticsPreference>({ ...period.value, label: "", contributor: "", metric: "closed" });
+const combinedRepository = computed<Repo>(() => ({ id: -1, name: t("Alla valda repositories"), full_name: "__combined__", owner: { login: "" }, description: null, html_url: "", private: false }));
 const fromInput = ref<HTMLInputElement | null>(null);
 const toInput = ref<HTMLInputElement | null>(null);
 
@@ -296,7 +300,17 @@ const historyVerifiedAt = computed(() => {
 });
 const collapsedRepositories = computed(() => new Set(props.repositories.filter((repo, index) =>
   statisticsRepositoryCollapsed(preferencesState.value, repo.full_name, index)).map(repo => repo.id)));
-const expandedRepositories = computed(() => props.repositories.filter(repo => !collapsedRepositories.value.has(repo.id)));
+// A combined graph explicitly selects every repository, including split-collapsed sections.
+// Saved collapse choices stay intact and resume controlling lazy loads on return to split.
+const expandedRepositories = computed(() => props.repositories.filter(repo => !splitByRepository.value || !collapsedRepositories.value.has(repo.id)));
+const combinedData = computed(() => props.repositories.map(repo => snapshots.value[repo.full_name] ?? {
+  repository: repo.full_name, ...period.value, fetchedAt: 0,
+  issues: null, events: null, commits: null, changes: null, pulls: null, temporary: [],
+}));
+const combinedFilters = computed(() => Object.fromEntries(props.repositories.map(repo => [repo.full_name, {
+  label: preferencesState.value[repo.full_name]?.label || "", contributor: preferencesState.value[repo.full_name]?.contributor || "",
+}])));
+const combinedRules = computed(() => Object.fromEntries(props.repositories.map(repo => [repo.full_name, repositoryRules(repo.full_name) || {}])));
 const repositoryRuns = new Map<string, number>();
 function initializeCollapsePreferences() {
   let changed = false;
@@ -492,6 +506,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
         <label>{{ t("Till") }}<input ref="toInput" :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
       </div>
     </div>
+    <label v-if="repositories.length" class="coord-toggle statistics-split-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
     <p v-if="invalidRange" role="status" class="statistics-message">{{ t("Välj ett giltigt datumintervall inom de senaste 30 dagarna.") }}</p>
@@ -501,10 +516,14 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
       <p>{{ t("Vi hämtar underlaget från GitHub. Tillgängliga värden visas löpande under hämtningen.") }}</p>
       <small>{{ t("Hämtning avslutad för {done} av {total} repositories.", { done: completed, total: expandedRepositories.length }) }}</small>
     </div>
-    <div v-show="!invalidRange" class="statistics-repositories">
+    <div v-show="!invalidRange" class="statistics-repositories" :class="{ 'statistics-combined': !splitByRepository }">
+      <StatisticsRepository v-if="!splitByRepository && repositories.length" class="statistics-combined-chart" :repository="combinedRepository" combined
+        :data="combinedData[0] || null" :datasets="combinedData" :repository-filters="combinedFilters" :all-rules="combinedRules"
+        :loading="busy" :load-failed="repositories.some(repo => failures[repo.full_name])" :period="period" :time-span="timeSpan"
+        :preference="combinedPreference" @update:preference="combinedPreference = $event" />
       <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
         :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-status="loadStatuses[repository.full_name]" :load-failed="!!failures[repository.full_name]"
-        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :rules="repositoryRules(repository.full_name)" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
+        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :rules="repositoryRules(repository.full_name)" :collapsed="splitByRepository && collapsedRepositories.has(repository.id)" :filters-only="!splitByRepository" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">
@@ -525,6 +544,8 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
 </template>
 <style scoped>
 .statistics-view { width: 100%; min-width: 0; }
+.statistics-split-toggle { color: var(--text); font-size: 12px; display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+@media (pointer: coarse), (max-width: 650px), (max-width: 950px) and (max-height: 500px) { .statistics-split-toggle { min-height: 44px; } }
 .statistics-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-3); }
 .statistics-heading h1 { margin: 6px 0; font-size: 32px; }
 .statistics-time-controls { margin-bottom: var(--space-3); padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; }

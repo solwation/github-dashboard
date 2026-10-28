@@ -21,7 +21,7 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   const sections = page.locator(".statistics-repository");
   await expect(sections).toHaveCount(3);
   await expect(sections.locator(".statistics-repository-heading a")).toHaveText(["design-system", "personal-website", "weekend-project"]); // one shared owner shortens names (#258)
-  await expect(page.locator(".statistics-view input[type=checkbox], .statistics-view .repository-selection, .statistics-active-filters")).toHaveCount(0);
+  await expect(page.locator(".statistics-view .repository-selection, .statistics-active-filters")).toHaveCount(0);
   const design = sections.filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
   const weekend = sections.filter({ has: page.getByRole("heading", { name: "demo/weekend-project", exact: true }) });
   await weekend.getByRole("button", { name: "Expandera demo/weekend-project", exact: true }).click();
