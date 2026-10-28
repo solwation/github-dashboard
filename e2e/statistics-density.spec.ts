@@ -17,7 +17,6 @@ async function geometry(repository: Locator) {
       svg: box(repo.querySelector(".statistics-chart > svg")!),
       totals: box(repo.querySelector(".statistics-totals")!),
       groups: [...repo.querySelectorAll(".statistics-total-grid")].map(grid => ({ bounds: box(grid), tiles: [...grid.querySelectorAll(".statistics-total")].map(box) })),
-      breakdowns: [...repo.querySelectorAll(".statistics-breakdown")].map(box),
       fonts: [...repo.querySelectorAll(".statistics-chart svg text")].map(text => parseFloat(getComputedStyle(text).fontSize)),
       scrollWidth: document.documentElement.scrollWidth,
     };
@@ -62,7 +61,6 @@ for (const scenario of [
       }
       if (scenario.name === "rail") for (const group of measured.groups)
         for (const tile of group.tiles) expect(tile.height).toBeLessThanOrEqual(64);
-      if (!scenario.mobile) for (const panel of measured.breakdowns) expect(panel.height).toBeLessThanOrEqual(40);
       if (scenario.name === "laptop") expect(measured.chart.bottom).toBeLessThanOrEqual(scenario.height);
       await textAccessibility(page);
       // Original scroll position is part of the acceptance: capture the complete viewport first.
@@ -71,13 +69,7 @@ for (const scenario of [
     }
   }
   await testInfo.attach("density-geometry", { body: JSON.stringify(report, null, 2), contentType: "application/json" });
-  const contributor = repository.locator(".statistics-breakdown").first();
-  await contributor.locator("summary").focus();
-  await page.keyboard.press("Enter");
-  await expect(contributor).toHaveJSProperty("open", true);
-  await expect(contributor.getByRole("table")).toBeVisible();
-  await page.keyboard.press("Enter");
-  await expect(contributor).toHaveJSProperty("open", false);
+  await expect(repository.locator(".statistics-breakdowns, .statistics-breakdown")).toHaveCount(0);
   const slider = repository.getByRole("slider", { name: "Tidpunkt i diagrammet" });
   await slider.focus(); await page.keyboard.press("End");
   await expect(slider).toHaveValue("29");

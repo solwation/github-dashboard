@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
-import { openSettings } from "./support/phone-menu";
+import { closePhoneMenu, openSettings } from "./support/phone-menu";
 test.use({ timezoneId: "UTC" });
 async function openStatistics(page: Page) {
   await page.getByRole('link', { name: /^(Statistics|Statistik)$/, exact: true }).click();
@@ -69,13 +69,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(metricButton(design, "Commits")).toHaveAttribute("aria-pressed", "false");
   await expect(design.getByRole("button", { name: /Medianålder/ })).toHaveCount(0);
   await expect(design.locator(".statistics-total-static")).toContainText("Medianålder vid stängning");
-  // #184: optional breakdowns start closed on every screen size.
-  const breakdowns = design.locator(".statistics-breakdowns > details");
-  await expect(breakdowns.locator("summary")).toHaveText(["Bidragsgivare", "Labels på skapade issues"]);
-  for (const element of await breakdowns.all()) await expect(element).toHaveJSProperty("open", false);
-  await expect(design.getByRole("table")).toBeHidden();
-  await breakdowns.first().locator("summary").click();
-  await expect(design.getByRole("table")).toBeVisible();
+  // #353: optional breakdown lists are removed; heading filters and chart remain.
+  await expect(design.locator(".statistics-breakdowns, .statistics-breakdown, .statistics-labels, table")).toHaveCount(0);
   const yLabels = await design.locator(".statistics-chart > svg > g > text").count();
   expect(yLabels).toBeGreaterThanOrEqual(2);
   const day = design.getByRole("slider", { name: "Tidpunkt i diagrammet" });
@@ -143,6 +138,8 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   await expect(xLabels.first()).toContainText(/\d{2}:\d{2}/);
   await day.focus();
   await expect(design.locator(".chart-selection-time")).toContainText(/\d{2}:\d{2}$/);
+  // Leave the focus-only keyboard slider before switching to pointer selection.
+  await day.blur();
   await design.locator(".statistics-chart circle").first().click();
   await expect(day).toHaveValue("0");
   await rangeSelect.selectOption("8h");
@@ -239,31 +236,57 @@ test("Statistics stacks sidebar repositories in order with independent filters a
   expect(errors).toEqual([]);
 });
 
-test("Statistics collapses per-repository breakdowns on phones and keeps heading filters reachable", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await page.getByRole("button", { name: "Utforska en demo" }).click();
-  await openStatistics(page);
-  const design = page.locator(".statistics-repository").filter({ has: page.getByRole("heading", { name: "demo/design-system", exact: true }) });
-  const breakdowns = design.locator(".statistics-breakdowns > details");
-  await expect(breakdowns).toHaveCount(2);
-  for (const element of await breakdowns.all()) await expect(element).toHaveJSProperty("open", false);
-  await expect(design.getByRole("table")).toBeHidden();
-  await breakdowns.locator("summary").filter({ hasText: "Bidragsgivare" }).click();
-  await expect(breakdowns.first()).toHaveJSProperty("open", true);
-  await expect(design.getByRole("table")).toBeVisible();
-  const label = design.locator(".statistics-repository-heading").getByRole("combobox", { name: "Nuvarande label", exact: true });
-  await expect(label).toBeVisible();
-  await label.selectOption("bug");
-  await expect(design.locator(".statistics-filter-chip")).toHaveText(["Label: bug"]);
-  await design.getByRole("button", { name: "Ta bort filter Label: bug", exact: true }).click();
-  // The user's own toggle survives the contributor table being hidden and shown again.
-  await expect(breakdowns.first()).toHaveJSProperty("open", true);
-  await expect(breakdowns.nth(1)).toHaveJSProperty("open", false);
-  for (const width of [320, 390]) {
-    await page.setViewportSize({ width, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  }
+for (const scenario of [
+  { name: "wide", width: 1600, height: 1000, mobile: false },
+  { name: "rail", width: 950, height: 900, mobile: false },
+  { name: "phone", width: 390, height: 844, mobile: true },
+]) test(`Statistics keeps project filters without breakdown lists: ${scenario.name}`, async ({ browser }, info) => {
+  const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile, locale: "sv-SE", reducedMotion: "reduce" });
+  const page = await context.newPage();
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Utforska en demo" }).click();
+    await openStatistics(page);
+    const design = page.locator("#statistics-repo-1");
+    const chart = design.locator(".statistics-chart");
+    const total = design.locator('[data-metric="closed"] strong');
+    await expect(total).toHaveText("4");
+    for (const language of ["sv", "en"]) {
+      if (language === "en") {
+        await openSettings(page);
+        await page.getByLabel("Språk", { exact: true }).selectOption("en");
+        await page.getByRole("button", { name: "Done", exact: true }).click();
+        await closePhoneMenu(page);
+      }
+      await expect(design.locator(".statistics-breakdowns, .statistics-breakdown, .statistics-labels, table")).toHaveCount(0);
+      await expect(design.getByRole("heading", { name: /^(Labels på skapade issues|Labels on created issues|Bidragsgivare|Contributors)$/ })).toHaveCount(0);
+      const label = design.getByRole("combobox", { name: language === "sv" ? "Nuvarande label" : "Current label", exact: true });
+      const contributor = design.getByRole("combobox", { name: language === "sv" ? "Bidragsgivare" : "Contributors", exact: true });
+      await expect(label).toBeVisible(); await expect(contributor).toBeVisible();
+      await label.selectOption("bug");
+      await expect(total).toHaveText("2");
+      expect(await dailySum(design)).toBe(2);
+      await label.selectOption("");
+      await contributor.selectOption("demo-alex");
+      const filtered = Number((await total.innerText()).replace(/\D/g,""));
+      expect(filtered).toBeLessThan(4);
+      expect(await dailySum(design)).toBe(filtered);
+      await contributor.selectOption("");
+      await expect(total).toHaveText("4");
+      for (const theme of ["light", "dark"]) {
+        await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+        await chart.scrollIntoViewIfNeeded();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        const gap = await design.evaluate(el => {
+          const panel = el.querySelector(".statistics-panel")!.getBoundingClientRect();
+          const source = el.querySelector(".statistics-source-time")!.getBoundingClientRect();
+          return source.top - panel.bottom;
+        });
+        expect(gap).toBeGreaterThanOrEqual(0); expect(gap).toBeLessThanOrEqual(16);
+        await design.screenshot({ path: info.outputPath(`${scenario.name}-${language}-${theme}.png`) });
+      }
+    }
+  } finally { await context.close(); }
 });
 
 test("Statistics shows estimate time per SP and deviation as chart metrics only where they have a basis (#280)", async ({ page }) => {

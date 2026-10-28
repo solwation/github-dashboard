@@ -69,7 +69,7 @@ function summarize(filter: StatisticsFilter) {
   }
   return cached;
 }
-// Cards, breakdowns and the chart share one time window (dates, range and
+// Cards and the chart share one time window (dates, range and
 // resolution), so each total equals the sum of the chart's points (#167).
 function windowFilter(label: string, contributor: string): StatisticsFilter {
   return {
@@ -149,9 +149,6 @@ function metricStyle(metric: StatisticsMetric) {
 // Only label/contributor count as filters; the selected chart metrics are not (#172).
 const filtersActive = computed(() => !!state.value.label || !!state.value.contributor);
 const showFilters = computed(() => !!props.data && (dimensions.value.labels.length > 0 || dimensions.value.contributors.length > 0));
-// Each optional breakdown starts closed; reopening a repository preserves the user's toggles.
-const breakdownOpen = ref({ contributors: false, labels: false });
-function syncOpen(key: "contributors" | "labels", event: Event) { breakdownOpen.value[key] = (event.target as HTMLDetailsElement).open; }
 const lastFetched = computed(() => {
   const values = props.data ? [props.data.issues, props.data.events, props.data.commits, props.data.changes, props.data.pulls].filter(value => !!value).map(value => value!.fetchedAt) : [];
   return values.length ? Math.min(...values) : 0;
@@ -255,7 +252,6 @@ function clearFilters() {
         <p role="status" class="statistics-unit-message" :class="{ empty: !replacedText }">{{ replacedText }}</p>
         <StatisticsChart :series="chartSeries" :metric="state.metric" :title="chartTitle" :resolution="timeSpan.resolution" :coverage="chartCoverage" />
       </section>
-      <div class="statistics-breakdowns"><details v-if="summary.totals.commits !== undefined && summary.contributors.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.contributors" @toggle="syncOpen('contributors', $event)"><summary><h3>{{ t("Bidragsgivare") }}</h3></summary><div class="statistics-table-scroll"><table><caption>{{ t("Commits och kodändringar per författare") }}</caption><thead><tr><th scope="col">{{ t("Författare") }}</th><th scope="col">Commits</th><th v-if="summary.totals.additions !== undefined" scope="col">+ / −</th></tr></thead><tbody><tr v-for="person in summary.contributors" :key="person.name"><th scope="row">{{ person.name || t("Okänd författare") }}</th><td>{{ number(person.commits) }}</td><td v-if="summary.totals.additions !== undefined">+{{ number(person.additions || 0) }} / −{{ number(person.deletions || 0) }}</td></tr></tbody></table></div></details><details v-if="summary.labels.length" class="statistics-panel statistics-breakdown" :open="breakdownOpen.labels" @toggle="syncOpen('labels', $event)"><summary><h3>{{ t("Labels på skapade issues") }}</h3></summary><ul class="statistics-labels"><li v-for="item in summary.labels" :key="item.name"><span>{{ item.name }}</span><strong>{{ number(item.count) }}</strong></li></ul></details></div>
       <p v-if="lastFetched" class="statistics-source-time">{{ t("Äldsta underlaget hämtat {time}", { time: new Date(lastFetched).toLocaleString(locale) }) }}.</p>
     </template>
     <div v-else-if="!loading && !temporary" class="statistics-empty"><BarChart3 :size="32" /><h3>{{ t("Ingen statistik att visa") }}</h3><p>{{ t("Det finns inget tillgängligt statistikunderlag för urvalet.") }}</p></div>
@@ -303,23 +299,6 @@ function clearFilters() {
 .statistics-panel h3 { font-size: 16px; margin: 0 0 15px; }
 .statistics-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-1); flex-wrap: wrap; }
 .statistics-panel-heading h3 { margin: 0; }
-.statistics-table-scroll { overflow: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-caption { text-align: left; margin: 0 0 10px; color: var(--muted); }
-th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
-.statistics-breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 0 var(--space-3); align-items: start; }
-.statistics-breakdown { padding: 0 var(--space-3); }
-.statistics-breakdown > summary { min-height: 36px; display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; border-radius: 5px; }
-.statistics-breakdown > summary::-webkit-details-marker { display: none; }
-.statistics-breakdown > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s ease; flex-shrink: 0; }
-.statistics-breakdown[open] > summary::before { transform: rotate(45deg); }
-.statistics-breakdown > summary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }
-.statistics-breakdown > summary h3 { margin: 0; font-size: 13px; }
-.statistics-breakdown[open] > summary { margin-bottom: var(--space-3); }
-.statistics-breakdown[open] { padding-bottom: var(--space-3); }
-@media (prefers-reduced-motion: reduce) { .statistics-breakdown > summary::before { transition: none; } }
-.statistics-labels { list-style: none; padding: 0; margin: 0; }
-.statistics-labels li { display: flex; gap: 12px; justify-content: space-between; padding: 8px; font-size: 12px; }
 .statistics-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
 .statistics-empty h3 { font-size: 18px; }
 .statistics-empty p { font-size: 13px; }
@@ -341,20 +320,12 @@ th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--lin
   .statistics-total { padding: var(--space-1) var(--space-2); border-left-width: 3px; }
   .statistics-total-label { font-size: 11px; }
   .statistics-total strong { font-size: 16px; }
-  /* Collapsed breakdowns sit side by side; an opened one takes the full row. */
-  .statistics-breakdowns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; }
-  .statistics-breakdown { padding: 0 var(--space-2); margin-bottom: var(--space-2); }
-  .statistics-breakdown[open] { grid-column: 1 / -1; }
-  .statistics-breakdown > summary { min-height: 44px; }
-  .statistics-breakdown[open] > summary { margin-bottom: 10px; }
-  .statistics-breakdown > summary h3 { font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
   .statistics-source-time { margin: 2px 0 0; }
 }
 /* Rail-sized desktops give long metric labels enough width instead of breaking words. */
 @media (min-width: 651px) and (max-width: 1100px) {
   .statistics-total { flex-basis: calc((100% - var(--space-4)) / 3); }
 }
-@media (pointer: coarse) { .statistics-breakdown > summary { min-height: 44px; } }
 @media (max-width: 850px) {
   .statistics-repository :deep(.statistics-repository-heading) { grid-template-columns: minmax(0, 1fr); }
 }

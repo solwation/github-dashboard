@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 for (const width of [1440, 320]) {
-  test(`repository collapse preserves filters, point selection and breakdowns at ${width}px`, async ({ page }) => {
+  test(`repository collapse preserves filters and point selection at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await page.getByRole('button', { name: 'Utforska en demo', exact: true }).click();
@@ -9,12 +9,7 @@ for (const width of [1440, 320]) {
     const repository = page.locator('#statistics-repo-1');
     const other = page.locator('#statistics-repo-2');
     const chart = repository.locator('.statistics-chart');
-    const breakdowns = repository.locator('.statistics-breakdowns > details');
-    await expect(breakdowns).toHaveCount(2);
-    for (const detail of await breakdowns.all()) await expect(detail).toHaveJSProperty('open', false);
-    await breakdowns.first().locator('summary').click();
-    await expect(breakdowns.first()).toHaveJSProperty('open', true);
-    await expect(breakdowns.nth(1)).toHaveJSProperty('open', false);
+    await expect(repository.locator('.statistics-breakdowns, .statistics-breakdown')).toHaveCount(0);
     await repository.getByRole('combobox', { name: 'Bidragsgivare', exact: true }).selectOption('demo-alex');
     const created = repository.getByRole('group', { name: 'Mätvärden i diagrammet' }).getByRole('button', { name: 'Skapade issues' });
     await created.click();
@@ -49,8 +44,6 @@ for (const width of [1440, 320]) {
     await expect(created).toHaveAttribute('aria-pressed', 'true');
     await expect(repository.getByRole('combobox', { name: 'Bidragsgivare', exact: true })).toHaveValue('demo-alex');
     await expect(slider).toHaveValue(point);
-    await expect(breakdowns.first()).toHaveJSProperty('open', true);
-    await expect(breakdowns.nth(1)).toHaveJSProperty('open', false);
     await expect(keyboard).toHaveCSS('clip-path', 'inset(50%)');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
