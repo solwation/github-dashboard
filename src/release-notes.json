@@ -2,8 +2,8 @@
   {
     "date": "2026-10-28",
     "summary": {
-      "sv": "Tydligare överblick över aktuellt arbete. Försiktigare poäng och aktivitetsmarkeringar hjälper prognoser och uppföljning.",
-      "en": "Clearer overview of recent work. Conservative sizing and activity indicators improve forecasts and follow-up."
+      "sv": "Tydligare arbetsaktivitet och flexiblare statistik kompletterar försiktigare poäng och prognoser.",
+      "en": "Clearer work activity and flexible statistics complement conservative sizing and forecasts."
     },
     "sections": [
       {
@@ -35,11 +35,12 @@
       },
       {
         "text": {
-          "sv": "Statistikvyn visar graf och projektfilter utan de expanderbara listorna för labels och bidragsgivare.",
-          "en": "Statistics keeps charts and repository filters without the expandable label and contributor lists."
+          "sv": "Statistik kan samlas i en gemensam graf med bevarade projektfilter och tidsperiod, utan expanderbara detaljlistor.",
+          "en": "Statistics can share one graph while retaining repository filters and time range, without expandable detail lists."
         },
         "issues": [
-          353
+          353,
+          354
         ]
       }
     ]

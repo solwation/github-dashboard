@@ -1,10 +1,11 @@
 {
   "baseCommit": "6fd6931621ca026858acf2c92a7379f275e484c8",
   "summary": {
-    "sv": "Statistikvyn visar graf och projektfilter utan de expanderbara listorna för labels och bidragsgivare.",
-    "en": "Statistics keeps charts and repository filters without the expandable label and contributor lists."
+    "sv": "Statistik kan visas gemensamt eller per repository med bevarade projektfilter och tidsperiod. De expanderbara detaljlistorna har tagits bort.",
+    "en": "Statistics can be combined or split by repository with filters and period preserved. Expandable detail lists have been removed."
   },
   "issues": [
-    353
+    353,
+    354
   ]
 }
