@@ -100,7 +100,7 @@ async function setupFixture(page: Page) {
   await expect(page.locator(".issue-row")).toHaveCount(3);
 }
 
-test("expanded list rows place localized comments control below content and omit top duplicate toolbar", async ({ page }) => {
+test("expanded list rows place localized comments control below content and omit top duplicate toolbar", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await setupFixture(page);
 
@@ -162,11 +162,11 @@ test("expanded list rows place localized comments control below content and omit
   await expect(footerButton2.locator(".comment-count-value")).toHaveText("5 kommentarer");
 
   // Screenshot wide desktop light
-  await page.screenshot({ path: "/home/olw/orkester-20261027-1328/evidence-348/expanded-list-desktop-light.png" });
+  await page.screenshot({ path: testInfo.outputPath("expanded-list-desktop-light.png") });
 
   // 4. Switch theme to dark and screenshot
   await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
-  await page.screenshot({ path: "/home/olw/orkester-20261027-1328/evidence-348/expanded-list-desktop-dark.png" });
+  await page.screenshot({ path: testInfo.outputPath("expanded-list-desktop-dark.png") });
 
   // 5. Test English localization
   await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
@@ -177,17 +177,17 @@ test("expanded list rows place localized comments control below content and omit
   await expect(footerButton0.locator(".comment-count-value")).toHaveText("0 comments");
   await expect(footerButton1.locator(".comment-count-value")).toHaveText("1 comment");
   await expect(footerButton2.locator(".comment-count-value")).toHaveText("5 comments");
-  await page.screenshot({ path: "/home/olw/orkester-20261027-1328/evidence-348/expanded-list-desktop-english.png" });
+  await page.screenshot({ path: testInfo.outputPath("expanded-list-desktop-english.png") });
 
   // 6. Test narrow desktop (1000x900)
   await page.setViewportSize({ width: 1000, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: "/home/olw/orkester-20261027-1328/evidence-348/expanded-list-narrow-desktop.png" });
+  await page.screenshot({ path: testInfo.outputPath("expanded-list-narrow-desktop.png") });
 
   // 7. Verify Cards view retains top toolbar placement without unintentional moves
   await page.getByRole("group", { name: "Board view mode", exact: true }).getByRole("button", { name: "Cards", exact: true }).click();
   const firstCard = page.locator(".issue-card").first();
   await expect(firstCard.locator(".details-toolbar .comment-count")).toBeVisible();
   await expect(firstCard.locator(".details-footer")).toHaveCount(0);
-  await page.screenshot({ path: "/home/olw/orkester-20261027-1328/evidence-348/cards-view-preserved.png" });
+  await page.screenshot({ path: testInfo.outputPath("cards-view-preserved.png") });
 });
