@@ -1,6 +1,5 @@
 import type { Repo } from "./model";
 import { publicRepositoryRecord } from "./public-workspace";
-import { moveProject } from "./project-layout";
 
 /** Other people's public repositories ("Andras publika projekt") are a separate, ordered group.
  * They are stored in the encrypted account settings under `externalRepositories`, in group order. */
@@ -39,10 +38,3 @@ export function groupedLaneOrder(projectOrder: readonly string[], externalOrder:
   return [...ordered, ...own.filter(name => !placed.has(name)).sort(), ...outer];
 }
 
-/** Reordering never moves a repository between groups. */
-export function moveExternal(order: string[], source: string, target: string): string[] {
-  return moveProject(order, source, target);
-}
-export function sameGroup(external: ReadonlySet<string>, a: string, b: string): boolean {
-  return external.has(a) === external.has(b);
-}

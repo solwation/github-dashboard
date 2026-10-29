@@ -220,7 +220,7 @@ function lastChange(changedAt: string | null) {
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 .sidebar-external-group { margin-top: var(--space-3); }
-.sidebar-external-heading { margin: 0; padding: var(--space-1) var(--space-2); }
+.sidebar-external-heading { margin: 0; padding-block: var(--space-1); text-transform: uppercase; line-height: 1.5; }
 .sidebar-inactive-toggle {
   display: flex;
   align-items: center;

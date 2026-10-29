@@ -2,10 +2,19 @@
   {
     "date": "2026-10-29",
     "summary": {
-      "sv": "Kommentarsfönstret öppnas centrerat från kort igen.",
-      "en": "The comments window opens centered from cards again."
+      "sv": "Följ andras publika projekt i en egen grupp, och kommentarer från kort öppnas centrerat igen.",
+      "en": "Follow other people's public projects in their own group, and card comments open centered again."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Lägg till andras publika repositories som ägare/repo; de visas i en egen grupp med egen ordning i sidomenyn och Inställningar.",
+          "en": "Add other people's public repositories as owner/repo; they appear in their own group with separate order in the sidebar and Settings."
+        },
+        "issues": [
+          364
+        ]
+      },
       {
         "text": {
           "sv": "Kommentarer som öppnas från ett kort visas centrerade i fönstret i stället för fast vid vänsterkanten.",
