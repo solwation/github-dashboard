@@ -47,6 +47,8 @@ import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
+import ExternalRepositoryForm from "./components/ExternalRepositoryForm.vue";
+import { groupedLaneOrder, MAX_EXTERNAL_REPOSITORIES, mergeExternalRepositories, parseExternalRepositories } from "./lib/external-repositories";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
 import { countUnreadActivity, ActivityTracker } from "./lib/activity";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
@@ -162,16 +164,23 @@ const projectOrder = ref<string[]>([]);
 const collapsedRepos = ref<string[]>([]);
 const showInactiveRepos = ref(false);
 const layoutAnnouncement = ref("");
+/** Other people's public repositories: their own group, in their own order, below the account's projects. */
+const externalRepos = ref<Repo[]>([]);
+const externalNames = computed(() => new Set(externalRepos.value.map(repo => repo.full_name)));
 const orderedLanes = computed(() => {
-  const order = reconcileOrder(projectOrder.value, lanes.value.map(lane => lane.repo.full_name));
+  const order = groupedLaneOrder(projectOrder.value, externalRepos.value.map(repo => repo.full_name), lanes.value.map(lane => lane.repo.full_name));
   const positions = new Map(order.map((name, index) => [name, index]));
   return [...lanes.value].sort((a, b) => positions.get(a.repo.full_name)! - positions.get(b.repo.full_name)!);
 });
 function reorderProject(source: string, target: string) {
   const names = orderedLanes.value.map(lane => lane.repo.full_name);
   if (!names.includes(source) || !names.includes(target) || source === target) return;
+  if (externalNames.value.has(source) !== externalNames.value.has(target)) return; // Never between groups.
   const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  projectOrder.value = moveProject(reconcileOrder(projectOrder.value, repos.value.length ? repos.value.map(repo => repo.full_name) : names), source, target);
+  if (externalNames.value.has(source)) {
+    const order = moveProject(externalRepos.value.map(repo => repo.full_name), source, target);
+    externalRepos.value = order.map(name => externalRepos.value.find(repo => repo.full_name === name)!);
+  } else projectOrder.value = moveProject(reconcileOrder(projectOrder.value, repos.value.length ? repos.value.map(repo => repo.full_name) : names), source, target);
   layoutAnnouncement.value = t("{name} flyttad till plats {position} av {total}", {
     name: source.split("/").pop()!, position: orderedLanes.value.findIndex(lane => lane.repo.full_name === source) + 1, total: names.length,
   });
@@ -696,7 +705,7 @@ function setPermissionAcknowledgements(value: string[]) {
 }
 const permissionsChecking = ref(false);
 let permissionRun = 0;
-const permissionRepos = computed(() => repos.value.filter(repo => selected.value.includes(repo.full_name)));
+const permissionRepos = computed(() => repos.value.filter(repo => selected.value.includes(repo.full_name) && !externalNames.value.has(repo.full_name)));
 async function refreshPermissions(force = false) {
   const client = api;
   const session = generation;
@@ -921,9 +930,12 @@ const connectionLabel = computed(() =>
   loggedIn.value ? t("GitHub anslutet") : publicMode.value ? t("Publik vy") : isDemo.value ? t("Demoläge") : t("Ej ansluten"),
 );
 const filteredRepos = computed(() =>
-  repos.value.filter((r) =>
+  repos.value.filter((r) => !externalNames.value.has(r.full_name) &&
     r.full_name.toLowerCase().includes(repoQuery.value.toLowerCase()),
   ),
+);
+const filteredExternalRepos = computed(() =>
+  externalRepos.value.filter((r) => r.full_name.toLowerCase().includes(repoQuery.value.toLowerCase())),
 );
 const columns = computed(() => [
   { key: "backlog", title: "Backlog" },
@@ -1044,7 +1056,7 @@ const unreadOverviewCount = computed(() => {
 const sidebarRepos = computed(() => {
   activityRevision.value;
   return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
-    (repo, issue) => activity.changedAt(repo, issue, activityNow.value));
+    (repo, issue) => activity.changedAt(repo, issue, activityNow.value), externalNames.value);
 });
 const stats = computed(() => {
   const all = lanes.value.flatMap((l) =>
@@ -1134,6 +1146,7 @@ function save(): Promise<void> {
         preferences: transferablePreferences.value,
         selected: selected.value,
         projectOrder: projectOrder.value,
+        ...(publicMode.value ? {} : { externalRepositories: externalRepos.value }),
         collapsedRepos: collapsedRepos.value,
         showInactiveRepos: showInactiveRepos.value,
         rules: rules.value,
@@ -1221,7 +1234,7 @@ async function openPublicWorkspace() {
     isDemo.value = false; publicMode.value = true;
     publicSnapshots = snapshots.filter(entry => available.some(repo => repo.id === entry.lane.repo.id && repo.full_name === entry.lane.repo.full_name));
     lastSynced.clear(); lastFullSynced.clear(); repoSyncedAt.value = {}; refreshed.value = null; repoBackoff.clear();
-    lanes.value = []; repos.value = available; selected.value = []; notificationRepos.value = [];
+    lanes.value = []; repos.value = available; externalRepos.value = []; selected.value = []; notificationRepos.value = [];
     restorePreferences(available, settings);
     rememberPublicWorkspace(true);
     reconcileSelection();
@@ -1261,6 +1274,46 @@ async function addPublicRepository() {
   } catch (cause) { if (run === generation) publicRepoError.value = message(cause); }
   finally { if (run === generation) publicRepoBusy.value = false; }
 }
+/** Adds someone else's public repository to its own group. Resolves null on success, otherwise the error to show. */
+async function addExternalRepository(input: string): Promise<string | null> {
+  const client = api, run = generation;
+  if (!client || publicMode.value || isDemo.value || !user.value) return t("Något gick fel. Försök igen.");
+  try {
+    const repo = await client.publicRepository(input);
+    if (client !== api || run !== generation) return null;
+    const known = (list: readonly Repo[]) => list.some(entry => entry.full_name.toLowerCase() === repo.full_name.toLowerCase());
+    if (known(externalRepos.value)) return t("Repositoryt är redan tillagt bland andras publika projekt.");
+    if (known(repos.value)) return t("Repositoryt finns redan bland dina egna projekt.");
+    if (externalRepos.value.length >= MAX_EXTERNAL_REPOSITORIES) return t("Du kan lägga till högst {count} andra publika projekt.", { count: MAX_EXTERNAL_REPOSITORIES });
+    externalRepos.value = [...externalRepos.value, repo];
+    repos.value = mergeExternalRepositories(repos.value, externalRepos.value);
+    if (picker.value) pendingSelected.value = [...pendingSelected.value, repo.full_name];
+    else {
+      selected.value = [...selected.value, repo.full_name];
+      reconcileSelection();
+      save();
+      await refresh(false, true);
+    }
+    if (picker.value) await save();
+    return null;
+  } catch (cause) {
+    return run === generation ? message(cause) : null;
+  }
+}
+function removeExternalRepository(name: string) {
+  if (!externalNames.value.has(name)) return;
+  externalRepos.value = externalRepos.value.filter(repo => repo.full_name !== name);
+  repos.value = repos.value.filter(repo => repo.full_name !== name);
+  pendingSelected.value = pendingSelected.value.filter(entry => entry !== name);
+  notificationRepos.value = notificationRepos.value.filter(entry => entry !== name);
+  delete rules.value[name];
+  if (!selected.value.includes(name)) { save(); return; }
+  selected.value = selected.value.filter(entry => entry !== name);
+  reconcileSelection();
+  save();
+  if (picker.value) return; // The picker applies the remaining selection on confirm.
+  void refresh(false, true);
+}
 /** Resolves true when the account connected live; failures are shown in `error` instead of thrown. */
 async function connect(token: string, imported?: HandoffSettings, cached?: ContentSnapshot | null): Promise<boolean> {
   if (authBusy.value) return false;
@@ -1270,9 +1323,12 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
   const previousLogin = user.value?.login;
   // Set once GitHub accepted the token, so a later board refresh failure still counts as connected.
   let connected = false;
+  let ownRepos: Repo[] = [];
   try {
     if (imported && token === sessionToken.value && api && user.value && !isDemo.value) {
-      const available = await api.repos();
+      ownRepos = await api.repos();
+      externalRepos.value = parseExternalRepositories(externalRepos.value, ownRepos);
+      const available = mergeExternalRepositories(ownRepos, externalRepos.value);
       repos.value = available;
       await applyImportedPreferences(imported, available);
       reconcileSelection();
@@ -1289,8 +1345,11 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       api = next;
       user.value = cached.user;
       sessionToken.value = token;
-      repos.value = cached.repos;
-      restorePreferences(cached.repos, cachedSettings);
+      const cachedExternal = parseExternalRepositories(cachedSettings.value?.externalRepositories, []);
+      const cachedRepos = mergeExternalRepositories(cached.repos, cachedExternal);
+      externalRepos.value = cachedExternal;
+      repos.value = cachedRepos;
+      restorePreferences(cachedRepos, cachedSettings);
       renderLanesGradually();
       measureRender("cache-first-render", nextTick);
       lanes.value = cached.lanes.filter(lane => selected.value.includes(lane.repo.full_name));
@@ -1302,8 +1361,10 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       for (const lane of lanes.value) closureTracker.update(lane);
     }
     const identity = await next.user();
-    const available = await next.repos();
+    ownRepos = await next.repos();
     const liveSettings = cached?.user.login === identity.login ? null : await readSettings(identity.login);
+    const liveExternal = parseExternalRepositories(liveSettings ? liveSettings.value?.externalRepositories : externalRepos.value, ownRepos);
+    const available = mergeExternalRepositories(ownRepos, liveExternal);
     connected = true;
     const credentialChanged = Boolean(previousToken && previousToken !== token);
     const accountChanged = Boolean(previousLogin && previousLogin !== identity.login);
@@ -1330,6 +1391,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     publicMode.value = false; rememberPublicWorkspace(false);
     user.value = identity;
     repos.value = available;
+    externalRepos.value = liveExternal;
     const sameCachedIdentity = cached?.user.login === identity.login;
     if (!sameCachedIdentity) {
       lanes.value = [];
@@ -1538,7 +1600,7 @@ function showDemo() {
   columnLimit.value = defaultColumnLimit;
   repositoryColumnLimits.value = {};
   visibleLimit.value = {};
-  projectOrder.value = [];
+  projectOrder.value = []; externalRepos.value = [];
   collapsedRepos.value = [];
   showInactiveRepos.value = false;
   lanes.value = demo();
@@ -1600,7 +1662,7 @@ function logout() {
   lanes.value = [];
   repos.value = [];
   selected.value = [];
-  projectOrder.value = [];
+  projectOrder.value = []; externalRepos.value = [];
   collapsedRepos.value = [];
   showInactiveRepos.value = false;
   layoutAnnouncement.value = "";
@@ -1971,7 +2033,7 @@ onMounted(async () => {
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="20" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
-        <LanguageSettings :repositories="sidebarRepos" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :repositories="sidebarRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -2412,10 +2474,26 @@ onMounted(async () => {
             t("Privat")
           }}</span></label
         >
-        <p v-if="!filteredRepos.length">
+        <p v-if="!filteredRepos.length && !filteredExternalRepos.length">
           {{ t("Inga repositories matchar sökningen.") }}
         </p>
+        <template v-if="filteredExternalRepos.length">
+          <h3 class="repo-options-group">{{ t("Andras publika projekt") }}</h3>
+          <div v-for="repo in filteredExternalRepos" :key="repo.id" class="repo-option external-repo-option">
+            <label class="external-repo-choice"
+              ><input
+                type="checkbox"
+                :checked="pendingSelected.includes(repo.full_name)"
+                @change="toggleRepo(repo.full_name)"
+              /><span
+                ><strong>{{ repo.full_name }}</strong
+                ><small>{{ repo.description || t("Ingen beskrivning") }}</small></span
+              ></label>
+            <button type="button" class="icon-button" :aria-label="t('Ta bort {name}', { name: repo.name })" :title="t('Ta bort {name}', { name: repo.name })" @click="removeExternalRepository(repo.full_name)"><X :size="16" /></button>
+          </div>
+        </template>
       </div>
+      <ExternalRepositoryForm v-if="loggedIn && !publicMode" :add="addExternalRepository" />
       <div class="modal-footer">
         <span>{{ pendingSelected.length }}{{ t(" valda") }}</span
         ><button class="button primary" @click="applyRepos">
@@ -2529,6 +2607,12 @@ onMounted(async () => {
 .repository-properties .modal-heading > button { flex-shrink: 0; }
 .repository-properties .modal-footer { flex-wrap: wrap; }
 .repository-properties .modal-footer > button { margin-left: auto; }
+.repo-options-group { margin: var(--space-4) 0 0; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.external-repo-option { cursor: default; padding-block: var(--space-2); }
+.external-repo-choice { display: flex; align-items: center; gap: var(--space-3); flex: 1; min-width: 0; padding-block: var(--space-2); cursor: pointer; }
+.external-repo-choice > input { width: 16px; height: 16px; flex-shrink: 0; }
+.external-repo-choice > span { min-width: 0; flex: 1; }
+@media (pointer: coarse) { .external-repo-option .icon-button { min-width: 44px; min-height: 44px; } }
 .repository-navigation-highlight:not(.repository-selected) {
   outline: 2px solid var(--green);
   outline-offset: -2px;

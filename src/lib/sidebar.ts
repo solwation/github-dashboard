@@ -15,6 +15,8 @@ export interface SidebarRepository {
   private?: boolean;
   /** Public GitHub Pages address, only when the repository reports Pages. */
   pagesUrl?: string;
+  /** Another person's public repository, shown in its own group below the account's own. */
+  external?: boolean;
 }
 
 /** Standard GitHub Pages address; `<owner>.github.io` is the user/organization site. Null without Pages. */
@@ -32,6 +34,7 @@ export function summarizeLanes(
   rules: Record<string, Rules>,
   hideCoordination: boolean,
   unreadAt?: (repo: string, issue: Issue) => string | null,
+  external?: ReadonlySet<string>,
 ): SidebarRepository[] {
   return lanes.map((lane) => {
     const summary: SidebarRepository = {
@@ -44,6 +47,7 @@ export function summarizeLanes(
       changedAt: null,
       ...(typeof lane.repo.private === "boolean" ? { private: lane.repo.private } : {}),
       ...(pagesUrl(lane.repo) ? { pagesUrl: pagesUrl(lane.repo)! } : {}),
+      ...(external?.has(lane.repo.full_name) ? { external: true } : {}),
       ...(lane.loading ? { loading: true } : {}),
       ...(lane.error && !lane.issues.length ? { unavailable: true } : {}),
       ...(unreadAt ? { unreadAt: null } : {}),

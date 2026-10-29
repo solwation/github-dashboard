@@ -43,8 +43,10 @@ const showInactive = computed({
 function toggleInactive() {
   showInactive.value = !showInactive.value;
 }
-const activeRepos = computed(() => props.repos.filter(repo => !isInactiveRepository(repo)));
-const inactiveRepos = computed(() => props.repos.filter(repo => isInactiveRepository(repo)));
+const ownRepos = computed(() => props.repos.filter(repo => !repo.external));
+const externalRepos = computed(() => props.repos.filter(repo => repo.external));
+const activeRepos = computed(() => ownRepos.value.filter(repo => !isInactiveRepository(repo)));
+const inactiveRepos = computed(() => ownRepos.value.filter(repo => isInactiveRepository(repo)));
 // Interest in a repository (#187): click and focus act at once, hover after a short rest.
 let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 function hoverStart(name: string) { hoverEnd(); hoverTimer = setTimeout(() => emit('interest', name), HOVER_DELAY_MS); }
@@ -137,6 +139,32 @@ function lastChange(changedAt: string | null) {
       </div>
     </div>
 
+    <section v-if="externalRepos.length" class="sidebar-external-group" aria-labelledby="sidebar-external-heading">
+      <h3 id="sidebar-external-heading" class="nav-caption sidebar-external-heading">{{ t("Andras publika projekt") }}</h3>
+      <div v-for="repo in externalRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100 }" :data-repository="repo.fullName">
+      <div class="repo-body">
+      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+        <span class="repo-dot" aria-hidden="true" />
+        <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
+        <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
+          <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
+        </span>
+        <span v-if="repo.loading" class="repository-counts">{{ t("Hämtar…") }}</span>
+        <span v-else-if="!repo.unavailable" class="repository-counts">
+          <span class="status-count backlog" :title="t('Backlog: {count}', { count: repo.backlog })"><Circle aria-hidden="true" /><span class="sr-only">Backlog: </span><span class="status-count-value">{{ repo.backlog }}</span></span>
+          <span class="status-count progress" :title="t('Pågående: {count}', { count: repo.progress })"><Clock3 aria-hidden="true" /><span class="sr-only">{{ t('Pågående') }}: </span><span class="status-count-value">{{ repo.progress }}</span></span>
+          <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
+        </span>
+        <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
+        <span v-if="repo.private !== undefined" class="repo-icons">
+          <span class="repo-visibility" :class="repo.private ? 'is-private' : 'is-public'" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')"><component :is="repo.private ? Lock : Globe" aria-hidden="true" /></span>
+        </span>
+      </a>
+      <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+      </div>
+      </div>
+    </section>
+
     <div v-if="restoring && !repos.length" class="sidebar-placeholder" aria-hidden="true"><span /><span /><span /></div>
     <p v-else-if="!repos.length" class="sidebar-empty">{{ t("Dina projekt börjar här.") }}</p>
   </div>
@@ -191,6 +219,8 @@ function lastChange(changedAt: string | null) {
 .recent-activity { width: 6px; height: 6px; border-radius: 50%; background: var(--unread); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
+.sidebar-external-group { margin-top: var(--space-3); }
+.sidebar-external-heading { margin: 0; padding: var(--space-1) var(--space-2); }
 .sidebar-inactive-toggle {
   display: flex;
   align-items: center;
