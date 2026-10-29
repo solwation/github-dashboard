@@ -1,11 +1,10 @@
 {
-  "baseCommit": "7f652c4b533e4356d8b5b977569c072e8acf923c",
+  "baseCommit": "4e073dd3ad75f2c1b1f27e41133a7d1c5bf2da40",
   "summary": {
-    "sv": "Oförändrade uppdateringar återanvänder kända arbetsstarter. Listans etiketter mäts samlat när rader monteras.",
-    "en": "Unchanged refreshes reuse known work starts. List labels use batched sizing when rows mount."
+    "sv": "Kommentarsfönstret öppnas centrerat från kort i stället för vid vänsterkanten.",
+    "en": "The comments window opens centered from cards instead of at the left edge."
   },
   "issues": [
-    359,
-    360
+    361
   ]
 }

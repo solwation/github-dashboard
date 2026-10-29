@@ -2758,8 +2758,9 @@ a.sidebar-repository:focus-visible {
 .card-label-tooltip { position: absolute; z-index: 2; top: 100%; right: 0; width: max-content; max-width: min(16rem, 65vw); padding: var(--space-2); border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .issue-card > .issue-details { margin-top: var(--space-1); }
 .issue-card .details-toolbar { gap: var(--space-2); }
-.issue-card .details-toolbar > :last-child { margin-left: 0; }
-.issue-card.row-details-card .details-toolbar > :last-child { margin-left: auto; }
+/* The comments <dialog> follows its trigger as a sibling; toolbar spacing must not shift the modal (#361). */
+.issue-card .details-toolbar > :last-child:not(dialog) { margin-left: 0; }
+.issue-card.row-details-card .details-toolbar > :last-child:not(dialog) { margin-left: auto; }
 .issue-card .details-toggle { flex: 0 0 auto; gap: var(--space-1); font-size: 11px; }
 .issue-card .comment-count { flex: 0 0 auto; min-height: 28px; padding: var(--space-1); font-size: 11px; }
 .issue-card .card-bottom > :is(.backlog-age, .closed-date) { font-size: 11px; color: var(--badge-text); }

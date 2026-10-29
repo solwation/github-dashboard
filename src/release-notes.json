@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-29",
+    "summary": {
+      "sv": "Kommentarsfönstret öppnas centrerat från kort igen.",
+      "en": "The comments window opens centered from cards again."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Kommentarer som öppnas från ett kort visas centrerade i fönstret i stället för fast vid vänsterkanten.",
+          "en": "Comments opened from a card appear centered in the window instead of pinned to the left edge."
+        },
+        "issues": [
+          361
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-28",
     "summary": {
       "sv": "Tydligare arbetsaktivitet och flexiblare statistik kompletterar försiktigare poäng och prognoser.",

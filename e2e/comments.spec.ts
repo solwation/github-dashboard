@@ -495,3 +495,40 @@ for (const scenario of [
   await expect(viewer.locator("img")).toHaveAttribute("alt", "Description");
   await context.close();
 });
+
+test("comment dialogs open centered from cards and list rows and stay centered on resize", async ({ browser }, testInfo) => {
+  // A card toolbar's last-child spacing once pinned the modal to the left window edge (#361).
+  async function expectCentered(page: Page, dialog: Locator) {
+    const box = (await dialog.boundingBox())!;
+    const { width, height } = page.viewportSize()!;
+    expect(Math.abs(box.x - (width - box.x - box.width))).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y - (height - box.y - box.height))).toBeLessThanOrEqual(1);
+  }
+  const scenarios = [
+    { name: "desktop", options: { viewport: { width: 1600, height: 1000 } } },
+    { name: "phone", options: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+  ];
+  for (const scenario of scenarios) {
+    const context = await browser.newContext(scenario.options);
+    const page = await context.newPage();
+    await connect(page, async route => { await route.fulfill({ json: [comment(1, "Centered comment")] }); });
+    for (const mode of ["Kort", "Lista"]) {
+      await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: mode, exact: true }).click();
+      // Phone list rows show their comments control only once expanded.
+      if (scenario.name === "phone" && mode === "Lista") await page.locator(".issue-row .row-title").first().click();
+      await page.locator(".comment-count:visible").first().click();
+      const dialog = page.getByRole("dialog", { name: "Kommentarer för #1" });
+      await expect(dialog.getByText("Centered comment"), `${scenario.name} ${mode}`).toBeVisible();
+      await expectCentered(page, dialog);
+      if (scenario.name === "desktop") {
+        await page.screenshot({ path: testInfo.outputPath(`centered-${mode}.png`) });
+        await page.setViewportSize({ width: 1300, height: 760 });
+        await expectCentered(page, dialog);
+        await page.setViewportSize({ width: 1600, height: 1000 });
+      }
+      await page.keyboard.press("Escape");
+      await expect(dialog).not.toBeVisible();
+    }
+    await context.close();
+  }
+});
