@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { cpus, loadavg } from 'node:os';
 import { previewOrigin } from "./ports";
 
 // Startup from the encrypted content cache with 12 repositories × 70 issues (#121), measured on
@@ -44,6 +45,11 @@ const cacheSaved = (page: Page) => page.evaluate(async () => {
 for (const [throttle, firstCardLimit, longTaskLimit] of [[1, 1000, 200], [4, 4000, Infinity]] as const) {
   test(`first cached card draws within ${firstCardLimit} ms at ${throttle}× CPU`, async ({ page, context }) => {
     test.setTimeout(120000);
+    // Wall-clock budgets only mean something when this run has the CPU. A host already running more
+    // work than it has cores (other sessions, builds) slows every revision alike (#366), so skip with
+    // the measured load instead of reporting a false regression.
+    const load = loadavg()[0], cores = cpus().length;
+    test.skip(load > cores, `host overloaded: one-minute load ${load.toFixed(1)} on ${cores} cores`);
     const state = await fixture(page);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(base);
