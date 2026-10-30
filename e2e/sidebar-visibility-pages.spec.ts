@@ -76,9 +76,17 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   await expect(page.locator('.recent-activity')).toHaveCount(2);
   await expect(row('site').locator('.recent-activity')).toHaveAttribute('aria-label', 'Oläst aktivitet');
   await expect(row('notes').locator('.recent-activity')).toHaveCount(1);
-  await expect(row('site').locator('.repo-visibility')).toHaveAttribute('aria-label', 'Publikt repository');
-  await expect(row(long).locator('.repo-visibility')).toHaveAttribute('aria-label', 'Privat repository');
-  await expect(row('unknown').locator('.repo-visibility')).toHaveCount(0);
+  // Globe = Pages link (only with Pages); lock only for private repositories without Pages; GitHub link on every row.
+  await expect(row('site').locator('.repo-visibility')).toHaveCount(0);
+  await expect(row(long).locator('.repo-visibility')).toHaveCount(0);
+  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna GitHub Pages för ${long}`);
+  await expect(row('notes').locator('.repo-visibility')).toHaveAttribute('aria-label', 'Privat repository');
+  await expect(row('notes').locator('.repo-pages')).toHaveCount(0);
+  for (const repo of repositories) {
+    await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('href', `https://github.com/${repo.full_name}`);
+    await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('target', '_blank');
+    await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('aria-label', `Öppna ${repo.name} på GitHub`);
+  }
   await expect(row('unknown').locator('.repo-pages')).toHaveCount(0);
   await expect(row('site').locator('.repo-pages')).toHaveAttribute('href', 'https://sample.github.io/site/');
   await expect(row('Sample.github.io').locator('.repo-pages')).toHaveAttribute('href', 'https://sample.github.io/');
@@ -99,16 +107,16 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   const grid = await rows.evaluateAll(list => list.map(row => {
     const rect = (selector: string) => row.querySelector(selector)?.getBoundingClientRect() ?? null;
     const label = rect('.repository-label')!, counts = rect('.repository-counts')!, dot = rect('.repo-dot')!;
-    const trailing = rect('.repo-pages svg') ?? rect('.repo-visibility svg');
-    const visibility = rect('.repo-visibility'), pages = rect('.repo-pages'), unread = rect('.recent-activity'), action = rect('.repo-board-toggle');
-    const group = visibility || pages;
+    const trailing = rect('.repo-github svg');
+    const visibility = rect('.repo-visibility'), pages = rect('.repo-pages'), github = rect('.repo-github')!, unread = rect('.recent-activity'), action = rect('.repo-board-toggle');
     const centre = (r: DOMRect) => r.top + r.height / 2;
+    const group = { left: (visibility || pages || github).left, right: github.right, y: centre(github) };
     return {
       lastIconX: trailing && trailing.left + trailing.width / 2,
       name: row.getAttribute('data-repository'), labelLeft: label.left, labelRight: label.right, labelY: centre(label),
       dotY: centre(dot), countsLeft: counts.left, countsTop: counts.top, countsBottom: counts.bottom, labelBottom: label.bottom,
-      group: group && { left: visibility?.left ?? pages!.left, right: pages?.right ?? visibility!.right, y: centre(group) },
-      visibility: visibility && { right: visibility.right, y: centre(visibility) },
+      group,
+      visibility: visibility && { right: visibility.right, y: centre(visibility), width: visibility.width },
       pages: pages && { left: pages.left, right: pages.right, y: centre(pages), width: pages.width, height: pages.height },
       unread: unread && { y: centre(unread) },
       action: action && { left: action.left, right: action.right, y: centre(action), width: action.width, height: action.height },
@@ -139,18 +147,18 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
       expect(item.labelRight).toBeLessThanOrEqual(item.group.left - 7);
       expect(Math.abs(item.group.y - item.labelY)).toBeLessThanOrEqual(1);
     }
-    if (item.visibility) expect(Math.abs(item.visibility.y - item.labelY)).toBeLessThanOrEqual(1);
+    if (item.visibility) { expect(Math.abs(item.visibility.y - item.labelY)).toBeLessThanOrEqual(1); expect(item.visibility.width).toBe(16); } // the lock is no touch target
     if (item.pages) {
       expect(Math.abs(item.pages.y - item.labelY)).toBeLessThanOrEqual(1);
+      expect(item.group.right - item.pages.right).toBe(item.pages.width + 4);
       if (scenario.mobile) { expect(item.pages.width).toBeGreaterThanOrEqual(44); expect(item.pages.height).toBeGreaterThanOrEqual(44); }
     }
-    if (item.visibility && item.pages) expect(item.pages.left - item.visibility.right).toBe(4);
     if (item.unread) expect(item.unread.y).toBeGreaterThanOrEqual(item.countsTop);
   }
-  await expect(row('unknown').locator('.repo-icons')).toHaveCount(0);
+  await expect(row('unknown').locator('.repo-icons > *')).toHaveCount(1);
   await expect(row('pages-only').locator('.repo-visibility')).toHaveCount(0);
   await expect(row('pages-only').locator('.repo-pages')).toHaveCount(1);
-  await expect(row('private-only').locator('.repo-icons > *')).toHaveCount(1);
+  await expect(row('private-only').locator('.repo-icons > *')).toHaveCount(2);
   await expect(row(long).locator('.repository-label')).toHaveAttribute('title', `Sample/${long}`);
   // Pages is the next keyboard stop after project selection and opens independently.
   await row('site').locator('.sidebar-repository').focus();
@@ -160,7 +168,8 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   await keyboardPopup.close();
   expect(await page.evaluate(() => location.hash)).toBe(hash);
   await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
-  await row('site').locator('.sidebar-repository').click();
+  // Touch rows reserve two 44px icon targets at the right; tap the left part of the row.
+  await row('site').locator('.sidebar-repository').click({ position: { x: 20, y: 12 } });
   await expect(row('site').locator('.sidebar-repository')).toHaveClass(/repository-selected/);
   await expect(row('site').locator('.repo-dot')).toBeVisible();
   writeFileSync(testInfo.outputPath('sidebar-geometry.json'), JSON.stringify(grid, null, 2));

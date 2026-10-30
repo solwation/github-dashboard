@@ -2,8 +2,8 @@
   {
     "date": "2026-10-30",
     "summary": {
-      "sv": "Dölj projekt från boarden – även i Översiktens summor – och ärendetitlar får jämn textstorlek på iPhone.",
-      "en": "Hide projects from the board, including the Overview totals, and issue titles keep an even text size on iPhone."
+      "sv": "Dölj projekt från boarden och dess summor, nya länkar i vänstermenyn och jämn titelstorlek på iPhone.",
+      "en": "Hide projects from the board and its totals, new left-menu links and even title sizes on iPhone."
     },
     "sections": [
       {
@@ -23,6 +23,15 @@
         },
         "issues": [
           369
+        ]
+      },
+      {
+        "text": {
+          "sv": "Jordgloben i vänstermenyn öppnar projektets GitHub Pages när sådan finns, och länkikonen öppnar projektet på github.com.",
+          "en": "The globe in the left menu opens the project's GitHub Pages when available, and the link icon opens the project on github.com."
+        },
+        "issues": [
+          370
         ]
       }
     ]

@@ -82,8 +82,10 @@ test.describe("desktop", () => {
     await expect(stat(page, "open")).toHaveText(/^2/);
     await expect(page.locator(".stats .stat-delta")).toHaveCount(0);
 
-    // Keyboard: the action follows the row link (and Pages) in tab order, for another person's public project.
+    // Keyboard: the action follows the row link and its GitHub link (#370) in tab order, for another person's public project.
     await row(page, "octo/hello").locator(".sidebar-repository").focus();
+    await page.keyboard.press("Tab");
+    await expect(row(page, "octo/hello").locator(".repo-github")).toBeFocused();
     await page.keyboard.press("Tab");
     const helloAction = row(page, "octo/hello").locator(".repo-board-toggle");
     await expect(helloAction).toBeFocused();

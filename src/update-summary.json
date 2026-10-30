@@ -1,11 +1,12 @@
 {
   "baseCommit": "1dd9e0480f5f3bd81a51230edc9481dbd6a9b02d",
   "summary": {
-    "sv": "Dolda projekt räknas inte längre i Översiktens summor, och ärendetitlar visas i samma textstorlek på iPhone.",
-    "en": "Hidden projects no longer count in the Overview totals, and issue titles keep one text size on iPhone."
+    "sv": "Dolda projekt räknas inte i Översiktens summor, vänstermenyn länkar till Pages och GitHub, och titlar har jämn storlek på iPhone.",
+    "en": "Hidden projects leave the Overview totals, the left menu links to Pages and GitHub, and titles keep one size on iPhone."
   },
   "issues": [
     369,
+    370,
     371
   ]
 }

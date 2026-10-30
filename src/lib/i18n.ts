@@ -501,6 +501,7 @@ export const english: Record<string, string> = {
   "Hämtar…": "Loading…",
   "Privat repository": "Private repository",
   "Öppna GitHub Pages för {repo}": "Open GitHub Pages for {repo}",
+  "Öppna {repo} på GitHub": "Open {repo} on GitHub",
   Uppdatera: "Refresh",
   "Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.":
     "You are exploring a demo with fictional projects. Connect GitHub to see your own.",
