@@ -45,6 +45,7 @@ async function connect(page: Page, login: string) {
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
 }
 
+const stat = (page: Page, key: string) => page.locator(`.stats [data-stat="${key}"] strong`);
 const row = (page: Page, name: string) => page.locator(`.sidebar-repository-row[data-repository="${name}"]`);
 const boardRepositories = (page: Page) => page.evaluate(() => {
   const items = [...document.querySelectorAll<HTMLElement>(".combined-board [data-repository], .repo-lane [data-repository]")].map(item => item.dataset.repository!);
@@ -57,9 +58,14 @@ test.describe("desktop", () => {
     await connect(page, "board-visibility");
     // Hide inactive repositories is off by default; turned on, quiet stays in the menu, greyed and off the board.
     await expect(page.locator("#repo-3")).toBeVisible();
+    await expect(stat(page, "open")).toHaveText(/^3/);
+    await expect(stat(page, "closed")).toHaveText(/^1/);
     await page.getByRole("checkbox", { name: "Dölj inaktiva repositories" }).check();
     await expect(row(page, "sample/quiet")).toHaveClass(/repository-hidden/);
     await expect(page.locator("#repo-3")).toHaveCount(0);
+    // Overview totals follow the board (#371); the Repositories card still counts every selected project.
+    await expect(stat(page, "closed")).toHaveText(/^0/);
+    await expect(stat(page, "repositories")).toHaveText("4");
     await expect(page.locator("#repo-1, #repo-2, #repo-11")).toHaveCount(3);
 
     // Hover reveals Hide; it is not shown on an untouched row.
@@ -73,6 +79,8 @@ test.describe("desktop", () => {
     await expect(row(page, "sample/alpha")).toHaveClass(/repository-hidden/);
     await expect(page.locator("#repo-1")).toHaveCount(0);
     await expect(page.getByRole("status").filter({ hasText: "alpha dold i innehållsvyn" })).toHaveCount(1);
+    await expect(stat(page, "open")).toHaveText(/^2/);
+    await expect(page.locator(".stats .stat-delta")).toHaveCount(0);
 
     // Keyboard: the action follows the row link (and Pages) in tab order, for another person's public project.
     await row(page, "octo/hello").locator(".sidebar-repository").focus();

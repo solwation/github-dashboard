@@ -2,17 +2,18 @@
   {
     "date": "2026-10-30",
     "summary": {
-      "sv": "Dölj valda eller inaktiva projekt från boarden, och ärendetitlar får jämn textstorlek på iPhone.",
-      "en": "Hide chosen or inactive projects from the board, and issue titles keep an even text size on iPhone."
+      "sv": "Dölj projekt från boarden – även i Översiktens summor – och ärendetitlar får jämn textstorlek på iPhone.",
+      "en": "Hide projects from the board, including the Overview totals, and issue titles keep an even text size on iPhone."
     },
     "sections": [
       {
         "text": {
-          "sv": "Dölj projekt från split- och samlad board via ögonknappen i vänstermenyn; klicka på ett utgråat projekt för att visa det igen.",
-          "en": "Hide projects from split and combined boards with the eye button in the left menu; click a greyed project to show it again."
+          "sv": "Dölj projekt från split- och samlad board via ögonknappen i vänstermenyn; dolda projekt räknas inte i Översiktens summor. Klicka på ett utgråat projekt för att visa det igen.",
+          "en": "Hide projects from split and combined boards with the eye button in the left menu; hidden projects leave the Overview totals. Click a greyed project to show it again."
         },
         "issues": [
-          367
+          367,
+          371
         ]
       },
       {

@@ -1,10 +1,11 @@
 {
   "baseCommit": "1dd9e0480f5f3bd81a51230edc9481dbd6a9b02d",
   "summary": {
-    "sv": "Ärendetitlar på kort och i listor visas nu i samma textstorlek på iPhone – inga slumpvis förstorade titlar.",
-    "en": "Issue titles on cards and in lists now keep one text size on iPhone – no randomly enlarged titles."
+    "sv": "Dolda projekt räknas inte längre i Översiktens summor, och ärendetitlar visas i samma textstorlek på iPhone.",
+    "en": "Hidden projects no longer count in the Overview totals, and issue titles keep one text size on iPhone."
   },
   "issues": [
-    369
+    369,
+    371
   ]
 }

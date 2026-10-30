@@ -15,7 +15,9 @@ import { emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, 
 const props = defineProps<{
   query?: string; repositoryQueries?: Record<string, string>;
   repositories: SidebarRepository[];
-  counts: OverviewCounts; lanes: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
+  counts: OverviewCounts; lanes: Lane[];
+  /** All selected repositories' lanes for the Repositories card; `lanes` holds only those shown on the board (#371). */
+  repositoryLanes?: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
   live: boolean; session: number | string; loggedIn: boolean;
 }>();
 const emit = defineEmits<{ chooseRepositories: [] }>();
@@ -79,12 +81,13 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
 watch(clock, () => secondaryTracker.rebaseline(summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories)));
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); for (const key of secondaryKeys) clearCell(key); });
 const estimateGroups = computed(() => overviewEstimateGroups(props.lanes, props.rules, props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
-const totalRepositories = computed(() => new Set(props.lanes.map(lane => lane.repo.full_name)).size);
-const activities = computed(() => props.lanes.flatMap(lane => {
+const repositoryLanes = computed(() => props.repositoryLanes ?? props.lanes);
+const totalRepositories = computed(() => new Set(repositoryLanes.value.map(lane => lane.repo.full_name)).size);
+const activities = computed(() => repositoryLanes.value.flatMap(lane => {
   const activity = repositoryActivity(lane, props.rules[lane.repo.full_name] || {}, current());
   return activity ? [activity] : [];
 }));
-const repositoryInfo = computed(() => overviewRepositoryInfo(props.lanes));
+const repositoryInfo = computed(() => overviewRepositoryInfo(repositoryLanes.value));
 const repositoryInfoLabel = computed(() => [
   t("Privata: {count}", { count: repositoryInfo.value.private }), t("Publika: {count}", { count: repositoryInfo.value.public }),
   ...(repositoryInfo.value.owners > 1 ? [t("Ägare: {count}", { count: repositoryInfo.value.owners })] : []),
