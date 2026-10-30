@@ -1,10 +1,10 @@
 {
-  "baseCommit": "61cc86f8d338e121b132b07115997fcc11f47616",
+  "baseCommit": "3460d80a5825cf1b940fcfc1464c59375f3e3f80",
   "summary": {
-    "sv": "Lägg till andras publika projekt som ägare/repo – de visas i en egen grupp med egen ordning i sidomenyn och Inställningar.",
-    "en": "Add other people's public projects as owner/repo – they get their own group and order in the sidebar and Settings."
+    "sv": "Dölj valda eller inaktiva projekt från boarden – de ligger kvar utgråade i vänstermenyn och visas igen med ett klick.",
+    "en": "Hide chosen or inactive projects from the board – they stay greyed in the left menu and come back with one click."
   },
   "issues": [
-    364
+    367
   ]
 }
