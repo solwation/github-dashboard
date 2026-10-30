@@ -64,7 +64,7 @@ deployment.
 - [Issue workflow instructions for AI assistants](public/ISSUEFLOW.md)
 - [Repository development workflow](AI.md) and [design rules](DESIGN.md)
 - [Orchestra policy](.orchestra/project.md): `/orkester` uses
-  [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern) **v0.6.0**,
+  [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern) **v0.6.1**,
   pinned as a squashed Git subtree in `.orchestra/shared`
   ([update policy](.orchestra/project.md#upstream-update-discovery),
   [installation guide](.orchestra/shared/INSTALL.md))
