@@ -4,6 +4,10 @@
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
+  /* #369: stop iOS WebKit text autosizing from enlarging some card titles; 100% keeps pinch zoom
+     and the system text size setting working. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   color-scheme: light;
   /* Theme tokens: light values here, dark values in the theme section at the end. */
   --bg: #f6f7f9;

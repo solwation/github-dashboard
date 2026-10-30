@@ -1,10 +1,10 @@
 {
-  "baseCommit": "3460d80a5825cf1b940fcfc1464c59375f3e3f80",
+  "baseCommit": "1dd9e0480f5f3bd81a51230edc9481dbd6a9b02d",
   "summary": {
-    "sv": "Dölj valda eller inaktiva projekt från boarden – de ligger kvar utgråade i vänstermenyn och visas igen med ett klick.",
-    "en": "Hide chosen or inactive projects from the board – they stay greyed in the left menu and come back with one click."
+    "sv": "Ärendetitlar på kort och i listor visas nu i samma textstorlek på iPhone – inga slumpvis förstorade titlar.",
+    "en": "Issue titles on cards and in lists now keep one text size on iPhone – no randomly enlarged titles."
   },
   "issues": [
-    367
+    369
   ]
 }

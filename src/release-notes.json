@@ -2,8 +2,8 @@
   {
     "date": "2026-10-30",
     "summary": {
-      "sv": "Dölj valda eller inaktiva projekt från boarden medan de ligger kvar utgråade i vänstermenyn.",
-      "en": "Hide chosen or inactive projects from the board while they stay greyed in the left menu."
+      "sv": "Dölj valda eller inaktiva projekt från boarden, och ärendetitlar får jämn textstorlek på iPhone.",
+      "en": "Hide chosen or inactive projects from the board, and issue titles keep an even text size on iPhone."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           367
+        ]
+      },
+      {
+        "text": {
+          "sv": "Ärendetitlar i Kort och Lista visas i samma textstorlek på iPhone i stället för att vissa förstoras; zoom fungerar som vanligt.",
+          "en": "Issue titles in Cards and List keep the same text size on iPhone instead of some being enlarged; zoom still works."
+        },
+        "issues": [
+          369
         ]
       }
     ]
