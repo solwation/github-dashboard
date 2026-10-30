@@ -1,11 +1,10 @@
 {
-  "baseCommit": "1dd9e0480f5f3bd81a51230edc9481dbd6a9b02d",
+  "baseCommit": "11a683934a00e6d91943fd8d1c6bf00fa18a19b0",
   "summary": {
-    "sv": "Dolda projekt räknas inte i Översiktens summor, vänstermenyn länkar till Pages och GitHub, och titlar har jämn storlek på iPhone.",
-    "en": "Hidden projects leave the Overview totals, the left menu links to Pages and GitHub, and titles keep one size on iPhone."
+    "sv": "Dolda projekt räknas inte längre i Översiktens summor, och vänstermenyn länkar till projektets Pages och GitHub.",
+    "en": "Hidden projects no longer count in the Overview totals, and the left menu links to each project's Pages and GitHub."
   },
   "issues": [
-    369,
     370,
     371
   ]
