@@ -58,7 +58,6 @@ test("repository settings stay at the right end of one compact action row", asyn
   await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
   await expect(page.locator(".combined-repository-controls")).toHaveCount(0);
   await expect(page.getByText("Repositoryinställningar")).toHaveCount(0);
-  await page.getByRole("button", { name: "Visa inaktiva repositories" }).click();
   const sidebar = page.locator(`.sidebar-repository-row[data-repository="sample/${name}"] .sidebar-repository`);
   await sidebar.click();
   await expect(sidebar).toBeFocused();

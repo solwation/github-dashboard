@@ -12,6 +12,7 @@ import {
   ArrowRight,
   ChevronDown,
   ExternalLink,
+  EyeOff,
   Layers3,
   LayoutDashboard,
   LogOut,
@@ -47,6 +48,7 @@ import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
+import { hideRepository, repositoryVisibility, restoreHiddenRepositories, showRepository, type RepositoryVisibility } from "./lib/repository-visibility";
 import ExternalRepositoryForm from "./components/ExternalRepositoryForm.vue";
 import { groupedLaneOrder, MAX_EXTERNAL_REPOSITORIES, mergeExternalRepositories, parseExternalRepositories } from "./lib/external-repositories";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
@@ -162,7 +164,11 @@ const selected = ref<string[]>([]);
 const repositoryColors = ref<Record<string, string>>({});
 const projectOrder = ref<string[]>([]);
 const collapsedRepos = ref<string[]>([]);
-const showInactiveRepos = ref(false);
+// "Hide inactive repositories" (#367): off by default so a quiet or new repository never vanishes unasked.
+const hideInactiveRepos = ref(false);
+// Board visibility (#367): saved manual choices and this session's reveals of inactive repositories.
+const hiddenRepos = ref<string[]>([]);
+const revealedRepos = ref<string[]>([]);
 const layoutAnnouncement = ref("");
 /** Other people's public repositories: their own group, in their own order, below the account's projects. */
 const externalRepos = ref<Repo[]>([]);
@@ -197,9 +203,28 @@ function toggleCollapsed(name: string) {
     ? collapsedRepos.value.filter(repo => repo !== name) : [...collapsedRepos.value, name];
   save();
 }
-function setShowInactiveRepos(value: boolean) {
-  showInactiveRepos.value = value;
+function setHideInactiveRepos(value: boolean) {
+  hideInactiveRepos.value = value;
+  // A new choice applies to every inactive repository again; manual choices stay.
+  revealedRepos.value = [];
   void save();
+}
+function visibilityState() {
+  return { hidden: hiddenRepos.value, hideInactive: hideInactiveRepos.value, revealed: revealedRepos.value };
+}
+function setRepositoryVisible(name: string, visible: boolean) {
+  const next = (visible ? showRepository : hideRepository)(visibilityState(), name);
+  hiddenRepos.value = next.hidden;
+  revealedRepos.value = next.revealed;
+  if (!visible && selectedCombinedRepository.value === name) selectedCombinedRepository.value = null;
+  layoutAnnouncement.value = t(visible ? "{name} visas i innehållsvyn" : "{name} dold i innehållsvyn", { name: name.split("/").pop()! });
+  void save();
+}
+function hiddenFromBoard(name: string) {
+  return (repositoryVisibilities.value[name] ?? "visible") !== "visible";
+}
+function toggleRepositoryVisibility(name: string) {
+  setRepositoryVisible(name, hiddenFromBoard(name));
 }
 let highlightedRepositories: HTMLElement[] = [];
 let repositoryHighlightTimer: ReturnType<typeof setTimeout> | undefined;
@@ -224,11 +249,6 @@ const mobileNavigationAnnouncement = ref("");
 const mobileBoardNavigatorButton = ref<HTMLButtonElement | null>(null);
 let boardNavigationHighlight: HTMLElement | null = null;
 let boardNavigationTimer: ReturnType<typeof setTimeout> | undefined;
-watch(() => orderedLanes.value.map(lane => lane.repo.full_name).join("\n"), () => {
-  if (!orderedLanes.value.some(lane => lane.repo.full_name === mobileNavigationRepository.value)) {
-    mobileNavigationRepository.value = orderedLanes.value[0]?.repo.full_name ?? "";
-  }
-}, { immediate: true });
 function closeMobileBoardNavigator(returnFocus = false) {
   mobileBoardNavigatorOpen.value = false;
   if (returnFocus) void nextTick(() => mobileBoardNavigatorButton.value?.focus());
@@ -237,17 +257,17 @@ function mobileStatusLabel(key: string) {
   return key === "progress" ? t("Pågående") : key === "closed" ? t("Stängda") : t("Backlog");
 }
 const mobileNavigationStatuses = computed(() => columns.value.map(col => {
-  const lane = orderedLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? orderedLanes.value[0];
+  const lane = contentLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? contentLanes.value[0];
   const count = splitByRepository.value
     ? (lane ? items(lane, col.key).length : 0)
     : combinedColumns.value[col.key]?.length ?? 0;
   return { key: col.key, label: mobileStatusLabel(col.key), count };
 }));
 async function navigateToBoardStatus(key: string) {
-  const lane = orderedLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? orderedLanes.value[0];
+  const lane = contentLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? contentLanes.value[0];
   if (splitByRepository.value && !lane) return;
   if (splitByRepository.value && lane) {
-    const laneIndex = orderedLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
+    const laneIndex = contentLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
     if (laneIndex >= renderedLanes.value) renderedLanes.value = laneIndex + 1;
   }
   if (splitByRepository.value && lane && collapsedRepos.value.includes(lane.repo.full_name)) {
@@ -279,8 +299,11 @@ async function navigateToBoardStatus(key: string) {
 function activateSidebarRepository(name: string) {
   const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
   if (!repo) return;
-  const toggle = currentView.value === "overview" && !splitByRepository.value
-    ? selectedCombinedRepository.value === name : focusedSidebarRepository.value === name;
+  // A hidden repository is shown and expanded rather than toggled away (#367).
+  const hidden = currentView.value === "overview" && hiddenFromBoard(name);
+  if (hidden) setRepositoryVisible(name, true);
+  const toggle = !hidden && (currentView.value === "overview" && !splitByRepository.value
+    ? selectedCombinedRepository.value === name : focusedSidebarRepository.value === name);
   focusedSidebarRepository.value = name;
   const hash = (currentView.value === "statistics" ? "#statistics-repo-" : "#repo-") + repo.id;
   // Explicit activation owns this navigation; a hashchange would also reveal collapsed content.
@@ -553,8 +576,10 @@ async function revealParentIssue(repository: string, number: number): Promise<bo
     query.value = "";
     if (repositoryQueries.value[lane.repo.full_name]) repositoryQueries.value = { ...repositoryQueries.value, [lane.repo.full_name]: "" };
   }
+  // Like a filter, a hidden repository yields to explicit navigation to one of its issues (#367).
+  if (hiddenFromBoard(lane.repo.full_name)) setRepositoryVisible(lane.repo.full_name, true);
   if (splitByRepository.value) {
-    const laneIndex = orderedLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
+    const laneIndex = contentLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
     if (laneIndex >= renderedLanes.value) renderedLanes.value = laneIndex + 1;
     collapsedRepos.value = collapsedRepos.value.filter(name => name !== lane.repo.full_name);
   }
@@ -969,18 +994,18 @@ const laneColumns = computed(() => new Map(lanes.value.map((lane) => {
 })));
 function laneIssues(lane: Lane) { return laneColumns.value.get(lane.repo.full_name)?.issues ?? []; }
 function items(lane: Lane, key: string) { return laneColumns.value.get(lane.repo.full_name)?.[key] ?? []; }
-const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(orderedLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value }, columnSorts.value[col.key])])));
+const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(contentLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value }, columnSorts.value[col.key])])));
 // Column estimates (#140) read the filtered issues shown; stable arrays keep the header clocks quiet.
 const laneEstimateGroups = computed(() => new Map(lanes.value.map((lane) => [lane.repo.full_name,
   [{ issues: laneColumns.value.get(lane.repo.full_name)?.issues ?? [], rules: rules.value[lane.repo.full_name] }]])));
-const combinedEstimateGroups = computed(() => orderedLanes.value.filter((lane) => !lane.loading).map((lane) => ({
+const combinedEstimateGroups = computed(() => contentLanes.value.filter((lane) => !lane.loading).map((lane) => ({
   issues: lane.issues.filter((issue) => (!hideCoordination.value || !isCoordination(issue)) && matchesIssueFilters(issue, query.value, "")),
   rules: rules.value[lane.repo.full_name],
 })));
 // Match the current column calibration, including filters and loading repository exclusion.
 provideRepositoryDisplayNames(() => orderedLanes.value.map(lane => lane.repo.full_name), () => !splitByRepository.value);
 provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
-  orderedLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
+  contentLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
 ), () => !splitByRepository.value);
 const timeoutCalibrationLanes = computed(() => lanes.value.filter(lane => splitByRepository.value || !lane.loading).map(lane => ({
   ...lane, issues: splitByRepository.value ? laneIssues(lane) : lane.issues.filter(issue =>
@@ -1058,6 +1083,18 @@ const sidebarRepos = computed(() => {
   return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
     (repo, issue) => activity.changedAt(repo, issue, activityNow.value), externalNames.value);
 });
+const sidebarRepoByName = computed(() => new Map(sidebarRepos.value.map(repo => [repo.fullName, repo])));
+const repositoryVisibilities = computed<Record<string, RepositoryVisibility>>(() => {
+  const state = visibilityState();
+  return Object.fromEntries(sidebarRepos.value.map(repo => [repo.fullName, repositoryVisibility(repo, state)]));
+});
+/** The board's repositories (#367): the left menu keeps hidden ones, split and combined boards leave them out. */
+const contentLanes = computed(() => orderedLanes.value.filter(lane => !hiddenFromBoard(lane.repo.full_name)));
+watch(() => contentLanes.value.map(lane => lane.repo.full_name).join("\n"), () => {
+  if (!contentLanes.value.some(lane => lane.repo.full_name === mobileNavigationRepository.value)) {
+    mobileNavigationRepository.value = contentLanes.value[0]?.repo.full_name ?? "";
+  }
+}, { immediate: true });
 const stats = computed(() => {
   const all = lanes.value.flatMap((l) =>
     laneIssues(l).map((i) => ({ i, r: rules.value[l.repo.full_name] })),
@@ -1148,7 +1185,8 @@ function save(): Promise<void> {
         projectOrder: projectOrder.value,
         ...(publicMode.value ? {} : { externalRepositories: externalRepos.value }),
         collapsedRepos: collapsedRepos.value,
-        showInactiveRepos: showInactiveRepos.value,
+        hideInactiveRepos: hideInactiveRepos.value,
+        hiddenRepos: hiddenRepos.value,
         rules: rules.value,
         columnLimit: columnLimit.value,
         repositoryColumnLimits: repositoryColumnLimits.value,
@@ -1167,7 +1205,8 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     repositoryColors.value = {};
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
-    showInactiveRepos.value = false;
+    hideInactiveRepos.value = false;
+    hiddenRepos.value = []; revealedRepos.value = [];
     columnLimit.value = defaultColumnLimit;
     timeoutSettings.value = normalizeTimeoutSettings({});
     repositoryColumnLimits.value = {};
@@ -1187,9 +1226,9 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
         const layout = restoreLayout(saved, available.map(repo => repo.full_name));
         projectOrder.value = layout.order;
         collapsedRepos.value = layout.collapsed;
-        if (typeof saved.showInactiveRepos === "boolean") {
-          showInactiveRepos.value = saved.showInactiveRepos;
-        }
+        // The older showInactiveRepos only expanded the sidebar group; it never hid board content.
+        if (typeof saved.hideInactiveRepos === "boolean") hideInactiveRepos.value = saved.hideInactiveRepos;
+        hiddenRepos.value = restoreHiddenRepositories(saved.hiddenRepos, available.map(repo => repo.full_name));
         activity.restore(saved.activityRead);
         permissionAcknowledgements.value = restorePermissionAcknowledgements(saved.permissionAcknowledgements);
         selected.value = Array.isArray(saved.selected)
@@ -1306,6 +1345,7 @@ function removeExternalRepository(name: string) {
   repos.value = repos.value.filter(repo => repo.full_name !== name);
   pendingSelected.value = pendingSelected.value.filter(entry => entry !== name);
   notificationRepos.value = notificationRepos.value.filter(entry => entry !== name);
+  hiddenRepos.value = hiddenRepos.value.filter(entry => entry !== name);
   delete rules.value[name];
   if (!selected.value.includes(name)) { save(); return; }
   selected.value = selected.value.filter(entry => entry !== name);
@@ -1410,6 +1450,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       selected.value = selected.value.filter(name => accessible.has(name));
       projectOrder.value = reconcileOrder(projectOrder.value, [...accessible]);
       collapsedRepos.value = collapsedRepos.value.filter(name => accessible.has(name));
+      hiddenRepos.value = hiddenRepos.value.filter(name => accessible.has(name));
       notificationRepos.value = notificationRepos.value.filter(name => accessible.has(name));
       repositoryColumnLimits.value = Object.fromEntries(Object.entries(repositoryColumnLimits.value).filter(([name]) => accessible.has(name)));
       rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
@@ -1602,7 +1643,8 @@ function showDemo() {
   visibleLimit.value = {};
   projectOrder.value = []; externalRepos.value = [];
   collapsedRepos.value = [];
-  showInactiveRepos.value = false;
+  hideInactiveRepos.value = false;
+  hiddenRepos.value = []; revealedRepos.value = [];
   lanes.value = demo();
   refreshed.value = Date.now();
   repoSyncedAt.value = {};
@@ -1664,7 +1706,8 @@ function logout() {
   selected.value = [];
   projectOrder.value = []; externalRepos.value = [];
   collapsedRepos.value = [];
-  showInactiveRepos.value = false;
+  hideInactiveRepos.value = false;
+  hiddenRepos.value = []; revealedRepos.value = [];
   layoutAnnouncement.value = "";
   rules.value = {};
   columnLimit.value = defaultColumnLimit;
@@ -1977,8 +2020,10 @@ onMounted(async () => {
       :selected-repository="currentView === 'overview' && !splitByRepository ? selectedCombinedRepository : null"
       :can-select="loggedIn || publicMode"
       :restoring="restoring && !workspaceOpen"
-      :show-inactive="showInactiveRepos"
-      @update:show-inactive="setShowInactiveRepos"
+      :hide-inactive="hideInactiveRepos"
+      :visibility="repositoryVisibilities"
+      @update:hide-inactive="setHideInactiveRepos"
+      @toggle-visibility="toggleRepositoryVisibility"
       @select="picker = true"
       @interest="refreshStaleRepository"
       @activate="activateSidebarRepository"
@@ -2014,7 +2059,7 @@ onMounted(async () => {
         <label v-if="splitByRepository" class="mobile-board-repository">
           <span>{{ t("Välj repository") }}</span>
           <select v-model="mobileNavigationRepository" :aria-label="t('Välj repository')">
-            <option v-for="lane in orderedLanes" :key="lane.repo.full_name" :value="lane.repo.full_name">{{ lane.repo.full_name }}</option>
+            <option v-for="lane in contentLanes" :key="lane.repo.full_name" :value="lane.repo.full_name">{{ lane.repo.full_name }}</option>
           </select>
         </label>
         <p class="mobile-board-navigator-caption">{{ splitByRepository ? t("Välj status") : t("Status i alla repositories") }}</p>
@@ -2033,7 +2078,7 @@ onMounted(async () => {
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="20" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
-        <LanguageSettings :repositories="sidebarRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -2240,7 +2285,7 @@ onMounted(async () => {
             {{ t("Dölj koordinationsärenden") }}</label
           ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
           >
-          <template v-if="!splitByRepository && orderedLanes.length">
+          <template v-if="!splitByRepository && contentLanes.length">
           <span v-if="isDemo" class="lane-sync combined-sync">
             <time v-if="refreshed" :datetime="new Date(refreshed).toISOString()"
               :title="t('Senast uppdaterad {time}', { time: statusTime(refreshed) })">{{ statusTime(refreshed) }}</time>
@@ -2277,11 +2322,16 @@ onMounted(async () => {
             <Plus :size="16" /> {{ t("Välj repositories") }}
           </button>
         </div>
+        <div v-else-if="!contentLanes.length" class="empty-state board-hidden-state">
+          <EyeOff :size="32" aria-hidden="true" />
+          <h2>{{ t("Alla repositories är dolda") }}</h2>
+          <p>{{ t("Visa dem igen i vänstermenyn eller under Ordna repositories i Inställningar.") }}</p>
+        </div>
         <p class="sr-only" role="status" aria-live="polite">{{ layoutAnnouncement }}</p>
         <p class="sr-only" role="status" aria-live="polite">{{ mobileNavigationAnnouncement }}</p>
         <template v-if="splitByRepository">
         <RepositorySection
-          v-for="(lane, laneIndex) in orderedLanes"
+          v-for="(lane, laneIndex) in contentLanes"
           :key="lane.repo.id"
           :id="'repo-' + lane.repo.id"
           :collapsed="collapsedRepos.includes(lane.repo.full_name)"
@@ -2325,9 +2375,9 @@ onMounted(async () => {
               </div>
             </div>
               <span v-if="!lane.loading && (!lane.error || lane.issues.length)" class="lane-summary" :aria-label="t('Sammanfattning för {name}', { name: lane.repo.name })">
-                <span>{{ t('Backlog: {count}', { count: sidebarRepos[laneIndex]?.backlog || 0 }) }}</span>
-                <span>{{ t('Pågående: {count}', { count: sidebarRepos[laneIndex]?.progress || 0 }) }}</span>
-                <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepos[laneIndex]?.closed || 0 }) }}</span>
+                <span>{{ t('Backlog: {count}', { count: sidebarRepoByName.get(lane.repo.full_name)?.backlog || 0 }) }}</span>
+                <span>{{ t('Pågående: {count}', { count: sidebarRepoByName.get(lane.repo.full_name)?.progress || 0 }) }}</span>
+                <span>{{ t('Stängda senaste 30 dagarna: {count}', { count: sidebarRepoByName.get(lane.repo.full_name)?.closed || 0 }) }}</span>
               </span>
           </template>
           <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'lane-content-' + lane.repo.id">
@@ -2375,8 +2425,8 @@ onMounted(async () => {
           </div>
         </RepositorySection>
         </template>
-        <section v-else-if="orderedLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
-          <template v-for="lane in orderedLanes" :key="lane.repo.full_name">
+        <section v-else-if="contentLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
+          <template v-for="lane in contentLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
             <p v-if="lane.error" class="notice error" role="alert"><strong>{{ lane.repo.full_name }}</strong> {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}</p>
             <p v-if="lane.timerWarning" class="notice"><strong>{{ lane.repo.full_name }}</strong> {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</p>
@@ -2396,7 +2446,7 @@ onMounted(async () => {
               :limit-increment="columnLimit"
               :estimate-groups="combinedEstimateGroups"
               :sort="columnSorts[col.key]"
-              :loading="orderedLanes.some(lane => lane.loading || lane.error)"
+              :loading="contentLanes.some(lane => lane.loading || lane.error)"
               :filtered="Boolean(query)"
               :card-props="cardProps"
               :row-props="rowProps"

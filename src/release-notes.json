@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-30",
+    "summary": {
+      "sv": "Dölj valda eller inaktiva projekt från boarden medan de ligger kvar utgråade i vänstermenyn.",
+      "en": "Hide chosen or inactive projects from the board while they stay greyed in the left menu."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Dölj projekt från split- och samlad board via ögonknappen i vänstermenyn; klicka på ett utgråat projekt för att visa det igen.",
+          "en": "Hide projects from split and combined boards with the eye button in the left menu; click a greyed project to show it again."
+        },
+        "issues": [
+          367
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-29",
     "summary": {
       "sv": "Följ andras publika projekt i en egen grupp, och kommentarer från kort öppnas centrerat igen.",

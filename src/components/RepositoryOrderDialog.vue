@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { nextTick, ref, useId } from "vue";
-import { ArrowDown, ArrowUp, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, Eye, EyeOff, X } from "@lucide/vue";
 import RepositoryOrderControls from "./RepositoryOrderControls.vue";
 import { projectDragType } from "../lib/project-layout";
-import type { SidebarRepository } from "../lib/sidebar";
+import { isInactiveRepository, type SidebarRepository } from "../lib/sidebar";
+import type { RepositoryVisibility } from "../lib/repository-visibility";
 import ExternalRepositoryForm from "./ExternalRepositoryForm.vue";
 import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
-const props = defineProps<{ repos: SidebarRepository[]; addExternal?: (input: string) => Promise<string | null> }>();
-const emit = defineEmits<{ reorder: [source: string, target: string]; removeExternal: [name: string] }>();
+const props = defineProps<{ repos: SidebarRepository[]; addExternal?: (input: string) => Promise<string | null>; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean }>();
+const emit = defineEmits<{ reorder: [source: string, target: string]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean] }>();
+// Board visibility (#367) is also reachable here, where phones and the icon rail have no repository list.
+const hiddenFromBoard = (name: string) => (props.visibility?.[name] ?? "visible") !== "visible";
+const hasInactive = computed(() => props.visibility !== undefined && props.repos.some(repo => !repo.external && isInactiveRepository(repo)));
 // Two groups with their own order; a repository never moves between them.
 const groups = computed(() => [
   { key: "own", repos: props.repos.filter(repo => !repo.external), heading: "" },
@@ -57,13 +61,16 @@ function drop(event: DragEvent, target: string) {
         <button class="icon-button" :aria-label="t('Stäng')" :title="t('Stäng')" autofocus @click="dialog?.close()"><X :size="20" /></button>
       </div>
       <p :id="helpId">{{ t("Dra i handtaget eller använd upp- och nedknapparna. Ordningen sparas direkt.") }}</p>
+      <label v-if="hasInactive" class="order-hide-inactive"><input type="checkbox" :checked="hideInactive" @change="emit('update:hideInactive', ($event.target as HTMLInputElement).checked)" />{{ t("Dölj inaktiva repositories") }}</label>
       <div class="repository-order-list">
         <section v-for="group in groups" :key="group.key" :aria-labelledby="group.heading ? titleId + '-' + group.key : undefined">
           <h3 v-if="group.heading" :id="titleId + '-' + group.key" class="order-group-heading">{{ t(group.heading) }}</h3>
           <ol>
             <li v-for="(repo, index) in group.repos" :key="repo.fullName" :data-repository="repo.fullName" @dragover.prevent @drop.prevent="drop($event, repo.fullName)">
               <RepositoryOrderControls :name="repo.name" :full-name="repo.fullName" :index="index" :total="group.repos.length" @move="move(group.repos, index, $event)" @reorder="reorder" />
-              <span class="order-repository-name">{{ repo.fullName }}</span>
+              <span class="order-repository-name" :class="{ 'repository-hidden': hiddenFromBoard(repo.fullName) }">{{ repo.fullName }}<span v-if="hiddenFromBoard(repo.fullName)" class="order-hidden-note">{{ t("Dold i innehållsvyn") }}</span></span>
+              <button v-if="visibility" class="icon-button order-visibility-toggle" :aria-label="t(hiddenFromBoard(repo.fullName) ? 'Visa {name} i innehållsvyn' : 'Dölj {name} i innehållsvyn', { name: repo.name })"
+                :title="t(hiddenFromBoard(repo.fullName) ? 'Visa {name} i innehållsvyn' : 'Dölj {name} i innehållsvyn', { name: repo.name })" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo.fullName) ? Eye : EyeOff" :size="18" aria-hidden="true" /></button>
               <button class="icon-button" :disabled="index === 0" :aria-label="t('Flytta {name} upp', { name: repo.name })" :title="t('Flytta {name} upp', { name: repo.name })" @click="move(group.repos, index, -1)"><ArrowUp :size="18" /></button>
               <button class="icon-button" :disabled="index === group.repos.length - 1" :aria-label="t('Flytta {name} ned', { name: repo.name })" :title="t('Flytta {name} ned', { name: repo.name })" @click="move(group.repos, index, 1)"><ArrowDown :size="18" /></button>
               <button v-if="repo.external" class="icon-button" :aria-label="t('Ta bort {name}', { name: repo.name })" :title="t('Ta bort {name}', { name: repo.name })" @click="emit('removeExternal', repo.fullName)"><X :size="18" /></button>
@@ -89,6 +96,9 @@ ol { margin: 0; padding: 0; list-style: none; }
 .order-group-heading { margin: var(--space-4) 0 0; padding-bottom: var(--space-1); border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 li { display: flex; align-items: center; gap: .25rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
 .order-repository-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: .8rem; }
+.order-repository-name.repository-hidden { color: var(--muted); }
+.order-hidden-note { display: block; font-size: 11px; }
+.order-hide-inactive { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; flex-shrink: 0; font-size: .8rem; }
 .icon-button { flex-shrink: 0; width: 44px; height: 44px; }
 .icon-button:disabled { opacity: .3; cursor: default; }
 .order-footer { display: flex; justify-content: flex-end; margin-top: 1rem; }

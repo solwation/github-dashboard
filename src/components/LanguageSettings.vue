@@ -3,6 +3,7 @@ import { ref, watch } from "vue";
 import { DEFAULT_TIMEOUT_OVERRUN_PERCENT, MAX_TIMEOUT_OVERRUN_PERCENT, parseTimeoutOverrunPercent } from "../lib/timeouts";
 import RepositoryOrderDialog from "./RepositoryOrderDialog.vue";
 import type { SidebarRepository } from "../lib/sidebar";
+import type { RepositoryVisibility } from "../lib/repository-visibility";
 import ColumnLimitField from "./ColumnLimitField.vue";
 import WorkflowGuide from "./WorkflowGuide.vue";
 import GitHubPermissions from "./GitHubPermissions.vue";
@@ -15,7 +16,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ repositories?: SidebarRepository[]; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
+const props = withDefaults(defineProps<{ repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -33,7 +34,7 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ removeExternal: [name: string]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
+const emit = defineEmits<{ removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const percent = parseTimeoutOverrunPercent(input.value);
@@ -142,7 +143,7 @@ function changeTheme(event: Event) {
       </section>
     </div>
     <div class="settings-actions">
-      <RepositoryOrderDialog v-if="repositories.length || addExternal" :repos="repositories" :add-external="addExternal" @remove-external="name => emit('removeExternal', name)" @reorder="(source, target) => emit('reorder', source, target)" />
+      <RepositoryOrderDialog v-if="repositories.length || addExternal" :repos="repositories" :visibility="visibility" :hide-inactive="hideInactive" @toggle-visibility="name => emit('toggleVisibility', name)" @update:hide-inactive="value => emit('update:hideInactive', value)" :add-external="addExternal" @remove-external="name => emit('removeExternal', name)" @reorder="(source, target) => emit('reorder', source, target)" />
       <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
       <WorkflowGuide />
       <button class="button small" aria-haspopup="dialog" @click="emit('openUpdates')">{{ t("Automatiska uppdateringar") }}</button>

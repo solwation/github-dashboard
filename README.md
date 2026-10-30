@@ -13,7 +13,8 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
 ## Why Issueflow
 
 - **One board for every repository.** Backlog by priority, In progress with live elapsed time,
-  and the last 30 days of Closed work, split per repository or combined.
+  and the last 30 days of Closed work, split per repository or combined. Hide quiet projects
+  from the board while keeping them in the menu.
 - **Built for agent workflows.** See which session owns an issue, spot work that may have
   stalled, and follow new comments and moves as they happen.
 - **Know how long things take.** Story-point estimates, remaining-time forecasts and actual

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, Circle, CircleCheck, Clock3, Globe, Lock, Plus, SquareArrowOutUpRight } from "@lucide/vue";
+import { Circle, CircleCheck, Clock3, Eye, EyeOff, Globe, Lock, Plus, SquareArrowOutUpRight } from "@lucide/vue";
 import { repositoryColor } from "../lib/repository-color";
 import { useLanguage } from "../lib/i18n";
+import type { RepositoryVisibility } from "../lib/repository-visibility";
 import { isInactiveRepository, recentlyChanged, RECENT_CHANGE_MS, type SidebarRepository } from "../lib/sidebar";
 import { HOVER_DELAY_MS } from "../lib/adhoc-refresh";
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount } from "vue";
 import { useNow } from "../composables/useNow";
 
 const props = withDefaults(
@@ -15,10 +16,12 @@ const props = withDefaults(
     canSelect: boolean;
     restoring?: boolean;
     statistics?: boolean;
-    showInactive?: boolean;
+    hideInactive?: boolean;
+    /** Board visibility per repository (#367); absent means every repository is shown. */
+    visibility?: Record<string, RepositoryVisibility>;
   }>(),
   {
-    showInactive: false,
+    hideInactive: false,
   },
 );
 // Re-check only when the newest unread marker expires.
@@ -30,18 +33,18 @@ const emit = defineEmits<{
   select: [];
   interest: [name: string];
   activate: [name: string];
-  "update:showInactive": [value: boolean];
+  "update:hideInactive": [value: boolean];
+  toggleVisibility: [name: string];
 }>();
-const localShowInactive = ref(false);
-const showInactive = computed({
-  get: () => props.showInactive ?? localShowInactive.value,
-  set: (val: boolean) => {
-    localShowInactive.value = val;
-    emit("update:showInactive", val);
-  },
-});
-function toggleInactive() {
-  showInactive.value = !showInactive.value;
+// "Hide inactive repositories" leaves inactive projects greyed here and off the board (#367).
+function setHideInactive(event: Event) {
+  emit("update:hideInactive", (event.target as HTMLInputElement).checked);
+}
+function hiddenFromBoard(repo: SidebarRepository) {
+  return (props.visibility?.[repo.fullName] ?? "visible") !== "visible";
+}
+function visibilityAction(repo: SidebarRepository) {
+  return t(hiddenFromBoard(repo) ? "Visa {name} i innehållsvyn" : "Dölj {name} i innehållsvyn", { name: repo.name });
 }
 const ownRepos = computed(() => props.repos.filter(repo => !repo.external));
 const externalRepos = computed(() => props.repos.filter(repo => repo.external));
@@ -75,9 +78,9 @@ function lastChange(changedAt: string | null) {
       <Plus :size="16" />
     </button>
     </div>
-    <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100 }" :data-repository="repo.fullName">
+    <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
     <div class="repo-body">
-    <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+    <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
       <span class="repo-dot" aria-hidden="true" />
       <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
       <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
@@ -90,34 +93,26 @@ function lastChange(changedAt: string | null) {
         <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
       </span>
       <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
+      <span v-if="hiddenFromBoard(repo)" class="sr-only">{{ t("Dold i innehållsvyn") }}</span>
       <span v-if="repo.private !== undefined" class="repo-icons">
         <span class="repo-visibility" :class="repo.private ? 'is-private' : 'is-public'" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')"><component :is="repo.private ? Lock : Globe" aria-hidden="true" /></span>
       </span>
     </a>
     <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+    <button v-if="visibility" type="button" class="repo-board-toggle" :aria-label="visibilityAction(repo)" :title="visibilityAction(repo)" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo) ? Eye : EyeOff" aria-hidden="true" /></button>
     </div>
     </div>
 
-    <button
-      v-if="inactiveRepos.length > 0"
-      type="button"
-      class="sidebar-inactive-toggle"
-      :aria-expanded="showInactive"
-      :aria-controls="'sidebar-inactive-repositories'"
-      :aria-label="showInactive ? t('Dölj inaktiva repositories') : t('Visa inaktiva repositories')"
-      :title="showInactive ? t('Dölj inaktiva repositories') : t('Visa inaktiva repositories')"
-      @click="toggleInactive"
-    >
-      <ChevronRight v-if="!showInactive" :size="16" aria-hidden="true" />
-      <ChevronDown v-else :size="16" aria-hidden="true" />
-      <span class="inactive-toggle-label">{{ showInactive ? t("Dölj inaktiva repositories") : t("Visa inaktiva repositories") }}</span>
-      <span class="nav-count" :aria-hidden="true">{{ inactiveRepos.length }}</span>
-    </button>
+    <label v-if="inactiveRepos.length > 0" class="sidebar-inactive-toggle" :title="t('Dölj inaktiva repositories')">
+      <input type="checkbox" :checked="hideInactive" @change="setHideInactive" />
+      <span class="inactive-toggle-label">{{ t("Dölj inaktiva repositories") }}</span>
+      <span class="nav-count" aria-hidden="true">{{ inactiveRepos.length }}</span>
+    </label>
 
-    <div v-if="inactiveRepos.length > 0" v-show="showInactive" id="sidebar-inactive-repositories" class="sidebar-inactive-group">
-      <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100 }" :data-repository="repo.fullName">
+    <div v-if="inactiveRepos.length > 0" id="sidebar-inactive-repositories" class="sidebar-inactive-group">
+      <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
         <span class="repo-dot" aria-hidden="true" />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
@@ -130,20 +125,22 @@ function lastChange(changedAt: string | null) {
           <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
         </span>
         <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
+        <span v-if="hiddenFromBoard(repo)" class="sr-only">{{ t("Dold i innehållsvyn") }}</span>
         <span v-if="repo.private !== undefined" class="repo-icons">
           <span class="repo-visibility" :class="repo.private ? 'is-private' : 'is-public'" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')"><component :is="repo.private ? Lock : Globe" aria-hidden="true" /></span>
         </span>
       </a>
       <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+      <button v-if="visibility" type="button" class="repo-board-toggle" :aria-label="visibilityAction(repo)" :title="visibilityAction(repo)" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo) ? Eye : EyeOff" aria-hidden="true" /></button>
       </div>
       </div>
     </div>
 
     <section v-if="externalRepos.length" class="sidebar-external-group" aria-labelledby="sidebar-external-heading">
       <h3 id="sidebar-external-heading" class="nav-caption sidebar-external-heading">{{ t("Andras publika projekt") }}</h3>
-      <div v-for="repo in externalRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100 }" :data-repository="repo.fullName">
+      <div v-for="repo in externalRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
         <span class="repo-dot" aria-hidden="true" />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
@@ -156,11 +153,13 @@ function lastChange(changedAt: string | null) {
           <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
         </span>
         <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
+        <span v-if="hiddenFromBoard(repo)" class="sr-only">{{ t("Dold i innehållsvyn") }}</span>
         <span v-if="repo.private !== undefined" class="repo-icons">
           <span class="repo-visibility" :class="repo.private ? 'is-private' : 'is-public'" role="img" :title="repo.private ? t('Privat repository') : t('Publikt repository')" :aria-label="repo.private ? t('Privat repository') : t('Publikt repository')"><component :is="repo.private ? Lock : Globe" aria-hidden="true" /></span>
         </span>
       </a>
       <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+      <button v-if="visibility" type="button" class="repo-board-toggle" :aria-label="visibilityAction(repo)" :title="visibilityAction(repo)" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo) ? Eye : EyeOff" aria-hidden="true" /></button>
       </div>
       </div>
     </section>
@@ -176,11 +175,13 @@ function lastChange(changedAt: string | null) {
 .sidebar-projects { min-height: 0; overflow-y: auto; }
 /* Name-line icons share a right edge; the next line keeps counts and unread separate. */
 .sidebar-repository-row { --row-line: var(--space-5); --pages-target: var(--icon-sm); --row-pad-end: var(--space-2); display: flex; align-items: flex-start; gap: var(--space-1); margin-top: var(--space-1); min-width: 0; }
-.repo-body { --metadata-width: 0px; position: relative; flex: 1; min-width: 0; display: flex; }
+.repo-body { --metadata-width: 0px; --action-width: 0px; position: relative; flex: 1; min-width: 0; display: flex; }
+/* The board visibility action (#367) owns the rightmost slot in every row, so other icons keep one column. */
+.repo-body:has(.repo-board-toggle) { --action-width: calc(var(--pages-target) + var(--space-1)); }
 .repo-body:has(.repo-visibility) { --metadata-width: var(--pages-target); }
 .repo-body:has(.repo-pages) { --metadata-width: var(--pages-target); }
 .repo-body:has(.repo-visibility):has(.repo-pages) { --metadata-width: calc(2 * var(--pages-target) + var(--space-1)); }
-.repo-body:has(.repo-visibility, .repo-pages) .repository-label { margin-inline-end: calc(var(--metadata-width) + var(--space-2)); }
+.repo-body:has(.repo-visibility, .repo-pages, .repo-board-toggle) .repository-label { margin-inline-end: calc(var(--metadata-width) + var(--action-width) + var(--space-2)); }
 .sidebar-repository {
   flex: 1;
   min-width: 0;
@@ -210,12 +211,23 @@ function lastChange(changedAt: string | null) {
 .backlog { color: var(--status-backlog); }
 .progress { color: var(--status-progress); }
 .closed { color: var(--status-closed); }
-.repo-icons { width: var(--metadata-width); position: absolute; top: var(--space-1); right: var(--row-pad-end); height: var(--row-line); display: flex; align-items: center; gap: var(--space-1); }
+.repo-icons { width: var(--metadata-width); position: absolute; top: var(--space-1); right: calc(var(--row-pad-end) + var(--action-width)); height: var(--row-line); display: flex; align-items: center; gap: var(--space-1); }
 .repo-visibility { display: grid; place-items: center; width: var(--pages-target); height: var(--pages-target); color: var(--muted); }
 /* Both visibility states keep their tooltip, accessible label and full contrast. */
-.repo-pages { position: absolute; right: var(--row-pad-end); top: calc(var(--space-1) + (var(--row-line) - var(--pages-target)) / 2); display: grid; place-items: center; width: var(--pages-target); height: var(--pages-target); border-radius: 4px; color: var(--muted); }
+.repo-pages { position: absolute; right: calc(var(--row-pad-end) + var(--action-width)); top: calc(var(--space-1) + (var(--row-line) - var(--pages-target)) / 2); display: grid; place-items: center; width: var(--pages-target); height: var(--pages-target); border-radius: 4px; color: var(--muted); }
 .repo-pages:hover { color: var(--green); }
 .repo-pages:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.repo-board-toggle { position: absolute; right: var(--row-pad-end); top: calc(var(--space-1) + (var(--row-line) - var(--pages-target)) / 2); display: grid; place-items: center; width: var(--pages-target); height: var(--pages-target); padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; transition: opacity .15s ease, color .15s ease; }
+.repo-board-toggle:hover { color: var(--green); }
+.repo-board-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+/* Hover reveals Hide; keyboard focus, touch screens and hidden rows always show the action. */
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-repository-row:not(.repository-hidden):not(:hover):not(:focus-within) .repo-board-toggle { opacity: 0; }
+}
+/* Hidden from the board: greyed name and counts, hollow dot; contrast stays at the muted text level. */
+.repository-hidden .sidebar-repository { color: var(--muted); }
+.repository-hidden :is(.backlog, .progress, .closed) { color: var(--muted); }
+.sidebar-repository-row.repository-hidden .sidebar-repository .repo-dot { background-color: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
 .recent-activity { width: 6px; height: 6px; border-radius: 50%; background: var(--unread); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
@@ -244,10 +256,11 @@ function lastChange(changedAt: string | null) {
   color: var(--text);
   background: var(--hover);
 }
-.sidebar-inactive-toggle:focus-visible {
+.sidebar-inactive-toggle:focus-within:has(:focus-visible) {
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
+.sidebar-inactive-toggle input { flex-shrink: 0; margin: 0; accent-color: var(--green); }
 .inactive-toggle-label {
   flex: 1;
   min-width: 0;
@@ -261,13 +274,16 @@ function lastChange(changedAt: string | null) {
 }
 @media (pointer: coarse) {
   .sidebar-repository-row { --row-line: 44px; --pages-target: 44px; }
+  /* No room for a third 44px target beside the name: touch uses Settings > Reorder repositories, and tapping a greyed row shows it. */
+  .repo-board-toggle { display: none; }
+  .repo-body:has(.repo-board-toggle) { --action-width: 0px; }
   .sidebar-add { min-width: 44px; min-height: 44px; }
   .sidebar-inactive-toggle {
     min-height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sidebar-inactive-toggle {
+  .sidebar-inactive-toggle, .repo-board-toggle {
     transition: none;
   }
 }

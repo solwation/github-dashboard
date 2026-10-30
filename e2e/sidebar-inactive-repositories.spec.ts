@@ -9,7 +9,7 @@ const repositories = [
 ].map(repo => ({ ...repo, description: 'Fixture', html_url: `https://github.com/${repo.full_name}`, owner: { login: 'Sample' } }));
 
 test.describe('sidebar inactive repositories', () => {
-  test('collapses inactive repositories by default, expands on toggle, persists setting, and updates reactively', async ({ page }) => {
+  test('lists inactive repositories, hides them from the board on request while keeping them greyed in the menu, persists the setting, and updates reactively', async ({ page }) => {
     const created = new Date(Date.now() - 86_400_000).toISOString();
     let movedIssueToProgress = false;
 
@@ -59,56 +59,53 @@ test.describe('sidebar inactive repositories', () => {
     await expect(activeBacklog).toBeVisible();
     await expect(activeProgress).toBeVisible();
 
-    // Inactive repositories are hidden under the toggle
-    await expect(inactiveClosed).toBeHidden();
-    await expect(inactiveEmpty).toBeHidden();
-
-    // Toggle button is visible with count of 2 inactive repositories
-    const toggle = page.locator('.sidebar-inactive-toggle');
-    await expect(toggle).toBeVisible();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(toggle).toContainText('Visa inaktiva repositories');
-    await expect(toggle.locator('.nav-count')).toHaveText('2');
-
-    // Expand the toggle
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(toggle).toContainText('Dölj inaktiva repositories');
-
-    // Now inactive repositories are visible
-    await expect(inactiveClosed).toBeVisible();
-    await expect(inactiveEmpty).toBeVisible();
-
+    // Inactive repositories are listed below "Hide inactive repositories", which is off by default (#367).
+    const toggle = page.getByRole('checkbox', { name: 'Dölj inaktiva repositories' });
+    await expect(toggle).not.toBeChecked();
+    await expect(page.locator('.sidebar-inactive-toggle .nav-count')).toHaveText('2');
+    for (const row of [inactiveClosed, inactiveEmpty]) {
+      await expect(row).toBeVisible();
+      await expect(row).not.toHaveClass(/repository-hidden/);
+    }
+    await expect(page.locator('#repo-3')).toBeVisible();
+    await expect(page.locator('#repo-4')).toBeVisible();
     await expect(active).toHaveText('2 aktiva');
 
     // Inactive repositories are selectable
     await inactiveClosed.locator('.sidebar-repository').click();
     await expect(page).toHaveURL(/#repo-3$/);
 
-    // Reload the page: the expanded setting is saved per account in encrypted IndexedDB
-    await page.reload();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(inactiveClosed).toBeVisible();
-    await expect(inactiveEmpty).toBeVisible();
+    // Turning it on keeps them greyed in the menu and off the board, without changing the active count.
+    await toggle.check();
+    await expect(inactiveClosed).toHaveClass(/repository-hidden/);
+    await expect(inactiveEmpty).toHaveClass(/repository-hidden/);
+    await expect(activeBacklog).not.toHaveClass(/repository-hidden/);
+    await expect(page.locator('#repo-1')).toBeVisible();
+    await expect(page.locator('#repo-3, #repo-4')).toHaveCount(0);
+    await expect(active).toHaveText('2 aktiva');
 
-    // Collapse again
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(inactiveClosed).toBeHidden();
-    await expect(inactiveEmpty).toBeHidden();
-
-    // Reload: remains collapsed
+    // Reload the page: the setting is saved per account in encrypted IndexedDB
     await page.reload();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(inactiveClosed).toBeHidden();
-    await expect(inactiveEmpty).toBeHidden();
+    await expect(toggle).toBeChecked();
+    await expect(inactiveEmpty).toHaveClass(/repository-hidden/);
+    await expect(page.locator('#repo-3, #repo-4')).toHaveCount(0);
+
+    // Off again survives a reload too
+    await toggle.uncheck();
+    await expect(page.locator('#repo-3')).toBeVisible();
+    await page.reload();
+    await expect(toggle).not.toBeChecked();
+    await expect(page.locator('#repo-3')).toBeVisible();
+    await toggle.check();
+    await expect(page.locator('#repo-3, #repo-4')).toHaveCount(0);
 
     // Reactive update: inactive-empty gets an in-progress issue
     movedIssueToProgress = true;
     await page.keyboard.press('Control+R'); // Trigger reload/refresh
-    await expect(inactiveEmpty).toBeVisible(); // Now active!
+    await expect(inactiveEmpty).not.toHaveClass(/repository-hidden/); // Now active!
+    await expect(page.locator('#repo-4')).toBeVisible();
     await expect(active).toHaveText(/3 aktiva/);
-    await expect(toggle.locator('.nav-count')).toHaveText('1'); // Only 1 inactive remains
+    await expect(page.locator('.sidebar-inactive-toggle .nav-count')).toHaveText('1'); // Only 1 inactive remains
   });
 
   test('does not show inactive toggle when all repositories have active issues', async ({ page }) => {
@@ -162,24 +159,24 @@ test.describe('sidebar inactive repositories', () => {
     for (const repo of repositories) await page.getByRole('checkbox', { name: new RegExp(repo.full_name.replace(/[.]/g, '\\.')) }).check();
     await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
 
-    const toggle = page.locator('.sidebar-inactive-toggle');
+    const toggle = page.getByRole('checkbox', { name: 'Dölj inaktiva repositories' });
     await expect(toggle).toBeVisible();
 
     const active = page.locator('.repository-active');
     await expect(active).toHaveText('1 aktiva');
     await expect(page.locator('.sidebar-projects > .sidebar-repository-row')).toHaveCount(1);
-    await toggle.click();
     await expect(page.locator('.sidebar-inactive-group .sidebar-repository-row')).toHaveCount(3);
+    await expect(page.locator('.sidebar-inactive-group .sidebar-repository-row.repository-hidden')).toHaveCount(0);
     await expect(active).toHaveText('1 aktiva');
-    await toggle.click();
 
     // Keyboard focus and activation
     await toggle.focus();
     await expect(toggle).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await page.keyboard.press('Space');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeChecked();
+    await expect(page.locator('.sidebar-inactive-group .sidebar-repository-row.repository-hidden')).toHaveCount(3);
+    await page.keyboard.press('Space');
+    await expect(toggle).not.toBeChecked();
 
     // Phone viewport (390x844)
     await page.setViewportSize({ width: 390, height: 844 });

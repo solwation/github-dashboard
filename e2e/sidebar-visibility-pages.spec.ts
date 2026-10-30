@@ -67,8 +67,6 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   // A status move after the first load marks two repositories as recently active.
   await expect(page.locator('.repo-lane')).toHaveCount(7);
   for (const name of ['site', 'notes']) await expect(row(name).locator('.backlog')).toContainText('1');
-  const toggle = page.locator('.sidebar-inactive-toggle');
-  if (await toggle.isVisible()) await toggle.click();
   moved = true; updated = new Date().toISOString();
   // A manual refresh may be ignored while the initial load settles; retry until the move is seen.
   await expect(async () => {
@@ -102,7 +100,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     const rect = (selector: string) => row.querySelector(selector)?.getBoundingClientRect() ?? null;
     const label = rect('.repository-label')!, counts = rect('.repository-counts')!, dot = rect('.repo-dot')!;
     const trailing = rect('.repo-pages svg') ?? rect('.repo-visibility svg');
-    const visibility = rect('.repo-visibility'), pages = rect('.repo-pages'), unread = rect('.recent-activity');
+    const visibility = rect('.repo-visibility'), pages = rect('.repo-pages'), unread = rect('.recent-activity'), action = rect('.repo-board-toggle');
     const group = visibility || pages;
     const centre = (r: DOMRect) => r.top + r.height / 2;
     return {
@@ -113,6 +111,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
       visibility: visibility && { right: visibility.right, y: centre(visibility) },
       pages: pages && { left: pages.left, right: pages.right, y: centre(pages), width: pages.width, height: pages.height },
       unread: unread && { y: centre(unread) },
+      action: action && { left: action.left, right: action.right, y: centre(action), width: action.width, height: action.height },
       fullCounts: [...row.querySelectorAll<HTMLElement>('.status-count-value')].every(el => el.scrollWidth <= el.clientWidth + 1),
     };
   }));
@@ -120,8 +119,17 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThanOrEqual(1);
   const lastIcons = grid.flatMap(item => item.lastIconX === null ? [] : [item.lastIconX]);
   expect(Math.max(...lastIcons) - Math.min(...lastIcons)).toBeLessThanOrEqual(1);
+  // The board visibility action (#367) owns one right-hand column in every row; touch uses Settings instead.
+  const actionEdges = grid.map(item => item.action!.right);
+  if (!scenario.mobile) expect(Math.max(...actionEdges) - Math.min(...actionEdges)).toBeLessThanOrEqual(1);
   for (const item of grid) {
     expect(Math.abs(item.labelLeft - grid[0]!.labelLeft)).toBeLessThanOrEqual(1);
+    if (scenario.mobile) expect(item.action!.width).toBe(0);
+    else {
+      expect(Math.abs(item.action!.y - item.labelY)).toBeLessThanOrEqual(1);
+      expect(item.labelRight).toBeLessThanOrEqual(item.action!.left - 7);
+      if (item.group) expect(item.action!.left - item.group.right).toBe(4);
+    }
     expect(Math.abs(item.countsLeft - item.labelLeft)).toBeLessThanOrEqual(1);
     expect(Math.abs(item.dotY - item.labelY)).toBeLessThanOrEqual(1);
     expect(item.countsTop).toBeGreaterThanOrEqual(item.labelBottom);
