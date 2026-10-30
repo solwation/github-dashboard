@@ -86,6 +86,8 @@ PUBLIC_GITHUB_LIVE=1 npm run test:e2e -- public-repositories-live.spec.ts
 
 The live check reads `solwation/lunden-3d-apartment`, `solwation/kvarteret-lunden` and `solwation/github-dashboard` without credentials and reviews cards, estimates and phone lists. Set `PUBLIC_GITHUB_REPOSITORIES` to a comma-separated subset for a smaller check. Screenshots and a small data-review report go to Playwright's output directory; repository responses are not committed as fixtures.
 
+On phones and tablets, pinch zoom, double-tap zoom and two-finger panning are disabled (viewport limits, `touch-action` and a touch-only gesture guard in `src/lib/touchZoomGuard.ts`); one-finger scrolling, drag handles, the statistics chart and the image viewer's own pinch/pan are unchanged, and desktop browser zoom is unaffected.
+
 Card and list UI changes follow the [four-scenario verification requirement in AI.md](../AI.md): wide/narrow desktop and portrait/landscape phone, with mobile/touch contexts, geometry checks and visual screenshot review.
 
 Issue descriptions and comments hide HTML comments as GitHub does, while code examples remain visible and source HTML stays escaped.

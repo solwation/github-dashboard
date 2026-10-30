@@ -2,8 +2,8 @@
   {
     "date": "2026-10-30",
     "summary": {
-      "sv": "Dölj projekt från boarden och dess summor, nya länkar i vänstermenyn och jämn titelstorlek på iPhone.",
-      "en": "Hide projects from the board and its totals, new left-menu links and even title sizes on iPhone."
+      "sv": "Dölj projekt från boarden och dess summor, nya länkar i vänstermenyn, jämn titelstorlek på iPhone och ingen oavsiktlig zoom på mobil.",
+      "en": "Hide projects from the board and its totals, new left-menu links, even title sizes on iPhone and no accidental zoom on mobile."
     },
     "sections": [
       {
@@ -32,6 +32,15 @@
         },
         "issues": [
           370
+        ]
+      },
+      {
+        "text": {
+          "sv": "Pinch-zoom, dubbeltrycks-zoom och tvåfingers-panorering är avstängda på telefon och surfplatta; bildvisarens egen zoom och vanlig scroll fungerar som förut.",
+          "en": "Pinch zoom, double-tap zoom and two-finger panning are disabled on phones and tablets; the image viewer's own zoom and normal scrolling work as before."
+        },
+        "issues": [
+          373
         ]
       }
     ]

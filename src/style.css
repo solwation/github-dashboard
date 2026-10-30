@@ -81,6 +81,11 @@
 * {
   box-sizing: border-box;
 }
+html,
+body {
+  /* No pinch or double-tap zoom; per-element pan-y/none overrides still narrow this. */
+  touch-action: pan-x pan-y;
+}
 body {
   margin: 0;
 }

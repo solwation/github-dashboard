@@ -1,11 +1,10 @@
 {
-  "baseCommit": "11a683934a00e6d91943fd8d1c6bf00fa18a19b0",
+  "baseCommit": "c0aa36b559de9a5adb59b241e3632709a8c8e76f",
   "summary": {
-    "sv": "Dolda projekt räknas inte längre i Översiktens summor, och vänstermenyn länkar till projektets Pages och GitHub.",
-    "en": "Hidden projects no longer count in the Overview totals, and the left menu links to each project's Pages and GitHub."
+    "sv": "Sidan zoomas eller panoreras inte längre av misstag med pinch, dubbeltryck eller två fingrar på mobil; bildvisarens zoom fungerar som förut.",
+    "en": "The page no longer zooms or pans by accident with pinch, double-tap or two fingers on mobile; the image viewer's own zoom works as before."
   },
   "issues": [
-    370,
-    371
+    373
   ]
 }

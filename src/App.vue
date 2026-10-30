@@ -4,6 +4,7 @@ import { useLanguage } from "./lib/i18n";
 import { browserTimeZone } from "./lib/browser-time";
 const accountTimeZone = browserTimeZone();
 const { t, locale, preference, setLanguage } = useLanguage();
+import { installTouchZoomGuard } from "./lib/touchZoomGuard";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
   Activity,
@@ -1814,6 +1815,9 @@ function trapFocus(event: KeyboardEvent) {
   }
 }
 onMounted(() => document.addEventListener("keydown", trapFocus));
+const removeTouchZoomGuard = shallowRef<() => void>();
+onMounted(() => { removeTouchZoomGuard.value = installTouchZoomGuard(); });
+onUnmounted(() => removeTouchZoomGuard.value?.());
 onUnmounted(() => document.removeEventListener("keydown", trapFocus));
 function laneHasActiveIssues(lane: Lane) {
   return lane.issues.some(
