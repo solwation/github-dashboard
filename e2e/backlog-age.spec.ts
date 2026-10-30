@@ -54,7 +54,7 @@ for (const language of [
           return { fontSize: style.fontSize, color: style.color };
         };
         const ageStyle = await age.evaluate(metadataStyle);
-        expect(ageStyle.color).toBe("rgb(135, 146, 154)");
+        expect(ageStyle.color).toBe("rgb(89, 102, 107)");
         expect(parseFloat(ageStyle.fontSize)).toBeLessThanOrEqual(11);
         const titleSize = await page.locator(".issue-row.backlog .row-title").first()
           .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));

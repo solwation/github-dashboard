@@ -147,7 +147,7 @@ test("connect, select, fetch events, customize work label, preserve data on API 
   await page
     .getByRole("button", { name: "Repositoryegenskaper för sample-project" })
     .click();
-  await page.getByLabel("Pågående arbete").fill("Building");
+  await page.getByRole("textbox", { name: "Pågående arbete", exact: true }).fill("Building");
   await page.getByRole("button", { name: "Spara och hämta igen" }).click();
   await expect(page.locator(".progress .issue-card")).toHaveCount(1);
   await expect(page.locator(".timer")).toContainText("2h");

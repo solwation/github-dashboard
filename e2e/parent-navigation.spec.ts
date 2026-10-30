@@ -73,7 +73,7 @@ for (const mode of ["Cards", "List"] as const) {
       await expect(githubLink).toHaveAttribute("href", "https://github.com/sample/parent/issues/42");
       await expect(page.getByRole("textbox", { name: "Sök issues", exact: true })).toHaveValue("");
       if (combined) await expect(target.locator(".row-repository, .card-repository")).toHaveAttribute("title", "sample/parent");
-      else await expect(page.locator(".repo-lane").filter({ has: target })).toContainText("sample/parent");
+      else await expect(page.locator(".repo-lane").filter({ has: target }).locator(".lane-title h2 a")).toHaveAttribute("title", "sample/parent");
       await target.screenshot({ path: info.outputPath(`${viewport.width}-${mode.toLowerCase()}-${combined ? "combined" : "split"}-parent-highlight.png`) });
       expect(popup.popupCount()).toBe(popupCountBeforeParentSelection);
       await expect(githubLink).toHaveAttribute("target", "_blank");

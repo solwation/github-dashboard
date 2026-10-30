@@ -4,7 +4,8 @@ import { previewOrigin } from "./ports";
 
 // Background notifications (#129–#131): the installed PWA's service worker checks GitHub on
 // periodicsync. Browsers schedule the event themselves, so the test dispatches it in the worker.
-test.use({ baseURL: previewOrigin });
+// The default headless shell denies Notification permission to service workers even after grantPermissions; the full Chromium (new headless) honors it.
+test.use({ baseURL: previewOrigin, channel: "chromium" });
 const app = "/github-dashboard/";
 const TAG = "issueflow-check";
 const repo = { id: 31, name: "alpha", full_name: "sample/alpha", description: "Fictional background fixture", private: true, html_url: "https://github.com/sample/alpha", owner: { login: "sample" } };
