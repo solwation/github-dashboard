@@ -1,16 +1,17 @@
 # github-dashboard orchestra policy
 
-Read [AI.md](../AI.md), this policy, the versioned [shared core](shared/ORCHESTRA.md),
-[Issueflow authority](shared/ISSUE-WORKFLOW.md) and [queue coordination](shared/COORDINATION.md).
+Read [AI.md](../AI.md), this policy, then the versioned [shared core](shared/ORCHESTRA.md)
+through its [read map](shared/ORCHESTRA.md#read-map): [Issueflow authority](shared/ISSUE-WORKFLOW.md)
+and [queue coordination](shared/COORDINATION.md).
 The shared method owns short planning, useful parallelism, risk-based verification,
 evidence reuse and one integration review. This file supplies this project's settings
 and overrides; explicit user instructions and platform limits take precedence.
 
 `/orkester`, `$orkester` or a plain-language request to run orchestration invokes this
 workflow. Reading, updating or installing these instructions does not start the queue.
-Keep explicit user scope. Without it this project overrides the shared core's
-[bounded pass](shared/COORDINATION.md#run-a-bounded-pass): work the repository's startable
-issue backlog as a queue session, then run the [final review and watch](#final-review-and-watch).
+Keep explicit user scope. Empty scope: a queue session, replacing the shared core's
+default [bounded pass](shared/COORDINATION.md#run-a-bounded-pass): work the repository's startable
+issue backlog, then run the [final review and watch](#final-review-and-watch).
 As in a pass, never ask in the chat; user-only decisions use the `user question` label,
 and only the Actions gate publishes ([release](#questions-and-release)).
 Use [the compact worker brief](shared/WORKER.md) for each assignment, including the
@@ -25,6 +26,9 @@ applicable [phase hooks](#project-phase-hooks) and the
   instructions maintained by this project. Follow its current revision under the shared
   authority procedure. Share the resolved guide/revision with workers. The imported
   offline copy never replaces or becomes a second edited source for this public guide.
+  Record the session's comparison with the bundled snapshot (identical, or the file's
+  change commit); after this project changes the guide, propose the snapshot refresh
+  upstream as an issue in `solwation/dirigenten-och-orkestern`.
   Parent issues follow its sub-issue rule: a worker starting the first sub-issue also marks
   the parent `in-progress`; the conductor removes the parent's label when no sub-issue or
   parent work remains active, and closes the parent only after its own acceptance.
@@ -35,7 +39,7 @@ applicable [phase hooks](#project-phase-hooks) and the
 - Fetch every open-issue page before assignment, resume and integration. Read selected
   bodies/comments and current coordination claims; exclude PRs and exact `orkester`
   coordination issues, never `orkester: <id>` ownership metadata. A partial/failed fetch
-  cannot prove the queue is empty. Re-read the queue/claims after reserving to catch races;
+  cannot prove the queue is empty. Re-read the queue/claims after claiming to catch races;
   the earlier valid claim wins. Never seize another session's active issue.
 - Use one stable `orkester: <id>` plus `in-progress` only during actual work. Maintain
   one editable status comment in #97 with issue, owner/phase, file responsibilities,
@@ -70,7 +74,7 @@ changes and overlapping integrations. The conductor's own implementation takes a
 choose it deliberately (very small changes or unavailable delegation) and record why.
 
 Every writing agent, including the implementing conductor, works only in its own
-worktree under the shared [isolation rules](shared/ORCHESTRA.md#choose-the-smallest-useful-team);
+worktree under the shared [isolation rules](shared/ORCHESTRA.md#isolate-concurrent-agents);
 never edit or run state-changing git commands in another checkout, and remove a worktree
 only after integration or preservation. Give each worktree its own ports with
 `E2E_DEV_PORT`/`E2E_PREVIEW_PORT` (for example 5xxx/4xxx by issue number) and its own
@@ -91,7 +95,8 @@ child issues. Preserve interrupted work and resume its commits rather than recre
 Follow [AI.md's Git and publication rules](../AI.md#implementation-and-git), including
 its required local checks, release metadata, final Action gate and Pages verification.
 The shared core does not authorize another deployment route or relax those gates.
-For unpublished subtree imports preserve merge ancestry with
+Delivery mode: direct to `main` (user authorization in AI.md); no PR mode, so the
+core's PR-mode rules do not apply. For unpublished subtree imports preserve merge ancestry with
 `git rebase --rebase-merges origin/main`; never force-push main.
 
 Integration pushes are allowed while work remains, but main must always contain only
@@ -153,7 +158,7 @@ Listed order is execution order.
 | Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
 | Prepare publication | `delivery`: app changes, after integration | Keep `needs-deploy` as technical metadata on the completed, closed story without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta and separate publication status; never bypass the Actions gate |
 | Check Action | `delivery`: every push to `main` that includes an app change (skip for technical changes) | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
-| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up-with-evidence-that-fits-the-change) with outcome, revision, local checks, evidence and limits; close immediately. Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
+| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up) with outcome, revision, local checks, evidence and limits; close immediately. Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
 
 ## Queue intake hooks
 
@@ -176,7 +181,11 @@ issue for actual defects/gaps, then continue work.
 Only after the final work is solved, published, verified and reviewed without findings,
 start the 60-minute idle watch. This project-specific trigger overrides the shared
 core's simpler last-resolution default. Poll the complete paginated queue about every
-60 seconds, with interruptible waits ≤60 seconds. New user input steers the active task;
+60 seconds, with interruptible waits ≤60 seconds. Wait mechanism: the runtime's own
+interruptible wait (in interactive Claude Code a background timer or Monitor; elsewhere
+the client's equivalent), never a scheduled job. A runtime that cannot wait (one-shot or
+non-interactive runs such as `claude -p`) finishes as a bounded pass and states that no
+poll or idle watch ran. New user input steers the active task;
 new or review-triggered work resumes ordinary scope/priority/claim/capacity checks.
 Reset the full hour after the next completed, published, verified and reviewed batch.
 
@@ -189,8 +198,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.6.1**,
-commit **432e1879416a91215b4e174699c7af705fd0359d** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.7.0**,
+commit **2bd00217aa1704134c6e2a3d5c9614c6b7fdbfbe** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt

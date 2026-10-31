@@ -5,7 +5,8 @@ description: Coordinate scoped issue work using the shared model-independent orc
 
 When the user requests orchestration, read and follow [AI.md](../../../AI.md),
 [the project policy](../../../.orchestra/project.md),
-[the shared core](../../../.orchestra/shared/ORCHESTRA.md),
+[the shared core](../../../.orchestra/shared/ORCHESTRA.md) starting from its
+[read map](../../../.orchestra/shared/ORCHESTRA.md#read-map),
 [Issueflow authority](../../../.orchestra/shared/ISSUE-WORKFLOW.md) and
 [queue coordination](../../../.orchestra/shared/COORDINATION.md).
 
