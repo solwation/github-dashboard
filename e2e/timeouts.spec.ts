@@ -172,3 +172,52 @@ test('narrow phones show timeouts only as red cards', async ({ page }) => {
   await page.getByRole('button', { name: 'Klart', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('timeouts follow board time when the device clock runs behind GitHub (#376)', async ({ page }) => {
+  // GitHub's timestamps run 20 minutes ahead of the device clock; the board clock adopts them (#375).
+  const skew = 20 * 60000, server = (minutes: number) => new Date(Date.now() + skew + minutes * 60000).toISOString();
+  const startedAt = server(-24);
+  const repo = { id: 1, name: 'skewed-timeout', full_name: 'sample/skewed-timeout', private: true, description: '', html_url: 'https://github.com/sample/skewed-timeout', owner: { login: 'sample' } };
+  const issues = [
+    { id: 1, number: 1, title: 'Skewed work', comments: 0, state: 'open', labels: [{ name: 'in-progress', color: '000000' }], assignees: [], created_at: server(-90), updated_at: startedAt, closed_at: null, html_url: `${repo.html_url}/issues/1` },
+    { id: 2, number: 2, title: 'Just updated', comments: 0, state: 'open', labels: [], assignees: [], created_at: server(-90), updated_at: server(0), closed_at: null, html_url: `${repo.html_url}/issues/2` },
+  ];
+  const history = [101, 102, 103].map(number => ({ id: number, number, title: 'History work', state: 'closed', labels: [], assignees: [], created_at: server(-80), updated_at: server(-60), closed_at: server(-60), workStartedAt: server(-80), html_url: `${repo.html_url}/issues/${number}` }));
+  await page.addInitScript(() => {
+    const notices: unknown[] = [];
+    class FixtureNotification {
+      static permission = 'granted';
+      static requestPermission = async () => 'granted';
+      constructor(...args: unknown[]) { notices.push(args); }
+      close() {}
+    }
+    Object.assign(window, { Notification: FixtureNotification, timeoutNotices: notices });
+  });
+  await page.route('https://api.github.com/**', async route => {
+    const url = new URL(route.request().url());
+    await route.fulfill({ json: url.pathname === '/user' ? { login: 'skewed-timeout-account', avatar_url: '' }
+      : url.pathname === '/user/repos' ? [repo]
+      : url.pathname.endsWith('/issues/1/events') ? [{ id: 1, event: 'labeled', label: { name: 'in-progress' }, created_at: startedAt }]
+      : url.pathname.endsWith('/issues') && url.searchParams.get('state') === 'open' ? issues : url.pathname.endsWith('/issues') && url.searchParams.get('state') === 'closed' ? history : [] });
+  });
+  await page.clock.install();
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
+  await page.getByLabel('GitHub personal access token').fill('fixture-skewed-timeout-token');
+  await page.getByRole('button', { name: 'Anslut konto', exact: true }).click();
+  await page.getByRole('checkbox', { name: repo.full_name }).check();
+  await page.getByRole('button', { name: 'Visa översikt', exact: true }).click();
+  const card = page.locator('.issue-card').filter({ has: page.getByText('Skewed work', { exact: true }) });
+  // 24 of the allowed 25 minutes (20-minute estimate plus 25 %) have passed in board time, only 4 on the device.
+  await expect(card).toBeVisible();
+  await expect(card).not.toHaveClass(/issue-timeout/);
+  await repositoryNotification(page, 'skewed-timeout', toggle => toggle.click());
+  await page.clock.fastForward(2 * 60000);
+  await expect(card).toHaveClass(/issue-timeout/);
+  await expect(card.locator('.timeout-warning')).toContainText('över estimatet ≈ 20 min plus 25 %');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { timeoutNotices: unknown[] }).timeoutNotices.length)).toBe(1);
+  const body = await page.evaluate(() => (window as unknown as { timeoutNotices: [string, { body: string }][] }).timeoutNotices[0]?.[1].body);
+  expect(body).toContain('över estimatet ≈ 20 min plus 25 %');
+  expect(body).toMatch(/Pågående i 2[67]m /);
+});

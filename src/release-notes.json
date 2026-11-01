@@ -2,8 +2,8 @@
   {
     "date": "2026-11-01",
     "summary": {
-      "sv": "Pågående arbete tickar direkt även om enhetens klocka går efter GitHub.",
-      "en": "In-progress work starts ticking right away even when the device clock runs behind GitHub."
+      "sv": "Pågående arbete tickar direkt och timeout-varningar kommer i tid även om enhetens klocka går efter GitHub.",
+      "en": "In-progress work ticks right away and timeout warnings arrive on time even when the device clock runs behind GitHub."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           375
+        ]
+      },
+      {
+        "text": {
+          "sv": "Timeout-markering och timeout-notiser följer samma tid som kortens timer och kommer inte längre för sent när enhetens klocka går efter.",
+          "en": "Timeout highlighting and notifications follow the same time as card timers and no longer arrive late when the device clock runs behind."
+        },
+        "issues": [
+          376
         ]
       }
     ]

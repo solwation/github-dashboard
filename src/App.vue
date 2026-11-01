@@ -1020,11 +1020,12 @@ watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, sho
   clearTimeout(timeoutTimer);
   if (!timeoutSettings.value.timeoutEnabled) {
     timedOut.value = [];
-    timeoutTracker.scan(lanes.value, rules.value, timeoutSettings.value, Date.now(), { notify: false });
+    timeoutTracker.scan(lanes.value, rules.value, timeoutSettings.value, boardNow(), { notify: false });
     return;
   }
   if (busy.value) return;
-  const at = Date.now();
+  // Board time, like the cards' timers: a slow device clock must not delay timeouts (#376).
+  const at = boardNow();
   const bases = timeoutBases(timeoutCalibrationLanes.value, rules.value, at);
   const next = nextTimeout(lanes.value, rules.value, timeoutSettings.value, at, bases);
   if (next !== null) timeoutTimer = setTimeout(() => timeoutCheck.value++, Math.min(2147483647, Math.max(1, next - at)));

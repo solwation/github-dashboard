@@ -1,10 +1,10 @@
 {
-  "baseCommit": "819714a080333139d58f07dc03c5428f4e50a0b9",
+  "baseCommit": "e6a867a6fdbdd6d08f485c9f36693170ff148e22",
   "summary": {
-    "sv": "Påbörjade ärenden visar inte längre 0m 0s när enhetens klocka går efter GitHub; tiden tickar direkt.",
-    "en": "Started issues no longer show 0m 0s when the device clock runs behind GitHub; the timer ticks right away."
+    "sv": "Timeout-markering och notiser kommer i tid även när enhetens klocka går efter GitHub.",
+    "en": "Timeout highlighting and notifications arrive on time even when the device clock runs behind GitHub."
   },
   "issues": [
-    375
+    376
   ]
 }
