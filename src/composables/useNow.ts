@@ -1,4 +1,5 @@
 import { onScopeDispose, readonly, ref, shallowRef, watchEffect } from "vue";
+import { boardNow } from "../lib/clock";
 
 // Clocks pause in hidden tabs and, for board labels, while the overview is not shown (#120).
 const hidden = ref(typeof document !== "undefined" && document.hidden);
@@ -25,9 +26,9 @@ export const untilNext = (elapsed: number, unit: number) => unit - (elapsed % un
  * `active` pauses it further, e.g. for offscreen cards.
  */
 export function useNow(delay: (now: number) => number, options: { board?: boolean; active?: () => boolean } = {}) {
-  const now = shallowRef(Date.now());
+  const now = shallowRef(boardNow());
   let stopSeconds: (() => void) | undefined, timer: ReturnType<typeof setTimeout> | undefined, paused = false, seen: number | undefined;
-  const update = () => { now.value = Date.now(); };
+  const update = () => { now.value = boardNow(); };
   const halt = () => { stopSeconds?.(); stopSeconds = undefined; clearTimeout(timer); timer = undefined; };
   watchEffect(() => {
     if (hidden.value || (options.board && !boardVisible.value) || options.active?.() === false) { halt(); paused = true; return; }

@@ -1,6 +1,7 @@
 import { computed, inject, onScopeDispose, provide, shallowRef, watchEffect, type ComputedRef, type InjectionKey } from "vue";
 import { repositoryEstimate, type SubIssueWork } from "../lib/estimates";
 import { column, type Issue, type Rules } from "../lib/model";
+import { boardNow } from "../lib/clock";
 import { issueRepository, type SubIssue } from "../lib/sub-issues";
 import { useSubIssues } from "./useSubIssues";
 
@@ -36,7 +37,7 @@ export function useSubIssueWork(groups: () => readonly Group[]) {
   const loaded = shallowRef(new Map<string, SubIssue[]>());
   const parents = computed(() => {
     if (!relations) return [];
-    const now = Date.now();
+    const now = boardNow();
     return groups().flatMap(group => {
       const candidates = group.issues.filter(issue => !issue.pull_request && issue.state === "open" &&
         (issue.sub_issues_summary?.total ?? 0) > 0 && column(issue, group.rules ?? {}) !== "closed");

@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-01",
+    "summary": {
+      "sv": "Pågående arbete tickar direkt även om enhetens klocka går efter GitHub.",
+      "en": "In-progress work starts ticking right away even when the device clock runs behind GitHub."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Påbörjade ärenden fastnar inte längre på 0m 0s och nya ärenden visas inte som skapade i framtiden när enhetens klocka går efter GitHub.",
+          "en": "Started issues no longer stay at 0m 0s, and new issues no longer appear created in the future, when the device clock runs behind GitHub."
+        },
+        "issues": [
+          375
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-10-30",
     "summary": {
       "sv": "Dölj projekt från boarden och dess summor, nya länkar i vänstermenyn, jämn titelstorlek på iPhone och ingen oavsiktlig zoom på mobil.",

@@ -1,5 +1,6 @@
 import { computed, inject, provide, shallowRef, watchEffect, type ComputedRef, type InjectionKey } from "vue";
 import { column, type Issue, type Rules } from "../lib/model";
+import { boardNow } from "../lib/clock";
 import { closedIssueGroupOutcome, closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate, subIssueGroupWork, type EstimateBasis, type HistorySample, type SubIssueGroupWork, type SubIssueWork } from "../lib/estimates";
 import { useNow } from "./useNow";
 import { useSubIssues } from "./useSubIssues";
@@ -89,7 +90,7 @@ export function useClosedIssueOutcome(issue: () => Issue, repository: () => stri
     });
   });
   return computed(() => {
-    const current = issue(), repo = repository(), histories = context?.value.histories.get(repo ?? "") ?? [], now = context?.value.now ?? Date.now();
+    const current = issue(), repo = repository(), histories = context?.value.histories.get(repo ?? "") ?? [], now = context?.value.now ?? boardNow();
     const total = current.sub_issues_summary?.total ?? 0;
     if (total < 1) return closedIssueOutcome(current, histories, now);
     if (!repo || !relations) return null;

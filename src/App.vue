@@ -46,6 +46,7 @@ import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembe
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
 import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
+import { boardNow, observeLaneTimes } from "./lib/clock";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { summarizeLanes } from "./lib/sidebar";
@@ -364,6 +365,9 @@ const isStatisticsHash = () => /^#statistics(?:-repo-\d+)?$/.test(window.locatio
 const currentView = ref(isStatisticsHash() ? "statistics" : "overview");
 // Board time labels keep their own clocks and stop while Statistics is shown.
 watch(currentView, view => setBoardVisible(view === "overview"), { immediate: true });
+// Received GitHub timestamps keep board clocks from running behind GitHub (#375); a pre-flush
+// watcher in the root runs before the cards render the new data.
+watch(lanes, observeLaneTimes, { immediate: true });
 async function navigateWorkspace() {
   const notified = parseIssueNavigationHash(window.location.hash);
   if (notified) {
@@ -552,9 +556,9 @@ function timeoutEstimateMs(repo: string, issue: Issue) {
 }
 function issueTimedOut(repo: string, issue: Issue) {
   const started = issue.startedAt ? Date.parse(issue.startedAt) : NaN;
-  if (!timeoutSettings.value.timeoutEnabled || issue.timerError || !Number.isFinite(started) || started > Date.now()) return false;
+  if (!timeoutSettings.value.timeoutEnabled || issue.timerError || !Number.isFinite(started) || started > boardNow()) return false;
   return timedOut.value.some(entry => entry.repo === repo && entry.issue.id === issue.id &&
-    entry.issue.startedAt === issue.startedAt && Date.now() - started > entry.estimatedMs * (1 + timeoutSettings.value.timeoutOverrunPercent / 100));
+    entry.issue.startedAt === issue.startedAt && boardNow() - started > entry.estimatedMs * (1 + timeoutSettings.value.timeoutOverrunPercent / 100));
 }
 const repositoryColumnLimits = ref<Record<string, number>>({});
 let issueNavigationHighlight: HTMLElement | null = null;

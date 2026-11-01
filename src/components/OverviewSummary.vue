@@ -12,6 +12,7 @@ import type { SidebarRepository } from "../lib/sidebar";
 import type { Lane, Rules } from "../lib/model";
 import { coalesceDeltas, VALUE_DELTA_MS, ValueDeltaTracker } from "../lib/value-delta";
 import { emptyCounts, OVERVIEW_DELTA_MS, OverviewFeedbackTracker, overviewKeys, signedDelta, summarizeOverviewSecondary, type OverviewCounts, type OverviewOutcome } from "../lib/overview-feedback";
+import { boardNow } from "../lib/clock";
 const props = defineProps<{
   query?: string; repositoryQueries?: Record<string, string>;
   repositories: SidebarRepository[];
@@ -24,7 +25,7 @@ const emit = defineEmits<{ chooseRepositories: [] }>();
 const { t } = useLanguage();
 // Closed-window counts move with whole minutes; new data recomputes them with the current time.
 const clock = useNow(at => untilNext(at, 60000), { board: true });
-const current = () => Math.max(clock.value, Date.now());
+const current = () => Math.max(clock.value, boardNow());
 const tracker = new OverviewFeedbackTracker();
 const deltas = reactive(emptyCounts());
 const outcomes = reactive<Record<keyof OverviewCounts, OverviewOutcome>>({ open: null, progress: null, closed: null });
