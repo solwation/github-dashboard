@@ -114,6 +114,9 @@ for (const size of sizes) {
     await page.getByRole("button", { name: "Öppna vänstermeny" }).tap();
     await page.locator("aside.sidebar.sidebar-mobile-open").getByRole("link", { name: "Översikt" }).tap();
     await expect(page.locator("aside.sidebar.sidebar-mobile-open")).toHaveCount(0);
+    // #384: once slid out, the closed drawer leaves the tab order and accessibility tree.
+    await expect(page.locator("aside.sidebar")).toBeHidden();
+    await expect(page.locator("aside.sidebar").getByRole("link")).toHaveCount(0);
     await context.close();
   });
 }

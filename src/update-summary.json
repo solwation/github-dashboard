@@ -1,10 +1,10 @@
 {
-  "baseCommit": "3d4caad2dd82c8219d1a89f48aa840e0f61af0fa",
+  "baseCommit": "3db0a4119de8536e7501912371d998b20a867ae0",
   "summary": {
-    "sv": "Vänstermenyn på telefon visar nu Översikt, Statistik, repositories, version och licens i en kompakt lodrät meny.",
-    "en": "The left menu on phones now shows Overview, Statistics, repositories, version and license in a compact vertical menu."
+    "sv": "Den stängda vänstermenyn på telefon hoppas nu över vid tangentbordsnavigering och av skärmläsare.",
+    "en": "The closed left menu on phones is now skipped by keyboard navigation and screen readers."
   },
   "issues": [
-    382
+    384
   ]
 }

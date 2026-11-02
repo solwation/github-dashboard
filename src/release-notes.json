@@ -53,11 +53,12 @@
       },
       {
         "text": {
-          "sv": "Vänstermenyn på telefon visar nu alla funktioner i en kompakt kolumn: arbetsytan, repositories med räknare och dölj/visa, version och licens.",
-          "en": "The phone sidebar now shows every function in one compact column: workspace, repositories with counters and hide/show, version and license."
+          "sv": "Vänstermenyn på telefon visar alla funktioner i en kompakt kolumn och hoppas över av tangentbord och skärmläsare när den är stängd.",
+          "en": "The phone sidebar shows every function in one compact column and is skipped by keyboard and screen readers when closed."
         },
         "issues": [
-          382
+          382,
+          384
         ]
       }
     ]

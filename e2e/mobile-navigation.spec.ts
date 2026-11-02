@@ -42,10 +42,10 @@ test("compact navigation and Cards/List viewport matrix", async ({ browser }, in
       expect((await header.boundingBox())!.height).toBeLessThanOrEqual(80);
       await expect(page.locator(".mobile-navigation")).toBeVisible();
       await expect(page.locator(".mobile-menu-button")).toBeVisible();
-      await page.getByRole("button", { name: "Meny" }).click();
+      await page.getByRole("button", { name: "Meny", exact: true }).click();
       await expect(page.locator(".topbar-right").getByRole("button", { name: "Inställningar" })).toBeVisible();
       await expect(page.locator(".topbar-right").getByRole("button", { name: "Installera app" })).toBeVisible();
-      await page.getByRole("button", { name: "Meny" }).click();
+      await page.getByRole("button", { name: "Meny", exact: true }).click();
       await page.locator(".mobile-navigation").getByRole("link", { name: "Statistik" }).click();
       await expect(page.locator(".topbar .breadcrumb strong")).toHaveText("Statistik");
       await page.getByRole("button", { name: "Sök issues" }).click();
@@ -71,7 +71,7 @@ test("compact navigation and Cards/List viewport matrix", async ({ browser }, in
       }
       if (size.width === 320 && mode === "Lista") {
         await page.evaluate(() => { document.documentElement.style.fontSize = "24px"; });
-        await page.getByRole("button", { name: "Meny" }).click();
+        await page.getByRole("button", { name: "Meny", exact: true }).click();
         await expect(page.locator(".mobile-tools")).toHaveClass(/mobile-tools-open/);
         await page.setViewportSize({ width: 320, height: 260 }); // Short visual viewport while a mobile keyboard is open.
         const menu = page.locator("#mobile-tools-menu");
@@ -81,7 +81,7 @@ test("compact navigation and Cards/List viewport matrix", async ({ browser }, in
         expect(await menu.evaluate(element => element.scrollHeight >= element.clientHeight)).toBe(true);
         await menu.evaluate(element => { element.scrollTop = element.scrollHeight; });
         await expect(menu.getByRole("button", { name: "Till inloggning", exact: true })).toBeInViewport();
-        await page.getByRole("button", { name: "Meny" }).click();
+        await page.getByRole("button", { name: "Meny", exact: true }).click();
         await page.getByRole("button", { name: "Sök issues" }).click();
         const search = page.getByRole("textbox", { name: "Sök issues" });
         await expect(search).toBeFocused();
@@ -124,7 +124,7 @@ test("public and signed-in account actions remain available on portrait and land
     const page = await context.newPage();
     await enterPublic(page);
     await expect(page.locator(".topbar-right")).toBeHidden();
-    await page.getByRole("button", { name: "Meny" }).click();
+    await page.getByRole("button", { name: "Meny", exact: true }).click();
     await expect(page.locator(".topbar-right .account-timezone")).toBeVisible();
     await expect(page.locator(".topbar-right .account-timezone")).not.toBeEmpty();
     await expect(page.locator(".topbar-right").getByRole("button", { name: "Lämna publik vy", exact: true })).toBeVisible();
@@ -136,7 +136,7 @@ test("public and signed-in account actions remain available on portrait and land
     await expect(page.getByRole("checkbox", { name: "sample/mobile-nav" })).toBeVisible();
     await page.getByRole("checkbox", { name: "sample/mobile-nav" }).check();
     await page.getByRole("button", { name: "Visa översikt" }).click();
-    await page.getByRole("button", { name: "Meny" }).click();
+    await page.getByRole("button", { name: "Meny", exact: true }).click();
     await expect(page.locator(".topbar-right").getByRole("button", { name: "Logga ut", exact: true })).toBeVisible();
     await expect(page.locator(".topbar-right").getByRole("button", { name: "Öppna på mobilen" })).toBeVisible();
     await expect(page.locator(".topbar-right .username")).toHaveText("fictional-account");
