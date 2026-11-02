@@ -1,10 +1,11 @@
 {
   "baseCommit": "17b0df3c9767c29aa065daeb8e2bc6cf20c4eea3",
   "summary": {
-    "sv": "Kolumner som expanderats med Visa fler i den gemensamma boarden kan fällas ihop igen med en knapp i kolumnrubriken.",
-    "en": "Columns expanded with Show more on the combined board can be collapsed again with a button in the column header."
+    "sv": "Expanderade kolumner i gemensam vy kan fällas ihop igen, och issues som stängs syns direkt i Closed som väntande tills GitHub bekräftat.",
+    "en": "Expanded combined-board columns can be collapsed again, and closing issues appear in Closed at once as pending until GitHub confirms."
   },
   "issues": [
-    380
+    380,
+    381
   ]
 }

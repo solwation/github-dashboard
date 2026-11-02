@@ -88,7 +88,8 @@ import BoardModeToggle from "./components/BoardModeToggle.vue";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { provideSubIssues } from "./composables/useSubIssues";
-import { GitHub } from "./lib/github";
+import { GitHub, GitHubApiError } from "./lib/github";
+import { PendingClosures, mergeVerified, verificationAllowed, withPendingClosures, type PendingClosure } from "./lib/pending-closures";
 import { callback, login, oauthReady } from "./lib/auth";
 import { demo } from "./lib/demo";
 import { ClosureTracker, closureKey } from "./lib/closures";
@@ -152,6 +153,10 @@ const user = ref<{ login: string; avatar_url: string } | null>(null);
 // Lanes and their issues are always replaced, never mutated in place, so a shallow ref avoids
 // deep proxies over every cached issue at startup (#121).
 const lanes = shallowRef<Lane[]>([]);
+// Issues that left In progress but are not yet confirmed closed (#381): shown on the board only,
+// never written into `lanes`, so the encrypted cache cannot keep a guessed state.
+const pendingClosureEntries = shallowRef<readonly PendingClosure[]>([]);
+const boardLanes = computed(() => withPendingClosures(lanes.value, pendingClosureEntries.value));
 // A board restored from the cache mounts its repositories' cards a few per frame, so the
 // first cards draw without one long main-thread task (#121).
 const renderedLanes = ref(Number.POSITIVE_INFINITY);
@@ -182,7 +187,7 @@ const externalNames = computed(() => new Set(externalRepos.value.map(repo => rep
 const orderedLanes = computed(() => {
   const order = groupedLaneOrder(projectOrder.value, externalRepos.value.map(repo => repo.full_name), lanes.value.map(lane => lane.repo.full_name));
   const positions = new Map(order.map((name, index) => [name, index]));
-  return [...lanes.value].sort((a, b) => positions.get(a.repo.full_name)! - positions.get(b.repo.full_name)!);
+  return [...boardLanes.value].sort((a, b) => positions.get(a.repo.full_name)! - positions.get(b.repo.full_name)!);
 });
 function reorderProject(source: string, target: string) {
   const names = orderedLanes.value.map(lane => lane.repo.full_name);
@@ -860,7 +865,36 @@ function readIssue(repo: string, issue: Issue) {
   save();
 }
 const celebrationTimers = new Set<ReturnType<typeof setTimeout>>();
+// Pending closures (#381): one targeted issue request verifies a card that left In progress.
+const pendingClosures = new PendingClosures({
+  canRequest: () => !!api && verificationAllowed({ retryAfterMs: api.retryAfterMs(), remainingQuota: api.rateLimit()?.remaining, online: navigator.onLine }),
+  async verify(repository, issue) {
+    const client = api, repo = lanes.value.find(lane => lane.repo.full_name === repository)?.repo;
+    if (!client || !repo) return { kind: "gone" };
+    try {
+      const verified = await client.activeIssue(repo, issue, { ...rules.value[repository] });
+      return client === api ? { kind: "issue", issue: verified } : { kind: "error" };
+    } catch (cause) {
+      return cause instanceof GitHubApiError && (cause.status === 404 || cause.status === 410) ? { kind: "gone" } : { kind: "error" };
+    }
+  },
+  apply(repository, issue) {
+    let changed = false;
+    const next = lanes.value.map(lane => {
+      if (lane.repo.full_name !== repository || lane.loading || lane.error) return lane;
+      const merged = mergeVerified(lane, issue, { ...rules.value[repository] });
+      changed ||= merged !== lane;
+      return merged;
+    });
+    if (changed) { lanes.value = next; void persistContent(true); }
+  },
+  reconcile(repository) {
+    if (selected.value.includes(repository)) void refresh(false, false, true, false, [repository]).catch(() => {});
+  },
+  onChange(entries) { pendingClosureEntries.value = entries; },
+});
 function clearClosureFeedback() {
+  pendingClosures.clear();
   timeoutTracker.clear();
   timedOut.value = [];
   statusTracker.clear();
@@ -1020,7 +1054,7 @@ function setColumnSort(key: string, sort: ColumnSort) {
 // Per-repository searches belong to the split view only; the combined board uses the main search alone (#132).
 const activeRepositoryQueries = computed<Record<string, string>>(() => splitByRepository.value ? repositoryQueries.value : {});
 // Filtered and sorted once per data or filter change instead of on every render (#120).
-const laneColumns = computed(() => new Map(lanes.value.map((lane) => {
+const laneColumns = computed(() => new Map(boardLanes.value.map((lane) => {
   const issues = lane.issues.filter(
     (i) =>
       (!hideCoordination.value || !isCoordination(i)) &&
@@ -1523,6 +1557,7 @@ function reconcileSelection() {
   selected.value = [...new Set(selected.value)].filter(name => accessible.has(name));
   lanes.value = selectedLanes(lanes.value, repos.value, selected.value);
   closureTracker.retain(selected.value);
+  pendingClosures.retain(selected.value);
   activity.retain(selected.value);
   activityRevision.value++;
   statusTracker.retain(selected.value);
@@ -1649,6 +1684,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           const shown = pendingLanes.get(repo.full_name) || lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           const synced = withWorkStarts(loaded.lane);
           const lane = sameLaneContent(shown, synced) ? shown : synced;
+          if (lane !== shown) pendingClosures.observe(shown, lane, repoRules);
           if (publicMode.value && !lane.loading && !lane.error) publicSnapshots = [...publicSnapshots.filter(entry => entry.lane.repo.full_name !== repo.full_name), { lane, syncedAt }];
           result.push(lane);
           closureFeedback([lane]);

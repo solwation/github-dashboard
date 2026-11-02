@@ -35,6 +35,7 @@ import {
   HandHelping,
   Wrench,
   ShieldAlert,
+  Hourglass,
 } from "@lucide/vue";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import {
@@ -100,6 +101,7 @@ async function loadClosingCommit() {
     props.demo ||
     !props.loadCommit ||
     props.issue.state !== "closed" ||
+    props.issue.pendingClosure ||
     !props.issue.closed_at ||
     commitState.value === "loading" ||
     commitState.value === "loaded"
@@ -122,6 +124,7 @@ watch(
     () => props.issue.html_url,
     () => props.issue.state,
     () => props.issue.closed_at,
+    () => props.issue.pendingClosure,
     () => props.demo,
     () => props.commentsSession,
   ],
@@ -225,7 +228,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
     tabindex="-1"
     :data-repository="rowDetails ? undefined : repository"
     :style="repository ? { '--repository-color': assignedColor || repositoryColor(repository) } : undefined"
-    :class="[col, { 'row-details-card': rowDetails, 'has-repository': !!repository && !rowDetails, 'just-closed': celebrate && col === 'closed' && !rowDetails, 'unread-move': recentMove === true && !rowDetails, 'unread-created': recentMove === 'created' && !rowDetails, 'issue-timeout': timedOut && col === 'progress' && !rowDetails }]"
+    :class="[col, { 'row-details-card': rowDetails, 'has-repository': !!repository && !rowDetails, 'just-closed': celebrate && col === 'closed' && !rowDetails, 'unread-move': recentMove === true && !rowDetails, 'unread-created': recentMove === 'created' && !rowDetails, 'issue-timeout': timedOut && col === 'progress' && !rowDetails, 'pending-closure': issue.pendingClosure && !rowDetails }]"
   >
     <button v-if="recentMove && !rowDetails" class="movement-marker" @click="emit('read')"
       :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')">
@@ -318,6 +321,9 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
         ><Clock3 :size="12" aria-hidden="true" />{{
           issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd")
         }}</span
+      ><span v-else-if="col === 'closed' && issue.pendingClosure" class="pending-closure-badge"
+        :title="t('Väntar på att GitHub bekräftar att issuet är stängt')"
+        ><Hourglass :size="12" aria-hidden="true" />{{ t("Verifierar stängning") }}</span
       ><time
         v-else-if="col === 'closed' && issue.closed_at"
         class="closed-date"
@@ -339,7 +345,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
           width="22"
           height="22"
       /></span>
-      <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
+      <IssueImplementationTime v-if="col === 'closed' && !issue.pendingClosure" :issue="issue" :repository="repository" />
       <IssueTimeRemaining v-if="!rowDetails && (col === 'progress' || (col === 'backlog' && issue.sub_issues_summary?.total))" :issue="issue" :repository="repository" :active="visible" :in-progress="col === 'progress'" bar />
     </div>
       </template>

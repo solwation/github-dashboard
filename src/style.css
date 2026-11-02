@@ -893,6 +893,19 @@ h1 {
   font-size: 10px;
   color: var(--faint);
 }
+/* Pending closure (#381): dashed outline and an hourglass until GitHub confirms the closing. */
+:root .issue-card.pending-closure, :root .issue-row.pending-closure,
+:root[data-theme="dark"] .issue-card.pending-closure, :root[data-theme="dark"] .issue-row.pending-closure {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--muted) 70%, var(--surface));
+}
+.pending-closure-badge { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: 10px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+.issue-card .card-bottom > .pending-closure-badge { font-size: 11px; white-space: normal; }
+.pending-closure-badge svg { flex: 0 0 12px; animation: pending-closure-pulse 1.6s ease-in-out infinite; }
+.pending-closure-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.row-status.closed.pending { background: var(--badge-bg); color: var(--badge-text); }
+@keyframes pending-closure-pulse { 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .pending-closure-badge svg { animation: none; } }
 .assignees {
   display: flex;
   gap: 3px;

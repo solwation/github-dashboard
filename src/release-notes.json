@@ -2,8 +2,8 @@
   {
     "date": "2026-11-02",
     "summary": {
-      "sv": "Snabbare och prioriterad uppdatering av stora boards, pålitlig bakgrundssynk, mobilåtkomst till vänstermenyn och kolumner som kan fällas ihop igen.",
-      "en": "Faster, prioritized board updates, reliable background sync, mobile access to the left sidebar and columns that can be collapsed again."
+      "sv": "Snabbare och prioriterad uppdatering av stora boards, pålitlig bakgrundssynk, mobilåtkomst till vänstermenyn, hopfällbara kolumner och stängda issues som syns direkt.",
+      "en": "Faster, prioritized board updates, reliable background sync, mobile sidebar access, collapsible columns and closed issues that show up immediately."
     },
     "sections": [
       {
@@ -40,6 +40,15 @@
         },
         "issues": [
           380
+        ]
+      },
+      {
+        "text": {
+          "sv": "Ett issue som lämnar In progress visas direkt i Closed som väntande medan GitHub bekräftar stängningen, i stället för att försvinna en stund.",
+          "en": "An issue leaving In progress appears in Closed right away as pending while GitHub confirms the closing, instead of briefly disappearing."
+        },
+        "issues": [
+          381
         ]
       }
     ]

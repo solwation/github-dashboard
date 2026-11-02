@@ -34,6 +34,11 @@ export interface Issue {
    * feedback never treat a closed issue as running. Absent when unknown.
    */
   workStartedAt?: string;
+  /**
+   * Board overlay only (#381): the issue left In progress but GitHub has not confirmed its
+   * closing yet. Never part of the issues held in `lanes` or the encrypted content cache.
+   */
+  pendingClosure?: boolean;
 }
 export interface Repo {
   id: number;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, Hourglass, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
@@ -248,7 +248,8 @@ const hiddenLabelsAria = computed(() =>
     names: hiddenLabelsTitle.value,
   })
 );
-const status = computed(() => col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
+const pending = computed(() => col.value === "closed" && !!props.issue.pendingClosure);
+const status = computed(() => pending.value ? t("Verifieras") : col.value === "closed" ? t("Stängda") : col.value === "progress" ? t("Pågående") : "Backlog");
 const timeout = computed(() => props.timedOut && col.value === "progress");
 const backlogAge = computed(() => {
   const created = Date.parse(props.issue.created_at);
@@ -280,7 +281,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     :data-repository="repository"
     :style="{ '--repository-color': assignedColor || repositoryColor(repository) }"
     @click="rowClick"
-    :class="[col, { expanded, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout }]"
+    :class="[col, { expanded, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout, 'pending-closure': pending }]"
   >
     <span class="row-heading">
     <span class="row-id"
@@ -367,7 +368,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span class="row-slot row-slot-timeout"><span v-if="timeout && issue.startedAt" class="row-timeout"
         :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
         >{{ t("Timeout") }}</span></span
-      ><span class="row-slot row-slot-status"><span class="row-status" :class="col">{{ status }}</span></span></span
+      ><span class="row-slot row-slot-status"><span class="row-status" :class="[col, { pending }]">{{ status }}</span></span></span
       ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
         ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
       ></span><span ref="labelsContainer" class="row-labels"><span v-for="label in visibleLabels" :key="label.name" class="label" :title="label.name"
@@ -386,13 +387,15 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span v-else-if="col === 'progress'" class="timer"
         :title="issue.startedAt ? t('Arbetslabel satt ') + new Date(issue.startedAt).toLocaleString(locale) : t('Ingen säker starttid kunde hämtas')"
         ><Clock3 :size="12" aria-hidden="true" /><span class="row-elapsed-label">{{ issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd") }}</span></span
+      ><span v-else-if="pending" class="pending-closure-badge" :title="t('Väntar på att GitHub bekräftar att issuet är stängt')"
+        ><Hourglass :size="12" aria-hidden="true" /><span v-if="isPhone" class="pending-closure-text">{{ t("Verifieras") }}</span></span
       ><time v-else-if="issue.closed_at" class="closed-date" :datetime="issue.closed_at"
         :title="new Date(issue.closed_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
       >
     </span>
     <span class="row-outcome">
-      <IssueImplementationTime v-if="col === 'closed'" :issue="issue" :repository="repository" />
+      <template v-if="col === 'closed'"><IssueImplementationTime v-if="!pending" :issue="issue" :repository="repository" /></template>
       <IssueTimeRemaining v-else-if="col === 'progress'" :issue="issue" :repository="repository" :active="visible" />
       <IssueTimeEstimate v-else :issue="issue" :repository="repository" :active="visible" />
     </span>
