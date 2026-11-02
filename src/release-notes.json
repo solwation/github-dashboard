@@ -2,8 +2,8 @@
   {
     "date": "2026-11-02",
     "summary": {
-      "sv": "Snabbare och prioriterad uppdatering av stora boards, samt tillförlitlig synkning i bakgrunden och vid återgång.",
-      "en": "Faster, prioritized board updates and reliable background and resume synchronization on desktop and phone."
+      "sv": "Snabbare och prioriterad uppdatering av stora boards, tillförlitlig synkning i bakgrunden samt mobilåtkomst till vänstermenyn via draghandtag och svepgest.",
+      "en": "Faster, prioritized board updates, reliable background synchronization, and mobile access to the left sidebar via drag handle and swipe gestures."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           378
+        ]
+      },
+      {
+        "text": {
+          "sv": "Vänstermenyn är nu tillgänglig på mobiltelefoner via ett draghandtag och en svepgest från vänster kant, med full åtkomst till projekt och vyer.",
+          "en": "The left sidebar is now accessible on mobile phones via a drag handle and a left-to-right swipe gesture, providing full access to projects and views."
+        },
+        "issues": [
+          379
         ]
       }
     ]

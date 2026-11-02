@@ -2459,7 +2459,61 @@ html {
     scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, var(--phone-nav-height)));
   }
   .sidebar {
-    display: none;
+    display: flex;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(280px, 85vw);
+    height: 100%;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-4) var(--space-3);
+  }
+  .sidebar.sidebar-mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+  .sidebar-mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    border-radius: var(--space-1);
+    cursor: pointer;
+  }
+  .sidebar-mobile-close:hover,
+  .sidebar-mobile-close:focus-visible {
+    color: var(--text);
+    background: var(--hover);
+  }
+  .sidebar.sidebar-mobile-open > .nav-caption,
+  .sidebar.sidebar-mobile-open .brand > span:nth-child(2),
+  .sidebar.sidebar-mobile-open .sidebar-projects,
+  .sidebar.sidebar-mobile-open .sidebar-footer,
+  .sidebar.sidebar-mobile-open .nav-count {
+    display: flex;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-projects {
+    display: block;
+    margin-top: var(--space-4);
+  }
+  .sidebar.sidebar-mobile-open .nav-item {
+    font-size: 13px;
+    padding: var(--space-2) var(--space-3);
+    justify-content: flex-start;
+  }
+  .sidebar.sidebar-mobile-open .nav-item > svg {
+    margin-right: var(--space-2);
   }
   .workspace {
     margin-left: 0;
@@ -2885,3 +2939,72 @@ a.sidebar-repository:focus-visible {
   .row-time { justify-self: stretch; justify-content: flex-end; }
 }
 :root[data-theme="dark"] .issue-time-remaining.overdue { color: #f3c66f; }
+
+/* Mobile sidebar drawer, backdrop and drag handle (#379) */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: backdrop-fade 0.2s ease-out;
+}
+@keyframes backdrop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sidebar-drag-handle {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 98;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  min-height: 52px;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: none;
+  border-radius: 0 var(--space-2) var(--space-2) 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: pan-y;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, color 0.15s ease;
+}
+.sidebar-drag-handle:hover,
+.sidebar-drag-handle:focus-visible {
+  color: var(--text);
+  background: var(--hover);
+}
+.sidebar-drag-handle.sidebar-open {
+  left: min(280px, 85vw);
+  border-left: 1px solid var(--line);
+  border-radius: 0 var(--space-2) var(--space-2) 0;
+  z-index: 101;
+}
+@media (pointer: coarse) {
+  .sidebar-drag-handle {
+    min-width: 32px;
+    min-height: 56px;
+  }
+}
+@media (min-width: 651px) and (min-height: 501px) {
+  .sidebar-mobile-close,
+  .sidebar-backdrop,
+  .sidebar-drag-handle {
+    display: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar-drag-handle,
+  .sidebar-backdrop {
+    transition: none !important;
+    animation: none !important;
+  }
+}

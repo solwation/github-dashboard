@@ -12,6 +12,8 @@ import {
   BellOff,
   ArrowRight,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   EyeOff,
   Layers3,
@@ -62,6 +64,7 @@ import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } fro
 import { shouldAdhocRefresh } from "./lib/adhoc-refresh";
 import { sortRefreshTargets } from "./lib/refresh-priority";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
+import { createSwipeHandler } from "./lib/touch-swipe";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import { combinedItems, boardEntryKey } from "./lib/combined-board";
 import { reconcileRepositoryColors } from "./lib/repository-color";
@@ -246,6 +249,34 @@ const focusedSidebarRepository = ref<string | null>(null);
 const selectedCombinedRepository = ref<string | null>(null);
 const statisticsNavigation = ref<{ name: string; toggle: boolean; sequence: number }>();
 let sidebarNavigationSequence = 0;
+const mobileSidebarOpen = ref(false);
+const sidebarElement = ref<HTMLElement | null>(null);
+function openMobileSidebar() { mobileSidebarOpen.value = true; }
+function closeMobileSidebar() { mobileSidebarOpen.value = false; }
+function toggleMobileSidebar() { mobileSidebarOpen.value = !mobileSidebarOpen.value; }
+const swipeHandler = createSwipeHandler({
+  isOpen: () => mobileSidebarOpen.value,
+  onOpen: openMobileSidebar,
+  onClose: closeMobileSidebar,
+});
+onMounted(() => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("touchstart", swipeHandler.onTouchStart, { passive: true });
+    window.addEventListener("touchend", swipeHandler.onTouchEnd, { passive: true });
+  }
+});
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("touchstart", swipeHandler.onTouchStart);
+    window.removeEventListener("touchend", swipeHandler.onTouchEnd);
+  }
+});
+watch(mobileSidebarOpen, async (open) => {
+  if (open) {
+    await nextTick();
+    sidebarElement.value?.querySelector<HTMLElement>("a, button")?.focus();
+  }
+});
 const mobileBoardNavigatorOpen = ref(false);
 const mobileNavigationRepository = ref("");
 const mobileNavigationAnnouncement = ref("");
@@ -1831,6 +1862,11 @@ function closeModal() {
   else if (picker.value) picker.value = false;
 }
 function trapFocus(event: KeyboardEvent) {
+  if (event.key === "Escape" && mobileSidebarOpen.value) {
+    event.preventDefault();
+    closeMobileSidebar();
+    return;
+  }
   if (!modalOpen.value) return;
   const dialog = openModal();
   if (!dialog) return;
@@ -2045,8 +2081,16 @@ onMounted(async () => {
 });
 </script>
 <template>
-  <aside class="sidebar">
-    <a class="brand" href="." :aria-label="t('Issueflow startsida')"
+  <aside ref="sidebarElement" class="sidebar" :class="{ 'sidebar-mobile-open': mobileSidebarOpen }">
+    <button
+      type="button"
+      class="sidebar-mobile-close"
+      :aria-label="t('Stäng meny')"
+      @click="closeMobileSidebar"
+    >
+      <X :size="20" aria-hidden="true" />
+    </button>
+    <a class="brand" href="." :aria-label="t('Issueflow startsida')" @click="closeMobileSidebar"
       ><span class="brand-icon"><Layers3 :size="23" /></span
       ><span class="brand-copy"
         >issueflow<span class="brand-dot">.</span
@@ -2055,12 +2099,12 @@ onMounted(async () => {
     ><!-- Deliberate brand/section caption (#315) --><span class="nav-caption">WORKSPACE</span>
     <nav class="workspace-navigation">
     <a class="nav-item" :class="{ active: currentView === 'overview' }" href="#overview" :aria-label="t('Översikt')" aria-describedby="overview-unread-count"
-      :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined">
+      :aria-current="workspaceOpen && currentView === 'overview' ? 'page' : undefined" @click="closeMobileSidebar">
       <LayoutDashboard :size="20" /> {{ t("Översikt") }}
       <span id="overview-unread-count" class="nav-count" :title="t('{count} olästa händelser', { count: unreadOverviewCount })" :aria-label="t('{count} olästa händelser', { count: unreadOverviewCount })">{{ unreadOverviewCount }}</span>
     </a>
     <a v-if="workspaceOpen" class="nav-item statistics-nav" :class="{ active: currentView === 'statistics' }" href="#statistics"
-      :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined">
+      :aria-label="t('Statistik')" :title="t('Statistik')" :aria-current="currentView === 'statistics' ? 'page' : undefined" @click="closeMobileSidebar">
       <Activity :size="20" /><span>{{ t("Statistik") }}</span>
     </a>
     </nav>
@@ -2075,9 +2119,9 @@ onMounted(async () => {
       :visibility="repositoryVisibilities"
       @update:hide-inactive="setHideInactiveRepos"
       @toggle-visibility="toggleRepositoryVisibility"
-      @select="picker = true"
+      @select="picker = true; closeMobileSidebar()"
       @interest="refreshStaleRepository"
-      @activate="activateSidebarRepository"
+      @activate="activateSidebarRepository($event); closeMobileSidebar()"
     />
     <SidebarVersion ref="sidebarVersion" :available="updateAvailable" :checked="updateChecked" :checking="updateChecking"
       @release-notes="openReleaseNotes()" @open-update="openUpdateDialog" />
@@ -2090,6 +2134,23 @@ onMounted(async () => {
       <ExternalLink class="sidebar-footer-open" :size="12" aria-hidden="true" />
     </a>
   </aside>
+  <div
+    v-if="mobileSidebarOpen"
+    class="sidebar-backdrop"
+    @click="closeMobileSidebar"
+    aria-hidden="true"
+  ></div>
+  <button
+    type="button"
+    class="sidebar-drag-handle"
+    :class="{ 'sidebar-open': mobileSidebarOpen }"
+    :aria-label="mobileSidebarOpen ? t('Stäng vänstermeny') : t('Öppna vänstermeny')"
+    :aria-expanded="mobileSidebarOpen"
+    @click="toggleMobileSidebar"
+  >
+    <ChevronRight v-if="!mobileSidebarOpen" :size="16" aria-hidden="true" />
+    <ChevronLeft v-else :size="16" aria-hidden="true" />
+  </button>
   <div class="workspace">
     <header ref="topbar" class="topbar">
       <div class="breadcrumb">

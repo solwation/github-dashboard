@@ -1,10 +1,10 @@
 {
-  "baseCommit": "11ebf0749224bc0ebcc0c7e77e6bcd013c3fcd27",
+  "baseCommit": "e997bdc8ed041ab1acfeba7c256d0113cafd2ce0",
   "summary": {
-    "sv": "Synliga och aktiva projekt uppdateras först, med batchade UI-uppdateringar som minskar väntetid i stora boards.",
-    "en": "Visible and active projects update first, with batched UI updates reducing wait times on large boards."
+    "sv": "Vänstermenyn är nu tillgänglig på mobiltelefoner via ett draghandtag och en svepgest från vänster kant.",
+    "en": "The left sidebar is now accessible on mobile phones via a drag handle and a left-to-right swipe gesture."
   },
   "issues": [
-    377
+    379
   ]
 }
