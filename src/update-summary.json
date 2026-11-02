@@ -1,11 +1,10 @@
 {
-  "baseCommit": "17b0df3c9767c29aa065daeb8e2bc6cf20c4eea3",
+  "baseCommit": "3d4caad2dd82c8219d1a89f48aa840e0f61af0fa",
   "summary": {
-    "sv": "Expanderade kolumner i gemensam vy kan fällas ihop igen, och issues som stängs syns direkt i Closed som väntande tills GitHub bekräftat.",
-    "en": "Expanded combined-board columns can be collapsed again, and closing issues appear in Closed at once as pending until GitHub confirms."
+    "sv": "Vänstermenyn på telefon visar nu Översikt, Statistik, repositories, version och licens i en kompakt lodrät meny.",
+    "en": "The left menu on phones now shows Overview, Statistics, repositories, version and license in a compact vertical menu."
   },
   "issues": [
-    380,
-    381
+    382
   ]
 }
