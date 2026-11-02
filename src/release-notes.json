@@ -50,6 +50,15 @@
         "issues": [
           381
         ]
+      },
+      {
+        "text": {
+          "sv": "Vänstermenyn på telefon visar nu alla funktioner i en kompakt kolumn: arbetsytan, repositories med räknare och dölj/visa, version och licens.",
+          "en": "The phone sidebar now shows every function in one compact column: workspace, repositories with counters and hide/show, version and license."
+        },
+        "issues": [
+          382
+        ]
       }
     ]
   },

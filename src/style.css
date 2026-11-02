@@ -2534,6 +2534,129 @@ html {
   .sidebar.sidebar-mobile-open .nav-item > svg {
     margin-right: var(--space-2);
   }
+  /* #382: the drawer is a compact vertical column with the desktop sidebar's functions. The older
+     phone rule turned .sidebar into a horizontal top bar; direction and alignment are reset here. */
+  .sidebar {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+    padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+  }
+  .sidebar > :not(.sidebar-mobile-close) {
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  /* The brand sits top left and leaves the 44px close button (top right) free. */
+  .sidebar .brand {
+    align-self: stretch;
+    min-height: 44px;
+    margin: 0 calc(44px + var(--space-1)) var(--space-3) 0;
+    padding-left: var(--space-1);
+  }
+  .sidebar .brand-copy {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .sidebar .brand-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: var(--space-1);
+  }
+  .sidebar > .nav-caption {
+    padding: 0 var(--space-3);
+  }
+  .sidebar .workspace-navigation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: 100%;
+    margin-top: var(--space-1);
+  }
+  .sidebar .nav-item {
+    min-height: 44px;
+    margin: 0;
+    gap: 0;
+  }
+  .sidebar .nav-item > svg {
+    width: var(--icon-md);
+    height: var(--icon-md);
+    flex-shrink: 0;
+  }
+  .sidebar .statistics-nav span {
+    display: inline;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-projects {
+    flex: 0 0 auto;
+    overflow: visible;
+    margin: var(--space-3) 0;
+  }
+  .sidebar .repositories-heading {
+    padding: 0 0 0 var(--space-3);
+    min-height: 44px;
+  }
+  .sidebar .repositories-heading .nav-caption {
+    padding-left: 0;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-repository {
+    padding-left: var(--space-3);
+  }
+  .sidebar.sidebar-mobile-open .sidebar-add {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-repository-row {
+    --row-line: 28px;
+    --pages-target: 44px;
+    margin-top: var(--space-1);
+  }
+  /* Phones keep the per-repository hide/show action (#367) in the drawer too. */
+  .sidebar.sidebar-mobile-open .repo-board-toggle {
+    display: grid;
+  }
+  .sidebar .repo-body:has(.repo-board-toggle) {
+    --action-width: calc(var(--pages-target) + var(--space-1));
+  }
+  .sidebar.sidebar-mobile-open .sidebar-inactive-toggle {
+    min-height: 44px;
+    margin-top: var(--space-2);
+  }
+  .sidebar.sidebar-mobile-open .sidebar-external-heading {
+    padding-inline: var(--space-3);
+  }
+  /* SidebarVersion hides itself at phone widths (its badge sits in the top bar); the drawer shows it in full. */
+  .sidebar.sidebar-mobile-open .sidebar-version {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 44px;
+    margin: auto 0 0;
+    padding: var(--space-1) var(--space-2);
+    border-top: 1px solid var(--line);
+    border-radius: var(--space-1);
+    cursor: pointer;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-version :is(.sidebar-version-caption, .sidebar-version-build, .sidebar-version-open) {
+    display: block;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-version .sidebar-version-heading {
+    justify-content: flex-start;
+    min-height: 44px;
+  }
+  .sidebar.sidebar-mobile-open .sidebar-version .sidebar-version-badge {
+    width: var(--space-6);
+    height: var(--space-6);
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .sidebar.sidebar-mobile-open .brand > span:nth-child(2) {
+    display: block;
+  }
+  .sidebar .sidebar-footer {
+    min-height: 44px;
+  }
   .workspace {
     margin-left: 0;
     padding-top: 0;
