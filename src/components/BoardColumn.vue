@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ChevronDown, CircleCheck, Clock3, Layers3 } from "@lucide/vue";
+import { ChevronDown, ChevronUp, CircleCheck, Clock3, Layers3 } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { boardEntryKey, type BoardEntry } from "../lib/combined-board";
+import { canCollapseColumn } from "../lib/column-limits";
 import { issueDomId } from "../lib/issue-navigation";
 import type { ColumnSort, Issue, Lane, Rules } from "../lib/model";
 import ColumnEstimate from "./ColumnEstimate.vue";
@@ -66,6 +67,7 @@ const props = withDefaults(
     listMode?: boolean;
     limit?: number;
     limitIncrement?: number;
+    baseLimit?: number;
     estimateGroups?: { issues: Issue[]; rules?: Rules }[];
     sort?: ColumnSort;
     loading?: boolean;
@@ -84,6 +86,7 @@ const props = withDefaults(
     listMode: false,
     limit: undefined,
     limitIncrement: 10,
+    baseLimit: undefined,
     estimateGroups: () => [],
     sort: "default",
     loading: false,
@@ -98,6 +101,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   "update:sort": [value: ColumnSort];
   showMore: [increment: number];
+  collapse: [];
   read: [repository: string, issue: Issue];
   parentSelect: [repository: string, number: number];
   childSelect: [repository: string, number: number];
@@ -128,6 +132,11 @@ const shouldShowEmpty = computed(() => {
   if (props.showEmpty !== undefined) return props.showEmpty;
   return (!props.items || props.items.length === 0) && !props.loading;
 });
+
+const canCollapse = computed(() => {
+  return canCollapseColumn(props.limit, props.baseLimit, props.items?.length ?? 0);
+});
+
 </script>
 
 <template>
@@ -150,11 +159,24 @@ const shouldShowEmpty = computed(() => {
           :column="column.key as 'progress' | 'backlog'"
         />
       </div>
-      <ColumnSortMenu
-        :column="column.key"
-        :model-value="sort"
-        @update:model-value="emit('update:sort', $event)"
-      />
+      <div class="column-header-actions">
+        <button
+          v-if="canCollapse"
+          type="button"
+          class="column-collapse-button"
+          :aria-label="t('Fäll ihop {column} till {count} issues', { column: column.title, count: baseLimit ?? 0 })"
+          :title="t('Fäll ihop till {count} issues', { count: baseLimit ?? 0 })"
+          @click="emit('collapse')"
+        >
+          <ChevronUp :size="12" aria-hidden="true" />
+          <span>{{ t("Fäll ihop") }}</span>
+        </button>
+        <ColumnSortMenu
+          :column="column.key"
+          :model-value="sort"
+          @update:model-value="emit('update:sort', $event)"
+        />
+      </div>
     </div>
     <div class="cards">
       <ul v-if="listMode && items.length" class="issue-rows">
@@ -209,6 +231,7 @@ const shouldShowEmpty = computed(() => {
       </div>
       <button
         v-if="limit !== undefined && items.length > limit"
+        type="button"
         class="show-more"
         @click="emit('showMore', limitIncrement)"
       >

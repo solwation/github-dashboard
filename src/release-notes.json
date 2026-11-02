@@ -2,8 +2,8 @@
   {
     "date": "2026-11-02",
     "summary": {
-      "sv": "Snabbare och prioriterad uppdatering av stora boards, tillförlitlig synkning i bakgrunden samt mobilåtkomst till vänstermenyn via draghandtag och svepgest.",
-      "en": "Faster, prioritized board updates, reliable background synchronization, and mobile access to the left sidebar via drag handle and swipe gestures."
+      "sv": "Snabbare och prioriterad uppdatering av stora boards, pålitlig bakgrundssynk, mobilåtkomst till vänstermenyn och kolumner som kan fällas ihop igen.",
+      "en": "Faster, prioritized board updates, reliable background sync, mobile access to the left sidebar and columns that can be collapsed again."
     },
     "sections": [
       {
@@ -31,6 +31,15 @@
         },
         "issues": [
           379
+        ]
+      },
+      {
+        "text": {
+          "sv": "En kolumn som expanderats med Visa fler i den gemensamma boarden kan fällas ihop till det inställda antalet med en knapp i kolumnens rubrik.",
+          "en": "A combined-board column expanded with Show more can be collapsed back to the configured count with a button in its header."
+        },
+        "issues": [
+          380
         ]
       }
     ]

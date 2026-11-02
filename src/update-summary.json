@@ -1,10 +1,10 @@
 {
-  "baseCommit": "e997bdc8ed041ab1acfeba7c256d0113cafd2ce0",
+  "baseCommit": "17b0df3c9767c29aa065daeb8e2bc6cf20c4eea3",
   "summary": {
-    "sv": "Vänstermenyn är nu tillgänglig på mobiltelefoner via ett draghandtag och en svepgest från vänster kant.",
-    "en": "The left sidebar is now accessible on mobile phones via a drag handle and a left-to-right swipe gesture."
+    "sv": "Kolumner som expanderats med Visa fler i den gemensamma boarden kan fällas ihop igen med en knapp i kolumnrubriken.",
+    "en": "Columns expanded with Show more on the combined board can be collapsed again with a button in the column header."
   },
   "issues": [
-    379
+    380
   ]
 }

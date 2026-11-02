@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveColumnLimit, restoreColumnLimits, validColumnLimit } from "../src/lib/column-limits";
+import { canCollapseColumn, effectiveColumnLimit, restoreColumnLimits, validColumnLimit } from "../src/lib/column-limits";
 
 describe("column visibility preferences", () => {
   it("migrates existing settings to six and discards malformed, out-of-range and inaccessible overrides", () => {
@@ -17,5 +17,12 @@ describe("column visibility preferences", () => {
     expect(effectiveColumnLimit(2, overrides, "team/b")).toBe(2);
     expect(restoreColumnLimits({ columnLimit: 7, repositoryColumnLimits: overrides }, ["team/a"]))
       .toEqual({ global: 7, overrides });
+  });
+  it("allows collapsing only when the column is currently expanded past its base limit and has more items than the base limit", () => {
+    expect(canCollapseColumn(6, 6, 10)).toBe(false);
+    expect(canCollapseColumn(12, 6, 10)).toBe(true);
+    expect(canCollapseColumn(12, 6, 4)).toBe(false);
+    expect(canCollapseColumn(undefined, 6, 10)).toBe(false);
+    expect(canCollapseColumn(12, undefined, 10)).toBe(false);
   });
 });

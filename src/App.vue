@@ -1071,6 +1071,11 @@ watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, sho
   }
 }, { deep: true });
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }
+function resetCombinedLimit(key: string) {
+  const next = { ...combinedLimits.value };
+  delete next[key];
+  combinedLimits.value = next;
+}
 watch(columnLimit, () => { combinedLimits.value = {}; });
 // One set of loaders per repository and session keeps card props stable between renders (#120).
 const loaderCache = new Map<string, { client: GitHub; run: number; comments: (issue: Issue) => ReturnType<GitHub["issueComments"]>;
@@ -2556,6 +2561,7 @@ onMounted(async () => {
               :list-mode="listMode"
               :limit="combinedLimit(col.key)"
               :limit-increment="columnLimit"
+              :base-limit="columnLimit"
               :estimate-groups="combinedEstimateGroups"
               :sort="columnSorts[col.key]"
               :loading="contentLanes.some(lane => lane.loading || lane.error)"
@@ -2564,6 +2570,7 @@ onMounted(async () => {
               :row-props="rowProps"
               @update:sort="setColumnSort(col.key, $event)"
               @show-more="combinedLimits[col.key] = combinedLimit(col.key) + columnLimit"
+              @collapse="resetCombinedLimit(col.key)"
               @read="readIssue"
               @parent-select="revealParentIssue"
               @child-select="revealParentIssue"

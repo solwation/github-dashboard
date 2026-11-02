@@ -15,3 +15,10 @@ export function restoreColumnLimits(saved: unknown, available: string[]) {
 export function effectiveColumnLimit(global: number, overrides: Record<string, number>, repo: string) {
   return overrides[repo] ?? global;
 }
+export function canCollapseColumn(
+  limit: number | undefined,
+  baseLimit: number | undefined,
+  itemCount: number,
+): boolean {
+  return limit !== undefined && baseLimit !== undefined && limit > baseLimit && itemCount > baseLimit;
+}
