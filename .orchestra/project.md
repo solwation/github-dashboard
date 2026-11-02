@@ -158,7 +158,7 @@ Listed order is execution order.
 | Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
 | Prepare publication | `delivery`: app changes, after integration | Keep `needs-deploy` as technical metadata on the completed, closed story without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta and separate publication status; never bypass the Actions gate |
 | Check Action | `delivery`: every push to `main` that includes an app change (skip for technical changes) | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
-| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up) with outcome, revision, local checks, evidence and limits; close immediately. Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
+| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up) with outcome, revision, local checks, evidence and limits; UI changes include the reviewed screenshots (embedded or linked) or state why capture/upload was unavailable; close immediately. Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
 
 ## Queue intake hooks
 
@@ -198,8 +198,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.7.0**,
-commit **2bd00217aa1704134c6e2a3d5c9614c6b7fdbfbe** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.7.1**,
+commit **94c81f236bf892e979ecf1b20ede9d12885cc3d2** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
