@@ -1,10 +1,10 @@
 {
-  "baseCommit": "30f99f7088f0e248ccf1ab5deba1f2ca2e467f97",
+  "baseCommit": "11ebf0749224bc0ebcc0c7e77e6bcd013c3fcd27",
   "summary": {
-    "sv": "Tillförlitlig uppdatering i bakgrunden och omedelbar synkning när appen väcks på dator och telefon.",
-    "en": "Reliable background updating and immediate synchronization when resuming on desktop and phone."
+    "sv": "Synliga och aktiva projekt uppdateras först, med batchade UI-uppdateringar som minskar väntetid i stora boards.",
+    "en": "Visible and active projects update first, with batched UI updates reducing wait times on large boards."
   },
   "issues": [
-    378
+    377
   ]
 }

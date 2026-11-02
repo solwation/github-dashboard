@@ -2,10 +2,19 @@
   {
     "date": "2026-11-02",
     "summary": {
-      "sv": "Tillförlitlig uppdatering i bakgrunden och omedelbar synkning när appen väcks på dator och telefon.",
-      "en": "Reliable background updating and immediate synchronization when resuming on desktop and phone."
+      "sv": "Snabbare och prioriterad uppdatering av stora boards, samt tillförlitlig synkning i bakgrunden och vid återgång.",
+      "en": "Faster, prioritized board updates and reliable background and resume synchronization on desktop and phone."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Synliga och aktiva projekt uppdateras först i stället för i bokstavsordning, och ändringar batchas så att gränssnittet reagerar snabbt.",
+          "en": "Visible and active projects update first instead of alphabetically, with batched updates so the interface responds quickly."
+        },
+        "issues": [
+          377
+        ]
+      },
       {
         "text": {
           "sv": "Boarden uppdateras periodiskt i bakgrunden och revaliderar omedelbart när fliken öppnas eller enheten väcks, utan att låsas av nätverksbackoff.",

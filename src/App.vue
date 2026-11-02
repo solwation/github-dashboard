@@ -60,6 +60,7 @@ import { createIssueSync, RefreshQueue, RepositoryBackoff } from "./lib/sync";
 import { createBackgroundCheckScheduler } from "./lib/background-sync";
 import { selectedLanes, RepositoryRequestQueue, RepositoryRequestCancelled } from "./lib/repository-selection";
 import { shouldAdhocRefresh } from "./lib/adhoc-refresh";
+import { sortRefreshTargets } from "./lib/refresh-priority";
 import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import { combinedItems, boardEntryKey } from "./lib/combined-board";
@@ -1531,7 +1532,12 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     return false;
   }
   const nowMs = Date.now();
-  const targets = repos.value.filter(repo => {
+  const visualOrder = groupedLaneOrder(
+    projectOrder.value,
+    externalRepos.value.map(repo => repo.full_name),
+    repos.value.map(repo => repo.full_name),
+  );
+  const eligible = repos.value.filter(repo => {
     if (!selected.value.includes(repo.full_name)) return false;
     if (only && !only.includes(repo.full_name)) return false;
     const hasActive = lanes.value.some(lane => lane.repo.full_name === repo.full_name && laneHasActiveIssues(lane));
@@ -1540,10 +1546,43 @@ async function refresh(incremental = false, replacePending = false, manual = fal
       reconcile: !activeOnly,
       manual: manual || (only !== undefined && only.includes(repo.full_name)),
     }, nowMs);
-  }).sort((a, b) =>
-    Number(!!lanes.value.find(lane => lane.repo.full_name === b.full_name)?.loading) - Number(!!lanes.value.find(lane => lane.repo.full_name === a.full_name)?.loading));
+  });
+  const targets = sortRefreshTargets(eligible, {
+    visualOrder,
+    getState: repo => {
+      const lane = lanes.value.find(l => l.repo.full_name === repo.full_name);
+      return {
+        fullName: repo.full_name,
+        isLoading: !!lane?.loading,
+        isHidden: hiddenFromBoard(repo.full_name),
+        isCollapsed: collapsedRepos.value.includes(repo.full_name),
+        hasActive: lane ? laneHasActiveIssues(lane) : false,
+      };
+    },
+  });
   const result: Lane[] = [];
   let cursor = 0;
+  const pendingLanes = new Map<string, Lane>();
+  let updateScheduled = false;
+
+  function flushLanes() {
+    updateScheduled = false;
+    if (!pendingLanes.size) return;
+    const updates = new Map(pendingLanes);
+    pendingLanes.clear();
+    lanes.value = lanes.value.map(entry => updates.get(entry.repo.full_name) || entry);
+  }
+
+  function queueLaneUpdate(name: string, lane: Lane) {
+    pendingLanes.set(name, lane);
+    if (!updateScheduled) {
+      updateScheduled = true;
+      queueMicrotask(() => {
+        if (updateScheduled && current()) flushLanes();
+      });
+    }
+  }
+
   try {
     // A targeted refresh only drops and refetches relations for the repositories it updates (#149).
     if (!incremental) client.invalidateIssueRelations(only);
@@ -1571,30 +1610,31 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           markSynced([repo.full_name], syncedAt);
           if (loaded.full) lastFullSynced.set(repo.full_name, loaded.started);
           // An unchanged sync (e.g. all 304) keeps the shown lane object, so nothing re-renders or is rewritten (#122).
-          const shown = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
+          const shown = pendingLanes.get(repo.full_name) || lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           const synced = withWorkStarts(loaded.lane);
           const lane = sameLaneContent(shown, synced) ? shown : synced;
           if (publicMode.value && !lane.loading && !lane.error) publicSnapshots = [...publicSnapshots.filter(entry => entry.lane.repo.full_name !== repo.full_name), { lane, syncedAt }];
           result.push(lane);
           closureFeedback([lane]);
-          if (lane !== shown) lanes.value = lanes.value.map(entry => entry.repo.full_name === repo.full_name ? lane : entry);
+          if (lane !== shown) queueLaneUpdate(repo.full_name, lane);
         } catch (cause) {
           if (!current() || cause instanceof RepositoryRequestCancelled) continue;
           if ((client.retryAfterMs?.() || 0) === 0) {
             repoBackoff.recordFailure(repo.full_name);
           }
-          const old = lanes.value.find(lane => lane.repo.full_name === repo.full_name);
+          const old = pendingLanes.get(repo.full_name) || lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           if (!old || !selected.value.includes(repo.full_name)) continue;
           const reason = message(cause);
           // A repeated identical failure keeps the shown lane instead of rewriting the cache again.
           const failed = !old.loading && old.error === reason ? old : { ...old, loading: false, error: reason };
           result.push(failed);
-          if (failed !== old) lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? failed : lane);
+          if (failed !== old) queueLaneUpdate(repo.full_name, failed);
         } finally {
           markSyncing(repo.full_name, -1);
         }
       }
     }));
+    flushLanes();
     if (current()) {
       if (publicMode.value) {
         const times = publicSnapshots.filter(entry => selected.value.includes(entry.lane.repo.full_name)).map(entry => entry.syncedAt);
