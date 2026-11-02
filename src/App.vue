@@ -1840,11 +1840,12 @@ const sync = createIssueSync({
     !restoring.value &&
     !picker.value &&
     !editing.value &&
-    navigator.onLine &&
+    navigator.onLine,
+  hasActiveIssues: () =>
     (!document.hidden ||
       (notificationPermission() === "granted" &&
-        selected.value.some((repo) => notificationRepos.value.includes(repo)))),
-  hasActiveIssues: () => lanes.value.some(laneHasActiveIssues) || selected.value.some(name => repoBackoff.isDue(name)),
+        selected.value.some((repo) => notificationRepos.value.includes(repo)))) &&
+    (lanes.value.some(laneHasActiveIssues) || selected.value.some(name => repoBackoff.isDue(name))),
   refreshActive: () => refresh(true, false, false, true),
   reconcile: () => refresh(true),
   retryAfterMs: () => api?.retryAfterMs(),

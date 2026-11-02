@@ -109,6 +109,7 @@ export function createIssueSync(options: IssueSyncOptions) {
   let retryAt = 0;
   let failures = 0;
   let previouslyAllowed = false;
+  let serverRateLimitUntil = 0;
 
   async function tick() {
     if (!started) return;
@@ -132,6 +133,7 @@ export function createIssueSync(options: IssueSyncOptions) {
       }
       failures = 0;
       retryAt = 0;
+      serverRateLimitUntil = 0;
       nextActive = now() + ACTIVE_SYNC_MS;
       if (kind === "reconcile") lastReconcile = now();
       options.onSuccess?.(kind);
@@ -140,9 +142,13 @@ export function createIssueSync(options: IssueSyncOptions) {
       if (kind === "reconcile") requestedReconcile = true;
       failures++;
       const serverDelay = options.retryAfterMs?.(error);
+      const currentTime = now();
+      if (serverDelay !== undefined && Number.isFinite(serverDelay) && serverDelay > 0) {
+        serverRateLimitUntil = currentTime + serverDelay;
+      }
       const backoff = syncBackoffMs(failures);
       // Never retry before a valid server-specified limit, even when it exceeds our own cap.
-      retryAt = now() + Math.max(backoff, serverDelay !== undefined && Number.isFinite(serverDelay) ? Math.max(0, serverDelay) : 0);
+      retryAt = currentTime + Math.max(backoff, serverDelay !== undefined && Number.isFinite(serverDelay) ? Math.max(0, serverDelay) : 0);
       options.onError?.(error, kind);
     } finally {
       busy = false;
@@ -151,7 +157,15 @@ export function createIssueSync(options: IssueSyncOptions) {
   function wake() {
     if (!started) return;
     requestedReconcile = true;
-    // Waking never bypasses a rate-limit or failure backoff.
+    const currentTime = now();
+    // Waking clears transient client failure backoff (e.g. from sleep or offline)
+    // while strictly respecting genuine server rate limits.
+    if (currentTime >= serverRateLimitUntil) {
+      retryAt = 0;
+      failures = 0;
+    } else {
+      retryAt = serverRateLimitUntil;
+    }
     void tick();
   }
   function start() {

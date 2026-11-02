@@ -270,4 +270,18 @@ describe("GitHub transport", () => {
       `https://api.github.com/repos/owner/test/issues?state=all&per_page=100&sort=updated&direction=desc&since=${new Date(anchor - 149 * 120000 - 60000).toISOString()}`,
     ]);
   });
+  it("attaches an abort signal with timeout and cancels hung requests", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn((_url: URL, init: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => {
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        });
+      });
+    }));
+    const client = new GitHub("test-token");
+    const assertion = expect(client.request("/user")).rejects.toThrow();
+    await vi.advanceTimersByTimeAsync(30_000);
+    await assertion;
+  });
 });

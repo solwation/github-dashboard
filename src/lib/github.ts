@@ -156,17 +156,32 @@ export class GitHub {
     const { store = true, ...init } = options;
     const cacheable = store && (!init.method || init.method === "GET");
     const cached = cacheable ? this.responses.get(url.href) : undefined;
-    const response = await fetch(url, {
-      ...init,
-      cache: "no-store",
-      headers: {
-        Accept: "application/vnd.github+json",
-        ...(cached ? { "If-None-Match": cached.etag } : {}),
-        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
-        "X-GitHub-Api-Version": "2022-11-28",
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
-      },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort(new Error(t("Förfrågan tog för lång tid.")));
+    }, 30_000);
+    const externalSignal = (init as RequestInit).signal;
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort(externalSignal.reason);
+      else externalSignal.addEventListener("abort", () => controller.abort(externalSignal.reason), { once: true });
+    }
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...init,
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          Accept: "application/vnd.github+json",
+          ...(cached ? { "If-None-Match": cached.etag } : {}),
+          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+          "X-GitHub-Api-Version": "2022-11-28",
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
+        },
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
     this.observeQuota(url, response.headers);
     if (response.status === 304 && cached) {
       this.observePermission(url.pathname, true);

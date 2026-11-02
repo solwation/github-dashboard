@@ -96,6 +96,20 @@ describe("adaptive issue sync", () => {
     await vi.advanceTimersByTimeAsync(15_000);
     expect(app.options.refreshActive).toHaveBeenCalledTimes(1);
   });
+  it("clears network failure backoff on wake while preserving server rate limits", async () => {
+    vi.useFakeTimers();
+    const networkError = new Error("Failed to fetch");
+    const reconcile = vi.fn().mockRejectedValueOnce(networkError).mockResolvedValue(undefined);
+    const app = setup({ reconcile, retryAfterMs: () => undefined });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(app.options.onError).toHaveBeenCalledWith(networkError, "reconcile");
+    // Normal backoff would delay by 15s; but wake() clears transient failure backoff immediately
+    app.documentEvents.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    expect(app.options.onSuccess).toHaveBeenCalledWith("reconcile");
+  });
   it("cleans up scheduling and ignores late completion callbacks after stop", async () => {
     vi.useFakeTimers();
     let resolve!: () => void;
