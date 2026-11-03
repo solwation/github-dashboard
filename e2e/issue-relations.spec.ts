@@ -99,7 +99,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
 });
 
 test("REST progress stays available when GraphQL is denied and late parent responses cannot cross sessions", async ({ page }) => {
-  let deny = true, requests = 0;
+  let deny = true, relationRequests = 0;
   let release!: () => void;
   const pending = new Promise<void>(resolve => { release = resolve; });
   await page.route("https://api.github.com/**", async route => {
@@ -109,7 +109,10 @@ test("REST progress stays available when GraphQL is denied and late parent respo
     if (url.pathname.endsWith("/issues")) return route.fulfill({ json: url.searchParams.get("state") === "closed" ? [] : [{ ...issue(1, "REST parent fixture"), sub_issues_summary: { total: 3, completed: 0 } }] });
     if (url.pathname.endsWith("/sub_issues")) return route.fulfill({ status: 403, json: { message: "Resource not accessible" } });
     if (url.pathname === "/graphql") {
-      requests++;
+      const { query, variables } = route.request().postDataJSON();
+      expect(query).toContain("query IssueRelations");
+      expect(variables).toEqual({ owner: "sample", name: "relations", number: 1 });
+      relationRequests++;
       if (deny) return route.fulfill({ status: 403, json: { message: "Resource not accessible by personal access token" } });
       await pending;
       return route.fulfill({ json: { data: { repository: { issue: { parent: { number: 99, title: "Former account private parent", url: `${repo.html_url}/issues/99` }, subIssuesSummary: { total: 3, completed: 1 } } } } } });
@@ -119,19 +122,27 @@ test("REST progress stays available when GraphQL is denied and late parent respo
   await connect(page);
   await page.locator(".issue-card").locator(".card-open").press("Enter");
   await expect(page.getByRole("progressbar", { name: "0 av 3 underärenden stängda" })).toBeVisible();
-  await expect.poll(() => requests).toBe(1);
+  // Denied results are retryable (#319): startup revalidation can advance the
+  // relation revision and make a second legitimate attempt after the first 403.
+  await expect.poll(() => relationRequests).toBeGreaterThan(0);
   await expect(page.locator(".issue-sub-issues progress")).toHaveCount(1);
   await expect(page.locator(".issue-sub-issues li")).toHaveCount(0);
   await expect(page.locator(".sub-issues-loading")).toHaveCount(0);
   await expect(page.locator(".issue-parent")).toHaveCount(0);
   await expect(page.locator(".issue-card")).not.toContainText(/permission|åtkomst|kunde inte/);
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
+  const beforeRefresh = relationRequests;
   deny = false;
   await page.keyboard.press("F5");
-  await expect.poll(() => requests).toBe(2);
+  await expect.poll(() => relationRequests).toBeGreaterThan(beforeRefresh);
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
   await page.getByRole("button", { name: "Logga ut och ta bort token", exact: true }).click();
   await page.getByRole("button", { name: "Utforska en demo", exact: true }).click();
+  const lateResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/graphql");
   release();
+  await (await lateResponse).finished();
+  // Allow the delivered result's Vue work to render before checking isolation.
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
   await expect(page.locator(".repo-lane")).toHaveCount(3);
   await expect(page.locator("body")).not.toContainText("Former account private parent");
   await expect(page.locator(".issue-parent")).toHaveCount(0);
