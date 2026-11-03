@@ -147,12 +147,12 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
           }));
           expect(geometry.every(item => item.overflow <= 1 && !item.outside && item.footerInside)).toBe(true);
           expect(Math.max(...geometry.map(item => item.inset)) - Math.min(...geometry.map(item => item.inset))).toBeLessThanOrEqual(1);
-          await info.attach(`${split ? "split" : "combined"}-geometry`, { body: JSON.stringify(geometry, null, 2), contentType: "application/json" });
+          await writeFile(info.outputPath(`${split ? "split" : "combined"}-cards-geometry.json`), JSON.stringify(geometry, null, 2));
           await expect(page.locator(".issue-card.issue-timeout .timeout-warning")).toContainText("över estimatet");
           await expect(page.locator(".issue-card .issue-time-remaining-label").first()).toBeVisible();
           await expect(page.locator(".issue-card .implementation-time").first()).toBeVisible();
           if (size.mobile) {
-            for (const selector of [".details-toggle", ".comment-count", ".label-more", ".movement-marker"]) {
+            for (const selector of [".card-open", ".comment-count", ".label-more", ".movement-marker"]) {
               const bounds = (await page.locator(`.issue-card ${selector}`).first().boundingBox())!;
               expect(Math.round(bounds.width)).toBeGreaterThanOrEqual(44); expect(Math.round(bounds.height)).toBeGreaterThanOrEqual(44);
             }
@@ -169,9 +169,10 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
     const more = labeled.locator(".label-more");
     await more.focus(); await page.keyboard.press("Enter");
     await expect(labeled.getByRole("tooltip")).toContainText("touch target audit");
+    await expect(labeled.locator(".card-open")).toHaveAttribute("aria-expanded", "false");
     await page.keyboard.press("Escape");
     await expect(labeled.getByRole("tooltip")).toHaveCount(0);
-    const toggle = labeled.getByRole("button", { name: "Läs mer", exact: true });
+    const toggle = labeled.locator(".card-open");
     await toggle.focus(); await page.keyboard.press("Enter");
     await expect(labeled.getByRole("heading", { name: "Task details", exact: true })).toBeVisible();
     await page.keyboard.press("Space");

@@ -25,7 +25,7 @@ test("movement markers and sidebar dots are acknowledged individually and expire
   await page.keyboard.press("Control+r");
   await expect(page.locator(".unread-move")).toHaveCount(2);
   await expect(page.locator(".recent-activity")).toHaveCount(1);
-  await page.locator(".unread-move").first().getByRole("button", { name: "Läs mer", exact: true }).click();
+  await page.locator(".unread-move").first().locator(".card-open").press("Enter");
   await expect(page.locator(".unread-move")).toHaveCount(1);
   await expect(page.locator(".recent-activity")).toHaveCount(1);
   await page.getByRole("button", { name: "Nyligen flyttad. Markera som läst", exact: true }).click();

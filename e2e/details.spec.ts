@@ -48,11 +48,53 @@ for (const scenario of [
     await expect(card.getByRole("button", { name: "7 kommentarer" })).toBeVisible();
     if (mode === "Kort") {
       await expect(card.getByRole("heading", { name: "Implementation plan" })).toHaveCount(0);
-      await card.getByRole("button", { name: "Läs mer", exact: true }).focus();
+      const action = card.getByRole("button", { name: "Beskrivning för #1: Detailed task", exact: true });
+      await expect(action).toHaveAttribute("aria-expanded", "false");
+      await expect(card.getByRole("button", { name: "Läs mer", exact: true })).toHaveCount(0);
+      // Real pointer text selection must not activate the surface on mouseup.
+      if (!scenario.mobile) {
+        const age = (await card.locator(".backlog-age").boundingBox())!;
+        await page.mouse.move(age.x + 1, age.y + age.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(age.x + age.width - 1, age.y + age.height / 2, { steps: 10 });
+        await page.mouse.up();
+        expect(await page.evaluate(() => window.getSelection()?.toString().length)).toBeGreaterThan(0);
+        await expect(action).toHaveAttribute("aria-expanded", "false");
+        await page.evaluate(() => window.getSelection()?.removeAllRanges());
+      }
+      // A retained selection and nested comment button must not activate the surface.
+      await card.locator(".issue-title").evaluate(element => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+      });
+      await card.locator(".issue-number").dispatchEvent("click", { button: 0 });
+      await expect(action).toHaveAttribute("aria-expanded", "false");
+      await page.evaluate(() => window.getSelection()?.removeAllRanges());
+      await card.getByRole("button", { name: "7 kommentarer" }).click();
+      await expect(page.getByRole("dialog", { name: "Kommentarer för #1", exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(action).toHaveAttribute("aria-expanded", "false");
+      await context.route("https://github.com/sample/details-project/issues/1", route => route.fulfill({ body: "Fictional issue" }));
+      const popupPromise = page.waitForEvent("popup");
+      await card.getByRole("link", { name: "Detailed task", exact: true }).click();
+      await (await popupPromise).close();
+      await expect(action).toHaveAttribute("aria-expanded", "false");
+      await page.keyboard.press("Tab");
+      await action.focus();
+      await expect(action).toHaveCSS("outline-style", "solid");
+      await page.screenshot({ path: testInfo.outputPath("card-focus.png") });
       await page.keyboard.press("Enter");
+      await expect(action).toHaveAttribute("aria-expanded", "true");
+      await page.keyboard.press("Space");
+      await expect(action).toHaveAttribute("aria-expanded", "false");
+      if (scenario.mobile) await card.locator(".issue-number").tap();
+      else await card.locator(".issue-number").click();
     }
     if (mode === "Kort") await expect(card.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
     await expect(card.getByRole("heading", { name: "Implementation plan" })).toBeVisible();
+    // Reading plain Markdown keeps the description open.
+    await card.getByRole("heading", { name: "Implementation plan" }).click();
+    await expect(card.locator(".details-panel")).toBeVisible();
     await expect(card.locator(".issue-markdown")).not.toContainText("internal marker");
     await expect(card.locator(".issue-markdown")).not.toContainText("automation marker");
     await expect(card.locator('input[type="checkbox"]')).toHaveCount(2);
@@ -86,14 +128,15 @@ for (const scenario of [
     expect(await card.locator("pre").evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
     if (mode === "Kort") {
       await card.getByRole("button", { name: "Visa mindre", exact: true }).click();
-      await expect(card.getByRole("button", { name: "Läs mer", exact: true })).toHaveAttribute("aria-expanded", "false");
+      await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "false");
+      await expect(card.locator(".card-open")).toBeFocused();
       await expect(card.locator(".details-panel")).toHaveCount(0);
     } else if (scenario.mobile) await page.keyboard.press("Escape");
     else await page.locator(".row-title").filter({ hasText: "Detailed task" }).click();
     if (mode === "Lista") await page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Empty task", exact: true }) }).locator(".row-title").click();
     const empty = mode === "Kort" ? page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Empty task" }) }) : page.locator(".issue-card").filter({ visible: true }).first();
     await expect(empty.getByRole("button", { name: "0 kommentarer" })).toBeVisible();
-    if (mode === "Kort") await empty.getByRole("button", { name: "Läs mer", exact: true }).click();
+    if (mode === "Kort") await empty.locator(".card-open").press("Enter");
     await expect(empty.getByText("Ingen beskrivning har lagts till.")).toBeVisible();
     await context.close();
   });

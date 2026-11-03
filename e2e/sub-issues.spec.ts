@@ -36,7 +36,7 @@ for (const device of [
   await page.getByLabel('Pågående arbete', { exact: true }).fill('shipping');
   await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
   const card = page.locator('.issue-card').filter({ has: page.getByRole('link', { name: parent.title, exact: true }) });
-  await card.getByRole('button', { name: 'Läs mer', exact: true }).click();
+  await card.locator(".card-open").press("Enter");
   const section = card.getByRole('region', { name: 'Underärenden', exact: true });
   await expect(section.locator('li')).toHaveCount(3);
   await expect(section.getByRole('progressbar', { name: '1 av 3 underärenden stängda' })).toHaveCount(1);
@@ -54,7 +54,7 @@ for (const device of [
   await expect(section.locator('li').nth(2)).toContainText('Closed');
   expect(requests).toBe(2);
   await card.getByRole('button', { name: 'Visa mindre', exact: true }).click();
-  await card.getByRole('button', { name: 'Läs mer', exact: true }).click();
+  await card.locator(".card-open").press("Enter");
   await expect(section.locator('li')).toHaveCount(3); expect(requests).toBe(2);
   await section.screenshot({ path: info.outputPath('cards-sub-issues.png') });
   await page.getByRole('group', { name: 'Visningsläge för boarden', exact: true }).getByRole('button', { name: 'Lista', exact: true }).click();

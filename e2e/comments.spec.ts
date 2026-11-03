@@ -425,7 +425,7 @@ for (const scenario of [
   if (scenario.name === "desktop") await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
   const card = scenario.name === "desktop" ? page.locator(".issue-row").first() : page.locator(".issue-card").first();
   if (scenario.name === "desktop") await page.locator(".issue-row").nth(1).locator(".row-title").click();
-  else await page.locator(".issue-card").nth(1).getByRole("button", { name: "Läs mer", exact: true }).click();
+  else await page.locator(".issue-card").nth(1).locator(".card-open").press("Enter");
   await expect(page.getByRole("button", { name: "Öppna bild: Other issue image", exact: true })).toBeVisible();
   // The description is collapsed, but its images belong to the same issue gallery.
   await card.getByRole("button", { name: "102 kommentarer", exact: true }).click();
@@ -487,7 +487,7 @@ for (const scenario of [
   await expect(opener).toBeFocused();
   await discussion.getByRole("button", { name: "Stäng kommentarer", exact: true }).click();
   if (scenario.name === "desktop") await card.locator(".row-title").click();
-  else await card.getByRole("button", { name: "Läs mer", exact: true }).click();
+  else await card.locator(".card-open").press("Enter");
   await card.getByRole("button", { name: "Öppna bild: Description", exact: true }).click();
   // Closed comment dialogs supply no stale images; another issue cannot enter this gallery.
   await expect(viewer.locator(".image-navigation")).toHaveCount(0);

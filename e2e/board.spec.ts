@@ -61,7 +61,7 @@ test("phone swimlanes stack every status and keep controls reachable without sid
 
   // A control in the final status of the final repository remains keyboard accessible.
   const lastCard = lanes.last().locator(".closed .issue-card").last();
-  await lastCard.getByRole("button", { name: "Läs mer", exact: true }).focus();
+  await lastCard.locator(".card-open").focus();
   await page.keyboard.press("Enter");
   await expect(lastCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(lastCard.getByText("Ingen beskrivning har lagts till.")).toBeInViewport();

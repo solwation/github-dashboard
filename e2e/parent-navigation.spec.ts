@@ -57,7 +57,7 @@ for (const mode of ["Cards", "List"] as const) {
       await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
       const child = page.locator(".issue-card, .issue-row").filter({ hasText: "Child task" }).first();
       if (mode === "List") await child.locator(".row-title").click();
-      else await child.getByRole("button", { name: "Läs mer", exact: true }).click();
+      else await child.locator(".card-open").press("Enter");
       const parentButton = child.locator(".issue-parent button");
       await expect(parentButton).toContainText("Parent target");
       // A search must not strand the destination; parent selection clears it as needed.
@@ -78,7 +78,7 @@ for (const mode of ["Cards", "List"] as const) {
       expect(popup.popupCount()).toBe(popupCountBeforeParentSelection);
       await expect(githubLink).toHaveAttribute("target", "_blank");
       if (mode === "List") await target.locator(".row-title").click();
-      else await target.getByRole("button", { name: "Läs mer", exact: true }).click();
+      else await target.locator(".card-open").press("Enter");
       await expect(githubLink).toBeVisible();
       if (combined) await split.check();
       }
@@ -108,7 +108,7 @@ test("parent navigation works on touch phones in portrait, landscape and 320px l
         await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
         const child = page.locator(".issue-card, .issue-row").filter({ hasText: "Child task" }).first();
         if (mode === "List") await child.locator(".row-title").click();
-        else await child.getByRole("button", { name: "Läs mer", exact: true }).click();
+        else await child.locator(".card-open").press("Enter");
         const parentButton = mode === "List"
           ? page.getByRole("dialog", { name: "Child task" }).locator(".issue-parent button")
           : child.locator(".issue-parent button");
@@ -136,7 +136,7 @@ test("child selection from a parent navigates and highlights the board issue wit
       await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
       const parent = page.locator('[id="issue-sample%2Fparent-42"]');
       if (mode === "List") await parent.locator(".row-title").click();
-      else await parent.getByRole("button", { name: "Läs mer", exact: true }).click();
+      else await parent.locator(".card-open").press("Enter");
       const details = parent;
       if (mode === "Cards") await expect(parent.locator(".details-toggle")).toHaveAttribute("aria-expanded", "true");
       const childLink = details.locator(".issue-sub-issues button");
@@ -168,7 +168,7 @@ test("child navigation fits touch phones in portrait, landscape and narrow layou
         await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
         const parent = page.locator('[id="issue-sample%2Fparent-42"]');
         if (mode === "List") await parent.locator(".row-title").click();
-        else await parent.getByRole("button", { name: "Läs mer", exact: true }).click();
+        else await parent.locator(".card-open").press("Enter");
         const details = mode === "List" ? page.getByRole("dialog", { name: "Parent target" }) : parent;
         const childLink = details.locator(".issue-sub-issues button");
         await expect(childLink).toContainText("Child target");

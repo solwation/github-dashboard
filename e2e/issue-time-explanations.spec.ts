@@ -67,9 +67,9 @@ for (const [name, width, height, touch] of viewportMatrix) {
       const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
       await mode.getByRole("button", { name: "Kort", exact: true }).click();
       await expect(page.locator(".issue-card")).toHaveCount(7);
-      await expect(page.locator(".issue-card .details-toggle")).toHaveCount(7);
+      await expect(page.locator(".issue-card .card-open")).toHaveCount(7);
       const firstCard = page.locator(".issue-card").first();
-      await firstCard.getByRole("button", { name: "Läs mer", exact: true }).click();
+      await firstCard.locator(".card-open").press("Enter");
       await expect(firstCard.locator(".time-explanation")).toBeVisible();
       await expect(firstCard.locator(".time-explanation")).toContainText("grov storleksindikator");
       await firstCard.getByRole("button", { name: "Visa mindre", exact: true }).click();

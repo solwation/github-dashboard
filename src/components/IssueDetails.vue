@@ -10,11 +10,14 @@ import { useLanguage } from "../lib/i18n";
 import { imageGalleryKey, type ImageSource } from "../lib/comment-images";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; rowDetails?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
-const emit = defineEmits<{ read: []; childSelect: [repository: string, number: number] }>();
+const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; cardSurface?: boolean; rowDetails?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const emit = defineEmits<{ collapse: []; read: []; childSelect: [repository: string, number: number] }>();
 function toggle() {
   expanded.value = !expanded.value;
-  if (!expanded.value) return;
+  if (!expanded.value) {
+    if (props.cardSurface && document.activeElement?.classList.contains("details-toggle")) emit("collapse");
+    return;
+  }
   emit("read");
 }
 const markdown = useMarkdown();
@@ -23,6 +26,7 @@ const expanded = ref(Boolean(props.defaultExpanded));
 watch(() => props.defaultExpanded, value => { if (value) expanded.value = true; });
 watch([expanded, () => props.body], ([open, body]) => { if (open && body?.trim()) void markdown.load(); }, { immediate: true });
 const panelId = useId();
+defineExpose({ expanded, panelId, toggle, open: () => { if (!expanded.value) toggle(); } });
 const count = computed(() => Math.max(0, Math.floor(props.comments ?? 0)));
 const showTopToolbar = computed(() => {
   if (!props.rowDetails) return true;
@@ -36,7 +40,7 @@ provide(imageGalleryKey, { description: rendered, comments: commentImages });
   <div class="issue-details">
     <div v-if="showTopToolbar" class="details-toolbar">
       <slot name="metadata" />
-      <button v-if="!hideToggle" type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
+      <button v-if="!hideToggle && (!cardSurface || expanded)" type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
         {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
       </button>
       <IssueComments v-if="!rowDetails" :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />

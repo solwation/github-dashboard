@@ -44,7 +44,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   const roadmap = card(parent.title);
   await roadmap.scrollIntoViewIfNeeded();
   await expect(roadmap.locator("progress")).toHaveCount(0);
-  await roadmap.getByRole("button", { name: "Läs mer", exact: true }).click();
+  await roadmap.locator(".card-open").press("Enter");
   await expect(roadmap.getByRole("progressbar", { name: "2 av 5 underärenden stängda" })).toHaveAttribute("value", "2");
   await expect(roadmap.locator("progress")).toHaveAttribute("max", "5");
   await expect(roadmap.locator(".sub-issue-progress-label")).toContainText("40%");
@@ -56,7 +56,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   const nested = card("Nested work");
   await nested.scrollIntoViewIfNeeded();
   await expect(nested.locator(".issue-parent button")).toContainText("another/planning#42");
-  await nested.getByRole("button", { name: "Läs mer", exact: true }).click();
+  await nested.locator(".card-open").press("Enter");
   await expect(nested.getByRole("progressbar", { name: "0 av 2 underärenden stängda" })).toHaveAttribute("value", "0");
   await nested.locator(".issue-parent button").focus();
   await expect(nested.locator(".issue-parent button")).toBeFocused();
@@ -80,7 +80,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await nested.scrollIntoViewIfNeeded();
   await expect(nested.locator(".issue-parent > span")).toHaveText("Parent issue");
-  await nested.getByRole("button", { name: "Read more", exact: true }).click();
+  await nested.locator(".card-open").press("Enter");
   await expect(nested.getByRole("progressbar", { name: "0 of 2 sub-issues closed" })).toBeVisible();
   // Phone rows expose only a compact relation marker; full hierarchy remains in details, while desktop keeps descriptive badges.
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -117,7 +117,7 @@ test("REST progress stays available when GraphQL is denied and late parent respo
     return route.fulfill({ json: [] });
   });
   await connect(page);
-  await page.locator(".issue-card").getByRole("button", { name: "Läs mer", exact: true }).click();
+  await page.locator(".issue-card").locator(".card-open").press("Enter");
   await expect(page.getByRole("progressbar", { name: "0 av 3 underärenden stängda" })).toBeVisible();
   await expect.poll(() => requests).toBe(1);
   await expect(page.locator(".issue-sub-issues progress")).toHaveCount(1);

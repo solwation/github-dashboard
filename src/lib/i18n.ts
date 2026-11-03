@@ -412,6 +412,7 @@ export const english: Record<string, string> = {
   "För commit-information i privata projekt behövs även läsrättighet till Contents och Pull requests.":
     "For commit information in private projects, also grant read access to Contents and Pull requests.",
   "Läs mer": "Read more",
+  "Beskrivning för #{number}: {title}": "Description for #{number}: {title}",
   "Visa mindre": "Show less",
   "{count} kommentarer": "{count} comments",
   "1 kommentar": "1 comment",

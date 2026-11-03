@@ -1,10 +1,10 @@
 {
-  "baseCommit": "3db0a4119de8536e7501912371d998b20a867ae0",
+  "baseCommit": "1c99f234f67c9c88df37e8b10cfca1281fed96dc",
   "summary": {
-    "sv": "Den stängda vänstermenyn på telefon hoppas nu över vid tangentbordsnavigering och av skärmläsare.",
-    "en": "The closed left menu on phones is now skipped by keyboard navigation and screen readers."
+    "sv": "Öppna beskrivningen direkt genom att klicka eller trycka på ett issue-kort.",
+    "en": "Open the description directly by clicking or tapping an issue card."
   },
   "issues": [
-    384
+    386
   ]
 }
