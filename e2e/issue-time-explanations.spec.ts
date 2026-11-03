@@ -72,7 +72,7 @@ for (const [name, width, height, touch] of viewportMatrix) {
       await firstCard.locator(".card-open").press("Enter");
       await expect(firstCard.locator(".time-explanation")).toBeVisible();
       await expect(firstCard.locator(".time-explanation")).toContainText("grov storleksindikator");
-      await firstCard.getByRole("button", { name: "Visa mindre", exact: true }).click();
+      await firstCard.locator(".card-open").press("Enter");
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator(".swimlane").first().screenshot({ path: testInfo.outputPath(`${name}-cards-split.png`) });
       await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();

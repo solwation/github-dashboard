@@ -76,13 +76,13 @@ const emit = defineEmits<{ read: []; parentSelect: [repository: string, number: 
 const card = ref<HTMLElement>();
 const details = ref<InstanceType<typeof IssueDetails>>();
 const descriptionLabel = computed(() => t("Beskrivning för #{number}: {title}", { number: props.issue.number, title: props.issue.title }));
-function openFromSurface(event: MouseEvent) {
+function toggleFromSurface(event: MouseEvent) {
   if (props.rowDetails || event.defaultPrevented || event.button !== 0) return;
   const target = event.target;
   if (!(target instanceof Element) || target.closest('a, button, input, select, textarea, summary, [role="button"], [role="link"], [contenteditable]:not([contenteditable="false"])')) return;
   // Dragging/selecting text must never activate the card, including Markdown text.
   if (window.getSelection()?.toString()) return;
-  details.value?.open();
+  details.value?.toggle();
 }
 const visible = ref(false);
 const { progress, isSubtask, parent } = useIssueRelations(
@@ -236,7 +236,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
     ref="card"
     class="issue-card"
     tabindex="-1"
-    @click="openFromSurface"
+    @click="toggleFromSurface"
     :data-repository="rowDetails ? undefined : repository"
     :style="repository ? { '--repository-color': assignedColor || repositoryColor(repository) } : undefined"
     :class="[col, { 'row-details-card': rowDetails, 'has-repository': !!repository && !rowDetails, 'just-closed': celebrate && col === 'closed' && !rowDetails, 'unread-move': recentMove === true && !rowDetails, 'unread-created': recentMove === 'created' && !rowDetails, 'issue-timeout': timedOut && col === 'progress' && !rowDetails, 'pending-closure': issue.pendingClosure && !rowDetails }]"
@@ -316,7 +316,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
       </span>
     <IssueRelationsView v-if="repository && !demo" :issue="issue" :repository="repository" :visible="visible"
       :load="loadRelations" :session="commentsSession" :revision="relationsRevision" @parent-select="(repo, number) => emit('parentSelect', repo, number)" />
-    <IssueDetails @collapse="card?.querySelector<HTMLButtonElement>('.card-open')?.focus()" ref="details" :card-surface="!rowDetails" :row-details="rowDetails" :sub-issue-progress="progress" :hide-toggle="rowDetails" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" @child-select="(repo, number) => emit('childSelect', repo, number)">
+    <IssueDetails ref="details" :row-details="rowDetails" :sub-issue-progress="progress" :body="issue.body" :issue="issue" :comments="issue.comments" :new-comments="newComments" :default-expanded="defaultExpanded" :load-comments="loadComments" :comments-session="commentsSession" :demo="demo" @read="emit('read')" @child-select="(repo, number) => emit('childSelect', repo, number)">
       <template #metadata>
     <div v-if="!rowDetails || issue.assignees.length" class="card-bottom">
       <template v-if="!rowDetails">
@@ -421,7 +421,6 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
 /* Pointer events reach the real content; keyboard activation uses the native button. */
 .card-open { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: transparent; pointer-events: none; }
 .card-open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.issue-card :deep(.details-panel) { cursor: auto; }
 
 .card-top-meta { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
 .subtask-badge, .parent-task-badge {

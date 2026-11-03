@@ -175,6 +175,11 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
     const toggle = labeled.locator(".card-open");
     await toggle.focus(); await page.keyboard.press("Enter");
     await expect(labeled.getByRole("heading", { name: "Task details", exact: true })).toBeVisible();
+    await more.click();
+    await expect(labeled.getByRole("tooltip")).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await toggle.focus();
     await page.keyboard.press("Space");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await labeled.locator(".comment-count").focus(); await page.keyboard.press("Enter");

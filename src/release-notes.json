@@ -2,17 +2,18 @@
   {
     "date": "2026-11-03",
     "summary": {
-      "sv": "Öppna beskrivningar direkt från issue-kortets yta.",
-      "en": "Open descriptions directly from the issue card surface."
+      "sv": "Öppna och stäng beskrivningar direkt från issue-kortets yta.",
+      "en": "Open and close descriptions directly from the issue card surface."
     },
     "sections": [
       {
         "text": {
-          "sv": "Klicka eller tryck på ett kort för att läsa detaljer direkt, med bibehållna länkar, textmarkering och tangentbordsåtkomst.",
-          "en": "Click or tap a card to read details directly, while preserving links, text selection and keyboard access."
+          "sv": "Klicka eller tryck på ett kort för att öppna eller stänga detaljer, med bibehållna länkar, textmarkering och tangentbordsåtkomst.",
+          "en": "Click or tap a card to open or close details, while preserving links, text selection and keyboard access."
         },
         "issues": [
-          386
+          386,
+          388
         ]
       }
     ]

@@ -53,7 +53,7 @@ for (const device of [
   await expect(section.locator('li').nth(1).getByRole('button')).toHaveText(`${other.full_name}#${active.number} · ${active.title}`);
   await expect(section.locator('li').nth(2)).toContainText('Closed');
   expect(requests).toBe(2);
-  await card.getByRole('button', { name: 'Visa mindre', exact: true }).click();
+  await card.locator(".card-open").press("Enter");
   await card.locator(".card-open").press("Enter");
   await expect(section.locator('li')).toHaveCount(3); expect(requests).toBe(2);
   await section.screenshot({ path: info.outputPath('cards-sub-issues.png') });

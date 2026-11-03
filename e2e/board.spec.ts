@@ -63,7 +63,7 @@ test("phone swimlanes stack every status and keep controls reachable without sid
   const lastCard = lanes.last().locator(".closed .issue-card").last();
   await lastCard.locator(".card-open").focus();
   await page.keyboard.press("Enter");
-  await expect(lastCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(lastCard.locator(".card-open")).toHaveAttribute("aria-expanded", "true");
   await expect(lastCard.getByText("Ingen beskrivning har lagts till.")).toBeInViewport();
 
   await page.setViewportSize({ width: 1280, height: 900 });

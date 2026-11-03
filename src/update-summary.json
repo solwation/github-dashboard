@@ -1,10 +1,10 @@
 {
-  "baseCommit": "1c99f234f67c9c88df37e8b10cfca1281fed96dc",
+  "baseCommit": "9693c5252f9a5f3579fe641ee630413c4fb8c244",
   "summary": {
-    "sv": "Öppna beskrivningen direkt genom att klicka eller trycka på ett issue-kort.",
-    "en": "Open the description directly by clicking or tapping an issue card."
+    "sv": "Klicka på ett issue-kort för att öppna beskrivningen och klicka igen för att stänga den.",
+    "en": "Click an issue card to open its description, then click again to close it."
   },
   "issues": [
-    386
+    388
   ]
 }

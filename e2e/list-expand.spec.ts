@@ -155,7 +155,7 @@ test("desktop expands row details in place with open description while phone ope
       // Opening a list row is an explicit request for details: Markdown is rendered immediately.
       await expect(popupCard.locator(".issue-markdown")).toContainText("Description of beta task 1");
       await expect(popupCard.locator(".issue-markdown")).toContainText("Long paragraph 50 keeps scrolling content below the dialog header.");
-      await expect(popupCard.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
+      await expect(popupCard.locator(".card-open")).toHaveAttribute("aria-expanded", "true");
       expect(await noPageScroll(page)).toBe(true);
 
       // #159: on mobile, close is an X button in the top-right corner inside the card, no separate button below.

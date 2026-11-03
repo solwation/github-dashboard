@@ -138,7 +138,7 @@ test("child selection from a parent navigates and highlights the board issue wit
       if (mode === "List") await parent.locator(".row-title").click();
       else await parent.locator(".card-open").press("Enter");
       const details = parent;
-      if (mode === "Cards") await expect(parent.locator(".details-toggle")).toHaveAttribute("aria-expanded", "true");
+      if (mode === "Cards") await expect(parent.locator(".card-open")).toHaveAttribute("aria-expanded", "true");
       const childLink = details.locator(".issue-sub-issues button");
       await expect(childLink).toContainText("Child target");
       const popupsBefore = popup.popupCount();

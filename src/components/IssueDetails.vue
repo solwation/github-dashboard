@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, provide, ref, useId, watch } from "vue";
-import { ChevronDown, ChevronUp } from "@lucide/vue";
 import type { SubIssueProgress } from "../lib/issue-relations";
 import IssueSubIssues from "./IssueSubIssues.vue";
 import IssueComments from "./IssueComments.vue";
@@ -10,14 +9,11 @@ import { useLanguage } from "../lib/i18n";
 import { imageGalleryKey, type ImageSource } from "../lib/comment-images";
 import { useMarkdown } from "../lib/lazy-markdown";
 
-const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; hideToggle?: boolean; cardSurface?: boolean; rowDetails?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
-const emit = defineEmits<{ collapse: []; read: []; childSelect: [repository: string, number: number] }>();
+const props = defineProps<{ subIssueProgress?: SubIssueProgress | null; body?: string | null; comments?: number; newComments?: number; issue: Issue; demo?: boolean; defaultExpanded?: boolean; rowDetails?: boolean; loadComments?: (issue: Issue) => Promise<IssueComment[]>; commentsSession?: number }>();
+const emit = defineEmits<{ read: []; childSelect: [repository: string, number: number] }>();
 function toggle() {
   expanded.value = !expanded.value;
-  if (!expanded.value) {
-    if (props.cardSurface && document.activeElement?.classList.contains("details-toggle")) emit("collapse");
-    return;
-  }
+  if (!expanded.value) return;
   emit("read");
 }
 const markdown = useMarkdown();
@@ -26,11 +22,11 @@ const expanded = ref(Boolean(props.defaultExpanded));
 watch(() => props.defaultExpanded, value => { if (value) expanded.value = true; });
 watch([expanded, () => props.body], ([open, body]) => { if (open && body?.trim()) void markdown.load(); }, { immediate: true });
 const panelId = useId();
-defineExpose({ expanded, panelId, toggle, open: () => { if (!expanded.value) toggle(); } });
+defineExpose({ expanded, panelId, toggle });
 const count = computed(() => Math.max(0, Math.floor(props.comments ?? 0)));
 const showTopToolbar = computed(() => {
   if (!props.rowDetails) return true;
-  return !props.hideToggle || (props.issue.assignees && props.issue.assignees.length > 0);
+  return props.issue.assignees && props.issue.assignees.length > 0;
 });
 const rendered = computed(() => markdown.renderer.value ? markdown.renderer.value(props.body) : "");
 const commentImages = ref<ImageSource[]>([]);
@@ -40,9 +36,6 @@ provide(imageGalleryKey, { description: rendered, comments: commentImages });
   <div class="issue-details">
     <div v-if="showTopToolbar" class="details-toolbar">
       <slot name="metadata" />
-      <button v-if="!hideToggle && (!cardSurface || expanded)" type="button" class="details-toggle" :aria-expanded="expanded" :aria-controls="panelId" @click="toggle">
-        {{ expanded ? t("Visa mindre") : t("Läs mer") }}<ChevronUp v-if="expanded" :size="13" /><ChevronDown v-else :size="13" />
-      </button>
       <IssueComments v-if="!rowDetails" :issue="issue" :count="count" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <section v-if="expanded" :id="panelId" class="details-panel" :class="{ 'details-panel-first': !showTopToolbar }" :aria-label="t('Beskrivning')">
@@ -65,8 +58,6 @@ provide(imageGalleryKey, { description: rendered, comments: commentImages });
 .issue-details { min-width: 0; margin-top: .7rem; }
 .details-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .details-toolbar > :last-child { margin-left: auto; }
-.details-toggle { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem 0; border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: .72rem; font-weight: 600; }
-.details-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 .details-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); min-width: 0; max-width: 100%; }
 .details-panel.details-panel-first { margin-top: 0; padding-top: 0; border-top: 0; }
 .details-footer { margin-top: .75rem; display: flex; align-items: center; }

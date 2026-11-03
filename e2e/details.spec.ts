@@ -90,11 +90,26 @@ for (const scenario of [
       if (scenario.mobile) await card.locator(".issue-number").tap();
       else await card.locator(".issue-number").click();
     }
-    if (mode === "Kort") await expect(card.getByRole("button", { name: "Visa mindre", exact: true })).toHaveAttribute("aria-expanded", "true");
+    if (mode === "Kort") await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "true");
     await expect(card.getByRole("heading", { name: "Implementation plan" })).toBeVisible();
-    // Reading plain Markdown keeps the description open.
-    await card.getByRole("heading", { name: "Implementation plan" }).click();
-    await expect(card.locator(".details-panel")).toBeVisible();
+    if (mode === "Kort") {
+      await expect(card.getByRole("button", { name: /^(Läs mer|Visa mindre)$/ })).toHaveCount(0);
+      // Selected description text stays open; a second ordinary click closes it.
+      const heading = card.getByRole("heading", { name: "Implementation plan" });
+      await heading.evaluate(element => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+      });
+      await heading.dispatchEvent("click", { button: 0 });
+      await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "true");
+      await page.evaluate(() => window.getSelection()?.removeAllRanges());
+      if (scenario.mobile) await heading.tap();
+      else await heading.click();
+      await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "false");
+      if (scenario.mobile) await card.locator(".issue-number").tap();
+      else await card.locator(".issue-number").click();
+      await expect(card.locator(".details-panel")).toBeVisible();
+    }
     await expect(card.locator(".issue-markdown")).not.toContainText("internal marker");
     await expect(card.locator(".issue-markdown")).not.toContainText("automation marker");
     await expect(card.locator('input[type="checkbox"]')).toHaveCount(2);
@@ -124,12 +139,15 @@ for (const scenario of [
     await viewer.getByRole("button", { name: "Stäng bild", exact: true }).click();
     await expect(card.getByRole("link", { name: "GitHub", exact: true })).not.toHaveAttribute("data-image-src");
     await page.screenshot({ path: testInfo.outputPath("description.png") });
+    await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+    await page.screenshot({ path: testInfo.outputPath("description-dark.png") });
+    await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await card.locator("pre").evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
     if (mode === "Kort") {
-      await card.getByRole("button", { name: "Visa mindre", exact: true }).click();
+      if (scenario.mobile) await card.locator(".issue-number").tap();
+      else await card.locator(".issue-number").click();
       await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "false");
-      await expect(card.locator(".card-open")).toBeFocused();
       await expect(card.locator(".details-panel")).toHaveCount(0);
     } else if (scenario.mobile) await page.keyboard.press("Escape");
     else await page.locator(".row-title").filter({ hasText: "Detailed task" }).click();
