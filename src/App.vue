@@ -48,6 +48,7 @@ import { bundledReleaseNotes, noteLanguage, notesSince, type ReleaseNoteDay } fr
 import { useAppUpdate } from "./composables/useAppUpdate";
 import { PUBLIC_CONTENT_LIFETIME_MS, readPublicContent, writePublicContent, type PublicLaneSnapshot } from "./lib/public-content-cache";
 import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
+import { normalizeRepositoryOwnerDisplay, sidebarRepositoryDisplayName, type RepositoryOwnerDisplay } from "./lib/repository-display-name";
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
 import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
@@ -1077,7 +1078,8 @@ const combinedEstimateGroups = computed(() => contentLanes.value.filter((lane) =
   rules: rules.value[lane.repo.full_name],
 })));
 // Match the current column calibration, including filters and loading repository exclusion.
-provideRepositoryDisplayNames(() => orderedLanes.value.map(lane => lane.repo.full_name), () => !splitByRepository.value);
+const repositoryOwnerDisplay = ref<RepositoryOwnerDisplay>("auto");
+provideRepositoryDisplayNames(() => orderedLanes.value.map(lane => lane.repo.full_name), () => !splitByRepository.value, () => repositoryOwnerDisplay.value);
 provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
   contentLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
 ), () => !splitByRepository.value);
@@ -1160,8 +1162,9 @@ const unreadOverviewCount = computed(() => {
 });
 const sidebarRepos = computed(() => {
   activityRevision.value;
+  const names = orderedLanes.value.map(lane => lane.repo.full_name);
   return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
-    (repo, issue) => activity.changedAt(repo, issue, activityNow.value), externalNames.value);
+    (repo, issue) => activity.changedAt(repo, issue, activityNow.value), externalNames.value).map(repo => ({ ...repo, name: sidebarRepositoryDisplayName(repo.fullName, names, repositoryOwnerDisplay.value) }));
 });
 const sidebarRepoByName = computed(() => new Map(sidebarRepos.value.map(repo => [repo.fullName, repo])));
 const repositoryVisibilities = computed<Record<string, RepositoryVisibility>>(() => {
@@ -1240,6 +1243,7 @@ watch(() => ({
   }
 }, { deep: true });
 const transferablePreferences = computed<HandoffPreferences>(() => ({
+  repositoryOwnerDisplay: repositoryOwnerDisplay.value,
   repositoryColors: workspaceRepositoryColors.value,
   projectOrder: projectOrder.value, collapsedRepos: collapsedRepos.value,
   columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
@@ -1250,6 +1254,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
+  repositoryOwnerDisplay.value = normalizeRepositoryOwnerDisplay(value.repositoryOwnerDisplay ?? repositoryOwnerDisplay.value);
   repositoryColors.value = value.repositoryColors ?? repositoryColors.value;
   projectOrder.value = value.projectOrder ?? projectOrder.value;
   collapsedRepos.value = value.collapsedRepos ?? collapsedRepos.value;
@@ -1281,7 +1286,7 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   applyChosenPreferences(state);
   return save();
 }
-watch([query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listMode, currentView, statisticsPreferences, preference], () => save(), { deep: true });
+watch([repositoryOwnerDisplay, query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listMode, currentView, statisticsPreferences, preference], () => save(), { deep: true });
 // Periodic Background Sync (#129): keep the installed app's background check registered only
 // while a signed-in account has notifications on for a selected repository. Untouched elsewhere.
 const scheduleBackgroundCheck = createBackgroundCheckScheduler();
@@ -1350,6 +1355,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
     listMode.value = false;
     notificationSounds.value = true;
+    repositoryOwnerDisplay.value = "auto";
     try {
       const saved = settings.value;
       if (saved) {
@@ -1804,6 +1810,7 @@ function showDemo() {
   resetEventHistory();
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
+  repositoryOwnerDisplay.value = "auto";
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
   splitByRepository.value = true;
@@ -1857,6 +1864,7 @@ function logout() {
   rememberPublicWorkspace(false); publicRepoInput.value = ""; publicRepoError.value = ""; publicRepoBusy.value = false;
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
+  repositoryOwnerDisplay.value = "auto";
   settingsAccount = null; publicMode.value = false; publicSnapshots = []; // Encrypted settings stay saved for this account's next sign-in.
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
@@ -2292,7 +2300,7 @@ onMounted(async () => {
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="20" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
-        <LanguageSettings :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings v-model:repository-owner-display="repositoryOwnerDisplay" :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button

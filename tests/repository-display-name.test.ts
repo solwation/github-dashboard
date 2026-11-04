@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compactRepositoryOwner, repositoryDisplayName } from '../src/lib/repository-display-name';
+import { compactRepositoryOwner, repositoryDisplayName, normalizeRepositoryOwnerDisplay, sidebarRepositoryDisplayName } from '../src/lib/repository-display-name';
 
 describe('combined repository display labels', () => {
   it('shortens one or several selected repositories only when owners agree case-insensitively', () => {
@@ -30,5 +30,29 @@ describe('combined repository display labels', () => {
     selected.pop();
     expect(repositoryDisplayName(selected[0]!, compactRepositoryOwner(selected, true))).toBe('one');
     expect(selected).toEqual(['owner/one', 'OWNER/two']);
+  });
+});
+
+describe('account owner-display choice', () => {
+  it('defaults older or invalid account values to Auto', () => {
+    for (const value of [undefined, null, false, 'YES', {}]) expect(normalizeRepositoryOwnerDisplay(value)).toBe('auto');
+    for (const value of ['auto', 'yes', 'no'] as const) expect(normalizeRepositoryOwnerDisplay(value)).toBe(value);
+  });
+  it('overrides Auto for shared, mixed, colliding and foreign repository names without changing identity', () => {
+    for (const names of [['owner/same', 'OWNER/other'], ['owner/same', 'another/same']]) {
+      for (const combined of [true, false]) {
+        const owner = compactRepositoryOwner(names, combined);
+        expect(names.map(name => repositoryDisplayName(name, owner, 'yes'))).toEqual(names);
+        expect(names.map(name => repositoryDisplayName(name, owner, 'no'))).toEqual(names.map(name => name.split('/')[1]));
+      }
+    }
+    expect(repositoryDisplayName('foreign/repo', 'owner', 'no')).toBe('repo');
+    expect(repositoryDisplayName('owner/repo/extra', null, 'no')).toBe('owner/repo/extra');
+  });
+  it('uses sidebar project owners independently of split board layout', () => {
+    expect(sidebarRepositoryDisplayName('owner/first', ['owner/first', 'OWNER/second'], 'auto')).toBe('first');
+    expect(sidebarRepositoryDisplayName('owner/first', ['owner/first', 'other/second'], 'auto')).toBe('owner/first');
+    expect(sidebarRepositoryDisplayName('owner/first', ['owner/first'], 'yes')).toBe('owner/first');
+    expect(sidebarRepositoryDisplayName('owner/first', ['owner/first', 'other/second'], 'no')).toBe('first');
   });
 });

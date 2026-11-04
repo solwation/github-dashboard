@@ -66,6 +66,8 @@ export const english: Record<string, string> = {
   "{duration} utan synlig aktivitet": "{duration} without visible activity",
   "Möjligen avstannat. Ingen synlig aktivitet på ärendet på {duration}. Agenten kan ha fastnat eller kopplats från. Arbete kan också pågå utan GitHub-uppdateringar; kontrollera agenten eller samordningstråden.": "Possibly stalled. No visible issue activity for {duration}. The agent may be stuck or disconnected. Work may also continue without GitHub updates; check the agent or coordination thread.",
   "Utseende": "Appearance",
+  "Visa GitHub-användarnamn i projekt": "Show GitHub username in projects",
+  "Auto behåller automatisk visning. Yes visar alltid ägare/projekt. No visar bara projektnamnet. Sparas för ditt konto.": "Auto keeps automatic display. Yes always shows owner/project. No shows only the project name. Saved for your account.",
   "Board": "Board",
   "Tidsestimat": "Time estimates",
   "Bild": "Image",

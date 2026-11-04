@@ -1,10 +1,10 @@
 {
-  "baseCommit": "56d8df2949022656756ffb611863e6e321b49f31",
+  "baseCommit": "1884fa6a5d569beac8f8b09ac8d452cff1dafe47",
   "summary": {
-    "sv": "Projektfel samlas i en klickbar rad. Headerns klocka visar historik för information, varningar och fel med en badge för olästa händelser.",
-    "en": "Project errors share one clickable summary. The header bell shows information, warnings and errors, with a badge for unread events."
+    "sv": "Välj Auto, Yes eller No i Inställningar för att styra om projektens GitHub-användarnamn visas i labels och vänstermeny.",
+    "en": "Choose Auto, Yes or No in Settings to control whether project GitHub usernames appear in repository labels and the sidebar."
   },
   "issues": [
-    389
+    394
   ]
 }

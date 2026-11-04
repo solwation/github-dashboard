@@ -1,3 +1,4 @@
+import { validRepositoryOwnerDisplay, type RepositoryOwnerDisplay } from "./repository-display-name";
 import { normalizeTimeoutSettings } from "./timeouts";
 import { reconcileRepositoryColors, validRepositoryColor } from "./repository-color";
 import { validColumnLimit } from "./column-limits";
@@ -28,6 +29,7 @@ export interface HandoffStatisticsFilter {
 }
 export type HandoffStatisticsPreferences = Record<string, HandoffStatisticsFilter>;
 export interface HandoffPreferences {
+  repositoryOwnerDisplay?: RepositoryOwnerDisplay;
   repositoryColors?: Record<string, string>;
   projectOrder?: string[];
   collapsedRepos?: string[];
@@ -77,6 +79,7 @@ function validWindow(from: unknown, to: unknown): boolean {
   return validStatisticsBound(from) && validStatisticsBound(to) && Number.isFinite(statisticsWindowMs({ from, to }).start);
 }
 const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> = {
+  repositoryOwnerDisplay: validRepositoryOwnerDisplay,
   repositoryColors: value => repoMap(value, validRepositoryColor),
   projectOrder: handoffRepositoryList, collapsedRepos: handoffRepositoryList,
   columnLimit: validColumnLimit, repositoryColumnLimits: value => repoMap(value, validColumnLimit),

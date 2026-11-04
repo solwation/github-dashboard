@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { RepositoryOwnerDisplay } from "../lib/repository-display-name";
 import { ref, watch } from "vue";
 import { DEFAULT_TIMEOUT_OVERRUN_PERCENT, MAX_TIMEOUT_OVERRUN_PERCENT, parseTimeoutOverrunPercent } from "../lib/timeouts";
 import RepositoryOrderDialog from "./RepositoryOrderDialog.vue";
@@ -16,7 +17,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
+const props = withDefaults(defineProps<{ repositoryOwnerDisplay?: RepositoryOwnerDisplay; repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { repositoryOwnerDisplay: "auto", repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -34,7 +35,7 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
+const emit = defineEmits<{ "update:repositoryOwnerDisplay": [value: RepositoryOwnerDisplay]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const percent = parseTimeoutOverrunPercent(input.value);
@@ -109,6 +110,16 @@ function changeTheme(event: Event) {
       <section class="settings-section" aria-labelledby="board-settings-title">
         <h3 id="board-settings-title">{{ t("Board") }}</h3>
         <div class="settings-field">
+          <label for="repository-owner-display">{{ t("Visa GitHub-användarnamn i projekt") }}</label>
+          <select id="repository-owner-display" :value="repositoryOwnerDisplay" :disabled="!canEditLimit" aria-describedby="repository-owner-display-help"
+            @change="emit('update:repositoryOwnerDisplay', ($event.target as HTMLSelectElement).value as RepositoryOwnerDisplay)">
+            <option value="auto">Auto</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+          <p id="repository-owner-display-help">{{ t("Auto behåller automatisk visning. Yes visar alltid ägare/projekt. No visar bara projektnamnet. Sparas för ditt konto.") }}</p>
+        </div>
+        <div class="settings-field">
           <ColumnLimitField id="global-column-limit" :model-value="columnLimit" :disabled="!canEditLimit"
             @update:model-value="emit('update:columnLimit', $event)" />
           <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
@@ -170,6 +181,7 @@ function changeTheme(event: Event) {
 .settings-field :deep(.rule-field) { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; }
 .settings-dialog select#language-preference,
 .settings-dialog select#theme-preference,
+.settings-dialog select#repository-owner-display,
 .settings-dialog .settings-field :deep(input[type="number"]) { width: 100%; min-width: 0; min-height: 36px; margin: 0; padding: var(--space-2); border: 1px solid var(--input-border); border-radius: var(--space-1); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; line-height: 1.4; }
 .settings-dialog :deep(select:focus-visible),
 .settings-dialog :deep(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -189,6 +201,7 @@ function changeTheme(event: Event) {
 @media (pointer: coarse) {
   .settings-dialog select#language-preference,
   .settings-dialog select#theme-preference,
+.settings-dialog select#repository-owner-display,
   .settings-dialog .settings-field :deep(input[type="number"]),
   .settings-actions > .button,
   .settings-actions :deep(.repository-order-open),

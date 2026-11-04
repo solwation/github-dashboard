@@ -72,6 +72,7 @@ describe("mobile handoff", () => {
 });
 
 const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList" | "timeoutMinutes">> = {
+  repositoryOwnerDisplay: "yes",
   repositoryColors: { "sample/repo": "#8b43b5" },
   projectOrder: ["sample/second", "sample/repo"],
   collapsedRepos: ["sample/second"], columnLimit: 8,
@@ -220,4 +221,12 @@ describe("compact format limits", () => {
 
 it('migrates legacy minute preferences instead of treating minutes as a percentage', () => {
   expect(parseHandoffPreferences({ timeoutMinutes: 180 })).toEqual({ timeoutEnabled: true, timeoutOverrunPercent: 25 });
+});
+
+it('validates owner-display choices and preserves them when an older transfer omits the field', () => {
+  for (const value of ['auto', 'yes', 'no'] as const) expect(parseHandoffPreferences({ repositoryOwnerDisplay: value })).toEqual({ repositoryOwnerDisplay: value });
+  expect(() => parseHandoffPreferences({ repositoryOwnerDisplay: true })).toThrow();
+  const current = { selected: ['sample/repo'], rules: {}, repositoryOwnerDisplay: 'no' as const };
+  expect(mergeHandoffPreferences(current, settings, ['sample/repo']).repositoryOwnerDisplay).toBe('no');
+  expect(mergeHandoffPreferences(current, { ...settings, preferences: { repositoryOwnerDisplay: 'yes' } }, ['sample/repo']).repositoryOwnerDisplay).toBe('yes');
 });
