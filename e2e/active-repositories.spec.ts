@@ -1,3 +1,4 @@
+import { setHideCoordination } from "./support/coordination-setting";
 import { expect, test } from '@playwright/test';
 import { openSettings } from "./support/phone-menu";
 
@@ -50,7 +51,7 @@ test('repository summary counts active projects independently of text search and
   await page.getByRole('textbox', { name: 'Sök issues', exact: true }).fill('no matching issue');
   await expect(page.locator('.issue-card')).toHaveCount(0);
   await expect(active).toHaveText('3 aktiva');
-  await page.getByRole('checkbox', { name: 'Dölj koordinationsärenden' }).uncheck();
+  await setHideCoordination(page, false);
   await expect(active).toHaveText('4 aktiva');
   await expect(activeRows).toHaveCount(4);
   await active.focus();

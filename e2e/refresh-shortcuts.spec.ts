@@ -1,3 +1,4 @@
+import { setHideCoordination, expectHideCoordination } from "./support/coordination-setting";
 import { expect, test, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
 
@@ -60,7 +61,7 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
   await page.getByRole("button", { name: "Klart", exact: true }).click();
   await page.getByRole("button", { name: "Kollapsa beta", exact: true }).click();
   await page.getByRole("textbox", { name: "Sök issues" }).fill("Keep");
-  await page.getByRole("checkbox", { name: "Dölj koordinationsärenden" }).uncheck();
+  await setHideCoordination(page, false);
   const requests = api.requests();
   // The post-connect background reconcile may be incremental; only the shortcuts' fetches are checked.
   const incremental = api.incrementalRequests.length;
@@ -87,7 +88,7 @@ test("refresh shortcuts fetch full data in place and preserve filters, order and
   await expect(page.locator(".repo-lane h2 a")).toHaveText(["beta", "alpha"]);
   await expect(page.getByRole("button", { name: "Expandera beta", exact: true })).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("textbox", { name: "Sök issues" })).toHaveValue("Keep");
-  await expect(page.getByRole("checkbox", { name: "Dölj koordinationsärenden" })).not.toBeChecked();
+  await expectHideCoordination(page, false);
   for (const [shortcut, version] of [["F5", 3], ["Meta+r", 4]] as const) {
     api.next();
     await page.keyboard.press(shortcut);
@@ -148,7 +149,7 @@ test("a refresh shortcut pressed during a background sync runs a full refresh on
       // The 15-second tick revalidates one list per repository with active issues (#123).
       activeRequests++;
       await gate;
-      data = task();
+      data = [task()];
     } else if (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open") {
       openRequests++;
       data = [task()];

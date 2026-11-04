@@ -18,12 +18,13 @@
       },
       {
         "text": {
-          "sv": "Jämför projekt i simbanor: horisontella band i Kort och en sammanhängande tabell med projektkolumner och gemensamma statusrader i Lista.",
-          "en": "Compare project swimlanes: horizontal bands in Cards and a joined table with repository columns and shared status rows in List."
+          "sv": "Visa List-simbanor som en sammanhängande tabell med projektkolumner och gemensamma statusrader, och styr koordinationsfiltret i Settings.",
+          "en": "View List swimlanes as one joined table with repository columns and shared status rows, and control coordination filtering in Settings."
         },
         "issues": [
           390,
-          402
+          402,
+          403
         ]
       },
       {

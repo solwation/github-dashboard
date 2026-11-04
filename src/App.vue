@@ -2368,7 +2368,7 @@ onMounted(async () => {
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="20" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
-        <LanguageSettings v-model:repository-owner-display="repositoryOwnerDisplay" :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings v-model:hide-coordination="hideCoordination" v-model:repository-owner-display="repositoryOwnerDisplay" :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -2570,9 +2570,6 @@ onMounted(async () => {
               v-model="query"
               :aria-label="t('Sök issues')"
               :placeholder="t('Sök issues, labels eller nummer…')" /></label
-          ><label class="coord-toggle"
-            ><input type="checkbox" v-model="hideCoordination" />
-            {{ t("Dölj koordinationsärenden") }}</label
           ><BoardGroupingToggle v-model="boardGrouping" :list="listMode" />
           <template v-if="!splitByRepository && contentLanes.length">
           <span v-if="isDemo" class="lane-sync combined-sync">

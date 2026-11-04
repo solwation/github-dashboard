@@ -17,7 +17,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ repositoryOwnerDisplay?: RepositoryOwnerDisplay; repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { repositoryOwnerDisplay: "auto", repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
+const props = withDefaults(defineProps<{ hideCoordination?: boolean; repositoryOwnerDisplay?: RepositoryOwnerDisplay; repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { hideCoordination: true, repositoryOwnerDisplay: "auto", repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -35,7 +35,7 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ "update:repositoryOwnerDisplay": [value: RepositoryOwnerDisplay]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
+const emit = defineEmits<{ "update:hideCoordination": [value: boolean]; "update:repositoryOwnerDisplay": [value: RepositoryOwnerDisplay]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const percent = parseTimeoutOverrunPercent(input.value);
@@ -109,6 +109,13 @@ function changeTheme(event: Event) {
       </section>
       <section class="settings-section" aria-labelledby="board-settings-title">
         <h3 id="board-settings-title">{{ t("Board") }}</h3>
+        <div class="settings-field">
+          <label class="settings-toggle" for="hide-coordination">
+            <input id="hide-coordination" type="checkbox" :checked="hideCoordination" :disabled="!canEditLimit"
+              @change="emit('update:hideCoordination', ($event.target as HTMLInputElement).checked)" />
+            <span>{{ t("Dölj koordinationsärenden") }}</span>
+          </label>
+        </div>
         <div class="settings-field">
           <label for="repository-owner-display">{{ t("Visa GitHub-användarnamn i projekt") }}</label>
           <select id="repository-owner-display" :value="repositoryOwnerDisplay" :disabled="!canEditLimit" aria-describedby="repository-owner-display-help"

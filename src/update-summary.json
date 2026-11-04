@@ -1,10 +1,11 @@
 {
   "baseCommit": "e044f85da01e4e55ade3c1e0ee531a45a775df80",
   "summary": {
-    "sv": "List-simbanor är nu en sammanhängande tabell med projektkolumner och gemensamma statusrader, även på telefon.",
-    "en": "List swimlanes now form one joined table with repository columns and shared status rows, including on phones."
+    "sv": "List-simbanor är en sammanhängande tabell med projektkolumner. Dölj koordinationsärenden finns nu i Settings.",
+    "en": "List swimlanes form one joined table with repository columns. Hide coordination issues now lives in Settings."
   },
   "issues": [
-    402
+    402,
+    403
   ]
 }

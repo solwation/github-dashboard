@@ -1,3 +1,4 @@
+import { setHideCoordination } from "./support/coordination-setting";
 import { expect, test, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
 import { boardSplit } from "./support/board-grouping";
@@ -103,7 +104,7 @@ test("summary points follow global and per-repository queries, combined view and
   await expect(open.locator(".overview-points")).toHaveText("3 SP");
   await expect(open.locator(".overview-time")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("");
-  await page.getByRole("checkbox", { name: "Dölj koordinationsärenden", exact: true }).uncheck();
+  await setHideCoordination(page, false);
   await expect(open.locator(".overview-points")).toHaveText("24 SP");
 });
 
