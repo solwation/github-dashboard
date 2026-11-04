@@ -1,12 +1,10 @@
 {
-  "baseCommit": "e044f85da01e4e55ade3c1e0ee531a45a775df80",
+  "baseCommit": "6000795b38f3c07889c882d084b0eeae85de06bb",
   "summary": {
-    "sv": "List-simbanor sitter ihop som en tabell. Koordinationsfiltret finns i Settings, och vänstermenyn slipper den interna scrollbaren.",
-    "en": "List swimlanes form one joined table. Coordination filtering lives in Settings, and the sidebar no longer has a nested project scrollbar."
+    "sv": "Automatisk uppdatering fungerar även efter en tidigare hård omladdning, så nya visuella ändringar slår igenom utan cache-rensning.",
+    "en": "Automatic updates keep working after a previous hard reload, so new visual changes appear without clearing the cache."
   },
   "issues": [
-    402,
-    403,
-    404
+    405
   ]
 }

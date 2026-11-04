@@ -218,6 +218,48 @@ describe("app version updates", () => {
     await vi.waitFor(() => expect(app.checked.value).toBe(true));
     expect(app.registration.update.mock.calls.length).toBe(calls + 1);
   });
+  it.each([false, true])("automatically applies an update on an uncontrolled hard-reloaded page (already waiting: %s)", async (alreadyWaiting) => {
+    vi.useFakeTimers();
+    const app = setup(false);
+    app.registration.active = Object.assign(new Worker(), { state: "activated" });
+    if (alreadyWaiting) app.registration.waiting = app.worker;
+    else app.registration.installing = app.worker;
+    await app.check();
+    if (!alreadyWaiting) {
+      app.registration.installing = null;
+      app.registration.waiting = app.worker;
+      app.worker.dispatchEvent(new Event("statechange"));
+    }
+    expect(app.available.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(app.worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+    app.worker.state = "activating";
+    app.serviceWorker.controller = app.worker;
+    app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    expect(app.reload).not.toHaveBeenCalled();
+    app.worker.state = "activated";
+    app.worker.dispatchEvent(new Event("statechange"));
+    expect(app.reload).toHaveBeenCalledOnce();
+    app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    expect(app.reload).toHaveBeenCalledOnce();
+  });
+  it("keeps an automatically activated first controller available until the hard-reloaded page finishes its countdown", async () => {
+    vi.useFakeTimers();
+    const app = setup(false);
+    app.registration.active = Object.assign(new Worker(), { state: "activated" });
+    app.registration.waiting = app.worker;
+    await app.check();
+    app.registration.waiting = null;
+    app.registration.active = app.worker;
+    app.worker.state = "activated";
+    app.serviceWorker.controller = app.worker;
+    app.serviceWorker.dispatchEvent(new Event("controllerchange"));
+    expect(app.available.value).toBe(true);
+    expect(app.reload).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(app.reload).toHaveBeenCalledOnce();
+    expect(app.worker.postMessage).not.toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+  });
   it("discovers a waiting update after the first controller claim", async () => {
     vi.useFakeTimers();
     const app = setup(false);

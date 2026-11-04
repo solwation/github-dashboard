@@ -40,6 +40,8 @@ test.beforeAll(async () => {
         return;
       }
       let data = await readFile(file);
+      if (extname(file) === ".css")
+        data = Buffer.concat([data, Buffer.from(`\n:root { --update-test-version: ${version}; }\n`)]);
       if (path === "/sw.js" && failCleanup)
         data = Buffer.concat([Buffer.from('caches.delete = async () => { throw new Error("fixture cleanup failure"); };\n'), data]);
       const types: Record<string, string> = {
@@ -192,6 +194,29 @@ test("visible tabs count down, Not now defers across reloads and checks, and the
 function versionStatus(page: Page) {
   return page.getByRole("region", { name: "Version", exact: true }).getByRole("status");
 }
+test("automatic updates still load new JavaScript and CSS after a previous hard reload", async ({ page }) => {
+  test.setTimeout(90_000);
+  version = 0;
+  failCleanup = false;
+  failInstall = false;
+  await page.goto(base);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Page.reload", { ignoreCache: true });
+  await expectBuild(page, commits[0]!);
+  expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(false);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--update-test-version").trim())).toBe("0");
+  await page.evaluate(() => localStorage.setItem("update-regression-setting", "preserved"));
+  version = 1;
+  await discover(page);
+  await expect(page.locator(".version-update")).toBeVisible();
+  // No update button, normal reload or cache clearing: the countdown must complete.
+  await expectBuild(page, commits[1]!);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--update-test-version").trim())).toBe("1");
+  expect(await page.evaluate(() => localStorage.getItem("update-regression-setting"))).toBe("preserved");
+  await expect(versionStatus(page)).toHaveText("Senaste versionen");
+});
 test("the sidebar confirms the latest version on first visit, hard reload and after updating", async ({ page }) => {
   test.setTimeout(90_000);
   version = 0;

@@ -61,6 +61,15 @@
         "issues": [
           398
         ]
+      },
+      {
+        "text": {
+          "sv": "Nya versioner installeras automatiskt även efter en tidigare hård omladdning, så visuella ändringar inte kräver cache-rensning.",
+          "en": "New versions install automatically even after an earlier hard reload, so visual changes no longer require clearing the cache."
+        },
+        "issues": [
+          405
+        ]
       }
     ]
   },

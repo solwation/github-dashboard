@@ -226,7 +226,7 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
   }
 
   function offer(worker: ServiceWorker | null) {
-    if (!active || !hadController || state.applying) return;
+    if (!active || state.applying) return;
     const replaced = Boolean(worker && waiting && worker !== waiting);
     if (worker) waiting = worker;
     if (!state.available) {
@@ -308,11 +308,15 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     // A first installation may claim this tab, without representing a new app version.
     if (!hadController) {
       hadController = true;
-      loadedController = sw.controller;
-      watchInstalling();
-      if (registration?.waiting) offer(registration.waiting);
-      void check();
-      return;
+      // An update can activate and claim an uncontrolled, hard-reloaded page
+      // before its countdown ends. Keep recognizing it as newer than this page.
+      if (!state.available && !activationRequested) {
+        loadedController = sw.controller;
+        watchInstalling();
+        if (registration?.waiting) offer(registration.waiting);
+        void check();
+        return;
+      }
     }
     if (sw.controller === loadedController) return;
     waiting = null;
@@ -329,7 +333,9 @@ export function createAppUpdateController(environment: UpdateEnvironment) {
     if (!worker || installationListeners.has(worker)) return;
     state.checked = false;
     const changed = () => {
-      if (worker.state === "installed" && hadController) {
+      // First installs activate themselves; updates have an older active worker,
+      // including when a hard reload left this page without a controller.
+      if (worker.state === "installed" && (hadController || (registration?.active && registration.active !== worker))) {
         if (state.applying) activate(registration?.waiting || worker);
         else offer(registration?.waiting || worker);
       }
