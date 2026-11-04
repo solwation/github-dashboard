@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-04",
+    "summary": {
+      "sv": "Samlad felöversikt och händelsehistorik med olästa händelser.",
+      "en": "A grouped error summary and event history with unread events."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Öppna projektfel från en samlad rad och följ information, varningar och fel via headerns klocka, med krypterad historik per konto.",
+          "en": "Open project errors from one summary and follow information, warnings and errors through the header bell, with encrypted history per account."
+        },
+        "issues": [
+          389
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-03",
     "summary": {
       "sv": "Öppna och stäng beskrivningar direkt från issue-kortets yta.",

@@ -3152,3 +3152,16 @@ a.sidebar-repository:focus-visible {
     animation: none !important;
   }
 }
+
+/* Event diagnostics (#389): the history action stays outside the phone tools menu. */
+:root { --dialog-backdrop: rgb(0 0 0 / 65%); }
+:root[data-theme="dark"] { --dialog-backdrop: rgb(0 0 0 / 75%); }
+.event-history-toggle { position: relative; flex: 0 0 auto; margin-left: auto; }
+.event-unseen-badge { position: absolute; right: 0; top: 0; display: grid; place-items: center; min-width: 16px; height: 16px; padding: 0 var(--space-1); border-radius: var(--space-3); background: var(--accent-red); color: var(--on-timeout); font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.project-error-summary { display: flex; align-items: center; gap: var(--space-2); width: 100%; text-align: left; cursor: pointer; font: inherit; }
+.project-error-summary > span:last-child { margin-left: auto; font-size: 12px; }
+@media (pointer: coarse), (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
+  .event-history-toggle { min-width: 44px; min-height: 44px; margin-left: 0; }
+  .project-error-summary { min-height: 44px; }
+}
+@media (max-width: 360px) { .topbar:has(.event-history-toggle) .breadcrumb { display: none; } }

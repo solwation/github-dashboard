@@ -86,7 +86,10 @@ test("a failed newly selected repository leaves existing content visible without
   await expect(page.locator("#repo-1 .issue-card")).toHaveCount(1);
   await expect(page.locator("#repo-2 .repository-loading")).toBeVisible();
   release();
-  await expect(page.locator("#repo-2 [role=alert]")).toContainText("500");
+  await page.locator(".project-error-summary").click();
+  await expect(page.locator(".event-current-error")).toContainText("sample/beta");
+  await expect(page.locator(".event-current-error")).toContainText("500");
+  await page.keyboard.press("Escape");
   await expect(page.locator("#repo-2 .repository-loading, #repo-2 .swimlane, #repo-2 .column-empty")).toHaveCount(0);
   await expect(page.locator("#repo-1 .issue-card")).toHaveCount(1);
   await order(page, ["alpha", "beta"]);

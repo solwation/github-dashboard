@@ -156,7 +156,9 @@ test("connect, select, fetch events, customize work label, preserve data on API 
   );
   fail = true;
   await page.keyboard.press("Control+r");
-  await expect(page.getByRole("alert")).toContainText("500");
+  await page.locator(".project-error-summary").click();
+  await expect(page.locator(".event-current-error")).toContainText("500");
+  await page.keyboard.press("Escape");
   await expect(page.locator(".issue-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
   await page

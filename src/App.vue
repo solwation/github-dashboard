@@ -10,6 +10,7 @@ import {
   Activity,
   Bell,
   BellOff,
+  CircleAlert,
   ArrowRight,
   ChevronDown,
   ChevronLeft,
@@ -35,6 +36,8 @@ import BoardColumn from "./components/BoardColumn.vue";
 import RepositoryHeading from "./components/RepositoryHeading.vue";
 import RepositoryFilter from "./components/RepositoryFilter.vue";
 import OverviewSummary from "./components/OverviewSummary.vue";
+import EventHistory from "./components/EventHistory.vue";
+import { emptyEventHistory, restoreEventHistory, reconcileEventHistory, seeEvents, type EventSignal } from "./lib/event-history";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
 import VersionUpdate from "./components/VersionUpdate.vue";
@@ -1186,6 +1189,56 @@ const stats = computed(() => {
 const workspaceRepositoryColors = computed(() => reconcileRepositoryColors(
   isDemo.value ? lanes.value.map(lane => lane.repo.full_name) : selected.value, repositoryColors.value,
 ));
+const eventHistory = ref(emptyEventHistory());
+const eventHistoryOpen = ref(false);
+const eventHistoryErrors = ref(false);
+const unseenEvents = computed(() => eventHistory.value.entries.filter(item => !item.seen).length);
+const projectErrors = computed(() => contentLanes.value.filter(lane => lane.error).map(lane => ({ repository: lane.repo.full_name, message: lane.error! })));
+function openEventHistory(showErrors = false) {
+  eventHistoryErrors.value = showErrors;
+  eventHistoryOpen.value = true;
+}
+function resetEventHistory() {
+  eventHistoryOpen.value = false;
+  eventHistory.value = emptyEventHistory();
+}
+function markEventsSeen(ids: number[]) {
+  eventHistory.value = seeEvents(eventHistory.value, ids);
+  void save();
+}
+watch(() => ({
+  account: user.value?.login, public: publicMode.value, demo: isDemo.value,
+  busy: authBusy.value || restoring.value,
+  lanes: lanes.value.map(lane => ({ repository: lane.repo.full_name, error: lane.error, loading: lane.loading, warning: lane.timerWarning })),
+  error: error.value, sync: syncError.value, cache: cacheWarning.value, notice: notificationNotice.value,
+  update: updateError.value, publicRepository: publicRepoError.value,
+}), state => {
+  if (state.busy) return;
+  const signals: EventSignal[] = [];
+  const scope = new Set<string>();
+  for (const lane of state.lanes) {
+    const source = "repository:" + lane.repository;
+    // Pending requests are not recoveries. Keep their previous failure active until they settle.
+    if (lane.loading) {
+      signals.push(...eventHistory.value.active.filter(item => item.source === source || item.source === "timer:" + lane.repository));
+      continue;
+    }
+    scope.add(source);
+    if (lane.error) signals.push({ source, severity: "error", repository: lane.repository, message: lane.error, recovery: t("Synkroniseringen fungerar igen.") });
+    if (lane.warning) signals.push({ source: "timer:" + lane.repository, severity: "warning", repository: lane.repository, message: t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") });
+  }
+  if (state.error) signals.push({ source: "app", severity: "error", message: state.error });
+  if (state.sync && !state.lanes.some(lane => lane.error === state.sync)) signals.push({ source: "sync", severity: "error", message: state.sync });
+  if (state.update) signals.push({ source: "update", severity: "error", message: state.update });
+  if (state.publicRepository) signals.push({ source: "public-repository", severity: "error", message: state.publicRepository });
+  if (state.cache) signals.push({ source: "cache", severity: "warning", message: t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") + " " + t(state.cache) });
+  if (state.notice) signals.push({ source: "notification", severity: permission.value === "denied" ? "warning" : "info", message: state.notice, repository: notificationNoticeRepo.value ?? undefined });
+  const next = reconcileEventHistory(eventHistory.value, signals, Date.now(), scope);
+  if (JSON.stringify(next) !== JSON.stringify(eventHistory.value)) {
+    eventHistory.value = next;
+    void save();
+  }
+}, { deep: true });
 const transferablePreferences = computed<HandoffPreferences>(() => ({
   repositoryColors: workspaceRepositoryColors.value,
   projectOrder: projectOrder.value, collapsedRepos: collapsedRepos.value,
@@ -1270,6 +1323,7 @@ function save(): Promise<void> {
         repositoryColumnLimits: repositoryColumnLimits.value,
         notificationRepos: notificationRepos.value,
         activityRead: activity.acknowledgements(),
+        ...(!publicMode.value ? { eventHistory: eventHistory.value } : {}),
         permissionAcknowledgements: permissionAcknowledgements.value,
         ...timeoutSettings.value,
       }).catch(() => { /* App remains usable without storage. */ });
@@ -1278,6 +1332,8 @@ function save(): Promise<void> {
   }
 }
 function restorePreferences(available: Repo[], settings: LoadedSettings) {
+    resetEventHistory();
+    if (settings.login !== PUBLIC_SETTINGS_ACCOUNT) eventHistory.value = restoreEventHistory(settings.value?.eventHistory);
     settingsAccount = settings.readable ? settings.login : null;
     permissionAcknowledgements.value = [];
     repositoryColors.value = {};
@@ -1745,6 +1801,7 @@ async function applyRepos() {
   else await refresh(false, true);
 }
 function showDemo() {
+  resetEventHistory();
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
   permissionAcknowledgements.value = [];
@@ -1790,6 +1847,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  resetEventHistory();
   try {
     void closeActiveNotifications();
   } catch {
@@ -2225,6 +2283,9 @@ onMounted(async () => {
           </button>
         </div>
       </div>
+      <button type="button" class="icon-button event-history-toggle" aria-haspopup="dialog" :aria-label="t('Händelsehistorik') + (unseenEvents ? ', ' + t(unseenEvents === 1 ? 'En oläst händelse' : '{count} olästa händelser', { count: unseenEvents }) : '')" :title="t('Händelsehistorik')" @click="openEventHistory()">
+        <Bell :size="20" aria-hidden="true" /><span v-if="unseenEvents" class="event-unseen-badge" aria-hidden="true">{{ unseenEvents > 99 ? '99+' : unseenEvents }}</span>
+      </button>
       <div class="mobile-tools" :class="{ 'mobile-tools-open': mobileToolsOpen }">
       <!-- Phones hide the sidebar, so its update badge is repeated beside the menu (#270). -->
       <button v-if="updateAvailable" ref="mobileUpdateBadge" type="button" class="mobile-update-badge" aria-haspopup="dialog"
@@ -2457,6 +2518,11 @@ onMounted(async () => {
           </template>
           <BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
         /></div>
+        <div v-if="projectErrors.length" role="status">
+        <button type="button" class="notice error project-error-summary" aria-haspopup="dialog" @click="openEventHistory(true)">
+          <CircleAlert :size="20" aria-hidden="true" /><span>{{ t(projectErrors.length === 1 ? 'Ett projektfel har inträffat' : '{count} projektfel har inträffat', { count: projectErrors.length }) }}</span><span>{{ t("Visa detaljer") }}</span>
+        </button>
+        </div>
         <div v-if="loggedIn && syncError && !lanes.some(lane => lane.error === syncError)" class="notice error sync-error" role="alert">
           {{ syncError }} {{ t("Tidigare data visas om de finns.") }}
         </div>
@@ -2537,9 +2603,6 @@ onMounted(async () => {
           <p v-if="!lane.loading && !lane.error && (query || repositoryQueries[lane.repo.full_name]) && !laneIssues(lane).length" class="repository-filter-empty" role="status">
             {{ t("Inga issues i {name} matchar filtren.", { name: lane.repo.full_name }) }}
           </p>
-          <div v-if="lane.error" class="notice error" role="alert">
-            {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}
-          </div>
           <div v-if="lane.timerWarning" class="notice">
             {{
               t(
@@ -2581,7 +2644,6 @@ onMounted(async () => {
         <section v-else-if="contentLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
           <template v-for="lane in contentLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>
-            <p v-if="lane.error" class="notice error" role="alert"><strong>{{ lane.repo.full_name }}</strong> {{ lane.error }} {{ t("Tidigare data visas om de finns.") }}</p>
             <p v-if="lane.timerWarning" class="notice"><strong>{{ lane.repo.full_name }}</strong> {{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</p>
           </template>
           <div class="swimlane" :class="{ 'list-mode': listMode }">
@@ -2768,6 +2830,8 @@ onMounted(async () => {
   <VersionUpdate :open="updateAvailable && !updateDeferred" :seconds="updateSeconds" :counting="updateCounting"
     :applying="updateApplying" :error="updateError" :summary="updateSummary" :available-version="availableBuild"
     @install="appUpdate.reloadNow()" @defer="deferUpdate" @read-more="openReleaseNotes(newNoteDays)" />
+  <EventHistory :open="eventHistoryOpen" :events="eventHistory.entries" :errors="projectErrors" :show-errors="eventHistoryErrors"
+    @close="eventHistoryOpen = false" @seen="markEventsSeen" @retry="refreshFromStatus($event)" />
   <UpdateDialog :open="updateDialogOpen" :available="updateAvailable" :applying="updateApplying" :error="updateError"
     :deferred="updateDeferred" :summary="updateSummary" :available-version="availableBuild"
     @close="updateDialogOpen = false" @install="appUpdate.reloadNow()" @read-more="openReleaseNotes(newNoteDays)" />

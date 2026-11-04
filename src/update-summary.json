@@ -1,10 +1,10 @@
 {
-  "baseCommit": "9693c5252f9a5f3579fe641ee630413c4fb8c244",
+  "baseCommit": "56d8df2949022656756ffb611863e6e321b49f31",
   "summary": {
-    "sv": "Klicka på ett issue-kort för att öppna beskrivningen och klicka igen för att stänga den.",
-    "en": "Click an issue card to open its description, then click again to close it."
+    "sv": "Projektfel samlas i en klickbar rad. Headerns klocka visar historik för information, varningar och fel med en badge för olästa händelser.",
+    "en": "Project errors share one clickable summary. The header bell shows information, warnings and errors, with a badge for unread events."
   },
   "issues": [
-    388
+    389
   ]
 }

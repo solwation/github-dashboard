@@ -23,6 +23,9 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
   durations, calibrated from your own history.
 - **Statistics that answer real questions.** Issue flow, pull requests, code churn and estimate
   accuracy per repository, label or contributor.
+- **Keep track of sync problems.** One project-error summary opens full details and retries.
+  The header bell keeps the latest 100 info, warning and error events, with an unread badge;
+  signed-in history stays encrypted per account, while public browsing history lasts for the session.
 - **Private by design.** Your token and cached data stay on your device, encrypted with
   non-exportable AES-GCM keys. There is no backend.
 - **Works everywhere.** Installable app with background notifications, phone layout, QR

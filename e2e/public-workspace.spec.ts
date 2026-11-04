@@ -101,7 +101,7 @@ test('public cache preserves successful lanes and sync times across failures, se
   for (const failure of ['network', 'quota'] as const) {
     api.fail(failure);
     await page.keyboard.press('Control+r');
-    await expect(page.locator('#repo-1 [role=alert]')).toBeVisible();
+    await expect(page.locator('.project-error-summary')).toBeVisible();
     await expect(page.locator('.board-toolbar')).toHaveAttribute('data-busy', 'false');
     await expect(page.locator('#repo-1 .issue-card')).toContainText('alpha revision 1');
     expect((await readSettings(page, ':public-content:')).entries[0].syncedAt).toBe(originalSync);
