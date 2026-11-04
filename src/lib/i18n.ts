@@ -710,7 +710,7 @@ export const english: Record<string, string> = {
   "Flyttad till {column}": "Moved to {column}",
   "Verifierar stängning": "Verifying closure",
   "Väntar på integration": "Awaiting integration",
-  "Integration": "Integration",
+  "Väntar": "Waiting",
   "Väntar på integration. Aktiv arbetstid {duration}; väntan räknas inte som arbete.": "Awaiting integration. Active working time {duration}; waiting does not count as work.",
   "Väntar på integration. Väntan räknas inte som arbete.": "Awaiting integration. Waiting does not count as work.",
   " · aktiv arbetstid utan {duration} väntan på integration": " · active working time without {duration} waiting for integration",

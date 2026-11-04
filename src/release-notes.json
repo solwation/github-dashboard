@@ -2,8 +2,8 @@
   {
     "date": "2026-11-04",
     "summary": {
-      "sv": "Tydligare projektikoner, valbara användarnamn samt samlad felöversikt och händelsehistorik.",
-      "en": "Clearer project icons, optional usernames, a grouped error summary and event history."
+      "sv": "Tydligare projektikoner, valbara användarnamn, samlad felöversikt och händelsehistorik samt arbete som väntar på integration.",
+      "en": "Clearer project icons, optional usernames, a grouped error summary, event history and work waiting for integration."
     },
     "sections": [
       {
@@ -25,6 +25,16 @@
           394,
           395,
           396
+        ]
+      },
+      {
+        "text": {
+          "sv": "Färdigt arbete med labeln integration-ready stannar i Pågående med en tydlig väntemarkering, utan att räknas som aktiv arbetstid eller ge timeout.",
+          "en": "Finished work labelled integration-ready stays in In progress with a clear waiting badge, without counting as active working time or timing out."
+        },
+        "issues": [
+          391,
+          392
         ]
       }
     ]

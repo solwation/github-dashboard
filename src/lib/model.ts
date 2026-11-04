@@ -115,9 +115,8 @@ export const isActiveWork = (issue: Issue, rules: Rules = {}) =>
 /** Open, in In progress only because it waits for integration (#392). */
 export const awaitsIntegration = (issue: Issue, rules: Rules = {}) =>
   issue.state !== "closed" && !isActiveWork(issue, rules) && issue.labels.some((l) => isIntegrationReady(l.name));
-// Progress labels are redundant in the In progress column and misleading on closed issues (#264).
-// integration-ready stays visible as its own indicator instead of a chip (#392).
-export const hidesProgressLabel = (col: string) => col === "progress" || col === "closed";
+// Work labels are redundant in the In progress column (integration-ready has its own indicator,
+// #392) and misleading on closed issues (#264).
 export const hidesWorkLabel = (col: string, label: string, rules: Rules = {}) =>
   col === "closed" ? isWorkLabel(label, rules) : col === "progress" && isWorkLabel(label, rules);
 export function priority(issue: Issue, rules: Rules = {}): number {

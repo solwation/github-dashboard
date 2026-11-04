@@ -18,7 +18,8 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
 - **Read details in place.** Click or tap a card surface to open or close its description, or focus its description action and press Enter or Space.
   Links and other controls keep their own actions; List view opens details as before.
 - **Built for agent workflows.** See which session owns an issue, spot work that may have
-  stalled, and follow new comments and moves as they happen.
+  stalled, see finished work waiting for integration, and follow new comments and moves as
+  they happen.
 - **Know how long things take.** Story-point estimates, remaining-time forecasts and actual
   durations, calibrated from your own history.
 - **Statistics that answer real questions.** Issue flow, pull requests, code churn and estimate

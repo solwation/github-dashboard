@@ -388,7 +388,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         >{{ backlogAge }}</time
       ><span v-else-if="col === 'backlog'" class="backlog-age">{{ t("Okänd ålder") }}</span
       ><span v-else-if="col === 'progress' && work.waiting.value" class="integration-wait" :title="work.waitingTitle.value"
-        ><GitMerge :size="12" aria-hidden="true" /><span class="row-elapsed-label" aria-hidden="true">{{ t("Integration") }}</span><span class="sr-only">{{ t("Väntar på integration") }}</span></span
+        ><GitMerge :size="12" aria-hidden="true" /><span class="row-elapsed-label" aria-hidden="true">{{ t("Väntar") }}</span><span class="sr-only">{{ t("Väntar på integration") }}</span></span
       ><span v-else-if="col === 'progress'" class="timer" :title="work.timerTitle.value"
         ><Clock3 :size="12" aria-hidden="true" /><span class="row-elapsed-label">{{ work.label.value ?? t("Starttid okänd") }}</span></span
       ><span v-else-if="pending" class="pending-closure-badge" :title="t('Väntar på att GitHub bekräftar att issuet är stängt')"
@@ -533,6 +533,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-priority svg { width: 9px; height: 9px; }
   .row-mobile-activity { padding: 0; }
   .row-time { max-width: 2.75rem; }
+  /* Narrow phones keep the icon badge; the full status stays in screen-reader text and the card (#392). */
+  .integration-wait .row-elapsed-label { display: none; }
   .row-outcome { width: 5rem; max-width: 5rem; overflow: hidden; font-size: 10px; }
   .row-outcome .issue-time-estimate,
   .row-outcome :deep(.issue-time-remaining-label) { font-size: 10px; }

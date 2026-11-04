@@ -901,7 +901,7 @@ h1 {
 .integration-wait { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; padding: 0 var(--space-1); border-radius: 4px;
   background: var(--badge-waiting-bg); color: var(--badge-waiting-text); font-size: 10px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
 .integration-wait svg { flex: 0 0 12px; }
-.issue-card .card-bottom > .integration-wait { font-size: 11px; }
+.issue-card .card-bottom > .integration-wait { font-size: 11px; white-space: normal; }
 /* Pending closure (#381): dashed outline and an hourglass until GitHub confirms the closing. */
 :root .issue-card.pending-closure, :root .issue-row.pending-closure,
 :root[data-theme="dark"] .issue-card.pending-closure, :root[data-theme="dark"] .issue-row.pending-closure {
@@ -3084,6 +3084,7 @@ a.sidebar-repository:focus-visible {
 .issue-time-fill { display: block; height: 100%; border-radius: inherit; background: currentColor; }
 .card-bottom:has(.issue-time-progress) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
 .card-bottom:has(.issue-time-progress) > .timer { grid-column: 1; grid-row: 1; }
+.card-bottom:has(.issue-time-progress) > .integration-wait { grid-column: 1; grid-row: 1; justify-self: start; max-width: 100%; }
 .card-bottom:has(.issue-time-progress) > .assignees { grid-column: 1; grid-row: 2; }
 .card-bottom > .assignees:empty { display: none; }
 .card-bottom > .issue-time-progress { grid-column: 2; grid-row: 1 / span 2; align-self: center; }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   column,
-  hidesProgressLabel,
+  hidesWorkLabel,
   isProgress,
   isCoordination,
   priority,
@@ -110,12 +110,12 @@ describe("progress label visibility (#264)", () => {
     const closed = issue(1, ["in-progress", "bug"], "closed");
     expect(column(closed)).toBe("closed");
     const shown = (i: Issue, rules = {}) =>
-      i.labels.filter((l) => !(hidesProgressLabel(column(i, rules)) && isProgress(l.name, rules))).map((l) => l.name);
+      i.labels.filter((l) => !hidesWorkLabel(column(i, rules), l.name, rules)).map((l) => l.name);
     expect(shown(closed)).toEqual(["bug"]);
     expect(shown(issue(2, ["in-progress", "bug"]))).toEqual(["bug"]);
     expect(shown(issue(3, ["wip", "bug"], "closed"), { progress: "wip" })).toEqual(["bug"]);
     expect(shown(issue(4, ["in-progress", "bug"], "closed"), { progress: "wip" })).toEqual(["in-progress", "bug"]);
-    expect(hidesProgressLabel("backlog")).toBe(false);
+    expect(hidesWorkLabel("backlog", "in-progress")).toBe(false);
   });
 });
 describe("column sort orders (#286)", () => {
