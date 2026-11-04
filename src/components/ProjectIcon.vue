@@ -22,5 +22,5 @@ const initials = computed(() => (props.repository.split("/").pop() || "?").slice
 .project-icon img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: inherit; }
 .project-icon-initials { font-size: 10px; font-weight: 700; line-height: 1; }
 .project-icon-color { position: absolute; right: -1px; bottom: -1px; width: var(--space-2); height: var(--space-2); border: 1px solid var(--surface); border-radius: 50%; background: var(--project-icon-color); }
-:global(:root[data-theme="dark"] .project-icon-color) { background: color-mix(in srgb, var(--project-icon-color) 75%, var(--text)); }
+:global(:root[data-theme="dark"] .project-icon-color) { background: color-mix(in srgb, var(--project-icon-color) 75%, white); }
 </style>

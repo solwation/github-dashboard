@@ -119,12 +119,13 @@ test("expired history removes summary time while retaining summed points", async
 });
 
 
-test("a future start wakes the estimate without waiting for new data", async ({ page }) => {
+test("a GitHub start timestamp corrects a slow device clock and continues counting locally", async ({ page }) => {
   await fixture(page, false, true);
   const progress = tile(page, "progress");
   await expect(progress.locator(".overview-time")).toHaveText("≈ 1 h 30 min kvar");
-  await expect(progress.locator(".overview-estimate")).toHaveAttribute("title", /1 pågående saknar säker starttid/);
+  // #375 advances board time to received GitHub timestamps within the clock-skew window.
+  await expect(progress.locator(".overview-estimate")).not.toHaveAttribute("title", /saknar säker starttid/);
   await page.clock.fastForward(2 * minute);
-  await expect(progress.locator(".overview-time")).toHaveText("≈ 1 h 29 min kvar");
+  await expect(progress.locator(".overview-time")).toHaveText("≈ 1 h 28 min kvar");
   await expect(progress.locator(".overview-estimate")).not.toHaveAttribute("title", /saknar säker starttid/);
 });

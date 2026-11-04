@@ -20,7 +20,7 @@ const viewports = [
 async function connect(browser: Browser, baseURL: string | undefined, device: typeof viewports[number]) {
   const context = await browser.newContext({ baseURL, viewport: { width: device.width, height: device.height }, isMobile: device.mobile, hasTouch: device.mobile, locale: "sv-SE" });
   const page = await context.newPage();
-  let relationRequests = 0;
+  const relationRequests: number[] = [];
   const longChild = issue(3, "Long child title and a long repository label", repositories[1]!);
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
@@ -37,8 +37,8 @@ async function connect(browser: Browser, baseURL: string | undefined, device: ty
       return route.fulfill({ json: url.searchParams.get("state") === "closed" ? [] : items });
     }
     if (url.pathname === "/graphql") {
-      relationRequests++;
       const { variables } = route.request().postDataJSON();
+      relationRequests.push(variables.number);
       if (variables.number === 5) return route.fulfill({ status: 403, json: { message: "Resource not accessible" } });
       const relations = variables.number === 1 ? { parent: null, subIssuesSummary: { total: 5, completed: 0 } }
         : variables.number === 2 ? { parent: null, subIssuesSummary: { total: 4, completed: 4 } }
@@ -89,7 +89,7 @@ for (const device of viewports) test(`mobile relation indicators stay compact an
         const time = current.locator(".row-time");
         if (await relation.isVisible() && await time.isVisible()) {
           const [a, b] = await Promise.all([relation.boundingBox(), time.boundingBox()]);
-          expect(a && b && (a.x + a.width <= b.x || b.x + b.width <= a.x)).toBe(true);
+          expect(a && b && (a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y)).toBe(true);
         }
       }
       if (device.width <= 390) await page.screenshot({ path: info.outputPath(`${device.width}-${combined ? "combined" : "split"}-list.png`), fullPage: true });
@@ -99,7 +99,12 @@ for (const device of viewports) test(`mobile relation indicators stay compact an
       await expect(childCard.locator(".subtask-badge")).toHaveCount(1);
       if (device.width <= 390) await page.screenshot({ path: info.outputPath(`${device.width}-${combined ? "combined" : "split"}-cards.png`), fullPage: true });
     }
-    expect(relationRequests()).toBe(5);
+    // Successful metadata is cached across layout mounts. Permission failures can retry on remount.
+    const calls = relationRequests();
+    expect([...new Set(calls)].sort()).toEqual([1, 2, 3, 4, 5]);
+    for (const number of [1, 2, 3, 4]) expect(calls.filter(value => value === number)).toHaveLength(1);
+    // Initial cards plus four view mounts; allow a failed lookup and one visibility retry per mount.
+    expect(calls.filter(value => value === 5).length).toBeLessThanOrEqual(2 * (1 + 2 * 2));
   } finally {
     await context.close();
   }

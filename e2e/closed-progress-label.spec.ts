@@ -38,7 +38,13 @@ for (const vp of viewports) {
     const card = page.locator(".issue-card.closed");
     await expect(card).toHaveCount(1);
     await expect(card.locator(inProgress)).toHaveCount(0);
-    await expect(card.locator(".label")).toHaveCount(4);
+    // Cards keep one line of labels; assert the complete label set including the +N tooltip.
+    await expect.poll(async () => {
+      const visible = await card.locator(".label").evaluateAll(labels => labels.map(label => label.getAttribute("title")));
+      const overflow = card.locator(".label-more");
+      const hidden = await overflow.count() ? (await overflow.getAttribute("title"))!.split(", ") : [];
+      return [...visible, ...hidden].sort();
+    }).toEqual(closed.labels.filter(label => label.name !== "in-progress").map(label => label.name).sort());
     await expect(page.locator(".issue-card.backlog .label")).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (shots) await page.screenshot({ path: `${shots}/${vp.name}-cards.png`, fullPage: true });

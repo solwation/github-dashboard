@@ -27,14 +27,15 @@
       },
       {
         "text": {
-          "sv": "Se större projektikoner och bredare projektrader, hitta fler ikoner även i img/images och välj när GitHub-användarnamn visas.",
-          "en": "See larger project icons and wider project rows, discover more artwork in img/images folders, and choose when GitHub usernames appear."
+          "sv": "Se större projektikoner och bredare projektrader, hitta fler ikoner och välj när GitHub-användarnamn visas, med konsekventa projektfärger i mörkt tema.",
+          "en": "See larger project icons and wider project rows, discover more artwork, and choose when GitHub usernames appear, with consistent project colors in dark theme."
         },
         "issues": [
           393,
           394,
           395,
           396,
+          397,
           401
         ]
       },

@@ -64,7 +64,15 @@ npm run dev
 ```
 
 `npm test` runs unit tests, `npm run test:e2e` runs browser tests and `npm run build` type-checks
-and builds. See the [setup and technical guide](docs/guide.md) for OAuth sign-in, security and
+and builds. Install the browser matching the locked Playwright version with
+`npx playwright install chromium` before browser checks. Use its bundled Chromium for baseline
+verification; a `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` override can select an incompatible revision.
+Record any override and font availability when comparing layout failures: downloaded web fonts
+and fallback fonts can produce different absolute row heights. Geometry checks should wait for
+fonts before screenshots and verify alignment, stable activity slots and bounded density across
+the supported breakpoints, rather than assume a single font-dependent pixel height.
+
+See the [setup and technical guide](docs/guide.md) for OAuth sign-in, security and
 deployment.
 
 ## Project icons

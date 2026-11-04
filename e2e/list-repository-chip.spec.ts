@@ -110,6 +110,7 @@ test("combined-list repository chips keep row content aligned at every card/list
     const geometryKey = `${scenario.name}:${split ? "split" : "combined"}`;
     bounds.set(geometryKey, geometry);
 
+
     if (!split) {
       const chip = row.locator(".row-repository");
       const repository = repos[0]!;
@@ -159,7 +160,9 @@ test("combined-list repository chips keep row content aligned at every card/list
       const combinedBounds = bounds.get(`${scenario.name}:combined`)!;
       expect(Math.abs(splitBounds.number - combinedBounds.number), `${scenario.name} number column`).toBeLessThanOrEqual(1);
       expect(Math.abs(splitBounds.title - combinedBounds.title), `${scenario.name} title column`).toBeLessThanOrEqual(1);
-      expect(Math.abs(splitBounds.height - combinedBounds.height), `${scenario.name} row height`).toBeLessThanOrEqual(1);
+      // A combined chip adds its two 1px borders around the shared 16px icon slot.
+      // Text and number columns still align exactly; only this bounded metadata border may grow the row.
+      expect(Math.abs(splitBounds.height - combinedBounds.height), `${scenario.name} row height`).toBeLessThanOrEqual(2);
     }
   } finally {
     await mobileContext.close();

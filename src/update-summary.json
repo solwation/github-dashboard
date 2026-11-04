@@ -1,10 +1,11 @@
 {
   "baseCommit": "22624f6b14e0e2b1f2f46d069c28156edeab39b0",
   "summary": {
-    "sv": "Kort öppnar GitHub via #numret. Statusbyten får rätt händelsebadge; info räknas bara i bakgrunden. Fler projektikoner hittas.",
-    "en": "Cards open GitHub via #numbers. Status changes get severity-colored badges; info counts only from the background. More project icons are discovered."
+    "sv": "Kort öppnar GitHub via #numret. Fler projektikoner och konsekventa färger; statusbyten får färgade notiser, och info räknas bara i bakgrunden.",
+    "en": "Cards open GitHub via #numbers. More project artwork and consistent colors; state changes get severity-colored badges, with info counted only in the background."
   },
   "issues": [
+    397,
     398,
     400,
     401
