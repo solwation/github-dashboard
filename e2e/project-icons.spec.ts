@@ -1,13 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 const evidence = process.env.PROJECT_ICON_EVIDENCE;
-const artwork = (color: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${color}"/><path d="M8 8h5v16H8zm10 0h5v16h-5z" fill="white"/></svg>`;
+const artwork = (color: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${color}"/><path d="M21 15v34h25v-7H29V15Z" fill="#f5f3e9"/></svg>`;
 const repos = [
   { id: 1, full_name: "sample/alpha", name: "alpha", owner: { login: "sample" } },
   { id: 2, full_name: "sample/long-project-without-an-icon", name: "long-project-without-an-icon", owner: { login: "sample" } },
   { id: 3, full_name: "other/alpha", name: "alpha", owner: { login: "other" } },
 ].map(repo => ({ ...repo, private: true, description: "Synthetic project icon fixture with a long repository description", html_url: `https://github.com/${repo.full_name}` }));
-async function fixture(page: Page) {
+async function fixture(page: Page, initiallyMissing = false) {
+  let missing = initiallyMissing;
   const reads: string[] = [];
   let revision = false;
   let login = "icons-one", blocked = false, release!: () => void;
@@ -20,7 +21,7 @@ async function fixture(page: Page) {
     if (url.pathname.includes("/contents")) {
       reads.push(url.pathname);
       if (blocked) await pending;
-      if (repo?.id === 2) return route.fulfill({ json: [] });
+      if (repo?.id === 2 || (repo?.id === 1 && missing)) return route.fulfill({ json: [] });
       if (url.pathname.endsWith("/contents")) return route.fulfill({ json: [{ type: "file", name: "favicon.svg", path: "favicon.svg", size: 300, download_url: "https://untrusted.invalid/never-fetch" }] });
       const svg = artwork(login === "icons-one" ? "#147d69" : "#6644aa");
       return route.fulfill({ json: { type: "file", name: "favicon.svg", path: "favicon.svg", size: svg.length, encoding: "base64", content: Buffer.from(svg).toString("base64"), download_url: "https://untrusted.invalid/never-fetch" } });
@@ -43,7 +44,7 @@ async function fixture(page: Page) {
   });
   await page.route("https://untrusted.invalid/**", () => { throw new Error("Project artwork must never make an external request"); });
   await page.goto("/");
-  return { reads, advance() { revision = true; }, account(value: string) { login = value; }, hold() { blocked = true; }, release() { blocked = false; release(); } };
+  return { reads, showIcon() { missing = false; }, advance() { revision = true; }, account(value: string) { login = value; }, hold() { blocked = true; }, release() { blocked = false; release(); } };
 }
 async function signIn(page: Page) {
   await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
@@ -64,6 +65,21 @@ async function signOut(page: Page) {
   await page.getByRole("button", { name: "Logga ut och ta bort token", exact: true }).click();
 }
 
+test("manual project refresh recovers the existing L artwork after a cached miss", async ({ page }) => {
+  const api = await fixture(page, true); await signIn(page);
+  await expect(firstIcon(page).locator(".project-icon-initials")).toHaveText("AL");
+  await expect(page.locator('.sidebar-repository-row[data-repository="other/alpha"] .project-icon img')).toBeVisible();
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
+  const before = [...api.reads];
+  api.showIcon();
+  await page.getByRole("button", { name: /Klicka för att uppdatera sample\/alpha nu/ }).click();
+  await expect(firstIcon(page).locator("img")).toHaveAttribute("src", /^data:image\/png;base64,/);
+  expect(api.reads.filter(path => path.includes("/other/alpha/")).length).toBe(before.filter(path => path.includes("/other/alpha/")).length);
+  expect(api.reads.filter(path => path.includes("/sample/long-project-without-an-icon/")).length).toBe(before.filter(path => path.includes("/sample/long-project-without-an-icon/")).length);
+  await expect.poll(() => api.reads.length).toBe(before.length + 2);
+  if (evidence) await page.screenshot({ path: `${evidence}/recovered-l-icon.png`, fullPage: true });
+});
+
 test("project icon resolver uses safe artwork, caches across reload, falls back on missing/broken images and isolates accounts", async ({ page }) => {
   const api = await fixture(page); await signIn(page);
   await expect(firstIcon(page).locator("img")).toHaveAttribute("src", /^data:image\/png;base64,/);
@@ -78,7 +94,7 @@ test("project icon resolver uses safe artwork, caches across reload, falls back 
     return snapshot?.repos.filter((repo: { projectIcon?: unknown }) => repo.projectIcon !== undefined).length;
   })).toBe(3);
   expect(api.reads.length).toBe(5);
-  await page.keyboard.press("Control+r");
+  await page.reload();
   await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
   expect(api.reads.length).toBe(5);
   // An image decoder failure keeps the same reserved box and readable initials.

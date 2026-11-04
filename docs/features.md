@@ -116,3 +116,5 @@ owner claim qualifies alone. GitHub metadata/comments are only an estimate of ac
 not proof of a live process. There is no machine-readable heartbeat identifying individual
 agents in the available issue data, so no agent count is inferred or deduplicated from
 issues, claims, commenters or sessions. The overview counts repositories with evidence.
+
+Projektikoner som tidigare inte hittades kan hämtas igen med projektets uppdateringsknapp eller F5/Ctrl+R. Befintliga ikoner återanvänds; bakgrundsuppdatering och hover gör inga extra ikonförsök. Äldre tomma ikonposter från första ikonversionen granskas en gång efter uppdateringen, därefter gäller fortsatt dygnscache, krypterad lagring och kvotgränser (#395).

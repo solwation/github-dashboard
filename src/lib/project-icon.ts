@@ -2,7 +2,7 @@
 export const PROJECT_ICON_MAX_BYTES = 64 * 1024;
 export const PROJECT_ICON_LIFETIME = 24 * 60 * 60 * 1000;
 export const PROJECT_ICON_REQUEST_LIMIT = 6;
-export type ProjectIconMetadata = { data: string | null; checkedAt: number };
+export type ProjectIconMetadata = { data: string | null; checkedAt: number; emptyVersion?: 1 };
 const encodedLimit = Math.ceil(PROJECT_ICON_MAX_BYTES / 3) * 4;
 function bytes(base64: string): string | null {
   if (!base64 || base64.length > encodedLimit || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) return null;
@@ -25,7 +25,8 @@ export function restoreProjectIcon(value: unknown): ProjectIconMetadata | undefi
   if (!value || typeof value !== "object") return;
   const icon = value as ProjectIconMetadata;
   if (!Number.isFinite(icon.checkedAt) || icon.checkedAt <= 0 || icon.checkedAt > Date.now() + 60_000) return;
-  if (icon.data === null) return { data: null, checkedAt: icon.checkedAt };
+  // Retry empty results from the first icon release once; successful artwork stays reusable.
+  if (icon.data === null) return icon.emptyVersion === 1 ? { data: null, checkedAt: icon.checkedAt, emptyVersion: 1 } : undefined;
   const data = projectIconData(icon.data);
   if (data) return { data, checkedAt: icon.checkedAt };
 }
@@ -72,13 +73,20 @@ export class ProjectIconResolver {
       if (icon && Date.now() - icon.checkedAt < PROJECT_ICON_LIFETIME && !this.cache.has(repo.full_name)) this.cache.set(repo.full_name, { result: Promise.resolve(icon), expiresAt: icon.checkedAt + PROJECT_ICON_LIFETIME });
     }
   }
-  get(repository: string): Promise<ProjectIconMetadata | null> {
+  async get(repository: string, retryMissing = false): Promise<ProjectIconMetadata | null> {
     const cached = this.cache.get(repository);
-    if (cached && cached.expiresAt > Date.now()) return cached.result;
-    const result = this.discover(repository).then(data => ({ data, checkedAt: Date.now() })).catch(error => {
+    if (cached && cached.expiresAt > Date.now()) {
+      if (!retryMissing) return cached.result;
+      const metadata = await cached.result;
+      // Explicit refresh retries only a confirmed miss, never positive art or a transient backoff.
+      if (metadata?.data !== null) return metadata;
+      if (this.cache.get(repository) !== cached) return this.get(repository);
+      this.cache.delete(repository);
+    }
+    const result = this.discover(repository).then(data => ({ data, checkedAt: Date.now(), ...(data === null ? { emptyVersion: 1 as const } : {}) })).catch(error => {
       const failure = error as { status?: number; permissionDenied?: boolean; rateLimited?: boolean } | null;
       // Missing optional access is stable for this credential; do not spend core quota retrying it.
-      if (failure?.status === 404 || (failure?.status === 403 && failure.permissionDenied && !failure.rateLimited)) return { data: null, checkedAt: Date.now() };
+      if (failure?.status === 404 || (failure?.status === 403 && failure.permissionDenied && !failure.rateLimited)) return { data: null, checkedAt: Date.now(), emptyVersion: 1 as const };
       // A transient failure is neither a negative discovery nor a reason to discard prior art.
       const entry = this.cache.get(repository);
       if (entry) entry.expiresAt = Date.now() + 5 * 60_000;

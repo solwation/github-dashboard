@@ -17,12 +17,13 @@
       },
       {
         "text": {
-          "sv": "Se projektikoner med färgprick och initialer som reserv, och välj om användarnamn visas i labels och vänstermeny.",
-          "en": "Recognize projects by icons, color dots and fallback initials, and choose whether usernames appear in repository labels and the sidebar."
+          "sv": "Se projektikoner som återhämtas vid uppdatering, med färgprick och initialer som reserv, och välj när GitHub-användarnamn visas.",
+          "en": "See project icons that recover on refresh, with color dots and fallback initials, and choose when GitHub usernames appear."
         },
         "issues": [
           393,
-          394
+          394,
+          395
         ]
       }
     ]

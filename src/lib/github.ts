@@ -121,7 +121,7 @@ export class GitHub {
     async (path, store = true) => (await this.request<unknown>(path, { store })).data,
     () => !this.retryAfterMs() && (!this.rateLimit() || this.rateLimit()!.remaining > (this.token ? 30 : 10)),
   );
-  projectIcon(repo: Repo) { this.projectIcons.restore([repo]); return this.projectIcons.get(repo.full_name); }
+  projectIcon(repo: Repo, retryMissing = false) { this.projectIcons.restore([repo]); return this.projectIcons.get(repo.full_name, retryMissing); }
   restoreProjectIcons(repositories: Repo[]) { this.projectIcons.restore(repositories); }
   constructor(private token: string = "") {}
   get authenticated() { return Boolean(this.token); }

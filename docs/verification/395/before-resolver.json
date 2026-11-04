@@ -1,0 +1,9 @@
+{
+  "freshPng": true,
+  "requests": [
+    "/repos/solwation/kvarteret-lunden/contents",
+    "/repos/solwation/kvarteret-lunden/contents/icon.svg"
+  ],
+  "negative": null,
+  "readsAfterCachedMiss": 0
+}

@@ -537,6 +537,7 @@ const combinedSyncing = computed(() => lanes.value.some(lane => syncingRepos.val
 function refreshFromStatus(name?: string) {
   if ((!loggedIn.value && !publicMode.value) || isDemo.value || authBusy.value) return;
   if (name ? syncingRepos.value.has(name) : combinedSyncing.value) return;
+  void loadProjectIcons(name ? [name] : selected.value);
   void refresh(false, false, true, false, name ? [name] : undefined);
 }
 /**
@@ -1197,15 +1198,15 @@ const workspaceRepositoryColors = computed(() => reconcileRepositoryColors(
 provideProjectIcons(() => [...lanes.value.map(lane => lane.repo), ...repos.value], () => workspaceRepositoryColors.value);
 // Optional artwork never delays the board and is looked up once per client/day, not each poll.
 let projectIconPass = 0;
-watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.value.join("\n"), authBusy, restoring, publicMode, isDemo, activityClock], async () => {
+async function loadProjectIcons(retryMissing: readonly string[] = []) {
   const pass = ++projectIconPass, client = api, run = generation;
   if (!client || authBusy.value || restoring.value || isDemo.value) return;
   const targets = repos.value.filter(repo => selected.value.includes(repo.full_name));
   for (const repo of targets) {
     if (pass !== projectIconPass || client !== api || run !== generation) return;
     const previous = restoreProjectIcon(repo.projectIcon);
-    if (previous && Date.now() - previous.checkedAt < PROJECT_ICON_LIFETIME) continue;
-    const icon = await client.projectIcon(repo);
+    if (previous && Date.now() - previous.checkedAt < PROJECT_ICON_LIFETIME && !(previous.data === null && retryMissing.includes(repo.full_name))) continue;
+    const icon = await client.projectIcon(repo, retryMissing.includes(repo.full_name));
     if (pass !== projectIconPass || client !== api || run !== generation) return;
     if (!icon || !selected.value.includes(repo.full_name)) continue;
     const current = repos.value.find(item => item.full_name === repo.full_name);
@@ -1219,7 +1220,8 @@ watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.
       void persistContent();
     }
   }
-});
+}
+watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.value.join("\n"), authBusy, restoring, publicMode, isDemo, activityClock], () => { void loadProjectIcons(); });
 const eventHistory = ref(emptyEventHistory());
 const eventHistoryOpen = ref(false);
 const eventHistoryErrors = ref(false);
@@ -2117,7 +2119,10 @@ function handleRefreshShortcut(event: KeyboardEvent) {
   if ((!loggedIn.value && !publicMode.value) || isDemo.value || event.defaultPrevented || !isDataRefreshShortcut(event)) return;
   // Prevent document reload even while a fetch is already running.
   event.preventDefault();
-  if (!event.repeat && !authBusy.value) void refresh(false, false, true);
+  if (!event.repeat && !authBusy.value) {
+    void loadProjectIcons(selected.value);
+    void refresh(false, false, true);
+  }
 }
 function resumeStatusAudio(event: Event) {
   if (event.isTrusted && notificationSounds.value && notificationRepos.value.some(notificationsEnabled)) void statusPlayer.unlock();

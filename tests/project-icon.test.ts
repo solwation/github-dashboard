@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHub, GitHubApiError } from "../src/lib/github";
-import { PROJECT_ICON_MAX_BYTES, ProjectIconResolver, projectIconData, safeProjectSvg } from "../src/lib/project-icon";
+import { PROJECT_ICON_MAX_BYTES, ProjectIconResolver, projectIconData, restoreProjectIcon, safeProjectSvg } from "../src/lib/project-icon";
 const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const data = "data:image/png;base64," + png;
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#147d69"/></svg>';
@@ -8,6 +8,35 @@ const dir = (name: string, parent = "") => ({ name, path: parent + name, type: "
 const file = (name: string, parent = "", size = 100) => ({ name, path: parent + name, type: "file", size });
 afterEach(() => vi.unstubAllGlobals());
 describe("project artwork discovery and security", () => {
+  it("retries a cached missing icon explicitly without refetching successful icons", async () => {
+    let available = false;
+    const request = vi.fn(async (path: string) => path.endsWith("/contents")
+      ? available ? [file("icon.svg")] : []
+      : { ...file("icon.svg"), encoding: "base64", content: btoa(svg) });
+    const icons = new ProjectIconResolver(request, () => true, async () => data);
+    expect((await icons.get("sample/project"))?.data).toBeNull();
+    available = true;
+    expect((await icons.get("sample/project"))?.data).toBeNull();
+    expect(request).toHaveBeenCalledOnce();
+    expect((await icons.get("sample/project", true))?.data).toBe(data);
+    expect(request).toHaveBeenCalledTimes(3);
+    expect((await icons.get("sample/project", true))?.data).toBe(data);
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+  it("migrates legacy empty artwork once while retaining positive encrypted-cache artwork", async () => {
+    const checkedAt = Date.now();
+    expect(restoreProjectIcon({ data: null, checkedAt })).toBeUndefined();
+    expect(restoreProjectIcon({ data, checkedAt })).toEqual({ data, checkedAt });
+    const request = vi.fn(async () => []);
+    const icons = new ProjectIconResolver(request);
+    icons.restore([{ full_name: "sample/project", projectIcon: { data: null, checkedAt } }]);
+    const missing = await icons.get("sample/project");
+    expect(request).toHaveBeenCalledOnce();
+    const restored = new ProjectIconResolver(request);
+    restored.restore([{ full_name: "sample/project", projectIcon: missing! }]);
+    await restored.get("sample/project");
+    expect(request).toHaveBeenCalledOnce();
+  });
   it("caches confirmed missing optional access across restore without caching a rate limit as missing artwork", async () => {
     vi.useFakeTimers();
     try {

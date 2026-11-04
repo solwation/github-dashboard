@@ -1,0 +1,9 @@
+{
+  "src/lib/project-icon.ts": "f612451306916d5bb922738ff5e712f9ab4f5d19bc6576c042d0a51ddad2c154",
+  "src/lib/github.ts": "5c77025d6b05a428c34d05f1770a3aea9e340b1ad0c2094745b08fdf2e95648c",
+  "src/App.vue": "4f0149113725db3cd0110126b5e5004833f808d1bc63f96df41f889302eaa16d",
+  "tests/project-icon.test.ts": "6ef362a11b66575935e00748fe20c2f4ddcfd9bf5d3d426eaf846ce85a2253aa",
+  "e2e/project-icons.spec.ts": "3dfe9ba41358e9c5863c4d28b34dacf0b3d7e12775127a63c459645f7a08c1cd",
+  "src/release-notes.json": "d9c26e019f60c08a73a6d2fbd17beda42ba7a4f482ea5b4caeac0a321cf75ce9",
+  "src/update-summary.json": "f62bc6f6e4d09fd39d0a6120a6d530d0f63f4a509eef3462728e33c300a86021"
+}
