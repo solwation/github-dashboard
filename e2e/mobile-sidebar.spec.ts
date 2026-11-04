@@ -91,13 +91,14 @@ for (const size of sizes) {
     expect(version.height).toBeGreaterThanOrEqual(44);
     expect(footer.height).toBeGreaterThanOrEqual(44);
     expect(footer.y, "footer after version").toBeGreaterThanOrEqual(version.y + version.height - 1);
-    // Left edges of the section captions, nav icons and repository dots line up (+-1px).
+    // Navigation keeps its inset; the wider project section aligns its caption with its full-row icons.
     await panel.evaluate(node => { node.scrollTop = 0; });
     const left = (locator: Locator) => locator.first().evaluate(node => node.getBoundingClientRect().left + parseFloat(getComputedStyle(node).paddingLeft));
     const edge = await left(panel.getByText("WORKSPACE", { exact: true }));
-    expect(Math.abs(await left(panel.getByText("REPOSITORIES", { exact: true })) - edge), "captions share a left edge").toBeLessThanOrEqual(1);
+    const projectEdge = await left(panel.getByText("REPOSITORIES", { exact: true }));
+    expect(Math.abs(projectEdge - panelBox.x - 4), "project section uses a small inset").toBeLessThanOrEqual(1);
     expect(Math.abs(await left(panel.locator(".nav-item > svg")) - edge), "nav icon aligns with captions").toBeLessThanOrEqual(1);
-    expect(Math.abs(await left(panel.locator(".sidebar-repository .project-icon")) - edge), "repository dot aligns with captions").toBeLessThanOrEqual(1);
+    expect(Math.abs(await left(panel.locator(".sidebar-repository .project-icon")) - projectEdge), "full-row project icon aligns with its caption").toBeLessThanOrEqual(1);
     expect(await panel.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await panel.evaluate(node => { node.scrollTop = 0; });

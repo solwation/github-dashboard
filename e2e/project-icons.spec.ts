@@ -138,7 +138,8 @@ test("project icon design matrix keeps fixed boxes, compact cards/list, overlay 
             const visible = (element: Element) => element.getClientRects().length && getComputedStyle(element).visibility !== "hidden";
             const icons = [...document.querySelectorAll(".project-icon")].filter(visible).map(element => {
               const box = element.getBoundingClientRect(), dot = element.querySelector(".project-icon-color")!.getBoundingClientRect();
-              return { width: box.width, height: box.height, colorRight: dot.right - box.right, colorBottom: dot.bottom - box.bottom };
+              const sidebarRow = element.closest(".sidebar-repository-row")?.getBoundingClientRect();
+              return { sidebarHeight: sidebarRow?.height, width: box.width, height: box.height, colorRight: dot.right - box.right, colorBottom: dot.bottom - box.bottom };
             });
             const rows = [...document.querySelectorAll(".issue-row")].filter(visible).map(element => element.getBoundingClientRect().height);
             const rowIds = [...document.querySelectorAll(".issue-row .row-id")].filter(visible).map(element => element.getBoundingClientRect().left);
@@ -147,7 +148,7 @@ test("project icon design matrix keeps fixed boxes, compact cards/list, overlay 
           expect(stats.overflow).toBeLessThanOrEqual(0);
           expect(stats.colorScheme).toBe(theme);
           if (theme === "dark") expect(stats.rootBackground).toBe("rgb(15, 23, 25)");
-          for (const icon of stats.icons) { expect([16, 20]).toContain(icon.width); expect(icon.height).toBe(icon.width); expect(Math.abs(icon.colorRight)).toBeLessThanOrEqual(1); expect(Math.abs(icon.colorBottom)).toBeLessThanOrEqual(1); }
+          for (const icon of stats.icons) { if (icon.sidebarHeight) expect(Math.abs(icon.width - icon.sidebarHeight)).toBeLessThanOrEqual(1); else expect([16, 20]).toContain(icon.width); expect(icon.height).toBe(icon.width); expect(Math.abs(icon.colorRight)).toBeLessThanOrEqual(1); expect(Math.abs(icon.colorBottom)).toBeLessThanOrEqual(1); }
           if (list && !split && stats.rowIds.length) expect(Math.max(...stats.rowIds) - Math.min(...stats.rowIds)).toBeLessThanOrEqual(1);
           measurements.push({ viewport, mobile, split, list, theme, ...stats });
           if (evidence) await page.screenshot({ path: `${evidence}/icons-${viewport.width}x${viewport.height}-${split ? "split" : "combined"}-${list ? "list" : "cards"}-${theme}.png`, fullPage: true });

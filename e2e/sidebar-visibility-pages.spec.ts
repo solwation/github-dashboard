@@ -79,7 +79,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   // Globe = Pages link (only with Pages); lock only for private repositories without Pages; GitHub link on every row.
   await expect(row('site').locator('.repo-visibility')).toHaveCount(0);
   await expect(row(long).locator('.repo-visibility')).toHaveCount(0);
-  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna GitHub Pages för sample/${long}`);
+  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna GitHub Pages för Sample/${long}`);
   await expect(row('notes').locator('.repo-visibility')).toHaveAttribute('aria-label', 'Privat repository');
   await expect(row('notes').locator('.repo-pages')).toHaveCount(0);
   for (const repo of repositories) {
@@ -114,7 +114,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     return {
       lastIconX: trailing && trailing.left + trailing.width / 2,
       name: row.getAttribute('data-repository'), labelLeft: label.left, labelRight: label.right, labelY: centre(label),
-      dotY: centre(dot), countsLeft: counts.left, countsTop: counts.top, countsBottom: counts.bottom, labelBottom: label.bottom,
+      iconHeight: dot.height, iconTop: dot.top, rowHeight: row.getBoundingClientRect().height, rowTop: row.getBoundingClientRect().top, countsLeft: counts.left, countsTop: counts.top, countsBottom: counts.bottom, labelBottom: label.bottom,
       group,
       visibility: visibility && { right: visibility.right, y: centre(visibility), width: visibility.width },
       pages: pages && { left: pages.left, right: pages.right, y: centre(pages), width: pages.width, height: pages.height },
@@ -139,7 +139,8 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
       if (item.group) expect(item.action!.left - item.group.right).toBe(4);
     }
     expect(Math.abs(item.countsLeft - item.labelLeft)).toBeLessThanOrEqual(1);
-    expect(Math.abs(item.dotY - item.labelY)).toBeLessThanOrEqual(1);
+    expect(Math.abs(item.iconHeight - item.rowHeight)).toBeLessThanOrEqual(1);
+    expect(Math.abs(item.iconTop - item.rowTop)).toBeLessThanOrEqual(1);
     expect(item.countsTop).toBeGreaterThanOrEqual(item.labelBottom);
     expect(item.countsBottom - item.countsTop).toBeLessThan(24);
     expect(item.fullCounts).toBe(true);

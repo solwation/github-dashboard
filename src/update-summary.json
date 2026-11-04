@@ -1,10 +1,11 @@
 {
   "baseCommit": "91d17fa29e3e970111afde4fdafce81390b1bbe1",
   "summary": {
-    "sv": "Projektikoner som tidigare saknades hittas igen vid uppdatering, utan att befintliga ikoner laddas om.",
-    "en": "Previously missing project icons are rediscovered on refresh without reloading existing artwork."
+    "sv": "Saknade projektikoner kan hämtas igen. Vänstermenyn visar ikoner i hela radhöjden och bredare projektrader.",
+    "en": "Missing project icons can be refreshed. The sidebar shows full-row icons and wider project rows."
   },
   "issues": [
-    395
+    395,
+    396
   ]
 }

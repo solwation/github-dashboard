@@ -126,6 +126,7 @@ input[type="checkbox"] {
   accent-color: var(--green);
 }
 .sidebar {
+  --sidebar-padding-inline: var(--space-5);
   width: 226px;
   position: fixed;
   inset: 0 auto 0 0;
@@ -1259,6 +1260,7 @@ h1 {
 @media (max-width: 1250px) {
   .sidebar {
     width: 195px;
+    --sidebar-padding-inline: 14px;
     padding: 30px 14px;
   }
   .workspace {
@@ -1305,6 +1307,7 @@ h1 {
 @media (max-width: 950px) {
   .sidebar {
     width: 70px;
+    --sidebar-padding-inline: 9px;
     align-items: center;
     padding: 25px 9px;
   }
@@ -2481,6 +2484,7 @@ html {
     display: flex;
     position: fixed;
     inset: 0 auto 0 0;
+    --sidebar-padding-inline: var(--space-3);
     width: min(280px, 85vw);
     height: 100%;
     z-index: 100;
@@ -2595,17 +2599,17 @@ html {
   .sidebar.sidebar-mobile-open .sidebar-projects {
     flex: 0 0 auto;
     overflow: visible;
-    margin: var(--space-3) 0;
+    margin: var(--space-3) calc(var(--space-1) - var(--sidebar-padding-inline));
   }
   .sidebar .repositories-heading {
-    padding: 0 0 0 var(--space-3);
+    padding: 0;
     min-height: 44px;
   }
   .sidebar .repositories-heading .nav-caption {
     padding-left: 0;
   }
   .sidebar.sidebar-mobile-open .sidebar-repository {
-    padding-left: var(--space-3);
+    padding-left: 0;
   }
   .sidebar.sidebar-mobile-open .sidebar-add {
     min-width: 44px;
@@ -2628,7 +2632,7 @@ html {
     margin-top: var(--space-2);
   }
   .sidebar.sidebar-mobile-open .sidebar-external-heading {
-    padding-inline: var(--space-3);
+    padding-inline: 0;
   }
   /* SidebarVersion hides itself at phone widths (its badge sits in the top bar); the drawer shows it in full. */
   .sidebar.sidebar-mobile-open .sidebar-version {

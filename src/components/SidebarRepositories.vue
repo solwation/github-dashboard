@@ -84,7 +84,7 @@ function lastChange(changedAt: string | null) {
     <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
     <div class="repo-body">
     <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-      <ProjectIcon :repository="repo.fullName" :size="20" />
+      <ProjectIcon :repository="repo.fullName" sidebar />
       <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
       <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
         <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
@@ -117,7 +117,7 @@ function lastChange(changedAt: string | null) {
       <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
       <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-        <ProjectIcon :repository="repo.fullName" :size="20" />
+        <ProjectIcon :repository="repo.fullName" sidebar />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
           <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
@@ -146,7 +146,7 @@ function lastChange(changedAt: string | null) {
       <div v-for="repo in externalRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
       <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-        <ProjectIcon :repository="repo.fullName" :size="20" />
+        <ProjectIcon :repository="repo.fullName" sidebar />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
           <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
@@ -178,9 +178,11 @@ function lastChange(changedAt: string | null) {
 .sidebar-placeholder { display: grid; gap: 16px; padding: 18px 0; }
 .sidebar-placeholder span { height: 24px; width: 80%; border-radius: 4px; background: currentColor; opacity: .06; }
 .sidebar-placeholder span:nth-child(2) { width: 65%; }
-.sidebar-projects { min-height: 0; overflow-y: auto; }
+.sidebar-projects { min-height: 0; overflow-y: auto; margin-inline: calc(var(--space-1) - var(--sidebar-padding-inline)); }
+.repositories-heading { padding-inline: 0; }
+.repositories-heading .nav-caption { padding-left: 0; }
 /* Name-line icons share a right edge; the next line keeps counts and unread separate. */
-.sidebar-repository-row { --row-line: var(--space-5); --pages-target: var(--icon-sm); --row-pad-end: var(--space-2); display: flex; align-items: flex-start; gap: var(--space-1); margin-top: var(--space-1); min-width: 0; }
+.sidebar-repository-row { --row-line: var(--space-5); --pages-target: var(--icon-sm); --row-pad-end: var(--space-1); --sidebar-project-icon-size: calc(var(--row-line) + var(--space-4) + 2 * var(--space-1)); display: flex; align-items: flex-start; gap: var(--space-1); margin-top: var(--space-1); min-width: 0; }
 .repo-body { --metadata-width: 0px; --action-width: 0px; position: relative; flex: 1; min-width: 0; display: flex; }
 /* The board visibility action (#367) owns the rightmost slot in every row, so other icons keep one column. */
 .repo-body:has(.repo-board-toggle) { --action-width: calc(var(--pages-target) + var(--space-1)); }
@@ -193,23 +195,25 @@ function lastChange(changedAt: string | null) {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: var(--icon-md) minmax(0, 1fr) var(--space-2);
+  grid-template-columns: var(--sidebar-project-icon-size) minmax(0, 1fr) var(--space-2);
+  grid-template-rows: var(--row-line) var(--space-4);
   column-gap: var(--space-2);
   row-gap: 0;
   align-items: center;
   margin-top: 0;
-  padding: var(--space-1) var(--row-pad-end) var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--row-pad-end) var(--space-1) 0;
   border-radius: 4px;
 }
+.sidebar-repository > :deep(.project-icon-sidebar) { grid-column: 1; grid-row: 1 / 3; margin-block: calc(-1 * var(--space-1)); }
 .sidebar-repository.repository-selected { background: color-mix(in srgb, var(--repository-indicator-color) 10%, var(--surface)); box-shadow: inset 0 0 0 2px var(--repository-indicator-color); }
 .sidebar-repository.repository-selected .repository-label { font-weight: 700; }
-.sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
+.sidebar-repository:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 .repo-body svg { width: var(--icon-xs); height: var(--icon-xs); stroke-width: 2; flex-shrink: 0; }
 .repo-dot { width: var(--space-2); height: var(--space-2); box-shadow: none; background-color: var(--repository-color); }
 .repository-label { grid-column: 2 / -1; grid-row: 1; min-width: 0; line-height: var(--row-line); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .repo-slots { grid-column: 3; grid-row: 2; display: grid; place-items: center; height: var(--space-4); }
 /* Three equal tracks keep backlog, progress and closed in columns across rows; a track only grows for unusually long numbers. */
-.repository-counts { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: var(--space-1); min-width: 0; white-space: nowrap; font-size: 10px; line-height: var(--space-4); font-variant-numeric: tabular-nums; }
+.repository-counts { grid-column: 2 / -1; grid-row: 2; padding-inline-end: var(--space-2); display: grid; grid-template-columns: repeat(3, 1fr); column-gap: var(--space-1); min-width: 0; white-space: nowrap; font-size: 10px; line-height: var(--space-4); font-variant-numeric: tabular-nums; }
 .status-count { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
 .status-count-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Preserve room for four-digit counts in the narrow sidebar. */
@@ -238,7 +242,7 @@ function lastChange(changedAt: string | null) {
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 .sidebar-external-group { margin-top: var(--space-3); }
-.sidebar-external-heading { margin: 0; padding-block: var(--space-1); text-transform: uppercase; line-height: 1.5; }
+.sidebar-external-heading { margin: 0; padding-inline: 0; padding-block: var(--space-1); text-transform: uppercase; line-height: 1.5; }
 .sidebar-inactive-toggle {
   display: flex;
   align-items: center;
@@ -246,7 +250,7 @@ function lastChange(changedAt: string | null) {
   width: 100%;
   min-height: 32px;
   margin-top: var(--space-3);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) 0;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -279,7 +283,7 @@ function lastChange(changedAt: string | null) {
   flex-shrink: 0;
 }
 @media (pointer: coarse) {
-  .sidebar-repository-row { --row-line: 44px; --pages-target: 44px; }
+  .sidebar-repository-row { --row-line: 28px; --pages-target: 44px; }
   /* No room for a third 44px target beside the name: touch uses Settings > Reorder repositories, and tapping a greyed row shows it. */
   .repo-board-toggle { display: none; }
   .repo-body:has(.repo-board-toggle) { --action-width: 0px; }

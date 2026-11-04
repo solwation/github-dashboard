@@ -17,13 +17,14 @@
       },
       {
         "text": {
-          "sv": "Se projektikoner som återhämtas vid uppdatering, med färgprick och initialer som reserv, och välj när GitHub-användarnamn visas.",
-          "en": "See project icons that recover on refresh, with color dots and fallback initials, and choose when GitHub usernames appear."
+          "sv": "Se större projektikoner och bredare rader i vänstermenyn, återhämta saknade ikoner vid uppdatering och välj när GitHub-användarnamn visas.",
+          "en": "See larger project icons and wider sidebar rows, recover missing icons on refresh, and choose when GitHub usernames appear."
         },
         "issues": [
           393,
           394,
-          395
+          395,
+          396
         ]
       }
     ]
