@@ -110,10 +110,10 @@ core's PR-mode rules do not apply. For unpublished subtree imports preserve merg
 Integration pushes are allowed while work remains, but main must always contain only
 finished, verified work. Only Actions authorizes app publication. Both gates fetch the
 complete fresh queue and bind source/main, public baseline, prepared delta and final
-artifact. Active (`in-progress`) and blocked issues, missing readiness and owner-claimed
-or `integration-ready` issues inside the prepared delta stop publication; unclaimed
-backlog, owner claims without an active work label and `integration-ready` handoffs
-outside the delta do not, because their code is not on main. The existing three-hour fallback concerns
+artifact. Active/owner/blocked claims, missing readiness and `integration-ready` issues
+inside the prepared delta stop publication; unclaimed backlog and `integration-ready`
+handoffs (with their owner label) outside the delta do not, because their code is not on
+main. The existing three-hour fallback concerns
 claims outside the delta only; it never permits unfinished code on main.
 
 Stories follow **Backlog → In progress → Closed**. After integration on main and
