@@ -1917,10 +1917,10 @@ button.lane-sync.syncing { cursor: progress; }
 }
 
 /* Card/list mode (#127): one compact row per issue; the column sections stack in list mode. */
-.board-mode-toggle { display: inline-flex; flex: 0 0 auto; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
-.board-mode-toggle button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 28px; padding: 3px 9px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; }
-.board-mode-toggle button:hover { background: var(--hover); color: var(--text); }
-.board-mode-toggle button[aria-pressed="true"] { background: #e3f2ec; color: #0f6a59; box-shadow: inset 0 0 0 1px #b6dacb; }
+.board-mode-toggle, .board-grouping-toggle { display: inline-flex; flex: 0 0 auto; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.board-mode-toggle button, .board-grouping-toggle button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 28px; padding: 3px 9px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; }
+.board-mode-toggle button:hover, .board-grouping-toggle button:hover { background: var(--hover); color: var(--text); }
+.board-mode-toggle button[aria-pressed="true"], .board-grouping-toggle button[aria-pressed="true"] { background: #e3f2ec; color: #0f6a59; box-shadow: inset 0 0 0 1px #b6dacb; }
 .swimlane.list-mode { grid-template-columns: minmax(0, 1fr); }
 .swimlane.list-mode .board-column { min-height: 0; }
 .swimlane.list-mode .board-column + .board-column { border-left: 0; border-top: 1px solid var(--line); }
@@ -2172,7 +2172,7 @@ button.lane-sync.syncing { cursor: progress; }
 }
 @media (max-width: 650px) {
   .board-mode-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .board-mode-toggle button { min-width: 38px; min-height: 36px; padding: 0 8px; }
+  .board-mode-toggle button, .board-grouping-toggle button { min-width: 38px; min-height: 36px; padding: 0 8px; }
 
   .swimlane.list-mode .cards { padding: 6px 8px 8px; }
   /* Phones: the time label moves beside the status line so the title keeps the width. */
@@ -2396,8 +2396,8 @@ button.lane-sync.syncing { cursor: progress; }
   :root[data-theme="dark"] .issue-card.just-closed { border-color: #4fae78; background: #173a2b; }
 }
 /* List mode (#127) in the dark theme. */
-:root[data-theme="dark"] .board-mode-toggle { background: var(--surface-sunken); }
-:root[data-theme="dark"] .board-mode-toggle button[aria-pressed="true"] { background: var(--tint-green); color: var(--accent-green); box-shadow: inset 0 0 0 1px #2f6355; }
+:root[data-theme="dark"] .board-mode-toggle, :root[data-theme="dark"] .board-grouping-toggle { background: var(--surface-sunken); }
+:root[data-theme="dark"] .board-mode-toggle button[aria-pressed="true"], :root[data-theme="dark"] .board-grouping-toggle button[aria-pressed="true"] { background: var(--tint-green); color: var(--accent-green); box-shadow: inset 0 0 0 1px #2f6355; }
 :root[data-theme="dark"] .issue-row { background: var(--card); border-color: #30424a; }
 :root[data-theme="dark"] .issue-row:hover { border-color: #4f6d66; }
 :root[data-theme="dark"] .issue-row.progress { box-shadow: inset 2px 0 0 #b8954f; }
@@ -3187,10 +3187,9 @@ a.sidebar-repository:focus-visible {
 /* Board grouping (#390). Swimlanes are one combined board with a band per repository: horizontal
    rows below one shared status header in Cards, vertical repository columns in List. */
 @media (pointer: coarse) {
-  .board-toolbar .board-mode-toggle button { min-height: 44px; min-width: 44px; }
+  .board-toolbar .board-mode-toggle button, .board-toolbar .board-grouping-toggle button { min-height: 44px; min-width: 44px; }
 }
 .board-grouping-toggle svg { flex-shrink: 0; }
-.board-toolbar .board-grouping-toggle { margin-left: 0; }
 .swimlane-board { margin-bottom: var(--space-6); }
 .swimlane-board:not(.list-mode) { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: clip; }
 /* The shared status header stays below the sticky top bar while lanes scroll past. */

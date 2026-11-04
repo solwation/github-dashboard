@@ -19,7 +19,7 @@ const options = computed(() => [
 ]);
 </script>
 <template>
-  <div class="board-mode-toggle board-grouping-toggle" role="group" :aria-label="t('Gruppering per repository')">
+  <div class="board-grouping-toggle" role="group" :aria-label="t('Gruppering per repository')">
     <button v-for="option in options" :key="option.value" type="button" :aria-pressed="modelValue === option.value"
       :title="option.hint" @click="emit('update:modelValue', option.value)">
       <component :is="option.icon" :size="16" aria-hidden="true" /><span class="board-grouping-text">{{ option.label }}</span>
