@@ -1,10 +1,11 @@
 {
   "baseCommit": "fc7b9ca8024dfa9f2b1236a9a9dfe3ef3a5a8c3b",
   "summary": {
-    "sv": "Färdigt arbete med integration-ready stannar i Pågående med en väntemarkering, utan aktiv arbetstid eller timeout.",
-    "en": "Finished work marked integration-ready stays in In progress with a waiting badge, without active time or timeouts."
+    "sv": "Välj gruppering Ingen, Dela upp eller Simbanor. Färdigt arbete med integration-ready stannar i Pågående med väntemarkering, utan aktiv tid eller timeout.",
+    "en": "Choose None, Split or Swimlanes grouping. Finished work marked integration-ready stays in In progress with a waiting badge, without active time or timeouts."
   },
   "issues": [
+    390,
     391,
     392
   ]
