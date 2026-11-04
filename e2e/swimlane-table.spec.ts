@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { connectGrouping, groupingFixture, setBoardGrouping } from "./support/board-grouping";
+import { openSettings } from "./support/phone-menu";
 const evidence = process.env.SWIMLANE_TABLE_EVIDENCE;
 const sizes = [{ width: 1600, height: 1000 }, { width: 1000, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }];
 test("one joined List table aligns project/status cells across themes and responsive layouts", async ({ browser }) => {
@@ -21,6 +22,7 @@ test("one joined List table aligns project/status cells across themes and respon
         const board = page.locator(".swimlane-board"); await board.scrollIntoViewIfNeeded();
         if (mode === "Lista") {
           const table = board.locator("table"); await expect(table).toHaveCount(1); await expect(table.locator("thead th")).toHaveCount(3);
+          await expect(table.locator(".swimlane-cell-count")).toHaveCount(0);
           for (const header of await table.locator(".swimlane-table-status").all()) expect((await header.boundingBox())!.height).toBeLessThanOrEqual(80);
           await expect(board.locator(".swimlane-band, .collapse-project")).toHaveCount(0);
           const geometry = await table.evaluate(table => {
@@ -50,4 +52,35 @@ test("one joined List table aligns project/status cells across themes and respon
     await context.close();
   }
   if (evidence) await writeFile(`${evidence}/geometry.json`, JSON.stringify(measurements, null, 2));
+});
+
+test("List cell counters appear only while the display limit hides issues", async ({ page }) => {
+  const repos = await groupingFixture(page, 3); await connectGrouping(page, repos);
+  await setBoardGrouping(page, "swimlanes");
+  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  const table = page.locator(".swimlane-table");
+  const counters = table.locator(".swimlane-cell-count");
+  await expect(counters).toHaveCount(0);
+  const setLimit = async (limit: string) => {
+    await openSettings(page);
+    await page.locator("#global-column-limit").fill(limit);
+    await page.getByRole("button", { name: "Klart", exact: true }).click();
+  };
+  await setLimit("1");
+  await expect(counters).toHaveCount(3);
+  for (const counter of await counters.all()) await expect(counter).toHaveText("2");
+  await expect(table.locator('tbody[data-status="progress"] .swimlane-cell-count')).toHaveCount(0);
+  const alpha = table.locator('tbody[data-status="backlog"] td[data-repository="sample/alpha"]');
+  await alpha.getByRole("button", { name: "Visa fler", exact: true }).press("Enter");
+  await expect(alpha.locator(".issue-row")).toHaveCount(2);
+  await expect(alpha.locator(".swimlane-cell-count")).toHaveCount(0);
+  await expect(counters).toHaveCount(2);
+  const search = page.getByRole("textbox", { name: "Sök issues", exact: true });
+  await search.fill("second backlog task");
+  await expect(counters).toHaveCount(0);
+  await search.fill("");
+  await expect(counters).toHaveCount(2);
+  await setLimit("2");
+  await expect(counters).toHaveCount(0);
+  await expect(table.locator('tbody[data-status="backlog"] .swimlane-table-status .column-count')).toHaveText("6");
 });

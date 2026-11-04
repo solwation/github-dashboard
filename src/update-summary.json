@@ -1,10 +1,10 @@
 {
-  "baseCommit": "6000795b38f3c07889c882d084b0eeae85de06bb",
+  "baseCommit": "fc6b7f4da4d9fc7acf05bf0116faec457bce5bd3",
   "summary": {
-    "sv": "Automatisk uppdatering fungerar även efter en tidigare hård omladdning, så nya visuella ändringar slår igenom utan cache-rensning.",
-    "en": "Automatic updates keep working after a previous hard reload, so new visual changes appear without clearing the cache."
+    "sv": "List-simbanor visar cellräknare bara när fler ärenden finns än de som visas. Tomma celler och fullt visade listor blir renare.",
+    "en": "List swimlanes show cell counts only when more issues exist than are displayed. Empty cells and fully displayed lists look cleaner."
   },
   "issues": [
-    405
+    406
   ]
 }

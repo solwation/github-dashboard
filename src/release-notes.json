@@ -18,13 +18,14 @@
       },
       {
         "text": {
-          "sv": "Visa List-simbanor som en sammanhängande tabell med projektkolumner och gemensamma statusrader, och styr koordinationsfiltret i Settings.",
-          "en": "View List swimlanes as one joined table with repository columns and shared status rows, and control coordination filtering in Settings."
+          "sv": "Visa List-simbanor som en sammanhängande tabell, med cellräknare bara när ärenden är dolda; koordinationsfiltret finns i Settings.",
+          "en": "View List swimlanes as one joined table, with cell counts only when issues are hidden; coordination filtering lives in Settings."
         },
         "issues": [
           390,
           402,
-          403
+          403,
+          406
         ]
       },
       {

@@ -2733,7 +2733,7 @@ onMounted(async () => {
                   <td v-for="(lane, laneIndex) in contentLanes" :key="lane.repo.id" :headers="'repo-' + lane.repo.id + ' swimlane-status-' + col.key" :data-repository="lane.repo.full_name" class="swimlane-table-cell">
                     <div v-if="lane.loading" class="repository-loading" role="status">{{ t('Hämtar issues för {name}…', { name: lane.repo.full_name }) }}</div>
                     <template v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)">
-                      <span class="swimlane-cell-count" :aria-label="t('{status}: {count}', { status: col.title, count: items(lane, col.key).length })">{{ items(lane, col.key).length }}</span>
+                      <span v-if="items(lane, col.key).length > shownLimit(lane.repo.full_name, col.key)" class="swimlane-cell-count" :aria-label="t('{status}: {count}', { status: col.title, count: items(lane, col.key).length })">{{ items(lane, col.key).length }}</span>
                       <BoardColumn cell list-mode :id="'board-' + lane.repo.id + '-' + col.key"
                         :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
                         :column="col" :lane="lane" :items="items(lane, col.key)" :limit="shownLimit(lane.repo.full_name, col.key)" :limit-increment="initialLimit(lane.repo.full_name)"
