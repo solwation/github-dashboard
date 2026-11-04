@@ -1,4 +1,4 @@
-import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
+import { column, isActiveWork, isCoordination, type Issue, type Lane, type Rules } from "./model";
 import { WORK_INACTIVITY_MS } from "./work-activity";
 
 export const REPOSITORY_ACTIVITY_MS = WORK_INACTIVITY_MS;
@@ -14,7 +14,7 @@ export function repositoryActivity(lane: Lane, rules: Rules, now: number): Repos
   if (lane.loading || lane.error || !Number.isFinite(now)) return null;
   const active = lane.issues.filter(issue => {
     const updated = Date.parse(issue.updated_at);
-    return !issue.pull_request && !isCoordination(issue) && column(issue, rules) === "progress"
+    return !issue.pull_request && !isCoordination(issue) && column(issue, rules) === "progress" && isActiveWork(issue, rules)
       && Number.isFinite(updated) && updated <= now && now - updated < REPOSITORY_ACTIVITY_MS;
   });
   if (!active.length) return null;

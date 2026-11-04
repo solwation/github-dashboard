@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useIssueForecast } from "../composables/useIssueForecast";
-import { useClosedIssueOutcome } from "../composables/useIssueEstimates";
+import { useClosedIssueOutcome, useIssueRules } from "../composables/useIssueEstimates";
 import { useIssueClock } from "../composables/useIssueClock";
 import { storyPoints } from "../lib/story-points";
 import { estimateLabel } from "../lib/estimates";
-import { duration } from "../lib/model";
+import { activeWorkMs, durationLabel } from "../lib/model";
 import { locale, useLanguage } from "../lib/i18n";
 import type { Issue } from "../lib/model";
 
@@ -18,9 +18,14 @@ const { basis, estimate } = useIssueForecast({
   active: true,
 });
 const outcome = useClosedIssueOutcome(() => props.issue, () => props.repository);
-const now = useIssueClock(() => props.issue, () => props.column, () => true);
+const rules = useIssueRules(() => props.repository);
+const now = useIssueClock(() => props.issue, () => props.column, () => true, rules);
 const size = computed(() => storyPoints(props.issue));
-const elapsed = computed(() => props.issue.startedAt ? duration(props.issue.startedAt, now.value) : null);
+// Active working time only; integration waits are not work (#392).
+const elapsed = computed(() => {
+  const ms = activeWorkMs(props.issue, now.value, rules());
+  return Number.isFinite(ms) ? durationLabel(ms) : null;
+});
 const actual = computed(() => outcome.value ? estimateLabel(outcome.value.actualMs).replace(/^≈\s*/, "") : null);
 const aggregation = computed(() => {
   if (!outcome.value || !("aggregation" in outcome.value) || !outcome.value.aggregation) return null;

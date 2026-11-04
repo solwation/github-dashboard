@@ -108,6 +108,7 @@ import {
 } from "./lib/notifications";
 import { parseIssueNavigationHash, issueDomId, type IssueNavigationTarget } from "./lib/issue-navigation";
 import {
+  activeWorkStart,
   column,
   deriveWorkStarts,
   isCoordination,
@@ -599,7 +600,9 @@ function timeoutEstimateMs(repo: string, issue: Issue) {
   return timedOut.value.find(entry => entry.repo === repo && entry.issue.id === issue.id)?.estimatedMs;
 }
 function issueTimedOut(repo: string, issue: Issue) {
-  const started = issue.startedAt ? Date.parse(issue.startedAt) : NaN;
+  // Active working time only: an issue waiting for integration never times out (#392).
+  const active = activeWorkStart(issue, rules.value[repo]);
+  const started = active ? Date.parse(active) : NaN;
   if (!timeoutSettings.value.timeoutEnabled || issue.timerError || !Number.isFinite(started) || started > boardNow()) return false;
   return timedOut.value.some(entry => entry.repo === repo && entry.issue.id === issue.id &&
     entry.issue.startedAt === issue.startedAt && boardNow() - started > entry.estimatedMs * (1 + timeoutSettings.value.timeoutOverrunPercent / 100));
@@ -1109,7 +1112,7 @@ watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, sho
   for (const entry of result.newlyTimedOut) {
     if ((hideCoordination.value && isCoordination(entry.issue)) || !notificationsEnabled(entry.repo)) continue;
     const repo = lanes.value.find(lane => lane.repo.full_name === entry.repo)?.repo;
-    if (repo) void notifyTimeout(repo, entry.issue, entry.estimatedMs, timeoutSettings.value.timeoutOverrunPercent, selectNotifiedIssue).catch(() => {});
+    if (repo) void notifyTimeout(repo, entry.issue, entry.estimatedMs, timeoutSettings.value.timeoutOverrunPercent, selectNotifiedIssue, rules.value[entry.repo]).catch(() => {});
   }
 }, { deep: true });
 function combinedLimit(key: string) { return combinedLimits.value[key] ?? columnLimit.value; }

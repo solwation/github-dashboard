@@ -1,7 +1,7 @@
 import {
   closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, repositoryEstimate, median,
 } from "./estimates";
-import { closedWorkStart, type Issue, type Rules } from "./model";
+import { closedWorkPeriod, type Issue, type Rules } from "./model";
 import { approximatePoints, MAX_LOCAL_POINTS, storyPoints, validPoints, type ApproximatePoints } from "./story-points";
 import type { StatisticsData, StatisticsEvent, StatisticsIssue } from "./statistics";
 
@@ -77,7 +77,7 @@ export function statisticsClosings(snapshot: StatisticsData, rules: Rules = {}):
     for (const [index, event] of sorted.entries()) {
       if (event.event !== "closed") continue;
       const closedMs = Date.parse(event.created_at);
-      const start = closedWorkStart(sorted, event.created_at, rules);
+      const period = closedWorkPeriod(sorted, event.created_at, rules), start = period?.start ?? null;
       const startedMs = start ? Date.parse(start) : NaN;
       if (!Number.isFinite(closedMs) || !Number.isFinite(startedMs) || startedMs >= closedMs) continue;
       const reopened = sorted.slice(index + 1).find(next => next.event === "reopened" && Date.parse(next.created_at) >= closedMs);
@@ -86,6 +86,7 @@ export function statisticsClosings(snapshot: StatisticsData, rules: Rules = {}):
           id, number: embedded.number, title: "", body: null, html_url: "", state: "closed",
           created_at: embedded.created_at, updated_at: event.created_at, closed_at: event.created_at,
           labels: [{ name: `sp ${points}`, color: "" }], assignees: [], workStartedAt: start!,
+          ...(period!.waitMs > 0 ? { waitMs: period!.waitMs } : {}),
         },
         labels: (issues.get(id) ?? embedded).labels,
         closer: event.actor?.login ?? "",

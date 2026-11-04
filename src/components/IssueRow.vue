@@ -2,7 +2,7 @@
 import ProjectIcon from "./ProjectIcon.vue";
 import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, Hourglass, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, GitMerge, HandHelping, Hourglass, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
@@ -16,7 +16,8 @@ import { useIssueRelations } from "../composables/useIssueRelations";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { repositoryColor } from "../lib/repository-color";
 import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
-import { column, duration, hidesProgressLabel, isProgress, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
+import { column, hidesWorkLabel, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
+import { useWorkTime } from "../composables/useWorkTime";
 import type { IssueRelations } from "../lib/issue-relations";
 import type { ActivityMarker } from "../lib/activity";
 const { t, locale } = useLanguage();
@@ -156,7 +157,8 @@ onBeforeUnmount(() => {
   observer?.disconnect();
 });
 const col = computed(() => column(props.issue, props.rules));
-const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
+const now = useIssueClock(() => props.issue, () => col.value, () => visible.value, () => props.rules);
+const work = useWorkTime(() => props.issue, () => props.rules, now);
 const rank = computed(() => priority(props.issue, props.rules));
 // Same type icon as the card, and the label it stands for is not repeated as a chip (#197, #199).
 const typeIcons = { bug: Bug, security: ShieldAlert, feature: Star, docs: FileText, question: CircleQuestionMark, help: HandHelping, chore: Wrench };
@@ -190,7 +192,7 @@ const allLabels = computed(() =>
     (l) =>
       !/^priority\s*:/i.test(l.name) &&
       l !== typeLabel.value &&
-      !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))
+      !hidesWorkLabel(col.value, l.name, props.rules)
   )
 );
 const partitionedLabels = computed(() => {
@@ -366,8 +368,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
         >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button></span
-      ><span class="row-slot row-slot-timeout"><span v-if="timeout && issue.startedAt" class="row-timeout"
-        :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
+      ><span class="row-slot row-slot-timeout"><span v-if="timeout && work.label.value" class="row-timeout"
+        :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: work.label.value, estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
         >{{ t("Timeout") }}</span></span
       ><span class="row-slot row-slot-status"><span class="row-status" :class="[col, { pending }]">{{ status }}</span></span></span
       ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
@@ -385,9 +387,10 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ backlogAge }}</time
       ><span v-else-if="col === 'backlog'" class="backlog-age">{{ t("Okänd ålder") }}</span
-      ><span v-else-if="col === 'progress'" class="timer"
-        :title="issue.startedAt ? t('Arbetslabel satt ') + new Date(issue.startedAt).toLocaleString(locale) : t('Ingen säker starttid kunde hämtas')"
-        ><Clock3 :size="12" aria-hidden="true" /><span class="row-elapsed-label">{{ issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd") }}</span></span
+      ><span v-else-if="col === 'progress' && work.waiting.value" class="integration-wait" :title="work.waitingTitle.value"
+        ><GitMerge :size="12" aria-hidden="true" /><span class="row-elapsed-label" aria-hidden="true">{{ t("Integration") }}</span><span class="sr-only">{{ t("Väntar på integration") }}</span></span
+      ><span v-else-if="col === 'progress'" class="timer" :title="work.timerTitle.value"
+        ><Clock3 :size="12" aria-hidden="true" /><span class="row-elapsed-label">{{ work.label.value ?? t("Starttid okänd") }}</span></span
       ><span v-else-if="pending" class="pending-closure-badge" :title="t('Väntar på att GitHub bekräftar att issuet är stängt')"
         ><Hourglass :size="12" aria-hidden="true" /><span v-if="isPhone" class="pending-closure-text">{{ t("Verifieras") }}</span></span
       ><time v-else-if="issue.closed_at" class="closed-date" :datetime="issue.closed_at"
@@ -513,7 +516,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: var(--marker-move-bg); color: var(--marker-move-text); font-size: 10px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
   .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
-  .row-time > .timer { flex: 1 1 auto; min-width: 0; }
+  .row-time > .timer, .row-time > .integration-wait { flex: 1 1 auto; min-width: 0; }
   .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {

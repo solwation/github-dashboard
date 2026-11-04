@@ -1,7 +1,7 @@
 import { computed } from "vue";
 import { issueGroupEstimate } from "../lib/estimates";
 import type { Issue } from "../lib/model";
-import { useIssueEstimateBasis, useIssueGroupWork } from "./useIssueEstimates";
+import { useIssueEstimateBasis, useIssueGroupWork, useIssueRules } from "./useIssueEstimates";
 import { useNow } from "./useNow";
 
 /**
@@ -12,7 +12,8 @@ import { useNow } from "./useNow";
 export function useIssueForecast(props: { issue: Issue; repository?: string; inProgress?: boolean; active?: boolean }) {
   const basis = useIssueEstimateBasis(() => props.repository);
   const groupWork = useIssueGroupWork(() => props.issue, () => props.repository);
-  const estimateAt = (at: number) => issueGroupEstimate(props.issue, basis.value?.msPerPoint, at, !!props.inProgress, groupWork(at));
+  const rules = useIssueRules(() => props.repository);
+  const estimateAt = (at: number) => issueGroupEstimate(props.issue, basis.value?.msPerPoint, at, !!props.inProgress, groupWork(at), rules());
   const now = useNow(at => {
     const estimate = estimateAt(at);
     if (!estimate || estimate.remainingMs === null || !estimate.counting) return Infinity;

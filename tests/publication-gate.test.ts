@@ -37,8 +37,22 @@ describe("Actions publication decision", () => {
   it("ignores unclaimed backlog issues outside the prepared delta", () => {
     expect(decidePublication(fixture({ openIssues: [issue(3), issue(4, ["priority: high", "enhancement"]), issue(1, ["needs-deploy"])] })).allowed).toBe(true);
     expect(decidePublication(fixture({ openIssues: [issue(3, ["in-progress"])] })).reason).toBe("queue-not-ready");
-    expect(decidePublication(fixture({ openIssues: [issue(3, ["orkester: session"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["orkester: session", "in-progress"])] })).reason).toBe("queue-not-ready");
     expect(decidePublication(fixture({ openIssues: [issue(3, ["user question"]), issue(1, ["needs-deploy"])] })).allowed).toBe(true);
+  });
+  it("lets finished handoffs waiting for integration outside the batch pass, but never inside it (#392)", () => {
+    // integration-ready keeps the owner label: neither label alone holds back other work whose code is not on main.
+    for (const labels of [["integration-ready", "orkester: session"], ["Integration_Ready"], ["orkester: session"], ["owner: worker"]])
+      expect(decidePublication(fixture({ openIssues: [issue(3, labels), issue(1, ["needs-deploy"])] }))).toMatchObject({ allowed: true, reason: "ready" });
+    // Inside the prepared delta a waiting handoff is unintegrated work, even with readiness and after the fallback.
+    const late = publishedAt + FALLBACK_AFTER_MS;
+    for (const labels of [["integration-ready"], ["integration-ready", "needs-deploy"], ["integration ready", "orkester: session", "needs-deploy"]])
+      expect(decidePublication(fixture({ now: late, openIssues: [issue(1, labels)] })).reason).toBe("queue-not-ready");
+    // Active work and blockers still block outside the batch, also when an issue carries both work labels.
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["integration-ready", "in-progress"])] })).reason).toBe("queue-not-ready");
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["integration-ready", "blocked"])] })).reason).toBe("queue-not-ready");
+    // Readiness metadata outside the batch is still inconsistent.
+    expect(decidePublication(fixture({ openIssues: [issue(3, ["integration-ready", "needs-deploy"])] })).reason).toBe("ready-issue-missing-from-delta");
   });
   it.each([
     issue(1), issue(1, ["priority: high"]), issue(1, ["needs-deploy", "in-progress"]),
@@ -49,7 +63,7 @@ describe("Actions publication decision", () => {
   });
   it("ignores PRs and the exact coordination label, but never treats session owner prefixes as coordination", () => {
     expect(decidePublication(fixture({ openIssues: [{ ...issue(4), pull_request: {} }, issue(5, ["orkester", "in-progress"])] })).allowed).toBe(true);
-    expect(decidePublication(fixture({ openIssues: [issue(5, ["orkester: session"])] })).allowed).toBe(false);
+    expect(decidePublication(fixture({ openIssues: [issue(1, ["orkester: session", "needs-deploy"])] })).allowed).toBe(false);
     expect(decidePublication(fixture({ openIssues: [issue(1, ["Orkester"])] })).allowed).toBe(false);
   });
   it("blocks ready work absent from this prepared delta and delta issues absent from daily notes", () => {

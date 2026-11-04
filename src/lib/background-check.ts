@@ -93,6 +93,8 @@ export function compactIssue(issue: Issue): Issue {
     ...(issue.pull_request ? { pull_request: {} } : {}),
     ...(issue.startedAt !== undefined ? { startedAt: issue.startedAt } : {}),
     ...(issue.timerError !== undefined ? { timerError: issue.timerError } : {}),
+    ...(issue.waitMs ? { waitMs: issue.waitMs } : {}),
+    ...(issue.waitingSince ? { waitingSince: issue.waitingSince } : {}),
   };
 }
 function compactRepo(repo: Repo): Repo {
@@ -145,7 +147,7 @@ export function timeoutNotices(previous: StoredRepo, current: Lane, rules: Rules
   tracker.scan([{ repo: current.repo, issues: previous.issues, labels: [] }], { [name]: rules }, settings, previous.checkedAt, { notify: false, bases });
   return tracker.scan([current], { [name]: rules }, settings, now, { bases }).newlyTimedOut
     .filter(entry => !(hideCoordination && isCoordination(entry.issue)))
-    .map(entry => ({ kind: "timeout", repo: current.repo, issue: entry.issue, detail: timeoutDetail(entry.issue, entry.estimatedMs, settings.timeoutOverrunPercent, now) }));
+    .map(entry => ({ kind: "timeout", repo: current.repo, issue: entry.issue, detail: timeoutDetail(entry.issue, entry.estimatedMs, settings.timeoutOverrunPercent, now, rules) }));
 }
 
 /** Tags match the open app's notifications (closureKey / notifyTimeout), so one replaces the other. */

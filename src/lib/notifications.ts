@@ -1,7 +1,7 @@
 import { timeoutDetail } from "./timeouts";
 import { boardNow } from "./clock";
 import { t } from "./i18n";
-import type { Issue, Repo } from "./model";
+import type { Issue, Repo, Rules } from "./model";
 import { issueNavigationHash } from "./issue-navigation";
 
 /** Called when the user clicks a page notification; the app shows the issue on its board (#278). */
@@ -61,8 +61,8 @@ export async function requestNotifications(): Promise<
 export async function notifyClosure(repo: Repo, issue: Issue, onSelect?: NotificationSelect) {
   return notifyIssue(repo, issue, t("Issue stängd"), `${repo.full_name}:${issue.id}:${issue.closed_at}`, undefined, onSelect);
 }
-export async function notifyTimeout(repo: Repo, issue: Issue, estimatedMs: number, percent: number, onSelect?: NotificationSelect) {
-  return notifyIssue(repo, issue, t("Estimatet för pågående arbete har överskridits"), `timeout:${repo.full_name}:${issue.id}:${issue.startedAt}`, timeoutDetail(issue, estimatedMs, percent, boardNow()), onSelect);
+export async function notifyTimeout(repo: Repo, issue: Issue, estimatedMs: number, percent: number, onSelect?: NotificationSelect, rules: Rules = {}) {
+  return notifyIssue(repo, issue, t("Estimatet för pågående arbete har överskridits"), `timeout:${repo.full_name}:${issue.id}:${issue.startedAt}`, timeoutDetail(issue, estimatedMs, percent, boardNow(), rules), onSelect);
 }
 async function notifyIssue(repo: Repo, issue: Issue, description: string, tag: string, detail?: string, onSelect?: NotificationSelect) {
   if (notificationPermission() !== "granted") return;

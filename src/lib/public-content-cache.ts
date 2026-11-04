@@ -22,7 +22,9 @@ function issue(value: unknown): value is Issue {
     (value.body === undefined || value.body === null || typeof value.body === "string") &&
     (value.comments === undefined || (Number.isSafeInteger(value.comments) && Number(value.comments) >= 0)) &&
     (value.startedAt === undefined || value.startedAt === null || date(value.startedAt)) &&
-    (value.workStartedAt === undefined || date(value.workStartedAt));
+    (value.workStartedAt === undefined || date(value.workStartedAt)) &&
+    (value.waitMs === undefined || (typeof value.waitMs === "number" && Number.isFinite(value.waitMs) && value.waitMs >= 0)) &&
+    (value.waitingSince === undefined || value.waitingSince === null || date(value.waitingSince));
 }
 /** Keep complete, public-only lanes. Age is based on the last successful fetch, never a cache write. */
 export function normalizePublicContent(value: unknown, now = Date.now()): PublicLaneSnapshot[] {

@@ -1,6 +1,6 @@
 import { t } from "./i18n";
 import { approximatePoints } from "./story-points";
-import { column, type Issue, type Rules } from "./model";
+import { activeWorkMs, activeWorkStart, awaitsIntegration, closedWorkMs, column, type Issue, type Rules } from "./model";
 
 /**
  * Pure time estimates for the board (#138). Nothing here fetches data: callers pass the lane
@@ -8,7 +8,8 @@ import { column, type Issue, type Rules } from "./model";
  *
  * Model:
  * - History: the most recent 30 positive start → close durations within 30 days, with a known
- *   workStartedAt (falling back to startedAt). Unknown/future/invalid closures never calibrate.
+ *   workStartedAt (falling back to startedAt), minus integration waits (#392). Unknown/future/invalid
+ *   closures never calibrate.
  * - Size: approximatePoints supplies explicit label values or conservative local 1–3 point scores, not measured complexity.
  * - Calibration: discard durations per point above 4× the raw sample median, then use the
  *   retained median per repository; fewer than MIN_SAMPLES retained gives no estimate.
@@ -31,6 +32,9 @@ import { column, type Issue, type Rules } from "./model";
  *   count the same groups (#287); a member reached through any sub-issue path is absorbed; on a
  *   combined board a walk stops at issues another repository estimates; and an unknown start
  *   with deducted sub-issue time is not reported as assuming the full estimate.
+ * - Active time (#392): an In progress issue's spent time counts only active work. While it waits
+ *   for integration (`integration-ready` without an active work label) its time is frozen, it does
+ *   not count down and it is not running for parallelism or timeouts.
  * - Parallelism: the time-weighted average number of issues in progress while at least one was in
  *   progress, over the window: sum of in-progress durations (history plus current in-progress
  *   issues, clipped to the window) divided by the length of their union. Idle periods such as
@@ -138,7 +142,9 @@ export function historySamples(
     const startedMs = time(issue.workStartedAt ?? issue.startedAt), closedMs = time(issue.closed_at);
     if (!Number.isFinite(startedMs) || !Number.isFinite(closedMs)) continue;
     if (closedMs < cutoff || closedMs > now || closedMs <= startedMs) continue;
-    samples.push({ issue, startedMs, closedMs, durationMs: closedMs - startedMs });
+    const durationMs = closedWorkMs(issue);
+    if (!Number.isFinite(durationMs)) continue;
+    samples.push({ issue, startedMs, closedMs, durationMs });
   }
   return samples.sort((a, b) => b.closedMs - a.closedMs || b.issue.id - a.issue.id).slice(0, sampleLimit);
 }
@@ -183,6 +189,7 @@ export function parallelism(
   inProgress: Issue[],
   now: number,
   windowDays = ESTIMATE_WINDOW_DAYS,
+  rules: Rules = {},
 ): number {
   const windowStart = now - windowDays * DAY_MS;
   const intervals: [number, number][] = [];
@@ -191,7 +198,8 @@ export function parallelism(
     if (Number.isFinite(from) && Number.isFinite(to) && to > from) intervals.push([from, to]);
   };
   for (const sample of samples) add(sample.startedMs, sample.closedMs);
-  for (const issue of inProgress) add(time(issue.startedAt), now);
+  // Only running active work occupies capacity; an integration wait does not (#392).
+  for (const issue of inProgress) add(time(activeWorkStart(issue, rules)), now);
   if (!intervals.length) return 1;
   intervals.sort((a, b) => a[0] - b[0]);
   let busy = 0, total = 0, [from, to] = intervals[0]!;
@@ -221,18 +229,18 @@ export function repositoryEstimate(
     typicalMs,
     msPerPoint,
     windowDays,
-    parallelism: parallelism(samples, active, now, windowDays),
+    parallelism: parallelism(samples, active, now, windowDays, rules),
   };
   if (msPerPoint === null) return { basis, progress: null, backlog: null };
   const groups = subIssueGroups([...active, ...waiting], now, rules, windowDays, options.children, options.external);
   const items = groups.filter(group => group.inProgress).map(({ root: issue, ownProgress, spentMs, running, descendants }): ProgressItemEstimate => {
     const points = approximatePoints(issue), durationMs = points * msPerPoint;
-    const started = time(issue.startedAt);
+    const own = ownWork(issue, rules, now);
     // Unknown start means the full estimate is assumed; deducted sub-issue time makes it neither full nor contradictory (#287).
-    const unknownStart = ownProgress && !Number.isFinite(started) && spentMs === 0;
-    const ownMs = ownProgress && Number.isFinite(started) ? Math.max(0, now - started) : 0;
+    const unknownStart = ownProgress && !own.known && spentMs === 0;
+    const ownMs = ownProgress ? own.spentMs : 0;
     const left = durationMs - ownMs - spentMs;
-    const ownRunning = ownProgress && Number.isFinite(started) && started <= now;
+    const ownRunning = ownProgress && own.running;
     return { issue, points, remainingMs: Math.max(0, left), overdue: left < 0, unknownStart,
       subIssueSpentMs: spentMs, subIssues: descendants, counting: left > 0 && (ownRunning || running) };
   });
@@ -265,14 +273,13 @@ export function subIssueSpentMs(child: SubIssueWork, fallbackRules: Rules, now: 
   const { issue } = child, state = column(issue, child.rules ?? fallbackRules);
   if (issue.pull_request) return { spentMs: 0, running: false, open: false };
   if (state === "progress") {
-    const start = time(issue.startedAt);
-    const running = Number.isFinite(start) && start <= now;
-    return { spentMs: running ? now - start : 0, running, open: true };
+    const own = ownWork(issue, child.rules ?? fallbackRules, now);
+    return { spentMs: own.spentMs, running: own.running, open: true };
   }
   if (state === "closed") {
-    const start = time(issue.workStartedAt ?? issue.startedAt), end = time(issue.closed_at);
-    const valid = Number.isFinite(start) && Number.isFinite(end) && end > start && end <= now && end >= now - windowDays * DAY_MS;
-    return { spentMs: valid ? end - start : 0, running: false, open: false };
+    const end = time(issue.closed_at), spent = closedWorkMs(issue);
+    const valid = Number.isFinite(spent) && end <= now && end >= now - windowDays * DAY_MS;
+    return { spentMs: valid ? spent : 0, running: false, open: false };
   }
   return { spentMs: 0, running: false, open: issue.state === "open" };
 }
@@ -367,15 +374,27 @@ function subIssueGroups(open: Issue[], now: number, rules: Rules, windowDays: nu
   });
 }
 
+/**
+ * An open In progress issue's own active time (#392): running work counts from its active start; an
+ * integration wait keeps the active time reached before it, without running. Unknown starts and
+ * future starts are neither known nor running.
+ */
+export function ownWork(issue: Issue, rules: Rules, now: number): { spentMs: number; running: boolean; known: boolean } {
+  const start = time(activeWorkStart(issue, rules));
+  if (Number.isFinite(start)) return start <= now ? { spentMs: now - start, running: true, known: true } : { spentMs: 0, running: false, known: false };
+  const frozen = awaitsIntegration(issue, rules) ? activeWorkMs(issue, now, rules) : NaN;
+  return Number.isFinite(frozen) && frozen >= 0 ? { spentMs: frozen, running: false, known: true } : { spentMs: 0, running: false, known: false };
+}
+
 /** Individual forecast uses the same calibrated rate and size as column estimates. */
-export function issueEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean) {
+export function issueEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean, rules: Rules = {}) {
   if (msPerPoint == null || !Number.isFinite(msPerPoint) || msPerPoint <= 0) return null;
   const totalMs = approximatePoints(issue) * msPerPoint;
   if (!Number.isFinite(totalMs)) return null;
-  const start = time(issue.startedAt);
+  const own = ownWork(issue, rules, now);
   // Unknown or future starts cannot justify a remaining-time countdown.
-  if (!inProgress || !Number.isFinite(start) || start > now) return { totalMs, remainingMs: null, overdue: false };
-  const remaining = totalMs - (now - start);
+  if (!inProgress || !own.known) return { totalMs, remainingMs: null, overdue: false };
+  const remaining = totalMs - own.spentMs;
   return { totalMs, remainingMs: Math.max(0, remaining), overdue: remaining < 0 };
 }
 
@@ -404,15 +423,14 @@ export interface IssueGroupForecast {
  * has started, matching its group moving into the In progress badge.
  */
 export function issueGroupEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean,
-  group?: SubIssueGroupWork | null): IssueGroupForecast | null {
-  const base = issueEstimate(issue, msPerPoint, now, inProgress);
+  group?: SubIssueGroupWork | null, rules: Rules = {}): IssueGroupForecast | null {
+  const base = issueEstimate(issue, msPerPoint, now, inProgress, rules);
   if (!base) return null;
   const subIssueSpentMs = group?.spentMs ?? 0, subIssues = group?.descendants ?? 0, running = !!group?.running;
-  const start = time(issue.startedAt);
-  const ownRunning = inProgress && Number.isFinite(start) && start <= now;
-  const ownSpentMs = ownRunning ? now - start : 0;
+  const own = inProgress ? ownWork(issue, rules, now) : { spentMs: 0, running: false, known: false };
+  const ownRunning = own.running, ownSpentMs = own.spentMs;
   const deducted = subIssueSpentMs > 0 || running || !!group?.openInProgress;
-  if (!ownRunning && !deducted) return { ...base, overtimeMs: 0, ownSpentMs, subIssueSpentMs, subIssues, running: false, counting: false };
+  if (!ownRunning && !deducted) return { ...base, overtimeMs: Math.max(0, ownSpentMs - base.totalMs), ownSpentMs, subIssueSpentMs, subIssues, running: false, counting: false };
   const left = base.totalMs - ownSpentMs - subIssueSpentMs;
   return { totalMs: base.totalMs, remainingMs: Math.max(0, left), overdue: left < 0, overtimeMs: Math.max(0, -left),
     ownSpentMs, subIssueSpentMs, subIssues, running: ownRunning || running, counting: left >= 0 && (ownRunning || running) };
@@ -463,9 +481,9 @@ export function estimateLabel(ms: number): string {
 
 /** Observed work duration, compared with other recent closures rather than calibrating against itself. */
 export function closedIssueOutcome(issue: Issue, history: HistorySample[], now: number) {
-  const start = time(issue.workStartedAt ?? issue.startedAt), end = time(issue.closed_at);
-  if (issue.pull_request || issue.state !== "closed" || !Number.isFinite(start) || !Number.isFinite(end) || end > now || end <= start) return null;
-  return outcomeForActual(issue, end - start, history);
+  const end = time(issue.closed_at), actualMs = closedWorkMs(issue);
+  if (issue.pull_request || issue.state !== "closed" || !Number.isFinite(actualMs) || end > now) return null;
+  return outcomeForActual(issue, actualMs, history);
 }
 
 /** Closed parent duration: sum complete member intervals, otherwise use one complete group span. */
@@ -475,14 +493,15 @@ export function closedIssueGroupOutcome(issue: Issue, children: Issue[], history
   const members = [issue, ...children];
   const intervals = members.map(member => {
     const start = time(member.workStartedAt ?? member.startedAt), end = time(member.closed_at);
-    return { start, end, validEnd: member.state === "closed" && Number.isFinite(end) && end <= now };
+    return { start, end, activeMs: closedWorkMs(member), validEnd: member.state === "closed" && Number.isFinite(end) && end <= now };
   });
   // Every child must be present and closed for either metric to describe the whole group.
   if (intervals.some(interval => !interval.validEnd)) return null;
   const knownIntervals = intervals.filter(interval => Number.isFinite(interval.start) && interval.start < interval.end);
   let actualMs: number, aggregation: "sum" | "span";
   if (knownIntervals.length === intervals.length) {
-    actualMs = knownIntervals.reduce((sum, interval) => sum + interval.end - interval.start, 0);
+    // Integration waits are not work (#392).
+    actualMs = knownIntervals.reduce((sum, interval) => sum + (Number.isFinite(interval.activeMs) ? interval.activeMs : interval.end - interval.start), 0);
     aggregation = "sum";
   } else {
     const starts = intervals.filter(interval => interval.start < interval.end).map(interval => interval.start).filter(Number.isFinite);

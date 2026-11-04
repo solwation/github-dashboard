@@ -69,7 +69,8 @@ export function departedIssues(previous: Lane | undefined, next: Lane, rules: Ru
 
 /** How the board shows a pending issue: a closed card that is visibly not yet confirmed. */
 export function pendingIssue(entry: PendingClosure): Issue {
-  const { startedAt, timerError, ...issue } = entry.issue;
+  // The open period's current wait is not extended to the closing; completed waits stay subtracted (#392).
+  const { startedAt, timerError, waitingSince: _waitingSince, ...issue } = entry.issue;
   const wasClosed = issue.state === "closed" && !!issue.closed_at;
   const workStartedAt = issue.workStartedAt ?? (!wasClosed && startedAt && !timerError ? startedAt : undefined);
   return {

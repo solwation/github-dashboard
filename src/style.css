@@ -64,6 +64,9 @@
   --badge-progress-text: #81621f;
   --badge-closed-bg: #e8f3ee;
   --badge-closed-text: #2b6d5c;
+  /* Waiting for integration (#392): In progress, but not active work. */
+  --badge-waiting-bg: #efedf9;
+  --badge-waiting-text: #514a96;
   --diff-add: var(--green);
   --diff-del: #ab3434;
   /* Layout tokens (#296): 4px grid spacing scale and icon sizes; theme independent. See DESIGN.md. */
@@ -894,6 +897,11 @@ h1 {
   font-size: 10px;
   color: var(--faint);
 }
+/* Waiting for integration (#392): replaces the running timer; icon plus text, never colour alone. */
+.integration-wait { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; padding: 0 var(--space-1); border-radius: 4px;
+  background: var(--badge-waiting-bg); color: var(--badge-waiting-text); font-size: 10px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+.integration-wait svg { flex: 0 0 12px; }
+.issue-card .card-bottom > .integration-wait { font-size: 11px; }
 /* Pending closure (#381): dashed outline and an hourglass until GitHub confirms the closing. */
 :root .issue-card.pending-closure, :root .issue-row.pending-closure,
 :root[data-theme="dark"] .issue-card.pending-closure, :root[data-theme="dark"] .issue-row.pending-closure {
@@ -2234,6 +2242,8 @@ button.lane-sync.syncing { cursor: progress; }
   --badge-progress-text: var(--accent-amber);
   --badge-closed-bg: var(--tint-green);
   --badge-closed-text: var(--accent-green);
+  --badge-waiting-bg: var(--tint-purple);
+  --badge-waiting-text: var(--accent-purple);
   --diff-add: var(--accent-green);
   --diff-del: var(--accent-red);
 }

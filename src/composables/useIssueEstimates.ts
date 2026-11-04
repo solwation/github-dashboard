@@ -53,6 +53,12 @@ export function provideIssueEstimates(groups: () => Map<string, Group[]>, combin
 
 }
 
+/** The repository's label rules as the estimates use them, so a card tells waiting from active work (#392). */
+export function useIssueRules(repository: () => string | undefined) {
+  const scopes = inject(groupScopeKey, undefined);
+  return () => scopes?.value.get(repository() ?? "")?.rules ?? {};
+}
+
 export function useIssueEstimateBasis(repository: () => string | undefined) {
   const bases = inject(issueEstimatesKey, undefined);
   return computed(() => bases?.value.get(repository() ?? ""));

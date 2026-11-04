@@ -37,13 +37,13 @@ import {
   Wrench,
   ShieldAlert,
   Hourglass,
+  GitMerge,
 } from "@lucide/vue";
+import { useWorkTime } from "../composables/useWorkTime";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import {
   column,
-  duration,
-  hidesProgressLabel,
-  isProgress,
+  hidesWorkLabel,
   priority,
   type Issue,
   type IssueComment,
@@ -187,7 +187,8 @@ onBeforeUnmount(() => {
 });
 const col = computed(() => column(props.issue, props.rules));
 // The card's own clock: per second only while its label shows seconds, and only while on screen (#120).
-const now = useIssueClock(() => props.issue, () => col.value, () => visible.value);
+const now = useIssueClock(() => props.issue, () => col.value, () => visible.value, () => props.rules);
+const work = useWorkTime(() => props.issue, () => props.rules, now);
 const typeIcons = { bug: Bug, security: ShieldAlert, feature: Star, docs: FileText, question: CircleQuestionMark, help: HandHelping, chore: Wrench };
 const type = computed<IssueType | null>(() => issueType(props.issue.labels));
 // The label the type icon stands for is not repeated as a chip on the card (#197).
@@ -202,7 +203,7 @@ const typeTitle = computed(() => {
 });
 const rank = computed(() => priority(props.issue, props.rules));
 const allLabels = computed(() =>
-  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !(hidesProgressLabel(col.value) && isProgress(l.name, props.rules))),
+  props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !hidesWorkLabel(col.value, l.name, props.rules)),
 );
 let labelCanvas: HTMLCanvasElement | undefined;
 function labelWidth(name: string) {
@@ -327,17 +328,14 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
         {{ backlogAgeLabel(issue.created_at, now, locale) }}
       </time>
       <span v-else-if="col === 'backlog'" class="backlog-age">{{ t("Okänd ålder") }}</span>
-      <span
+      <span v-else-if="col === 'progress' && work.waiting.value" class="integration-wait" :title="work.waitingTitle.value"
+        ><GitMerge :size="12" aria-hidden="true" />{{ t("Väntar på integration") }}</span
+      ><span
         v-else-if="col === 'progress'"
         class="timer"
-        :title="
-          issue.startedAt
-            ? t('Arbetslabel satt ') +
-              new Date(issue.startedAt).toLocaleString(locale)
-            : t('Ingen säker starttid kunde hämtas')
-        "
+        :title="work.timerTitle.value"
         ><Clock3 :size="12" aria-hidden="true" />{{
-          issue.startedAt ? duration(issue.startedAt, now) : t("Starttid okänd")
+          work.label.value ?? t("Starttid okänd")
         }}</span
       ><span v-else-if="col === 'closed' && issue.pendingClosure" class="pending-closure-badge"
         :title="t('Väntar på att GitHub bekräftar att issuet är stängt')"
@@ -372,8 +370,8 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
       </template>
     </IssueDetails>
     <IssueWorkActivity :issue="issue" :rules="rules" :now="now" />
-    <div v-if="timedOut && col === 'progress' && issue.startedAt" class="timeout-warning">
-      <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: duration(issue.startedAt, now), estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
+    <div v-if="timedOut && col === 'progress' && work.label.value" class="timeout-warning">
+      <p>{{ t("Pågående i {duration}, över estimatet {estimate} plus {percent} %.", { duration: work.label.value, estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 }) }}</p>
     </div>
 
     <div

@@ -1,5 +1,5 @@
 import { matchesIssueFilters } from "./issue-filter";
-import { column, isCoordination, type Issue, type Lane, type Rules } from "./model";
+import { activeWorkStart, closedWorkMs, column, isCoordination, type Issue, type Lane, type Rules } from "./model";
 import { sumStoryPoints, type StoryPoints } from "./story-points";
 import { estimateGroups, median, otherRepositoryMembers, repositoryEstimate, type SubIssueWork } from "./estimates";
 
@@ -71,11 +71,11 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
     remainingMs = Math.max(remainingMs, estimate.progress?.remainingMs ?? 0, key === "open" ? estimate.backlog?.remainingMs ?? 0 : 0);
     overdue += estimate.progress?.overdue ?? 0;
     for (const item of estimate.progress?.items ?? []) {
-      const start = Date.parse(item.issue.startedAt || "");
+      const start = Date.parse(activeWorkStart(item.issue, group.rules) || "");
       if (start > now) nextStartMs = Math.min(nextStartMs, start);
     }
     // Like an unknown start, a future start assumes the full time, unless sub-issue time was deducted (#287).
-    unknownStart += estimate.progress?.items.filter(item => item.unknownStart || (!item.subIssueSpentMs && Date.parse(item.issue.startedAt || "") > now)).length ?? 0;
+    unknownStart += estimate.progress?.items.filter(item => item.unknownStart || (!item.subIssueSpentMs && Date.parse(activeWorkStart(item.issue, group.rules) || "") > now)).length ?? 0;
     counting ||= !!estimate.progress?.items.some(item => item.counting);
   }
   return { repositories, knownRepositories, remainingMs: knownRepositories ? remainingMs : null, overdue, unknownStart, counting, nextStartMs };
@@ -91,8 +91,8 @@ export function overviewClosedSummary(groups: OverviewEstimateGroup[], now: numb
   for (const group of groups) for (const issue of group.issues) {
     if (issue.state !== "closed") continue;
     contributors.push(issue);
-    const start = Date.parse(issue.workStartedAt || ""), end = Date.parse(issue.closed_at || "");
-    if (Number.isFinite(start) && Number.isFinite(end) && end > start && end <= now) durations.push(end - start);
+    const end = Date.parse(issue.closed_at || ""), active = issue.workStartedAt ? closedWorkMs(issue) : NaN;
+    if (Number.isFinite(active) && end <= now) durations.push(active);
   }
   return { ...sumStoryPoints(contributors), medianMs: median(durations), measured: durations.length };
 }

@@ -1,5 +1,5 @@
 import { t } from "./i18n";
-import { column, duration, type Issue, type Lane, type Rules } from './model';
+import { activeWorkStart, column, duration, type Issue, type Lane, type Rules } from './model';
 import { issueEstimate, repositoryEstimate, nextHistoryExpiry, estimateLabel } from './estimates';
 export const DEFAULT_TIMEOUT_OVERRUN_PERCENT = 25;
 export const MAX_TIMEOUT_OVERRUN_PERCENT = 1000;
@@ -20,15 +20,17 @@ export type TimeoutBases = Map<string, number | null>;
 export function timeoutBases(lanes: Lane[], rules: Record<string, Rules>, now: number): TimeoutBases {
   return new Map(lanes.map(lane => [lane.repo.full_name, repositoryEstimate(lane.issues, now, { rules: rules[lane.repo.full_name] }).basis.msPerPoint]));
 }
-function thresholdFor(issue: Issue, rate: number | null | undefined, settings: TimeoutSettings, now: number) {
-  const estimate = issueEstimate(issue, rate, now, true);
+function thresholdFor(issue: Issue, rate: number | null | undefined, settings: TimeoutSettings, now: number, rules: Rules = {}) {
+  const estimate = issueEstimate(issue, rate, now, true, rules);
   return estimate && estimate.remainingMs !== null ? estimate.totalMs * (1 + settings.timeoutOverrunPercent / 100) : null;
 }
 interface WorkPeriod { repo: string; issueId: number; startedAt: string }
 export interface TimeoutEntry { key: string; repo: string; issue: Issue; elapsedMs: number; estimatedMs: number; thresholdMs: number }
-export function timeoutDetail(issue: Issue, estimatedMs: number, percent: number, now: number) {
+export function timeoutDetail(issue: Issue, estimatedMs: number, percent: number, now: number, rules: Rules = {}) {
+  // Active working time only: integration waits are not work (#392).
+  const active = activeWorkStart(issue, rules);
   return t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', {
-    duration: issue.startedAt ? duration(issue.startedAt, now) : '', estimate: estimateLabel(estimatedMs), percent,
+    duration: active ? duration(active, now) : '', estimate: estimateLabel(estimatedMs), percent,
   });
 }
 function workPeriod(repo: string, issue: Pick<Issue, 'id' | 'startedAt'>): WorkPeriod | null {
@@ -45,13 +47,15 @@ export function nextTimeout(lanes: Lane[], rules: Record<string, Rules>, setting
     const expiry = nextHistoryExpiry(lane.issues, now, { rules: rules[lane.repo.full_name] });
     if (expiry !== null) next = Math.min(next, expiry);
     for (const issue of lane.issues) {
-      if (issue.pull_request || column(issue, rules[lane.repo.full_name]) !== 'progress' || issue.timerError) continue;
+      const laneRules = rules[lane.repo.full_name];
+      if (issue.pull_request || column(issue, laneRules) !== 'progress' || issue.timerError) continue;
       const item = workPeriod(lane.repo.full_name, issue);
-      const started = item ? Date.parse(item.startedAt) : NaN;
+      // Waiting for integration never times out; active time resumes from the virtual active start (#392).
+      const started = item ? Date.parse(activeWorkStart(issue, laneRules) ?? '') : NaN;
       const rate = bases.get(lane.repo.full_name);
       if (started > now && rate != null && Number.isFinite(rate) && rate > 0) next = Math.min(next, started);
-      const threshold = thresholdFor(issue, rate, settings, now);
-      const crossing = item && threshold !== null ? Math.floor(Date.parse(item.startedAt) + threshold) + 1 : NaN;
+      const threshold = thresholdFor(issue, rate, settings, now, laneRules);
+      const crossing = Number.isFinite(started) && threshold !== null ? Math.floor(started + threshold) + 1 : NaN;
       if (crossing > now) next = Math.min(next, crossing);
     }
   }
@@ -79,14 +83,16 @@ export class TimeoutTracker {
     this.settingsKey = signature;
     this.calibrationKey = calibration;
     for (const lane of lanes) for (const issue of lane.issues) {
-      if (issue.pull_request || column(issue, rules[lane.repo.full_name]) !== 'progress' || issue.timerError) continue;
+      const laneRules = rules[lane.repo.full_name];
+      if (issue.pull_request || column(issue, laneRules) !== 'progress' || issue.timerError) continue;
       const item = workPeriod(lane.repo.full_name, issue);
       if (!item) continue;
+      // The period key stays the In progress start, so a handoff and resumed integration notify once (#392).
       const period = key(item);
       currentPeriods.add(period);
-      const elapsedMs = now - Date.parse(item.startedAt);
+      const elapsedMs = now - Date.parse(activeWorkStart(issue, laneRules) ?? '');
       if (!settings.timeoutEnabled) continue;
-      const thresholdMs = thresholdFor(issue, bases.get(lane.repo.full_name), settings, now);
+      const thresholdMs = thresholdFor(issue, bases.get(lane.repo.full_name), settings, now, laneRules);
       if (thresholdMs === null || !Number.isFinite(elapsedMs) || elapsedMs <= thresholdMs) continue;
       const estimatedMs = thresholdMs / (1 + settings.timeoutOverrunPercent / 100);
       const entry = { key: period, repo: lane.repo.full_name, issue, elapsedMs, estimatedMs, thresholdMs };

@@ -30,8 +30,9 @@ applicable [phase hooks](#project-phase-hooks) and the
   change commit); after this project changes the guide, propose the snapshot refresh
   upstream as an issue in `solwation/dirigenten-och-orkestern`.
   Parent issues follow its sub-issue rule: a worker starting the first sub-issue also marks
-  the parent `in-progress`; the conductor removes the parent's label when no sub-issue or
-  parent work remains active, and closes the parent only after its own acceptance.
+  the parent `in-progress`; the conductor removes the parent's label when no sub-issue is
+  in progress or `integration-ready` and no parent work remains, and closes the parent
+  only after its own acceptance.
 - Create/reuse issues with acceptance, exactly one canonical priority and impact/urgency
   rationale under AI.md. Do not change existing priorities without user direction.
   Default missing priority to medium when ordering; high → medium → low, oldest first,
@@ -44,8 +45,14 @@ applicable [phase hooks](#project-phase-hooks) and the
 - Use one stable `orkester: <id>` plus `in-progress` only during actual work. Maintain
   one editable status comment in #97 with issue, owner/phase, file responsibilities,
   worktree, capacity and latest checkpoint. Preserve the same identity when resuming.
-- Remove all recognized work labels and this session's owner labels on pause, completion,
-  reopening, or delivery into the integration queue. Reclaim capacity before review,
+- Remove all recognized work labels (including `integration-ready`) and this session's
+  owner labels on pause, completion or reopening. **Project override** of the shared
+  v0.7.1 rule that a worker waiting for integration is paused with its work labels
+  removed: a finished worker handoff delivered into the integration queue replaces
+  `in-progress` with `integration-ready` and keeps the session's owner label as
+  ownership. It consumes no active slot and is not a work queue for other workers or
+  sessions; the owning conductor sets `in-progress` again when integration review starts
+  or for a correction, and removes both labels to pause. Reclaim capacity before review,
   integration or verification starts. Waiting for deployment consumes no active slot.
   Preserve paused commits/worktrees and never remove another active session's claim.
 
@@ -60,7 +67,8 @@ Available tool slots and independent work may lower capacity; reserve resources 
 the conductor and browsers rather than filling all slots automatically.
 
 Count this session's active issues across workers and the conductor's implementation,
-review, integration and verification. Other sessions' claims count towards their own
+review, integration and verification. Issues waiting as `integration-ready` do not count
+until their integration starts. Other sessions' claims count towards their own
 capacity, but their machine load and file ownership still matter. Record issue/owner/
 phase before starting; finish or pause work if capacity is full. New user requests can
 be filed in the backlog without starting another concurrent task. If delegation tools
@@ -102,8 +110,10 @@ core's PR-mode rules do not apply. For unpublished subtree imports preserve merg
 Integration pushes are allowed while work remains, but main must always contain only
 finished, verified work. Only Actions authorizes app publication. Both gates fetch the
 complete fresh queue and bind source/main, public baseline, prepared delta and final
-artifact. Active/owner/blocked claims and missing readiness stop publication; unclaimed
-backlog outside the prepared delta does not. The existing three-hour fallback concerns
+artifact. Active (`in-progress`) and blocked issues, missing readiness and owner-claimed
+or `integration-ready` issues inside the prepared delta stop publication; unclaimed
+backlog, owner claims without an active work label and `integration-ready` handoffs
+outside the delta do not, because their code is not on main. The existing three-hour fallback concerns
 claims outside the delta only; it never permits unfinished code on main.
 
 Stories follow **Backlog → In progress → Closed**. After integration on main and
@@ -154,7 +164,7 @@ Listed order is execution order.
 | UI matrix | `verification`: changes affecting issue cards or list rows | Playwright Cards and List at 1600×1000, 1000×900, mobile 390×844 and 844×390 (plus 320×568 for density/truncation), relevant states, one reused public-data snapshot | Screenshots inspected for overlap, overflow and row height; no real issue fixtures committed |
 | Design rules | `verification`/`review`: every UI change | Check new and changed UI against [DESIGN.md](../DESIGN.md): spacing/icon tokens, row alignment, theme tokens in both themes, accessible icon controls, reduced motion; run its checklist | Checklist outcome and alignment measurements (±1px) in the evidence; deviations fixed or filed |
 | Build | `verification`: every change, before review | `npm run build` (conflict-marker scan, types, production output) | Green build at the reviewed revision |
-| Integration review | `review`: every change, before delivery | Conductor reads the combined diff and evidence, inspects screenshots against acceptance, rechecks conflict markers | Defects corrected and affected checks refreshed |
+| Integration review | `review`: every change, before delivery | Conductor switches the handoff from `integration-ready` to `in-progress`, reads the combined diff and evidence, inspects screenshots against acceptance, rechecks conflict markers | Defects corrected and affected checks refreshed |
 | Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
 | Prepare publication | `delivery`: app changes, after integration | Keep `needs-deploy` as technical metadata on the completed, closed story without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta and separate publication status; never bypass the Actions gate |
 | Check Action | `delivery`: every push to `main` that includes an app change (skip for technical changes) | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |

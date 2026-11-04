@@ -11,11 +11,12 @@ import {
   type ClosingResponse,
 } from "./commits";
 import {
-  carriedWorkStart,
   deriveWorkStarts,
   type RepositoryIssueEvent,
   column,
-  progressStart,
+  progressPeriod,
+  carriedWork,
+  type ProgressPeriod,
   type Event,
   type Issue,
   type IssueComment,
@@ -24,6 +25,14 @@ import {
   type Repo,
   type Rules,
 } from "./model";
+/** Issue fields for an In progress period (#392); waits are omitted when there are none. */
+function periodFields(period: ProgressPeriod): Pick<Issue, "startedAt" | "waitMs" | "waitingSince"> {
+  return { startedAt: period.start, ...(period.waitMs > 0 ? { waitMs: period.waitMs } : {}), ...(period.waitingSince ? { waitingSince: period.waitingSince } : {}) };
+}
+/** Reused integration waits of the previous copy of the same period (#392). */
+function waits(old: Issue | undefined): Pick<Issue, "waitMs" | "waitingSince"> {
+  return { ...(old?.waitMs ? { waitMs: old.waitMs } : {}), ...(old?.waitingSince ? { waitingSince: old.waitingSince } : {}) };
+}
 export class GitHubApiError extends Error {
   constructor(message: string, public readonly status: number, public readonly permissionDenied = false, public readonly rateLimited = false, public readonly emptyRepository = false) {
     super(message);
@@ -368,20 +377,16 @@ export class GitHub {
   ): Promise<Issue> {
     if (column(issue, rules) !== "progress") {
       // A closing seen by sync keeps the in-progress start for estimates, without extra requests (#141).
-      const workStartedAt = carriedWorkStart(issue, old, rules);
-      return workStartedAt ? { ...issue, workStartedAt } : issue;
+      const work = carriedWork(issue, old, rules);
+      return work ? { ...issue, ...work } : issue;
     }
     const reused = this.reusableStart(repo, issue, rules, old);
-    if (reused) return this.rememberStart(repo, { ...issue, startedAt: reused, timerError: false }, rules);
+    if (reused) return this.rememberStart(repo, { ...issue, ...waits(old), startedAt: reused, timerError: false }, rules);
     try {
       const events = await this.all<Event>(
         `/repos/${repo.full_name}/issues/${issue.number}/events?per_page=100`,
       );
-      return this.rememberStart(repo, {
-        ...issue,
-        startedAt: progressStart(events, rules),
-        timerError: false,
-      }, rules);
+      return this.rememberStart(repo, { ...issue, ...periodFields(progressPeriod(events, rules)), timerError: false }, rules);
     } catch {
       return { ...issue, startedAt: null, timerError: true };
     }
@@ -491,8 +496,8 @@ export class GitHub {
     ].filter((i) => !i.pull_request).map((i) => ({ ...i }));
     const known = previous?.issues.length ? new Map(previous.issues.map((issue) => [issue.id, issue])) : undefined;
     if (known) for (const issue of issues) {
-      const workStartedAt = carriedWorkStart(issue, known.get(issue.id), rules);
-      if (workStartedAt) issue.workStartedAt = workStartedAt;
+      const work = carriedWork(issue, known.get(issue.id), rules);
+      if (work) Object.assign(issue, work);
     }
     if (!this.token) {
       // One shared, bounded history read replaces per-active-issue fan-out in public mode.
@@ -506,9 +511,13 @@ export class GitHub {
         }
       } catch { /* Optional timeline data can be absent while the public board remains usable. */ }
       const enriched = deriveWorkStarts({ repo, issues, labels }, events, rules);
-      return { ...enriched, issues: enriched.issues.map(issue => column(issue, rules) === "progress"
-        ? { ...issue, startedAt: progressStart(events.filter(event => event.issue?.id === issue.id), rules) ?? (known?.get(issue.id)?.updated_at === issue.updated_at ? known?.get(issue.id)?.startedAt : null) ?? null }
-        : issue) };
+      return { ...enriched, issues: enriched.issues.map(issue => {
+        if (column(issue, rules) !== "progress") return issue;
+        const period = progressPeriod(events.filter(event => event.issue?.id === issue.id), rules);
+        if (period.start) return { ...issue, ...periodFields(period) };
+        const old = known?.get(issue.id);
+        return old?.updated_at === issue.updated_at && old.startedAt ? { ...issue, ...waits(old), startedAt: old.startedAt } : { ...issue, startedAt: null };
+      }) };
     }
     const active = issues.map((issue, index) => ({ issue, index })).filter(({ issue }) => column(issue, rules) === "progress");
     // Limit simultaneous timeline requests; each timeline is fully paginated.

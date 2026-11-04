@@ -42,8 +42,14 @@ export function decidePublication(input: GateInput): GateDecision {
     for (const issue of queue(input.openIssues)) {
       const labels = issue.labels.map(label => label.name);
       if (Object.hasOwn(issue, "pull_request") || labels.includes("orkester")) continue;
-      const claimed = labels.includes("in-progress") || labels.some(label => /^(orkester|owner):/i.test(label) || /^(?:status[\s:_-]+)?blocked$/i.test(label));
       const ready = labels.includes("needs-deploy"), included = delta.issues.includes(issue.number);
+      const active = labels.includes("in-progress"), blocked = labels.some(label => /^(?:status[\s:_-]+)?blocked$/i.test(label));
+      // A finished handoff waiting for integration keeps its owner label but is neither integrated nor
+      // publication-ready (#392). Ownership and integration-ready block only inside the prepared batch;
+      // outside it the code is not on main, so they count like unclaimed backlog.
+      const owned = labels.some(label => /^(orkester|owner):/i.test(label));
+      const waiting = labels.some(label => /^integration[\s:_-]+ready$/i.test(label.trim()));
+      const claimed = active || blocked || ((owned || waiting) && included);
       // Unfinished work never reaches main, so after three quiet hours claims outside the batch stop holding it back (#144).
       if (claimed && fallback && !ready && !included) { skipped = true; continue; }
       if (claimed) return result("queue-not-ready");

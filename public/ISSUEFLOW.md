@@ -45,6 +45,7 @@ Matching is case-insensitive. Except for a custom work label described below, le
 | Meaning | Recognized normalized labels |
 | --- | --- |
 | Active work | `in progress`, `status in progress`, `wip`, `working`, `doing`, `pågår` |
+| Waiting for integration | `integration ready` |
 | High priority | `high`, `critical`, `urgent`; any of those with a `priority ` prefix or ` priority` suffix (or both); `p0`, `p1`, `priority p0`, `priority p1` |
 | Medium priority | `medium`, `priority medium`, `medium priority`, `priority medium priority`, `p2`, `priority p2` |
 | Low priority | `low`, `priority low`, `low priority`, `priority low priority`, `p3`, `p4`, `priority p3`, `priority p4`, `reviewer filed` |
@@ -52,7 +53,7 @@ Matching is case-insensitive. Except for a custom work label described below, le
 
 Coordination labels identify coordination issues that the dashboard can hide using its coordination filter. They do not set priority or work status. A label such as `orkester: session-id` is ownership metadata and does not match the coordination label `orkester`.
 
-Repositories can override the work label and labels for high, medium and low in the dashboard's label settings. A custom work label **replaces** the default work labels and uses case-insensitive exact matching (the configured value is trimmed; the issue label itself is not normalized). A matching custom priority label is checked before built-in priorities, in high/medium/low order. Built-in priority detection still applies if no custom priority matches. Settings are local dashboard configuration, not GitHub-wide workflow rules; share them separately if others need the same view. Prefer the canonical labels above for a portable workflow.
+Repositories can override the work label and labels for high, medium and low in the dashboard's label settings. A custom work label **replaces** the default active-work labels and uses case-insensitive exact matching (the configured value is trimmed; the issue label itself is not normalized). `integration ready` is a separate status and stays recognized with a custom work label. An open issue with both an active work label and `integration ready` counts as active work. A matching custom priority label is checked before built-in priorities, in high/medium/low order. Built-in priority detection still applies if no custom priority matches. Settings are local dashboard configuration, not GitHub-wide workflow rules; share them separately if others need the same view. Prefer the canonical labels above for a portable workflow.
 
 ### Optional story points
 
@@ -61,13 +62,12 @@ Agents may optionally add one `sp-N` label after estimating an issue’s size, w
 ## Timing, order and limitations
 
 - Backlog sorts by priority and then creation time, oldest first within a priority. In progress sorts by the current start time, oldest first (falling back to creation time for ordering when no start time is known). Closed sorts by GitHub's closure timestamp, newest first.
-- The active start time comes from GitHub's issue event history: the earliest still-active recognized work-label addition since the latest closure or reopening. Removing that label ends its interval; closing or reopening resets tracked intervals. This is the current interval, not accumulated working time or a timesheet. If several work labels are active, remove all of them on pause or completion.
+- The In progress start time comes from GitHub's issue event history: the earliest still-active recognized work-label addition since the latest closure or reopening. Switching between an active work label and `integration-ready` keeps that start, also when the two label edits are up to five minutes apart, so a handoff does not move the card. Removing every work label ends the period; closing or reopening resets tracked periods. This is the current period, not a timesheet. If several work labels are active, remove all of them on pause or completion.
+- Active working time, timeout warnings and remaining-time estimates count only time with an active work label. While an issue waits for integration its active time stops, it never times out and it takes no capacity; when active work resumes, the time continues without the wait. Measured work time of closed issues also excludes these waits.
 - Closure time comes from GitHub's `closed_at` timestamp, not commit messages, label names, local clock estimates or the time the dashboard noticed a change. Closing commit or pull-request details are optional context and can be unavailable; they do not control the column or closure time.
 - Issueflow reads GitHub issue state, labels and events; editing this file or attaching it to a repository does not change issues, create labels or grant a tool permission to write. Apply changes through an authorized GitHub interface.
 - The dashboard excludes pull requests from issue columns and displays only issues closed in the last 30 days. Search and coordination filters can hide otherwise valid issues.
 - GitHub requests are paginated, but missing permissions, rate limits, network failures or unavailable event history can prevent fresh data or a start time from loading. Cached content may be shown while revalidating; the view is not an instantaneous source of truth. Check the issue and its history directly on GitHub when uncertain.
 - Access to private repositories and optional commit details depends on token permissions. Do not put tokens, secrets, private issue snapshots or account-specific instructions in this public guide or a shared copy.
-
-`integration-ready` is a workflow rule layered on the default detection: GitHub issue state remains authoritative, so a closed issue is Closed regardless of labels, and existing work labels and repository overrides keep working. The shared orchestra snapshot of this guide is refreshed upstream from the change commit of this guide (solwation/dirigenten-och-orkestern#43).
 
 This guide describes Issueflow's default detection and per-repository overrides. Keep a project copy synchronized when the dashboard's detection rules change.
