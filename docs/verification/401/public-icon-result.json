@@ -1,0 +1,11 @@
+{
+  "repository": "DasKrokodil/historia-globen",
+  "sourceSha": "2a8969e5f8ea4e0ea1cbd8a97ee51612a2e88e3d",
+  "reads": [
+    "/repos/DasKrokodil/historia-globen/contents",
+    "/repos/DasKrokodil/historia-globen/contents/img",
+    "/repos/DasKrokodil/historia-globen/contents/img/favicon.svg"
+  ],
+  "output": "64px PNG",
+  "bytes": 5358
+}

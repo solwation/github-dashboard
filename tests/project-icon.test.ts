@@ -26,6 +26,7 @@ describe("project artwork discovery and security", () => {
   it("migrates legacy empty artwork once while retaining positive encrypted-cache artwork", async () => {
     const checkedAt = Date.now();
     expect(restoreProjectIcon({ data: null, checkedAt })).toBeUndefined();
+    expect(restoreProjectIcon({ data: null, checkedAt, emptyVersion: 1 })).toBeUndefined();
     expect(restoreProjectIcon({ data, checkedAt })).toEqual({ data, checkedAt });
     const request = vi.fn(async () => []);
     const icons = new ProjectIconResolver(request);
@@ -118,4 +119,18 @@ describe("project artwork discovery and security", () => {
     await limited.request("/user");
     expect(await limited.projectIcon(repo)).toBeNull(); expect(fetcher).toHaveBeenCalledTimes(5);
   });
+});
+
+it.each(["img", "images", "public/img", "public/images", "assets/img", "assets/images"])("discovers safe artwork under %s without exceeding the request limit", async directory => {
+  const parts = directory.split("/");
+  const request = vi.fn(async (path: string) => {
+    if (path.endsWith("/contents")) return [dir(parts[0]!)];
+    if (parts.length > 1 && path.endsWith("/contents/" + parts[0])) return [dir(parts[1]!, parts[0] + "/")];
+    if (path.endsWith("/contents/" + directory)) return [file("favicon.svg", directory + "/")];
+    return { ...file("favicon.svg", directory + "/"), encoding: "base64", content: btoa(svg) };
+  });
+  const resolver = new ProjectIconResolver(request, () => true, async () => data);
+  expect((await resolver.get("outside/history"))?.data).toBe(data);
+  expect(request.mock.calls.length).toBeLessThanOrEqual(6);
+  expect(request.mock.calls.at(-1)?.[0]).toBe(`/repos/outside/history/contents/${directory}/favicon.svg`);
 });

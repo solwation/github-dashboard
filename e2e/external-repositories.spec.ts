@@ -100,3 +100,22 @@ test("other people's public repositories form their own ordered, removable, encr
   await expect(dialog.getByRole("heading", { name: "Andras publika projekt" })).toHaveCount(0);
   await expect.poll(() => readSettings(page, "external-user").then(saved => saved?.externalRepositories)).toEqual([]);
 });
+
+test("external projects discover img artwork and retain it across encrypted reload", async ({ page }, info) => {
+ await mock(page);
+ const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#147d69"/><path d="M32 8L50 48H14Z" fill="white"/></svg>';
+ let reads = 0;
+ await page.route("https://api.github.com/repos/octo/hello/contents**", async route => {
+  reads++; const path = new URL(route.request().url()).pathname;
+  if (path.endsWith("/contents")) return route.fulfill({ json: [{ name: "img", path: "img", type: "dir", size: 0 }] });
+  if (path.endsWith("/contents/img")) return route.fulfill({ json: [{ name: "favicon.svg", path: "img/favicon.svg", type: "file", size: svg.length }] });
+  return route.fulfill({ json: { name: "favicon.svg", path: "img/favicon.svg", type: "file", size: svg.length, encoding: "base64", content: Buffer.from(svg).toString("base64") } });
+ });
+ await page.goto("/"); await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click(); await page.getByLabel("GitHub personal access token").fill("fictional-external-icon-token"); await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
+ const picker = page.getByRole("dialog", { name: "Välj repositories" });
+ await picker.getByLabel("Lägg till någon annans publika repository").fill("octo/hello"); await picker.getByRole("button", { name: "Lägg till repository", exact: true }).click(); await expect(picker.getByRole("checkbox", { name: /octo\/hello/ })).toBeChecked(); await picker.getByRole("button", { name: "Visa översikt" }).click();
+ const icon = group(page).locator('.project-icon[data-repository="octo/hello"] img'); await expect(icon).toHaveAttribute("src", /^data:image\/png;base64,/); expect(reads).toBe(3);
+ await expect.poll(() => page.evaluate(async () => { const path = "/src/lib/content-cache.ts"; const { readSnapshot } = await import(path); return (await readSnapshot("fictional-external-icon-token"))?.repos.find((repo: any) => repo.full_name === "octo/hello")?.projectIcon?.data; })).toMatch(/^data:image\/png;base64,/);
+ await page.reload(); await expect(icon).toHaveAttribute("src", /^data:image\/png;base64,/); await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false"); expect(reads).toBe(3);
+ await page.screenshot({ path: info.outputPath("external-img-icon.png") });
+});

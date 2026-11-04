@@ -2,7 +2,7 @@
 export const PROJECT_ICON_MAX_BYTES = 64 * 1024;
 export const PROJECT_ICON_LIFETIME = 24 * 60 * 60 * 1000;
 export const PROJECT_ICON_REQUEST_LIMIT = 6;
-export type ProjectIconMetadata = { data: string | null; checkedAt: number; emptyVersion?: 1 };
+export type ProjectIconMetadata = { data: string | null; checkedAt: number; emptyVersion?: 2 };
 const encodedLimit = Math.ceil(PROJECT_ICON_MAX_BYTES / 3) * 4;
 function bytes(base64: string): string | null {
   if (!base64 || base64.length > encodedLimit || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) return null;
@@ -25,8 +25,8 @@ export function restoreProjectIcon(value: unknown): ProjectIconMetadata | undefi
   if (!value || typeof value !== "object") return;
   const icon = value as ProjectIconMetadata;
   if (!Number.isFinite(icon.checkedAt) || icon.checkedAt <= 0 || icon.checkedAt > Date.now() + 60_000) return;
-  // Retry empty results from the first icon release once; successful artwork stays reusable.
-  if (icon.data === null) return icon.emptyVersion === 1 ? { data: null, checkedAt: icon.checkedAt, emptyVersion: 1 } : undefined;
+  // Retry older empty results once after expanding discovery; successful artwork stays reusable.
+  if (icon.data === null) return icon.emptyVersion === 2 ? { data: null, checkedAt: icon.checkedAt, emptyVersion: 2 } : undefined;
   const data = projectIconData(icon.data);
   if (data) return { data, checkedAt: icon.checkedAt };
 }
@@ -83,10 +83,10 @@ export class ProjectIconResolver {
       if (this.cache.get(repository) !== cached) return this.get(repository);
       this.cache.delete(repository);
     }
-    const result = this.discover(repository).then(data => ({ data, checkedAt: Date.now(), ...(data === null ? { emptyVersion: 1 as const } : {}) })).catch(error => {
+    const result = this.discover(repository).then(data => ({ data, checkedAt: Date.now(), ...(data === null ? { emptyVersion: 2 as const } : {}) })).catch(error => {
       const failure = error as { status?: number; permissionDenied?: boolean; rateLimited?: boolean } | null;
       // Missing optional access is stable for this credential; do not spend core quota retrying it.
-      if (failure?.status === 404 || (failure?.status === 403 && failure.permissionDenied && !failure.rateLimited)) return { data: null, checkedAt: Date.now(), emptyVersion: 1 as const };
+      if (failure?.status === 404 || (failure?.status === 403 && failure.permissionDenied && !failure.rateLimited)) return { data: null, checkedAt: Date.now(), emptyVersion: 2 as const };
       // A transient failure is neither a negative discovery nor a reason to discard prior art.
       const entry = this.cache.get(repository);
       if (entry) entry.expiresAt = Date.now() + 5 * 60_000;
@@ -123,7 +123,7 @@ export class ProjectIconResolver {
         const svg = new TextDecoder().decode(Uint8Array.from(decoded, character => character.charCodeAt(0)));
         return safeProjectSvg(svg) ? this.rasterize(svg) : null;
       }
-      const children = directory === "" ? ["public", "assets", "icons"] : directory === "public" ? ["icons", "assets"] : [];
+      const children = directory === "" ? ["public", "assets", "icons", "img", "images"] : directory === "public" ? ["icons", "assets", "img", "images"] : directory === "assets" ? ["icons", "img", "images"] : [];
       for (const child of children) if (entries.some(entry => entry && entry.type === "dir" && entry.name === child && entry.path === (directory ? directory + "/" : "") + child)) directories.push(directory ? directory + "/" + child : child);
     }
     return null;
