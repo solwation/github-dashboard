@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { encodeHandoff } from "../src/lib/handoff";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit, groupingOption } from "./support/board-grouping";
 
 async function matchingColors(page: Page) {
   const colors = await page.locator(".sidebar-repository-row").evaluateAll(rows => Object.fromEntries(rows.map(row => [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".project-icon-color")!).backgroundColor])));
@@ -21,8 +22,8 @@ async function matchingColors(page: Page) {
 
 test("split defaults on; combined columns use only the main search, keep colors, keyboard controls and mobile layout", async ({ page }) => {
   await page.goto("/"); await page.getByRole("button", { name: "Utforska en demo" }).click();
-  const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
-  await expect(split).toBeChecked(); await expect(page.locator(".repo-lane")).toHaveCount(3);
+  const split = boardSplit(page);
+  await split.expectChecked(); await expect(page.locator(".repo-lane")).toHaveCount(3);
   const colors = await matchingColors(page);
   await openSettings(page);
   await page.getByLabel("Visa max work items per kolumn", { exact: true }).fill("5");
@@ -31,7 +32,7 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await page.getByRole("button", { name: "Filtrera issues i demo/design-system", exact: true }).click();
   await page.getByRole("textbox", { name: "Filtrera issues i demo/design-system", exact: true }).fill("missing");
   await expect(openStat).not.toHaveText(/^9(?!\d)/);
-  await split.focus(); await page.keyboard.press("Space");
+  await groupingOption(page, "none").focus(); await page.keyboard.press("Space");
   const board = page.locator(".combined-board");
   await expect(board.locator(".board-column")).toHaveCount(3);
   await expect(page.locator(".repo-lane")).toHaveCount(0);
@@ -118,7 +119,7 @@ test("split defaults on; combined columns use only the main search, keep colors,
   await openSettings(page);
   await page.getByRole("combobox", { name: "Språk", exact: true }).selectOption("en");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(page.getByRole("checkbox", { name: "Split by repository", exact: true })).toBeChecked();
+  await boardSplit(page).expectChecked();
 });
 
 async function fixture(page: Page) {
@@ -159,7 +160,7 @@ async function connect(page: Page, names: string[]) {
 
 test("combined cards with colliding IDs use their own comments, commits and persisted optical preference", async ({ page }) => {
   await fixture(page); await connect(page, ["alpha", "beta"]);
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   const board = page.locator(".combined-board"); await expect(board.locator(".issue-card")).toHaveCount(6);
   for (const name of ["alpha", "beta"]) {
     const card = board.locator(".issue-card").filter({ has: page.getByRole("link", { name: `${name} task 1`, exact: true }) });
@@ -172,22 +173,22 @@ test("combined cards with colliding IDs use their own comments, commits and pers
   }
   await expect.poll(() => readSettings(page, "combined-fixture").then(saved => saved?.preferences?.splitByRepository)).toBe(false);
   await page.reload(); await expect(page.locator(".combined-board .issue-card")).toHaveCount(6);
-  await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).not.toBeChecked();
+  await boardSplit(page).expectChecked(false);
   const transferred = encodeHandoff({ token: "fictional-combined-token", selected: ["sample/alpha", "sample/beta"], rules: {}, preferences: { splitByRepository: true } });
   await page.goto("about:blank");
   await page.goto("/#issueflow-handoff=" + transferred);
-  await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).toBeChecked();
+  await boardSplit(page).expectChecked();
   await expect(page.locator(".repo-lane")).toHaveCount(2);
   const combinedTransfer = encodeHandoff({ token: "fictional-combined-token", selected: ["sample/alpha", "sample/beta"], rules: {}, preferences: { splitByRepository: false } });
   await page.goto("about:blank");
   await page.goto("/#issueflow-handoff=" + combinedTransfer);
-  await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).not.toBeChecked();
+  await boardSplit(page).expectChecked(false);
   await expect(page.locator(".combined-board .issue-card")).toHaveCount(6);
 });
 
 test("new repository selection appears as loading in combined mode while retained cards remain", async ({ page }) => {
   const api = await fixture(page); await connect(page, ["alpha"]);
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   const release = api.hold();
   await page.locator(".sidebar-add").click();
   await page.getByRole("dialog").getByRole("checkbox", { name: "sample/beta" }).check();

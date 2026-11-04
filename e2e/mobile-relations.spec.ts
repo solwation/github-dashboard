@@ -1,4 +1,5 @@
 import { expect, test, type Browser } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 const repositories = [
   { id: 81, name: "relations", full_name: "sample/relations", private: true, description: "Fictional relations", html_url: "https://github.com/sample/relations", owner: { login: "sample" } },
@@ -61,8 +62,8 @@ for (const device of viewports) test(`mobile relation indicators stay compact an
   const { context, page, relationRequests } = await connect(browser, info.project.use.baseURL, device);
   try {
     for (const combined of [false, true]) {
-      if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
-      else if (await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).count()) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).check();
+      if (combined) await boardSplit(page).uncheck();
+      else if (await boardSplit(page).count()) await boardSplit(page).check();
       await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Lista", exact: true }).click();
       const rows = page.locator(".issue-row");
       await expect(rows).toHaveCount(5);

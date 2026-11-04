@@ -78,7 +78,7 @@ const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList
   collapsedRepos: ["sample/second"], columnLimit: 8,
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"], notificationSounds: false,
   language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
-  repoQuery: "sample", hideCoordination: false, splitByRepository: false, listMode: true, timeoutEnabled: false, timeoutOverrunPercent: 45, currentView: "statistics",
+  repoQuery: "sample", hideCoordination: false, splitByRepository: false, boardGrouping: "none", listMode: true, timeoutEnabled: false, timeoutOverrunPercent: 45, currentView: "statistics",
   statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions", collapsed: true } },
 };
 describe("optical preference schema v2", () => {

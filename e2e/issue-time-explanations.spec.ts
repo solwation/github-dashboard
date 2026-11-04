@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 const base = Date.parse("2026-10-15T10:00:00Z"), minute = 60_000, day = 86_400_000;
 const repository = { id: 246, name: "very-long-project-repository-name", full_name: "sample/very-long-project-repository-name", private: true,
@@ -75,18 +76,18 @@ for (const [name, width, height, touch] of viewportMatrix) {
       await firstCard.locator(".card-open").press("Enter");
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator(".swimlane").first().screenshot({ path: testInfo.outputPath(`${name}-cards-split.png`) });
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+      await boardSplit(page).uncheck();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator(".swimlane").first().screenshot({ path: testInfo.outputPath(`${name}-cards-combined.png`) });
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).check();
+      await boardSplit(page).check();
       await mode.getByRole("button", { name: "Lista", exact: true }).click();
       await expect(page.locator(".issue-row")).toHaveCount(7);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator(".swimlane").first().screenshot({ path: testInfo.outputPath(`${name}-list-split.png`) });
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+      await boardSplit(page).uncheck();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator(".swimlane").first().screenshot({ path: testInfo.outputPath(`${name}-list-combined.png`) });
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).check();
+      await boardSplit(page).check();
 
       const backlog = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "A backlog issue with a long title for narrow phones", exact: true }) });
       await backlog.getByRole("button", { name: "A backlog issue with a long title for narrow phones", exact: true }).click();

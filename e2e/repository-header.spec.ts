@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 test("repository settings stay at the right end of one compact action row", async ({ page }) => {
   const name = "a-repository-with-a-long-project-name";
@@ -55,7 +56,7 @@ test("repository settings stay at the right end of one compact action row", asyn
   await expect(dialog).toHaveCount(0);
   await expect(settings).toBeFocused();
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   await expect(page.locator(".combined-repository-controls")).toHaveCount(0);
   await expect(page.getByText("Repositoryinställningar")).toHaveCount(0);
   const sidebar = page.locator(`.sidebar-repository-row[data-repository="sample/${name}"] .sidebar-repository`);

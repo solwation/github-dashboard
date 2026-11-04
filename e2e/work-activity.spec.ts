@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 const now = Date.parse("2026-10-28T12:00:00Z"), minute = 60000;
 const iso = (at: number) => new Date(at).toISOString();
@@ -47,7 +48,7 @@ for (const scenario of [
     try {
       const fresh = await fixture(page);
       for (const split of [true, false]) {
-        if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+        if (!split) await boardSplit(page).uncheck();
         for (const mode of ["Kort", "Lista"]) {
           await page.getByRole("group", {name:"Visningsläge för boarden",exact:true}).getByRole("button",{name:mode,exact:true}).click();
           const selector = mode === "Kort" ? ".issue-card" : ".issue-row";

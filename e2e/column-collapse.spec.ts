@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { closePhoneMenu, openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 // Fictional fixture: 15 open backlog issues across two repositories (#380).
 async function fixture(page: Page, theme: string) {
@@ -57,7 +58,7 @@ for (const scenario of scenarios) for (const mode of ["Kort", "Lista"]) {
       await page.locator("#repo-1 .backlog").getByRole("button", { name: "Visa fler" }).click();
       await expect(page.locator(".column-collapse-button")).toHaveCount(0);
       await page.evaluate(() => scrollTo(0, 0));
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+      await boardSplit(page).uncheck();
       const backlog = page.locator(".combined-board .board-column.backlog");
       const entries = backlog.locator(mode === "Lista" ? ".issue-row" : ".issue-card");
       const collapse = backlog.getByRole("button", { name: /^Fäll ihop Backlog till 3 issues$/ });
@@ -112,7 +113,7 @@ test("collapse label is translated in English", async ({ page }) => {
   await page.getByRole("spinbutton", { name: "Maximum work items shown per column" }).fill("3");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await closePhoneMenu(page);
-  await page.getByRole("checkbox", { name: "Split by repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   const backlog = page.locator(".combined-board .board-column.backlog");
   await backlog.getByRole("button", { name: "Show more" }).click();
   const button = backlog.getByRole("button", { name: "Collapse Backlog to 3 issues" });

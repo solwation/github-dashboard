@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 const minute = 60000, day = 86400000, base = Date.parse("2026-10-20T12:00:00Z");
 const iso = (at: number) => new Date(at).toISOString();
 const repos = ["calibrated", "sparse"].map((name, i) => ({ id: 2190 + i, name, full_name: `sample/${name}`, private: true, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
@@ -94,7 +95,7 @@ test("summary points follow global and per-repository queries, combined view and
   await search.fill("#5");
   await expect(open.locator(".overview-points")).toHaveText("9 SP");
   await expect(open.locator(".overview-time")).toHaveCount(0);
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   await expect(open.locator(".overview-points")).toHaveText("11 SP");
   await expect(open.locator(".overview-time")).toHaveText("≈ 2 h 20 min kvar");
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("#5");

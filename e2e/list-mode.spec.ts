@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { encodeHandoff } from "../src/lib/handoff";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 const noPageScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
@@ -72,7 +73,7 @@ test("one global list mode for every repository and the combined board keeps fil
   }
   await page.setViewportSize({ width: 1280, height: 900 });
 
-  const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+  const split = boardSplit(page);
   await split.uncheck();
   const board = page.locator(".combined-board");
   const shared = toggle;
@@ -162,14 +163,14 @@ test("list choices persist in encrypted settings, travel by QR and keep timeout 
   await expect(beta.locator(".issue-row")).toHaveCount(5);
   await expect(toggle.getByRole("button", { name: "Lista", exact: true })).toHaveAttribute("aria-pressed", "true");
 
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   const board = page.locator(".combined-board");
   await expect(board.locator(".issue-row")).toHaveCount(10);
   const names = await board.locator(".row-repository").evaluateAll(elements => elements.map(element => element.getAttribute("title")));
   expect(new Set(names)).toEqual(new Set(["sample/alpha", "sample/beta"]));
   await page.reload();
   await expect(board.locator(".issue-row")).toHaveCount(10);
-  await expect(page.getByRole("checkbox", { name: "Dela upp per repository", exact: true })).not.toBeChecked();
+  await boardSplit(page).expectChecked(false);
 
   // An older QR code with #127's per-repository choices migrates to the global mode (strict majority).
   const transfer = encodeHandoff({ token: "fictional-list-token", selected: ["sample/alpha", "sample/beta"], rules: {}, preferences: { splitByRepository: true, listRepos: ["sample/beta"], combinedList: true } });

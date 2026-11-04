@@ -2,6 +2,7 @@ import { validRepositoryOwnerDisplay, type RepositoryOwnerDisplay } from "./repo
 import { normalizeTimeoutSettings } from "./timeouts";
 import { reconcileRepositoryColors, validRepositoryColor } from "./repository-color";
 import { validColumnLimit } from "./column-limits";
+import { boardGroupingFrom, validBoardGrouping, type BoardGrouping } from "./board-grouping";
 import { reconcileOrder } from "./project-layout";
 import {
   statisticsMetrics, statisticsRanges, statisticsResolutions, statisticsWindowMs, validStatisticsBound,
@@ -42,7 +43,10 @@ export interface HandoffPreferences {
   repositoryQueries?: Record<string, string>;
   repoQuery?: string;
   hideCoordination?: boolean;
+  /** Legacy boolean, still written as `boardGrouping === "split"` for older readers (#390). */
   splitByRepository?: boolean;
+  /** None, split per repository or swimlanes (#390); wins over splitByRepository when present. */
+  boardGrouping?: BoardGrouping;
   /** One global card/list choice for every repository and the combined board (#147). */
   listMode?: boolean;
   /** @deprecated Read only: per-repository list choice from #127, migrated to listMode. */
@@ -88,6 +92,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   query: text, repositoryQueries: value => repoMap(value, text), repoQuery: text,
   hideCoordination: value => typeof value === "boolean",
   splitByRepository: value => typeof value === "boolean",
+  boardGrouping: validBoardGrouping,
   listMode: value => typeof value === "boolean",
   listRepos: handoffRepositoryList, combinedList: value => typeof value === "boolean",
   timeoutEnabled: value => typeof value === "boolean",
@@ -161,6 +166,9 @@ export function mergeHandoffPreferences(
   };
   merged.listMode = migrateListMode({ ...preferences, splitByRepository: merged.splitByRepository }, merged.selected, current.listMode);
   delete merged.listRepos; delete merged.combinedList;
+  // A sender without boardGrouping (older app or saved settings) keeps its split choice (#390).
+  merged.boardGrouping = boardGroupingFrom(preferences, boardGroupingFrom(current));
+  merged.splitByRepository = merged.boardGrouping === "split";
   if (merged.projectOrder) merged.projectOrder = reconcileOrder(list(merged.projectOrder), accessibleNames);
   for (const key of ["collapsedRepos", "notificationRepos"] as const) if (merged[key]) merged[key] = list(merged[key]);
   if (merged.repositoryColumnLimits) merged.repositoryColumnLimits = map(merged.repositoryColumnLimits);

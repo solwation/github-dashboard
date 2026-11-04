@@ -1,4 +1,5 @@
 import { expect, test, type Page, type BrowserContext, type TestInfo } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 const repos = [
   { id: 901, name: "lunden-3d-apartment-with-a-very-long-repository-name", full_name: "sample/lunden-3d-apartment-with-a-very-long-repository-name", description: "Fictional layout fixture", private: false, html_url: "https://github.com/sample/lunden-3d-apartment-with-a-very-long-repository-name", owner: { login: "sample" } },
@@ -70,7 +71,7 @@ test("combined-list repository chips keep row content aligned at every card/list
 
   async function inspect(contextPage: Page, scenario: typeof scenarios[number], split: boolean, mode: typeof modes[number], info: TestInfo) {
     await contextPage.setViewportSize({ width: 1280, height: 900 });
-    const contextSplitToggle = contextPage.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+    const contextSplitToggle = boardSplit(contextPage);
     const contextViewToggle = contextPage.getByRole("group", { name: "Visningsläge för boarden", exact: true });
     if (await contextSplitToggle.isChecked() !== split) {
       if (split) await contextSplitToggle.check(); else await contextSplitToggle.uncheck();

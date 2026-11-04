@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { writeFileSync } from "node:fs";
+import { boardSplit } from "./support/board-grouping";
 
 const devices = [
   { width: 1600, height: 1000, mobile: false },
@@ -34,7 +35,7 @@ for (const device of devices) for (const list of [false, true]) {
     const measurements: unknown[] = [];
     for (const theme of ["light", "dark"]) for (const split of [true, false]) {
       await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).setChecked(split);
+      await boardSplit(page).setChecked(split);
       await expect(page.locator(".combined-board-head")).toHaveCount(0);
       const board = split ? lane : page.locator(".combined-board");
       await board.scrollIntoViewIfNeeded();

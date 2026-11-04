@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
+import { boardSplit } from "./support/board-grouping";
 const evidence = process.env.SIDEBAR_LAYOUT_EVIDENCE;
 const before = process.env.SIDEBAR_LAYOUT_BEFORE === "1";
 const scenarios = [{ width: 1600, height: 1000 }, { width: 1000, height: 900 }, { width: 1000, height: 1100, touch: true }, { width: 950, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }];
@@ -95,6 +96,6 @@ test("sidebar artwork sizing leaves content Cards/List and repository headings a
   await expect(page.locator(".issue-card")).not.toHaveCount(0);
   expect((await width(".issue-card .project-icon")).every(value => value === 16)).toBe(true);
   expect((await width(".lane-title .project-icon")).every(value => value === 20)).toBe(true);
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck(); await page.getByRole("button", { name: "Lista", exact: true }).click();
+  await boardSplit(page).uncheck(); await page.getByRole("button", { name: "Lista", exact: true }).click();
   expect((await width(".issue-row .project-icon")).every(value => value === 16)).toBe(true);
 });

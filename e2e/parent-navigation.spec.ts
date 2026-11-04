@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { devOrigin } from "./ports";
+import { boardSplit } from "./support/board-grouping";
 
 const repos = [
   { id: 401, name: "child", full_name: "sample/child", private: true, description: "", html_url: "https://github.com/sample/child", owner: { login: "sample" } },
@@ -49,7 +50,7 @@ async function fixture(page: Page) {
 for (const mode of ["Cards", "List"] as const) {
   test(`parent selection navigates to the right cross-repository status in split and combined ${mode.toLowerCase()} boards`, async ({ page }, info) => {
     const popup = await fixture(page);
-    const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+    const split = boardSplit(page);
     for (const viewport of [{ width: 1600, height: 1000 }, { width: 1000, height: 900 }]) {
       await page.setViewportSize(viewport);
       for (const combined of [false, true]) {
@@ -103,7 +104,7 @@ test("parent navigation works on touch phones in portrait, landscape and 320px l
       await page.setViewportSize(size);
       for (const mode of ["Cards", "List"] as const) {
         const combined = mode === "List";
-        const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+        const split = boardSplit(page);
         if (combined) await split.uncheck(); else await split.check();
         await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
         const child = page.locator(".issue-card, .issue-row").filter({ hasText: "Child task" }).first();
@@ -131,7 +132,7 @@ test("child selection from a parent navigates and highlights the board issue wit
     await page.setViewportSize(viewport);
     for (const mode of ["Cards", "List"] as const) {
       for (const combined of [false, true]) {
-      const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+      const split = boardSplit(page);
       if (combined) await split.uncheck(); else await split.check();
       await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
       const parent = page.locator('[id="issue-sample%2Fparent-42"]');
@@ -163,7 +164,7 @@ test("child navigation fits touch phones in portrait, landscape and narrow layou
     for (const size of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }]) {
       await page.setViewportSize(size);
       for (const mode of ["Cards", "List"] as const) {
-        const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+        const split = boardSplit(page);
         if (mode === "Cards") await split.check(); else await split.uncheck();
         await page.locator(".board-mode-toggle").locator(`[title="${mode === "List" ? "Lista" : "Kort"}"]`).click();
         const parent = page.locator('[id="issue-sample%2Fparent-42"]');

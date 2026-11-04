@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { textAccessibility } from "./support/text-accessibility";
+import { boardSplit } from "./support/board-grouping";
 
 const repo = {
   id: 341,
@@ -169,7 +170,7 @@ test.describe("List expanded labels (#341)", () => {
         await page.emulateMedia({ colorScheme: theme });
 
         for (const combined of [false, true]) {
-          const splitCheckbox = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+          const splitCheckbox = boardSplit(page);
           const isChecked = await splitCheckbox.isChecked();
           if (combined && isChecked) {
             await splitCheckbox.uncheck();

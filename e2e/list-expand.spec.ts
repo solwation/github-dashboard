@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, description: "Fictional expand fixture", private: true, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
 const stamp = new Date(Date.now() - 86_400_000).toISOString();
@@ -111,7 +112,7 @@ test("desktop expands row details in place with open description while phone ope
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 
   // Combined board on desktop & tablet: keeps the repository badge on the row and expands details with open description.
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   const board = page.locator(".combined-board");
   await expect(board.locator(".issue-row")).toHaveCount(4);
   const beta = board.getByRole("button", { name: "beta task 1", exact: true });

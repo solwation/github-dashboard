@@ -691,18 +691,21 @@ h1 {
   font-weight: 650;
   white-space: nowrap;
 }
-.column-heading i {
+.column-heading i,
+.swimlane-count i {
   width: 7px;
   height: 7px;
   display: inline-block;
   border-radius: 50%;
   border: 1.5px solid #9aaabc;
 }
-.column-heading i.progress {
+.column-heading i.progress,
+.swimlane-count.progress i {
   border-color: #c7a052;
   background: #e3ba68;
 }
-.column-heading i.closed {
+.column-heading i.closed,
+.swimlane-count.closed i {
   border-color: #328c74;
   background: #328c74;
 }
@@ -3180,3 +3183,75 @@ a.sidebar-repository:focus-visible {
   .project-error-summary { min-height: 44px; }
 }
 @media (max-width: 360px) { .topbar:has(.event-history-toggle) .breadcrumb { display: none; } }
+
+/* Board grouping (#390). Swimlanes are one combined board with a band per repository: horizontal
+   rows below one shared status header in Cards, vertical repository columns in List. */
+@media (pointer: coarse) {
+  .board-toolbar .board-mode-toggle button { min-height: 44px; min-width: 44px; }
+}
+.board-grouping-toggle svg { flex-shrink: 0; }
+.board-toolbar .board-grouping-toggle { margin-left: 0; }
+.swimlane-board { margin-bottom: var(--space-6); }
+.swimlane-board:not(.list-mode) { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: clip; }
+/* The shared status header stays below the sticky top bar while lanes scroll past. */
+.swimlane-board-head { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, 52px)); z-index: 5; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line); background: var(--surface); }
+.swimlane-board-head .board-column { min-height: 0; }
+.swimlane-board-head .column-header { border-bottom: 0; }
+.swimlane-band { position: relative; min-width: 0; scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--topbar-height, 58px) + 8px); }
+.swimlane-band + .swimlane-band { border-top: 1px solid var(--line); }
+/* The repository colour marks the whole band, matching the sidebar dot. */
+.swimlane-band::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--repository-color, var(--line)); pointer-events: none; z-index: 1; }
+.swimlane-band-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  background: color-mix(in srgb, var(--repository-color, var(--line)) 8%, var(--surface)); border-bottom: 1px solid var(--line); }
+.swimlane-band.is-collapsed .swimlane-band-header { border-bottom: 0; }
+.swimlane-band-header .lane-title { flex: 1 1 0; gap: var(--space-2); }
+.swimlane-band-header .lane-title > div { display: flex; align-items: center; gap: var(--space-3); flex: 1 1 auto; }
+.swimlane-band-header .lane-title h2 { flex: 0 1 auto; min-width: 0; margin: 0; flex-wrap: nowrap; gap: var(--space-2); font-size: 12px; }
+.swimlane-band-header .repository-badges { flex-wrap: nowrap; gap: var(--space-1); }
+.swimlane-band-header .repo-owner { flex: 1 1 0; min-width: 0; max-width: none; overflow: hidden; color: var(--text); }
+.swimlane-band-header .repo-owner span { margin: 0 var(--space-1); }
+.swimlane-counts { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: 10px; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.swimlane-count { display: inline-flex; align-items: center; gap: var(--space-1); }
+.swimlane-band-content > .notice, .swimlane-band-content > .repository-loading { margin: var(--space-2) var(--space-3) var(--space-2) var(--space-4); }
+/* Cards: the shared header row carries status, count, estimate and sorting; lane cells stay compact. */
+.swimlane-board:not(.list-mode) .swimlane-cell > .column-header { display: none; }
+.swimlane-board:not(.list-mode) .swimlane-cell { min-height: 0; }
+.swimlane-cell .column-empty { min-height: 0; flex-direction: row; gap: var(--space-2); padding: var(--space-2); }
+/* List: each repository is a vertical column; wide boards scroll inside the board, never the page. */
+.swimlane-board.list-mode { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(min(100%, 22rem), 1fr); align-items: start; gap: var(--space-3); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-bottom: var(--space-1); }
+.swimlane-board.list-mode .swimlane-band { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; scroll-snap-align: start; }
+.swimlane-board.list-mode .swimlane-band + .swimlane-band { border-top: 1px solid var(--line); }
+.swimlane-board.list-mode .swimlane-band-header { flex-wrap: wrap; row-gap: var(--space-1); }
+.swimlane-board.list-mode .swimlane-band-header .lane-title { flex-basis: 100%; }
+.swimlane-board.list-mode .swimlane-counts { justify-content: flex-start; padding-left: var(--space-8); }
+.swimlane-board.list-mode .repo-owner { display: none; }
+@media (max-width: 950px) {
+  .swimlane-band-header .lane-title > div { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+}
+@media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
+  .swimlane-board-head { display: none; }
+  .swimlane-board:not(.list-mode) .swimlane-cell > .column-header { display: flex; }
+  .swimlane-band-header { flex-wrap: wrap; gap: var(--space-2); }
+  .swimlane-band-header .lane-title { flex-basis: 100%; width: 100%; }
+  .swimlane-band-header .lane-title > div { overflow: hidden; }
+  .swimlane-band-header .lane-title h2 { max-width: 100%; }
+  .swimlane-band-header .repo-owner { flex-basis: auto; width: 100%; }
+  .swimlane-counts { justify-content: flex-start; padding-left: var(--space-8); }
+  .swimlane-board.list-mode { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); overflow-x: visible; scroll-snap-type: none; padding-bottom: 0; }
+}
+:root[data-theme="dark"] .swimlane-board:not(.list-mode),
+:root[data-theme="dark"] .swimlane-board.list-mode .swimlane-band { background: var(--surface); border-color: var(--line); }
+@media (min-width: 951px) {
+  /* Narrow repository columns: the status group heading already names the status, so its fixed chip slot gives way. */
+  .swimlane-board.list-mode .row-slot-status { display: none; }
+}
+/* Open lanes show their counts in the status headers wherever those headers are visible. */
+.swimlane-board.list-mode .swimlane-band:not(.is-collapsed) .swimlane-counts { display: none; }
+@media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
+  .swimlane-band:not(.is-collapsed) .swimlane-counts { display: none; }
+}
+@media (max-width: 650px) {
+  /* Phones keep the grouping words and drop their icons so grouping and Cards/List share a line. */
+  .board-grouping-toggle svg { display: none; }
+  .board-toolbar > .combined-sync { order: 1; }
+}

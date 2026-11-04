@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { repositoryNotification } from "./support/repository-properties";
+import { boardSplit } from "./support/board-grouping";
 
 // Clicking a status notice (#278) focuses the board and highlights the notified issue, even when it
 // sits in a collapsed repository, beyond "Visa fler" or behind a search. Fictional fixtures only.
@@ -126,7 +127,7 @@ for (const device of devices) for (const mode of ["Cards", "List"] as const) {
     await expect(page.locator(".sr-only[role=status]").filter({ hasText: "Sökningen rensades så att issuet syns." })).toHaveCount(1);
 
     // Combined board: the target is again beyond the shared "Visa fler" limit.
-    const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+    const split = boardSplit(page);
     await split.uncheck();
     notice = await closeTarget();
     await page.evaluate(() => window.scrollTo(0, 0));

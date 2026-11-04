@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSettings } from "./support/settings";
 import { closePhoneMenu, openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 // Fictional fixtures: an active public and private repository, an inactive one and another person's public project.
 const repo = (full_name: string, id: number, extra: Record<string, unknown> = {}) => ({
@@ -106,7 +107,7 @@ test.describe("desktop", () => {
     await expect(page.getByRole("heading", { name: "Alla repositories är dolda" })).toBeVisible();
 
     // Combined view: no empty sections, and only shown projects contribute cards.
-    await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    await boardSplit(page).uncheck();
     await expect(page.locator(".combined-board")).toHaveCount(0);
     await row(page, "sample/beta").getByRole("button", { name: "Visa sample/beta i innehållsvyn" }).click();
     await expect(page.locator(".combined-board")).toBeVisible();
@@ -140,7 +141,7 @@ test.describe("desktop", () => {
     await expect.poll(async () => (await boardRepositories(page)).items).toEqual(["sample/beta"]);
 
     // Split view: clicking a manually hidden project shows it again, expanded.
-    await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).check();
+    await boardSplit(page).check();
     await page.getByRole("button", { name: "Kollapsa beta" }).click();
     await row(page, "sample/alpha").locator(".sidebar-repository").click();
     await expect(page.locator("#repo-1")).toBeVisible();

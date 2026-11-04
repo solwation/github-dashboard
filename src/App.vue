@@ -91,6 +91,8 @@ import { measureRender } from "./lib/startup-timing";
 import { cacheFailureReason } from "./lib/cache-failure";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
 import BoardModeToggle from "./components/BoardModeToggle.vue";
+import BoardGroupingToggle from "./components/BoardGroupingToggle.vue";
+import { boardGroupingFrom, defaultBoardGrouping, type BoardGrouping } from "./lib/board-grouping";
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { provideSubIssues } from "./composables/useSubIssues";
@@ -304,26 +306,26 @@ function mobileStatusLabel(key: string) {
 }
 const mobileNavigationStatuses = computed(() => columns.value.map(col => {
   const lane = contentLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? contentLanes.value[0];
-  const count = splitByRepository.value
+  const count = groupedByRepository.value
     ? (lane ? items(lane, col.key).length : 0)
     : combinedColumns.value[col.key]?.length ?? 0;
   return { key: col.key, label: mobileStatusLabel(col.key), count };
 }));
 async function navigateToBoardStatus(key: string) {
   const lane = contentLanes.value.find(item => item.repo.full_name === mobileNavigationRepository.value) ?? contentLanes.value[0];
-  if (splitByRepository.value && !lane) return;
-  if (splitByRepository.value && lane) {
+  if (groupedByRepository.value && !lane) return;
+  if (groupedByRepository.value && lane) {
     const laneIndex = contentLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
     if (laneIndex >= renderedLanes.value) renderedLanes.value = laneIndex + 1;
   }
-  if (splitByRepository.value && lane && collapsedRepos.value.includes(lane.repo.full_name)) {
+  if (groupedByRepository.value && lane && collapsedRepos.value.includes(lane.repo.full_name)) {
     // Reveal the target without resetting its Show more limit.
     collapsedRepos.value = collapsedRepos.value.filter(name => name !== lane.repo.full_name);
     save();
   }
   closeMobileBoardNavigator();
   await nextTick();
-  const targetId = splitByRepository.value
+  const targetId = groupedByRepository.value
     ? `board-${lane!.repo.id}-${key}`
     : `board-combined-${key}`;
   const target = document.getElementById(targetId);
@@ -338,7 +340,7 @@ async function navigateToBoardStatus(key: string) {
     boardNavigationHighlight?.classList.remove("board-navigation-highlight");
     boardNavigationHighlight = null;
   }, 1400);
-  mobileNavigationAnnouncement.value = splitByRepository.value
+  mobileNavigationAnnouncement.value = groupedByRepository.value
     ? t("Visar {status} i {repository}", { status: mobileStatusLabel(key), repository: lane!.repo.full_name })
     : t("Visar {status} i alla repositories", { status: mobileStatusLabel(key) });
 }
@@ -348,7 +350,7 @@ function activateSidebarRepository(name: string) {
   // A hidden repository is shown and expanded rather than toggled away (#367).
   const hidden = currentView.value === "overview" && hiddenFromBoard(name);
   if (hidden) setRepositoryVisible(name, true);
-  const toggle = !hidden && (currentView.value === "overview" && !splitByRepository.value
+  const toggle = !hidden && (currentView.value === "overview" && !groupedByRepository.value
     ? selectedCombinedRepository.value === name : focusedSidebarRepository.value === name);
   focusedSidebarRepository.value = name;
   const hash = (currentView.value === "statistics" ? "#statistics-repo-" : "#repo-") + repo.id;
@@ -364,13 +366,13 @@ async function revealRepository(name: string, toggle = false) {
   if (!repo) return;
   const targetId = (currentView.value === "statistics" ? "statistics-repo-" : "repo-") + repo.id;
   repositoryNavigationTarget = targetId;
-  if (currentView.value === "overview" && splitByRepository.value && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
-  if (currentView.value === "overview" && !splitByRepository.value) {
+  if (currentView.value === "overview" && groupedByRepository.value && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
+  if (currentView.value === "overview" && !groupedByRepository.value) {
     selectedCombinedRepository.value = toggle && selectedCombinedRepository.value === name ? null : name;
   }
   await nextTick();
   if (run !== repositoryNavigationRun) return;
-  if (currentView.value === "overview" && !splitByRepository.value) {
+  if (currentView.value === "overview" && !groupedByRepository.value) {
     if (selectedCombinedRepository.value !== name) return;
     const combinedBoard = document.querySelector<HTMLElement>(".combined-board");
     combinedBoard?.scrollIntoView({ block: "start" });
@@ -424,7 +426,7 @@ async function navigateWorkspace() {
   if (window.location.hash !== "#" + repositoryNavigationTarget) clearRepositoryHighlight();
   currentView.value = isStatisticsHash() ? "statistics" : "overview";
   await nextTick();
-  if (currentView.value === "overview" && !splitByRepository.value) {
+  if (currentView.value === "overview" && !groupedByRepository.value) {
     const match = window.location.hash.match(/^#repo-(\d+)$/);
     if (match) {
       const repoId = Number(match[1]);
@@ -573,7 +575,13 @@ const picker = ref(false);
 const tokenPanel = ref(false);
 const tokenInput = ref("");
 const hideCoordination = ref(true);
-const splitByRepository = ref(true);
+// Grouping (#390): split boards per repository, one combined board, or combined swimlanes.
+const boardGrouping = ref<BoardGrouping>(defaultBoardGrouping);
+/** Separate boards with their own headers, searches and sync controls. */
+const splitByRepository = computed(() => boardGrouping.value === "split");
+/** Split boards and swimlanes both place each repository's issues in its own area. */
+const groupedByRepository = computed(() => boardGrouping.value !== "none");
+const swimlanes = computed(() => boardGrouping.value === "swimlanes");
 // Card/list choice (#127): one global choice for every repository and the combined board (#147).
 const listMode = ref(false);
 const combinedLimits = ref<Record<string, number>>({});
@@ -630,17 +638,17 @@ async function revealParentIssue(repository: string, number: number): Promise<bo
   }
   // Like a filter, a hidden repository yields to explicit navigation to one of its issues (#367).
   if (hiddenFromBoard(lane.repo.full_name)) setRepositoryVisible(lane.repo.full_name, true);
-  if (splitByRepository.value) {
+  if (groupedByRepository.value) {
     const laneIndex = contentLanes.value.findIndex(item => item.repo.full_name === lane.repo.full_name);
     if (laneIndex >= renderedLanes.value) renderedLanes.value = laneIndex + 1;
     collapsedRepos.value = collapsedRepos.value.filter(name => name !== lane.repo.full_name);
   }
   await nextTick();
-  const index = splitByRepository.value
+  const index = groupedByRepository.value
     ? items(lane, key).findIndex(item => item.number === number)
     : (combinedColumns.value[key] ?? []).findIndex(item => item.lane.repo.full_name.toLowerCase() === repository.toLowerCase() && item.issue.number === number);
   if (index < 0) return false;
-  if (splitByRepository.value) visibleLimit.value[lane.repo.full_name + key] = Math.max(shownLimit(lane.repo.full_name, key), index + 1);
+  if (groupedByRepository.value) visibleLimit.value[lane.repo.full_name + key] = Math.max(shownLimit(lane.repo.full_name, key), index + 1);
   else combinedLimits.value[key] = Math.max(combinedLimit(key), index + 1);
   await nextTick();
   const target = document.getElementById(issueDomId(repository, number));
@@ -726,12 +734,12 @@ const authBusy = ref(false);
 const restoring = ref(true);
 const savedSession = ref(false);
 const sessionToken = ref("");
-watch([currentView, splitByRepository, sessionToken, () => lanes.value.map(lane => lane.repo.full_name).sort().join("\n")], () => {
+watch([currentView, boardGrouping, sessionToken, () => lanes.value.map(lane => lane.repo.full_name).sort().join("\n")], () => {
   focusedSidebarRepository.value = null;
   statisticsNavigation.value = undefined;
 });
 
-watch([currentView, splitByRepository, sessionToken], clearRepositoryHighlight);
+watch([currentView, boardGrouping, sessionToken], clearRepositoryHighlight);
 watch([sessionToken, isDemo, publicMode, () => user.value?.login], () => { selectedCombinedRepository.value = null; });
 watch([authBusy, () => lanes.value.map(lane => lane.repo.full_name)], ([connecting, names]) => {
   if (!connecting && selectedCombinedRepository.value && !names.includes(selectedCombinedRepository.value)) selectedCombinedRepository.value = null;
@@ -1282,7 +1290,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   columnLimit: columnLimit.value, repositoryColumnLimits: repositoryColumnLimits.value,
   notificationRepos: notificationRepos.value, notificationSounds: notificationSounds.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
-  hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value,
+  hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value, boardGrouping: boardGrouping.value,
   listMode: listMode.value, ...timeoutSettings.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
@@ -1300,7 +1308,7 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   repositoryQueries.value = value.repositoryQueries ?? repositoryQueries.value;
   repoQuery.value = value.repoQuery ?? repoQuery.value;
   hideCoordination.value = value.hideCoordination ?? hideCoordination.value;
-  splitByRepository.value = value.splitByRepository ?? splitByRepository.value;
+  boardGrouping.value = boardGroupingFrom(value, boardGrouping.value);
   listMode.value = value.listMode ?? listMode.value;
   const legacyTimeout = value.timeoutMinutes !== undefined && value.timeoutEnabled === undefined && value.timeoutOverrunPercent === undefined;
   timeoutSettings.value = normalizeTimeoutSettings(legacyTimeout ? {} : { ...timeoutSettings.value, ...value });
@@ -1319,7 +1327,7 @@ function applyImportedPreferences(incoming: HandoffSettings, available: Repo[]) 
   applyChosenPreferences(state);
   return save();
 }
-watch([repositoryOwnerDisplay, query, repositoryQueries, repoQuery, hideCoordination, splitByRepository, listMode, currentView, statisticsPreferences, preference], () => save(), { deep: true });
+watch([repositoryOwnerDisplay, query, repositoryQueries, repoQuery, hideCoordination, boardGrouping, listMode, currentView, statisticsPreferences, preference], () => save(), { deep: true });
 // Periodic Background Sync (#129): keep the installed app's background check registered only
 // while a signed-in account has notifications on for a selected repository. Untouched elsewhere.
 const scheduleBackgroundCheck = createBackgroundCheckScheduler();
@@ -1385,7 +1393,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     visibleLimit.value = {};
     combinedLimits.value = {};
     query.value = ""; repositoryQueries.value = {}; repoQuery.value = "";
-    hideCoordination.value = true; splitByRepository.value = true; statisticsPreferences.value = {};
+    hideCoordination.value = true; boardGrouping.value = defaultBoardGrouping; statisticsPreferences.value = {};
     listMode.value = false;
     notificationSounds.value = true;
     repositoryOwnerDisplay.value = "auto";
@@ -1847,7 +1855,7 @@ function showDemo() {
   repositoryOwnerDisplay.value = "auto";
   permissionAcknowledgements.value = [];
   repositoryColors.value = {};
-  splitByRepository.value = true;
+  boardGrouping.value = defaultBoardGrouping;
   listMode.value = false;
   combinedLimits.value = {};
   generation++;
@@ -1938,7 +1946,7 @@ function logout() {
   query.value = "";
   currentView.value = "overview";
   history.replaceState(null, "", "#overview");
-  splitByRepository.value = true;
+  boardGrouping.value = defaultBoardGrouping;
   listMode.value = false;
   combinedLimits.value = {};
   repositoryQueries.value = {};
@@ -2256,7 +2264,7 @@ onMounted(async () => {
       :statistics="currentView === 'statistics'"
       :repos="sidebarRepos"
       :repository-colors="workspaceRepositoryColors"
-      :selected-repository="currentView === 'overview' && !splitByRepository ? selectedCombinedRepository : null"
+      :selected-repository="currentView === 'overview' && boardGrouping === 'none' ? selectedCombinedRepository : null"
       :can-select="loggedIn || publicMode"
       :restoring="restoring && !workspaceOpen"
       :hide-inactive="hideInactiveRepos"
@@ -2312,13 +2320,13 @@ onMounted(async () => {
       </nav>
       <div v-if="workspaceOpen && currentView === 'overview' && mobileBoardNavigatorOpen" id="mobile-board-navigator" class="mobile-board-navigator"
         role="group" :aria-label="t('Snabbnavigering mellan repositories och status')" @keydown.esc.prevent="closeMobileBoardNavigator(true)">
-        <label v-if="splitByRepository" class="mobile-board-repository">
+        <label v-if="groupedByRepository" class="mobile-board-repository">
           <span>{{ t("Välj repository") }}</span>
           <select v-model="mobileNavigationRepository" :aria-label="t('Välj repository')">
             <option v-for="lane in contentLanes" :key="lane.repo.full_name" :value="lane.repo.full_name">{{ lane.repo.full_name }}</option>
           </select>
         </label>
-        <p class="mobile-board-navigator-caption">{{ splitByRepository ? t("Välj status") : t("Status i alla repositories") }}</p>
+        <p class="mobile-board-navigator-caption">{{ groupedByRepository ? t("Välj status") : t("Status i alla repositories") }}</p>
         <div class="mobile-board-statuses" role="group" :aria-label="t('Statusgrupper')">
           <button v-for="status in mobileNavigationStatuses" :key="status.key" type="button" class="mobile-board-status"
             :disabled="status.count === 0"
@@ -2542,8 +2550,7 @@ onMounted(async () => {
           ><label class="coord-toggle"
             ><input type="checkbox" v-model="hideCoordination" />
             {{ t("Dölj koordinationsärenden") }}</label
-          ><label class="coord-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label
-          >
+          ><BoardGroupingToggle v-model="boardGrouping" :list="listMode" />
           <template v-if="!splitByRepository && contentLanes.length">
           <span v-if="isDemo" class="lane-sync combined-sync">
             <time v-if="refreshed" :datetime="new Date(refreshed).toISOString()"
@@ -2686,6 +2693,76 @@ onMounted(async () => {
           </div>
         </RepositorySection>
         </template>
+        <section v-else-if="swimlanes && contentLanes.length" class="swimlane-board" :class="{ 'list-mode': listMode }" :aria-label="t('Simbanor per repository')">
+          <!-- #390: Cards share one status header row; lanes are horizontal bands below it. In List each lane is a vertical column. -->
+          <div v-if="!listMode" class="swimlane-board-head">
+            <BoardColumn
+              v-for="col in columns"
+              :key="col.key"
+              header-only
+              :aria-label="t('{status} i alla repositories', { status: mobileStatusLabel(col.key) })"
+              :column="col"
+              :items="combinedColumns[col.key]!"
+              :estimate-groups="combinedEstimateGroups"
+              :sort="columnSorts[col.key]"
+              :loading="contentLanes.some(lane => lane.loading || lane.error)"
+              :card-props="cardProps"
+              :row-props="rowProps"
+              @update:sort="setColumnSort(col.key, $event)"
+            />
+          </div>
+          <section
+            v-for="(lane, laneIndex) in contentLanes"
+            :key="lane.repo.id"
+            :id="'repo-' + lane.repo.id"
+            class="swimlane-band"
+            :class="{ 'is-collapsed': collapsedRepos.includes(lane.repo.full_name) }"
+            :style="{ '--repository-color': workspaceRepositoryColors[lane.repo.full_name] }"
+            :data-repository="lane.repo.full_name"
+            :aria-labelledby="'swimlane-title-' + lane.repo.id"
+          >
+            <header class="swimlane-band-header">
+              <RepositoryHeading :repository="lane.repo" :collapsed="collapsedRepos.includes(lane.repo.full_name)" :heading-id="'swimlane-title-' + lane.repo.id"
+                :controls="'swimlane-content-' + lane.repo.id" :toggle-name="lane.repo.name" @toggle="toggleCollapsed(lane.repo.full_name)" />
+              <span v-if="!lane.loading && (!lane.error || lane.issues.length)" class="swimlane-counts">
+                <span v-for="col in columns" :key="col.key" class="swimlane-count" :class="col.key"
+                  ><i aria-hidden="true" />{{ t("{status}: {count}", { status: col.title, count: items(lane, col.key).length }) }}</span>
+              </span>
+              <span v-else-if="lane.loading" class="swimlane-counts">{{ t("Hämtar…") }}</span>
+            </header>
+            <div v-show="!collapsedRepos.includes(lane.repo.full_name)" :id="'swimlane-content-' + lane.repo.id" class="swimlane-band-content">
+              <div v-if="lane.timerWarning" class="notice">{{ t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") }}</div>
+              <div v-if="lane.loading" class="repository-loading" role="status" aria-live="polite">
+                <RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}
+              </div>
+              <div v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)" class="swimlane" :class="{ 'list-mode': listMode }">
+                <BoardColumn
+                  v-for="col in columns"
+                  :key="col.key"
+                  cell
+                  :id="'board-' + lane.repo.id + '-' + col.key"
+                  :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
+                  :column="col"
+                  :lane="lane"
+                  :items="items(lane, col.key)"
+                  :list-mode="listMode"
+                  :limit="shownLimit(lane.repo.full_name, col.key)"
+                  :limit-increment="initialLimit(lane.repo.full_name)"
+                  :estimate-groups="laneEstimateGroups.get(lane.repo.full_name) ?? []"
+                  :sort="columnSorts[col.key]"
+                  :filtered="Boolean(query)"
+                  :card-props="cardProps"
+                  :row-props="rowProps"
+                  @update:sort="setColumnSort(col.key, $event)"
+                  @show-more="visibleLimit[lane.repo.full_name + col.key] = shownLimit(lane.repo.full_name, col.key) + initialLimit(lane.repo.full_name)"
+                  @read="readIssue"
+                  @parent-select="revealParentIssue"
+                  @child-select="revealParentIssue"
+                />
+              </div>
+            </div>
+          </section>
+        </section>
         <section v-else-if="contentLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
           <template v-for="lane in contentLanes" :key="lane.repo.full_name">
             <p v-if="lane.loading" class="repository-loading" role="status"><RefreshCw class="spinning" :size="20" aria-hidden="true" />{{ t("Hämtar issues för {name}…", { name: lane.repo.full_name }) }}</p>

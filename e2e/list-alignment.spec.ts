@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 const repo = { id: 190, name: "list-align", full_name: "sample/list-align", description: "Fictional list alignment fixture", private: true, html_url: "https://github.com/sample/list-align", owner: { login: "sample" } };
 
@@ -118,7 +119,7 @@ for (const combined of [false, true]) {
   test(`activity occupies a stable slot before status in ${combined ? "combined" : "split"} rows`, async ({ page }) => {
     await page.setViewportSize({ width: 1800, height: 1000 });
     const api = await fixture(page);
-    if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    if (combined) await boardSplit(page).uncheck();
     const row = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Backlog one", exact: true }) });
     const geometry = () => row.evaluate(element => {
       const box = element.getBoundingClientRect();
@@ -203,7 +204,7 @@ for (const combined of [false, true]) {
   test(`phone rows stay dense and open full details in ${combined ? "combined" : "split"} mode`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const api = await fixture(page, true);
-    if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    if (combined) await boardSplit(page).uncheck();
     const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
     for (const width of [320, 375, 430, 650]) {
       await page.setViewportSize({ width, height: 844 });
@@ -244,7 +245,7 @@ for (const combined of [false, true]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const page = await context.newPage();
     const api = await fixture(page);
-    if (combined) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    if (combined) await boardSplit(page).uncheck();
     api.move(); await page.keyboard.press("Control+r");
     const marked = page.locator(".issue-row").filter({ has: page.locator(".row-comment-marker") });
     await expect(marked).toHaveCount(1);
@@ -314,7 +315,7 @@ test("interrupted work keeps its actual duration without inflating future issue 
 for (const combined of [false, true]) test(`timeout keeps its own slot with long labels in ${combined ? 'combined' : 'split'} rows`, async ({ page }) => {
   await page.setViewportSize({ width: 1800, height: 1000 });
   const api = await fixture(page, false, false, true);
-  if (combined) await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+  if (combined) await boardSplit(page).uncheck();
   const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: 'Backlog one', exact: true }) });
   const snapshot = () => row.evaluate(element => {
     const row = element.getBoundingClientRect();
@@ -367,7 +368,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
   test.use({ viewport: { width: scenario.width, height: scenario.height }, isMobile: scenario.mobile, hasTouch: scenario.mobile });
   for (const combined of [false, true]) test(`${combined ? 'combined' : 'split'} cards and list keep actual time in its own rightmost column`, async ({ page }, info) => {
     const api = await fixture(page, true, true, true, true, true);
-    if (combined) await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+    if (combined) await boardSplit(page).uncheck();
     api.move(); await page.keyboard.press('Control+r');
     const unread = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: /^A very long issue title/ }) });
     await expect(unread.locator('.row-number')).toHaveText('#12345');

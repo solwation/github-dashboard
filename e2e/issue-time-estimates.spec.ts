@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 const minute = 60000, day = 86400000;
 const base = Date.parse("2026-10-15T10:00:00Z");
@@ -82,7 +83,7 @@ test("individual timing follows repository history in cards, rows, combined view
   await expect(activeCard.locator(".issue-time-remaining-label")).toHaveText("≈ 15 min kvar");
   await mode.getByRole("button", { name: "Lista", exact: true }).click();
   for (const split of [true, false]) {
-    if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    if (!split) await boardSplit(page).uncheck();
     await expect(badge(page, ".issue-row", 5)).toHaveAttribute("title", /Uppskattad tid kvar: ≈ 15 min/);
     const row = page.locator(".issue-row").filter({ hasText: "Timing 5" });
     const spent = await row.locator(".row-time > .timer").boundingBox();
@@ -178,7 +179,7 @@ test("issue time calibration follows repository filters and ignores them on comb
   await expect(point()).not.toHaveAttribute("title", /Uppskattad tid:/);
   await expect(page.locator(".issue-time-remaining")).toHaveCount(0);
   await expect(page.locator(".column-estimate")).toHaveCount(0);
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   await expect(point()).toHaveAttribute("title", /Uppskattad tid: ≈ 30 min/);
   await expect(page.locator(".column-estimate").first()).toBeVisible();
   await page.getByRole("textbox", { name: "Sök issues", exact: true }).fill("#5");

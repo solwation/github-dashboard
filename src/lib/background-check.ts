@@ -6,6 +6,7 @@
  */
 import { issueNavigationHash } from "./issue-navigation";
 import { matchesIssueFilters } from "./issue-filter";
+import { boardGroupingFrom } from "./board-grouping";
 import { column, isCoordination, type Issue, type Label, type Lane, type Repo, type Rules } from "./model";
 import { normalizeTimeoutSettings, TimeoutTracker, timeoutBases, timeoutDetail, type TimeoutSettings } from "./timeouts";
 import { setLanguage, t, type LanguagePreference } from "./i18n";
@@ -76,7 +77,7 @@ export function watchSettings(saved: unknown): WatchSettings {
     ...normalizeTimeoutSettings({ ...value, ...preferences }),
     query: typeof preferences.query === "string" ? preferences.query.slice(0, 500) : "",
     repositoryQueries: isRecord(preferences.repositoryQueries) ? Object.fromEntries(Object.entries(preferences.repositoryQueries).filter((entry): entry is [string, string] => REPO_NAME.test(entry[0]) && typeof entry[1] === "string").map(([name, query]) => [name, query.slice(0, 500)])) : {},
-    splitByRepository: preferences.splitByRepository !== false,
+    splitByRepository: boardGroupingFrom(preferences) === "split",
     hideCoordination: typeof preferences.hideCoordination === "boolean" ? preferences.hideCoordination : true,
     language,
   };

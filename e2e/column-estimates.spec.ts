@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 // Column estimates (#140): median of closed issues' in-progress time, counted down by a local clock.
 // Closed fixture issues carry `startedAt` directly, the form estimates.ts reads (#141 will fill it from timelines).
@@ -94,7 +95,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   await estimatesFit(page, lane, /≈ 15 min kvar/, /≈ 1 h 15 min/);
 
   // Combined board: the slowest repository with an estimate decides; the sparse repository is skipped.
-  await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   const board = page.locator('.combined-board');
   await expect(board.locator('.progress .column-estimate')).toHaveText(/≈ 15 min kvar/);
   await expect(board.locator('.backlog .column-estimate')).toHaveText(/≈ 1 h 15 min/);
@@ -112,7 +113,7 @@ test('column estimates show the basis, count down, follow a sync and fit every b
   const [text, background] = await board.locator('.backlog .column-estimate').evaluate(element =>
     [getComputedStyle(element).color, getComputedStyle(element.closest('.board-column')!).backgroundColor]);
   expect(text).not.toBe(background);
-  await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).check();
+  await boardSplit(page).check();
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await noPageScroll(page)).toBe(true);

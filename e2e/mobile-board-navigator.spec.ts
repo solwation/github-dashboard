@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 const sizes = [
   { width: 390, height: 844, mobile: true },
@@ -89,7 +90,7 @@ test("mobile repository/status navigator works across the Cards/List viewport ma
         await page.locator("#issue-search input").fill("");
 
         // Combined mode uses one count set for the filtered board, with repository labels in context.
-        await page.getByLabel("Dela upp per repository").uncheck();
+        await boardSplit(page).uncheck();
         await toggle.click();
         await expect(navigator.getByRole("combobox")).toHaveCount(0);
         const combinedBacklogCount = await page.locator(".combined-board .backlog .column-count").textContent();
@@ -98,7 +99,7 @@ test("mobile repository/status navigator works across the Cards/List viewport ma
         await navigator.locator(".mobile-board-status").first().click();
         await checkTarget(page, "board-combined-backlog");
         await page.screenshot({ path: info.outputPath(`${size.width}x${size.height}-${mode}-combined-navigation.png`) });
-        await page.getByLabel("Dela upp per repository").check();
+        await boardSplit(page).check();
       }
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

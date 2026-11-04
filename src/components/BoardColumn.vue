@@ -76,6 +76,10 @@ const props = withDefaults(
     filtered?: boolean;
     showRepository?: boolean;
     selectedRepository?: string | null;
+    /** Swimlanes (#390): the shared status header row above the lanes renders only the header. */
+    headerOnly?: boolean;
+    /** Swimlanes (#390): one repository's status cell inside a lane. */
+    cell?: boolean;
     cardProps: (lane: Lane, issue: Issue, showRepository?: boolean) => CardPropsResult;
     rowProps: (lane: Lane, issue: Issue, showRepository?: boolean) => RowPropsResult;
   }>(),
@@ -95,6 +99,8 @@ const props = withDefaults(
     filtered: false,
     showRepository: false,
     selectedRepository: null,
+    headerOnly: false,
+    cell: false,
   },
 );
 
@@ -145,7 +151,7 @@ const canCollapse = computed(() => {
     tabindex="-1"
     :aria-label="ariaLabel"
     class="board-column"
-    :class="column.key"
+    :class="[column.key, { 'swimlane-cell': cell, 'swimlane-head-cell': headerOnly }]"
   >
     <div class="column-header">
       <div class="column-heading">
@@ -178,7 +184,7 @@ const canCollapse = computed(() => {
         />
       </div>
     </div>
-    <div class="cards">
+    <div v-if="!headerOnly" class="cards">
       <ul v-if="listMode && items.length" class="issue-rows">
         <IssueRow
           v-for="{ lane, issue } in visibleEntries"

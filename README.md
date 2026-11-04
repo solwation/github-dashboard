@@ -13,7 +13,8 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
 ## Why Issueflow
 
 - **One board for every repository.** Backlog by priority, In progress with live elapsed time,
-  and the last 30 days of Closed work, split per repository or combined. Hide quiet projects
+  and the last 30 days of Closed work, split per repository, combined, or combined with a swimlane
+  per repository. Hide quiet projects
   from the board while keeping them in the menu.
 - **Read details in place.** Click or tap a card surface to open or close its description, or focus its description action and press Enter or Space.
   Links and other controls keep their own actions; List view opens details as before.

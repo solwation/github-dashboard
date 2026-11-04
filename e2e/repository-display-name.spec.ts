@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { openSettings, closePhoneMenu } from './support/phone-menu';
 import { readSettings } from './support/settings';
+import { boardSplit } from "./support/board-grouping";
 
 async function fixture(page: Page) {
   let login = 'display-label-fixture';
@@ -35,7 +36,7 @@ for (const mode of ['Kort', 'Lista'] as const) {
   test(`combined ${mode} labels use all selected owners and keep canonical identity`, async ({ page }) => {
     const { repos, calls } = await fixture(page);
     await page.getByRole('button', { name: mode, exact: true }).click();
-    const split = page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true });
+    const split = boardSplit(page);
     await split.uncheck();
     const board = page.locator('.combined-board');
     const chips = board.locator(mode === 'Kort' ? '.card-repository' : '.row-repository');
@@ -92,7 +93,7 @@ for (const scenario of ownerScenarios) for (const mode of ['Kort', 'Lista'] as c
     const page = await context.newPage();
     await fixture(page);
     await page.getByRole('button', { name: mode, exact: true }).click();
-    const split = page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true });
+    const split = boardSplit(page);
     const sidebar = page.locator('.repository-label[title="shared/first"]');
     await expect(sidebar).toHaveText('shared/first'); // mixed owners, legacy default
     const choose = async (value: string) => {

@@ -2,8 +2,8 @@
   {
     "date": "2026-11-04",
     "summary": {
-      "sv": "Tydligare projektikoner, valbara användarnamn, samlad felöversikt och händelsehistorik samt arbete som väntar på integration.",
-      "en": "Clearer project icons, optional usernames, a grouped error summary, event history and work waiting for integration."
+      "sv": "Tydligare projektikoner, valbara användarnamn, simbanor per projekt, samlad felöversikt och händelsehistorik samt arbete som väntar på integration.",
+      "en": "Clearer project icons, optional usernames, project swimlanes, a grouped error summary, event history and work waiting for integration."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           389
+        ]
+      },
+      {
+        "text": {
+          "sv": "Välj gruppering Ingen, Dela upp eller Simbanor: en gemensam board med en rad per projekt i Kort och en kolumn per projekt i Lista.",
+          "en": "Choose None, Split or Swimlanes grouping: one combined board with a row per project in Cards and a column per project in List."
+        },
+        "issues": [
+          390
         ]
       },
       {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 async function fixture(page: Page) {
   const repo = { id: 185, name: "list-comments", full_name: "sample/list-comments", description: "Fictional list comments fixture", private: true, html_url: "https://github.com/sample/list-comments", owner: { login: "sample" } };
@@ -106,6 +107,6 @@ test("narrow rows keep comments in the phone detail card and fit without horizon
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   await expect(page.locator(".combined-board .row-comments").first().getByRole("button", { name: "1234 kommentarer", exact: true })).toBeVisible();
 });

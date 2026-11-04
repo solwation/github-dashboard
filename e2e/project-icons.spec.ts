@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+import { boardSplit } from "./support/board-grouping";
 const evidence = process.env.PROJECT_ICON_EVIDENCE;
 const artwork = (color: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${color}"/><path d="M21 15v34h25v-7H29V15Z" fill="#f5f3e9"/></svg>`;
 const repos = [
@@ -124,7 +125,7 @@ test("project icon design matrix keeps fixed boxes, compact cards/list, overlay 
     await expect(page.locator(".new-comments-badge")).not.toHaveCount(0);
     await expect(firstIcon(page).locator("img")).toHaveAttribute("src", /^data:image\/png;base64,/);
     for (const split of [true, false]) {
-      await page.getByRole("checkbox", { name: "Dela upp per repository" }).setChecked(split);
+      await boardSplit(page).setChecked(split);
       for (const list of [false, true]) {
         await page.getByRole("button", { name: list ? "Lista" : "Kort", exact: true }).click();
         for (const theme of ["light", "dark"]) {

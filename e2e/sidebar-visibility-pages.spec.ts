@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { revealPhoneMenu } from './support/phone-menu';
+import { boardSplit } from "./support/board-grouping";
 
 const long = 'a-very-long-repository-name-that-must-keep-its-ellipsis-in-the-slim-sidebar';
 const repositories = [
@@ -168,7 +169,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   const [keyboardPopup] = await Promise.all([page.waitForEvent('popup'), page.keyboard.press('Enter')]);
   await keyboardPopup.close();
   expect(await page.evaluate(() => location.hash)).toBe(hash);
-  await page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   // Touch rows reserve two 44px icon targets at the right; tap the left part of the row.
   await row('site').locator('.sidebar-repository').click({ position: { x: 20, y: 12 } });
   await expect(row('site').locator('.sidebar-repository')).toHaveClass(/repository-selected/);

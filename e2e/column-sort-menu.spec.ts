@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import { boardSplit } from "./support/board-grouping";
 
 const shots = process.env.SORT_SHOTS;
 const devices = [
@@ -83,7 +84,7 @@ test("keyboard opens, navigates and Escape returns focus; the choice applies to 
   await expect(closed).toHaveText("Äldst stängd först");
   await expect(closed).toBeFocused();
   // The choice is global per column: the combined board shows the same order.
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+  await boardSplit(page).uncheck();
   await expect(page.locator(".combined-board .board-column.closed .column-sort-button")).toHaveText("Äldst stängd först");
   await expect(page.locator(".combined-board .board-column.backlog .column-sort-button")).toHaveText("Högst prioritet först");
 });

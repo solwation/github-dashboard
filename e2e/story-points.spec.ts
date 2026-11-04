@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { openSettings } from "./support/phone-menu";
+import { boardSplit } from "./support/board-grouping";
 
 const repo = { id: 210, name: "points-fixture", full_name: "sample/points-fixture", private: true, description: "", html_url: "https://github.com/sample/points-fixture", owner: { login: "sample" } };
 const specs = [
@@ -89,7 +90,7 @@ test("cards and rows show explicit and heuristic sizes without timing history in
   await fixture(page);
   const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
   for (const split of [true, false]) {
-    if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+    if (!split) await boardSplit(page).uncheck();
     await mode.getByRole("button", { name: "Kort", exact: true }).click();
     await assertSizes(page.locator(".issue-card"));
     await fits(page, page.locator(".issue-card .issue-points"));
@@ -132,7 +133,7 @@ for (const scenario of [
   for (const theme of ["light", "dark"]) {
     await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
     for (const split of [true, false]) {
-      await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).setChecked(split);
+      await boardSplit(page).setChecked(split);
       for (const view of ["Kort", "Lista"]) {
         await mode.getByRole("button", { name: view, exact: true }).click();
         const items = page.locator(view === "Kort" ? ".issue-card" : ".issue-row");
@@ -155,7 +156,7 @@ for (const scenario of [
   // Mode and repository collapse remove observed nodes, including pending frame updates.
   if (scenario.mobile) await page.keyboard.press("Escape");
   for (const view of ["Kort", "Lista", "Kort"]) await mode.getByRole("button", { name: view, exact: true }).click();
-  await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).check();
+  await boardSplit(page).check();
   await page.locator(".repo-lane .collapse-project").click();
   await assertLabelObserversSettled(page);
   await context.close();

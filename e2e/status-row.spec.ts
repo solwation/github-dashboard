@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { boardSplit } from "./support/board-grouping";
 
 // Each repository header shows its own sync status (#146); the combined board shows the aggregate.
 // Only the time or a spinner is shown, as a button that refreshes now (#149).
@@ -129,7 +130,7 @@ for (const [language, text] of Object.entries(copy)) {
 
       // The combined board aggregates all repositories in the filter toolbar.
       await page.setViewportSize({ width: 375, height: 800 });
-      await page.getByRole("checkbox", { name: text.split }).uncheck();
+      await boardSplit(page).uncheck();
       const head = page.locator(".board-toolbar");
       const combinedSpinner = head.getByRole("button", { name: text.combined });
       await expect(head.locator(".lane-sync")).toHaveText(text.updated);
@@ -169,7 +170,7 @@ test("the sync spinner is static with reduced motion", async ({ page }) => {
 
 test("the combined board status stays inside the toolbar in both display modes", async ({ page }) => {
   await connect(page, copy.sv);
-  await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
+  await boardSplit(page).uncheck();
   const head = page.locator(".board-toolbar");
   await expect(head.locator(".lane-sync")).toHaveText(copy.sv.updated);
   for (const mode of copy.sv.modes) {
@@ -244,7 +245,7 @@ test("the header status refreshes its repository on click and keyboard, ignoring
   }
 
   // The combined board refreshes every repository at once, showing the spinner until all are done.
-  await page.getByRole("checkbox", { name: copy.sv.split }).uncheck();
+  await boardSplit(page).uncheck();
   const combined = page.locator(".board-toolbar button.lane-sync");
   await expect(combined).toHaveAccessibleName(copy.sv.refreshAll);
   before = api.requests();

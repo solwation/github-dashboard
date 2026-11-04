@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import QRCode from "qrcode";
 import { createHandoffUrl } from "../src/lib/handoff";
 import { textAccessibility } from "./support/text-accessibility";
+import { boardSplit } from "./support/board-grouping";
 
 const token = "fictional-project-selection-token";
 const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: false, description: "Fictional selection fixture", html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
@@ -55,7 +56,7 @@ async function frameColors(page: Page, view: string, name: string) {
 test("selection survives pulse, refresh, filters, view switches and palette sync, and clears on toggle/removal/logout", async ({ page }, info) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   const api = await fixture(page);
-  const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+  const split = boardSplit(page);
   await split.uncheck();
   const alpha = sidebar(page, "alpha"), beta = sidebar(page, "beta");
   const before = await entries(page, "Kort").evaluateAll(items => items.map(item => ({ id: item.id, height: item.getBoundingClientRect().height })));
@@ -140,7 +141,7 @@ for (const size of sizes) for (const theme of ["light", "dark"] as const) {
     const api = await fixture(page);
     api.refresh(); await page.keyboard.press("Control+r");
     await expect(page.locator(".issue-card.unread-move")).toHaveCount(2);
-    const split = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+    const split = boardSplit(page);
     await split.uncheck(); await sidebar(page, "alpha").click();
     await expect(entries(page, "Kort", "alpha").first()).not.toHaveClass(/repository-navigation-highlight/);
     await page.setViewportSize({ width: size.width, height: size.height });

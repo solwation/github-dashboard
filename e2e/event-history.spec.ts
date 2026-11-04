@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { readSettings } from "./support/settings";
+import { boardSplit } from "./support/board-grouping";
 const evidence = process.env.EVENT_HISTORY_EVIDENCE;
 const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: true, description: "Synthetic diagnostics fixture", html_url: `https://github.com/sample/${name}`, owner: { login: "sample" } }));
 async function fixture(page: Page) {
@@ -73,7 +74,7 @@ test("groups project failures, deduplicates reloads, keeps new arrivals unseen a
   await expect(historyDialog(page).locator(".event-history-item").first()).toContainText("Synkroniseringen fungerar igen.");
   await closeHistory(page); await expect(summary).toBeFocused();
   await expect(summary).toContainText("Ett projektfel");
-  await page.getByRole("checkbox", { name: "Dela upp per repository" }).uncheck();
+  await boardSplit(page).uncheck();
   await expect(summary).toContainText("Ett projektfel");
   await expect(page.locator(".combined-board .notice.error")).toHaveCount(0);
   await expect.poll(() => readSettings(page, "history-account").then(saved => saved?.eventHistory?.entries.every((item: any) => item.seen))).toBe(true);

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFileSync } from "node:fs";
+import { boardSplit } from "./support/board-grouping";
 
 const repos = [
   { id: 911, name: "booster-ai", full_name: "sample/booster-ai", description: "Short name", private: false, html_url: "https://github.com/sample/booster-ai", owner: { login: "sample" } },
@@ -95,7 +96,7 @@ for (const scenario of scenarios) {
         await expect(page.locator("html")).toHaveAttribute("data-theme", scenario.theme === "dark" ? "dark" : "light");
 
         // Set split checkbox
-        const splitCheckbox = page.getByRole("checkbox", { name: "Dela upp per repository", exact: true });
+        const splitCheckbox = boardSplit(page);
         if (split) await splitCheckbox.check();
         else await splitCheckbox.uncheck();
 

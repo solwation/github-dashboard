@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { textAccessibility } from "./support/text-accessibility";
+import { boardSplit } from "./support/board-grouping";
 
 const sizes = [
   { width: 1600, height: 1000, mobile: false },
@@ -105,7 +106,7 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
     await expect(page.locator(".stat").first()).toHaveCSS("background-color", theme === "dark" ? "rgb(23, 33, 36)" : "rgb(255, 255, 255)");
     const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
     for (const split of [true, false]) {
-      if (!split) await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
+      if (!split) await boardSplit(page).uncheck();
       for (const view of ["Kort", "Lista"]) {
         await mode.getByRole("button", { name: view, exact: true }).click();
         if (view === "Lista") {

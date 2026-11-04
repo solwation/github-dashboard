@@ -539,4 +539,15 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-outcome .issue-time-estimate,
   .row-outcome :deep(.issue-time-remaining-label) { font-size: 10px; }
 }
+/* Narrow desktop lists (swimlane columns, #390) reuse the narrow-content layout so the title keeps its width. */
+@media (min-width: 951px) {
+  @container issue-list (max-width: 600px) {
+    .issue-row { grid-template-columns: auto minmax(0, 1fr) auto 7.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; padding: var(--space-1) var(--space-2); }
+    .row-id { grid-area: number; }
+    .row-title { grid-area: title; }
+    .row-meta { grid-area: meta; }
+    .row-time { grid-area: time; }
+    .row-outcome { grid-area: outcome; }
+  }
+}
 </style>
