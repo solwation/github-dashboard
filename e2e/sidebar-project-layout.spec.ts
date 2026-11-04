@@ -60,16 +60,17 @@ test("sidebar project rows use full-height artwork and a small inset across them
           const rows = [...document.querySelectorAll(".sidebar-repository-row")].filter(row => row.getBoundingClientRect().height > 0).map(row => {
             const link = row.querySelector(".sidebar-repository")!, icon = row.querySelector(".project-icon")!, label = row.querySelector(".repository-label")!, counts = row.querySelector(".repository-counts")!;
             const box = rect(row), image = rect(icon);
-            return { repository: row.getAttribute("data-repository"), row: box, link: rect(link), icon: image, leftInset: box.left - sidebar.left, rightInset: sidebar.right - box.right, label: rect(label), counts: rect(counts), countsFit: [...row.querySelectorAll(".status-count-value")].every(value => value.scrollWidth <= value.clientWidth), labelEllipsis: getComputedStyle(label).textOverflow, controls: [...row.querySelectorAll(".repo-pages,.repo-github,.repo-board-toggle")].filter(element => element.getBoundingClientRect().width > 0).map(element => rect(element)), dot: rect(icon.querySelector(".project-icon-color")!) };
+            return { repository: row.getAttribute("data-repository"), row: box, link: rect(link), icon: image, leftInset: box.left - sidebar.left, rightInset: sidebar.right - box.right, label: rect(label), counts: rect(counts), countsFit: [...row.querySelectorAll(".status-count-value")].every(value => value.scrollWidth <= value.clientWidth), labelEllipsis: getComputedStyle(label).textOverflow, controls: [...row.querySelectorAll(".repository-actions-trigger")].filter(element => element.getBoundingClientRect().width > 0).map(element => rect(element)), dot: rect(icon.querySelector(".project-icon-color")!) };
           });
-          return { sidebar: rect(document.querySelector(".sidebar")!), overflow: document.documentElement.scrollWidth - innerWidth, sidebarOverflow: document.querySelector(".sidebar")!.scrollWidth - document.querySelector(".sidebar")!.clientWidth, rows };
+          return { workspace: rect(document.querySelector(".workspace-navigation")!), sidebar: rect(document.querySelector(".sidebar")!), overflow: document.documentElement.scrollWidth - innerWidth, sidebarOverflow: document.querySelector(".sidebar")!.scrollWidth - document.querySelector(".sidebar")!.clientWidth, rows };
         });
         expect(geometry.overflow).toBeLessThanOrEqual(0); expect(geometry.sidebarOverflow).toBeLessThanOrEqual(0);
         for (const row of geometry.rows) {
           expect(row.labelEllipsis).toBe("ellipsis");
           if (!before) expect(row.countsFit, row.repository + " counts stay readable").toBe(true);
           expect(Math.abs(row.label.left - row.counts.left)).toBeLessThanOrEqual(1);
-          for (const control of row.controls) { expect(control.right).toBeLessThanOrEqual(row.row.right + 1); expect(control.left).toBeGreaterThanOrEqual(row.label.right - 1); if (mobile) { expect(control.width).toBeGreaterThanOrEqual(44); expect(control.height).toBeGreaterThanOrEqual(44); } }
+          expect(Math.abs(row.label.right - row.row.right + 4)).toBeLessThanOrEqual(1);
+          for (const control of row.controls) { expect(control.right).toBeLessThanOrEqual(row.row.right + 1); expect(Math.abs(control.left - row.icon.left)).toBeLessThanOrEqual(1); expect(control.right).toBeLessThanOrEqual(row.icon.right + 1); if (mobile) { expect(control.width).toBeGreaterThanOrEqual(44); expect(control.height).toBeGreaterThanOrEqual(44); } }
           if (!before) {
             expect(Math.abs(row.icon.height - row.row.height)).toBeLessThanOrEqual(1); expect(row.icon.width).toBe(row.icon.height);
             expect(Math.abs(row.icon.top - row.row.top)).toBeLessThanOrEqual(1); expect(Math.abs(row.icon.left - row.row.left)).toBeLessThanOrEqual(1);
@@ -78,6 +79,8 @@ test("sidebar project rows use full-height artwork and a small inset across them
           }
         }
         if (geometry.rows.length) {
+          expect(Math.abs(geometry.workspace.left - geometry.rows[0]!.row.left)).toBeLessThanOrEqual(1);
+          expect(Math.abs(geometry.workspace.width - geometry.rows[0]!.row.width)).toBeLessThanOrEqual(1);
           expect(Math.max(...geometry.rows.map(row => row.label.left)) - Math.min(...geometry.rows.map(row => row.label.left))).toBeLessThanOrEqual(1);
           if (mode === "auto" && theme === "light") { await page.locator(".sidebar-repository").first().focus(); await page.keyboard.press("Enter"); await expect(page.locator('.sidebar-repository[aria-current="true"]')).toHaveCount(1); }
         }
@@ -98,4 +101,50 @@ test("sidebar artwork sizing leaves content Cards/List and repository headings a
   expect((await width(".lane-title .project-icon")).every(value => value === 20)).toBe(true);
   await boardSplit(page).uncheck(); await page.getByRole("button", { name: "Lista", exact: true }).click();
   expect((await width(".issue-row .project-icon")).every(value => value === 16)).toBe(true);
+});
+
+
+test("repository context actions support keyboard, touch, dismissal and viewport bounds without shortening names", async ({ browser }) => {
+  const menuGeometry: unknown[] = [];
+  for (const viewport of [{ width: 1600, height: 1000 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
+    const mobile = viewport.width < 651 || viewport.height < 501;
+    const context = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, locale: "sv-SE", reducedMotion: "reduce" });
+    const page = await context.newPage(); await fixture(page, mobile);
+    const row = page.locator('.sidebar-repository-row[data-repository="sample/a-very-long-project-name-that-needs-ellipsis"]');
+    const trigger = row.locator(".repository-actions-trigger"), menu = row.getByRole("menu");
+    const nameWidth = (await row.locator(".repository-label").boundingBox())!.width;
+    if (!mobile) { await page.mouse.move(1200, 900); await expect(trigger).toHaveCSS("opacity", "0"); await row.hover(); await expect(trigger).toHaveCSS("opacity", "1"); }
+    await trigger.focus(); await page.keyboard.press("ArrowDown");
+    await expect(menu).toBeVisible();
+    await expect(menu.locator(".repo-github")).toBeFocused();
+    const longBox = (await menu.boundingBox())!, triggerBox = (await trigger.boundingBox())!;
+    expect(longBox.x).toBeGreaterThanOrEqual(0); expect(longBox.y).toBeGreaterThanOrEqual(0); expect(longBox.x + longBox.width).toBeLessThanOrEqual(viewport.width); expect(longBox.y + longBox.height).toBeLessThanOrEqual(viewport.height);
+    menuGeometry.push({ viewport, mobile, menu: longBox, trigger: triggerBox, itemSizes: await menu.getByRole("menuitem").evaluateAll(items => items.map(item => ({ width: item.getBoundingClientRect().width, height: item.getBoundingClientRect().height }))) });
+    if (evidence) await page.screenshot({ path: `${evidence}/actions-long-${viewport.width}x${viewport.height}-light.png` });
+    await page.keyboard.press("ArrowDown"); await expect(menu.locator(".repo-pages")).toBeFocused();
+    await page.keyboard.press("End"); await expect(menu.locator(".repo-board-toggle")).toBeFocused();
+    await page.keyboard.press("Home"); await expect(menu.locator(".repo-github")).toBeFocused();
+    expect((await row.locator(".repository-label").boundingBox())!.width).toBe(nameWidth);
+    await page.keyboard.press("Escape"); await expect(menu).toBeHidden(); await expect(trigger).toBeFocused();
+    await trigger.focus(); await page.keyboard.press("ArrowDown"); await expect(menu).toBeVisible(); await expect(menu.locator(".repo-github")).toBeFocused();
+    await page.keyboard.press("Tab"); await expect(menu).toBeHidden();
+    await trigger.click(); await expect(menu).toBeVisible();
+    await menu.locator(".repo-board-toggle").click(); await expect(menu).toBeHidden(); await expect(trigger).toBeFocused();
+    await expect(row).not.toHaveClass(/repository-hidden/);
+    await trigger.click(); await expect(menu).toBeVisible();
+    await page.locator("main.workspace").click({ position: { x: 5, y: 5 }, force: true }); await expect(menu).toBeHidden();
+    // The last row can be scrolled, but the native top-layer popup must never be clipped.
+    const last = page.locator(".sidebar-repository-row").last();
+    await last.locator(".repository-actions-trigger").click(); const lastMenu = last.getByRole("menu"); await expect(lastMenu).toBeVisible();
+    const box = (await lastMenu.boundingBox())!; expect(box.x).toBeGreaterThanOrEqual(0); expect(box.y).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(viewport.width); expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+    for (const target of await lastMenu.getByRole("menuitem").all()) { const targetBox = (await target.boundingBox())!; expect(targetBox.height).toBeGreaterThanOrEqual(44); }
+    if (evidence) {
+      await page.screenshot({ path: `${evidence}/actions-${viewport.width}x${viewport.height}-light.png` });
+      await page.evaluate(async () => { const modulePath = "/src/lib/theme.ts"; (await import(modulePath)).setTheme("dark"); await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
+      await page.screenshot({ path: `${evidence}/actions-${viewport.width}x${viewport.height}-dark.png` });
+    }
+    await page.keyboard.press("Escape"); await expect(lastMenu).toBeHidden();
+    await context.close();
+  }
+  if (evidence) await writeFile(`${evidence}/menu-geometry.json`, JSON.stringify(menuGeometry, null, 2));
 });

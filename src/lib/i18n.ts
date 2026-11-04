@@ -35,6 +35,7 @@ export const locale = computed(() =>
     : "en-GB",
 );
 export const english: Record<string, string> = {
+  "Åtgärder för {name}": "Actions for {name}",
   "En oläst händelse": "One unread event",
   "Händelsehistorik": "Event history",
   "Stäng händelsehistorik": "Close event history",

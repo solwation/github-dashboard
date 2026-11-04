@@ -2633,13 +2633,6 @@ html {
     --pages-target: 44px;
     margin-top: var(--space-1);
   }
-  /* Phones keep the per-repository hide/show action (#367) in the drawer too. */
-  .sidebar.sidebar-mobile-open .repo-board-toggle {
-    display: grid;
-  }
-  .sidebar .repo-body:has(.repo-board-toggle) {
-    --action-width: calc(var(--pages-target) + var(--space-1));
-  }
   .sidebar.sidebar-mobile-open .sidebar-inactive-toggle {
     min-height: 44px;
     margin-top: var(--space-2);
@@ -3256,3 +3249,13 @@ a.sidebar-repository:focus-visible {
   .board-grouping-toggle svg { display: none; }
   .board-toolbar > .combined-sync { order: 1; }
 }
+
+/* Workspace and project navigation share the same section width (#399); preserve the icon rail. */
+@media (min-width: 951px), (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
+  .sidebar { --workspace-project-icon-slot: 44px; }
+  .sidebar > .nav-caption, .sidebar .workspace-navigation { margin-inline: calc(var(--space-1) - var(--sidebar-padding-inline)); padding-inline: 0; align-self: stretch; width: auto; }
+  .sidebar .workspace-navigation { gap: var(--space-1); }
+  .sidebar .workspace-navigation .nav-item { width: 100%; margin-top: 0; padding: var(--space-3) var(--space-1) var(--space-3) 0; gap: var(--space-2); }
+  .sidebar .workspace-navigation .nav-item > svg { width: var(--icon-md); height: var(--icon-md); flex: 0 0 var(--icon-md); margin-inline: calc((var(--workspace-project-icon-slot) - var(--icon-md)) / 2); }
+}
+@media (pointer: coarse), (max-width: 650px), (max-width: 950px) and (max-height: 500px) { .sidebar { --workspace-project-icon-slot: 52px; } }

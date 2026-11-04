@@ -72,7 +72,7 @@ for (const size of sizes) {
       expect(await label.evaluate(node => getComputedStyle(node).textOverflow)).toBe("ellipsis");
     }
     // Icon slots share left/right edges across rows (+-1px).
-    for (const selector of [".repo-github", ".repo-board-toggle", ".project-icon"]) {
+    for (const selector of [".repository-actions-trigger", ".project-icon"]) {
       const edges = await panel.locator(selector).evaluateAll(nodes => nodes.map(node => { const box = node.getBoundingClientRect(); return [box.left, box.right]; }));
       expect(edges.length, selector).toBeGreaterThan(1);
       for (const [l, r] of edges) {
@@ -80,7 +80,12 @@ for (const size of sizes) {
         expect(Math.abs(r - edges[0][1]), `${selector} right edge`).toBeLessThanOrEqual(1);
       }
     }
-    await inside(panel.locator(".repo-github").first(), "GitHub link");
+    const actionTrigger = panel.locator(".repository-actions-trigger").first();
+    await actionTrigger.click();
+    await expect(panel.getByRole("menu")).toBeVisible();
+    await expect(panel.getByRole("menu").locator(".repo-github")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(panel.getByRole("menu")).toBeHidden();
     const toggle = panel.locator(".sidebar-inactive-toggle");
     if (await toggle.count()) expect((await inside(toggle, "hide inactive")).height).toBeGreaterThanOrEqual(44);
     const versionLocator = panel.locator(".sidebar-version");
@@ -97,7 +102,9 @@ for (const size of sizes) {
     const edge = await left(panel.getByText("WORKSPACE", { exact: true }));
     const projectEdge = await left(panel.getByText("REPOSITORIES", { exact: true }));
     expect(Math.abs(projectEdge - panelBox.x - 4), "project section uses a small inset").toBeLessThanOrEqual(1);
-    expect(Math.abs(await left(panel.locator(".nav-item > svg")) - edge), "nav icon aligns with captions").toBeLessThanOrEqual(1);
+    expect(Math.abs(edge - projectEdge), "workspace and project captions share an edge").toBeLessThanOrEqual(1);
+    const navBox = (await panel.locator(".workspace-navigation").boundingBox())!, projectsBox = (await panel.locator(".sidebar-projects").boundingBox())!;
+    expect(Math.abs(navBox.x - projectsBox.x)).toBeLessThanOrEqual(1); expect(Math.abs(navBox.width - projectsBox.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(await left(panel.locator(".sidebar-repository .project-icon")) - projectEdge), "full-row project icon aligns with its caption").toBeLessThanOrEqual(1);
     expect(await panel.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

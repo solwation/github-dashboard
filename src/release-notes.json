@@ -27,8 +27,8 @@
       },
       {
         "text": {
-          "sv": "Se större projektikoner och bredare projektrader, hitta fler ikoner och välj när GitHub-användarnamn visas, med konsekventa projektfärger i mörkt tema.",
-          "en": "See larger project icons and wider project rows, discover more artwork, and choose when GitHub usernames appear, with consistent project colors in dark theme."
+          "sv": "Identifiera projekten med ikoner, valbara användarnamn och tydliga färger; få mer namnrymd och en åtgärdsmeny i den bredare vänstermenyn.",
+          "en": "Recognize projects with artwork, optional usernames and consistent colors, with more name space and contextual actions in the wider sidebar."
         },
         "issues": [
           393,
@@ -36,6 +36,7 @@
           395,
           396,
           397,
+          399,
           401
         ]
       },

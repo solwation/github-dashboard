@@ -69,12 +69,13 @@ test.describe("desktop", () => {
     await expect(stat(page, "repositories")).toHaveText("4");
     await expect(page.locator("#repo-1, #repo-2, #repo-11")).toHaveCount(3);
 
-    // Hover reveals Hide; it is not shown on an untouched row.
-    const alphaHide = row(page, "sample/alpha").getByRole("button", { name: "Dölj sample/alpha i innehållsvyn" });
+    // Hover/focus reveals the context action cue; the menu retains visibility actions.
+    const alphaHide = row(page, "sample/alpha").getByRole("menuitem", { name: "Dölj sample/alpha i innehållsvyn" });
     await page.mouse.move(1500, 900);
-    await expect(alphaHide).toHaveCSS("opacity", "0");
+    await expect(row(page, "sample/alpha").locator(".repository-actions-trigger")).toHaveCSS("opacity", "0");
     await row(page, "sample/alpha").hover();
-    await expect(alphaHide).toHaveCSS("opacity", "1");
+    await expect(row(page, "sample/alpha").locator(".repository-actions-trigger")).toHaveCSS("opacity", "1");
+    await row(page, "sample/alpha").locator(".repository-actions-trigger").click();
     if (evidence) await page.locator(".sidebar-projects").screenshot({ path: `${evidence}/sidebar-hover-hide.png` });
     await alphaHide.click();
     await expect(row(page, "sample/alpha")).toHaveClass(/repository-hidden/);
@@ -83,33 +84,32 @@ test.describe("desktop", () => {
     await expect(stat(page, "open")).toHaveText(/^2/);
     await expect(page.locator(".stats .stat-delta")).toHaveCount(0);
 
-    // Keyboard: the action follows the row link and its GitHub link (#370) in tab order, for another person's public project.
+    // Keyboard: context actions follow the row link, open with Enter and restore opener focus.
     await row(page, "octo/hello").locator(".sidebar-repository").focus();
     await page.keyboard.press("Tab");
-    await expect(row(page, "octo/hello").locator(".repo-github")).toBeFocused();
-    await page.keyboard.press("Tab");
+    const helloTrigger = row(page, "octo/hello").locator(".repository-actions-trigger");
+    await expect(helloTrigger).toBeFocused(); await page.keyboard.press("Enter");
     const helloAction = row(page, "octo/hello").locator(".repo-board-toggle");
-    await expect(helloAction).toBeFocused();
-    await expect(helloAction).toHaveCSS("opacity", "1");
-    await page.keyboard.press("Enter");
-    await expect(helloAction).toHaveAccessibleName("Visa octo/hello i innehållsvyn");
-    await expect(helloAction).toBeFocused();
+    await helloAction.click(); await expect(helloTrigger).toBeFocused();
+    await helloTrigger.click(); await expect(helloAction).toHaveAccessibleName("Visa octo/hello i innehållsvyn"); await page.keyboard.press("Escape");
     await expect(page.locator("#repo-11")).toHaveCount(0);
     // Hidden rows always show their Show action and carry the state in their accessible text.
     await page.mouse.move(1500, 900);
-    await expect(helloAction).toHaveCSS("opacity", "1");
+    await expect(helloAction).toBeHidden();
     await expect(row(page, "octo/hello").locator(".sidebar-repository")).toContainText("Dold i innehållsvyn");
 
     // Private project via the same action; the board is left with nothing to show.
     await row(page, "sample/beta").hover();
-    await row(page, "sample/beta").getByRole("button", { name: "Dölj sample/beta i innehållsvyn" }).click();
+    await row(page, "sample/beta").locator(".repository-actions-trigger").click();
+    await row(page, "sample/beta").getByRole("menuitem", { name: "Dölj sample/beta i innehållsvyn" }).click();
     await expect(page.locator(".repo-lane")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Alla repositories är dolda" })).toBeVisible();
 
     // Combined view: no empty sections, and only shown projects contribute cards.
     await boardSplit(page).uncheck();
     await expect(page.locator(".combined-board")).toHaveCount(0);
-    await row(page, "sample/beta").getByRole("button", { name: "Visa sample/beta i innehållsvyn" }).click();
+    await row(page, "sample/beta").locator(".repository-actions-trigger").click();
+    await row(page, "sample/beta").getByRole("menuitem", { name: "Visa sample/beta i innehållsvyn" }).click();
     await expect(page.locator(".combined-board")).toBeVisible();
     expect((await boardRepositories(page)).items).toEqual(["sample/beta"]);
 
@@ -164,7 +164,7 @@ test.describe("touch tablet", () => {
     await openSettings(page, "Inställningar", true);
     await page.getByRole("button", { name: "Ordna repositories", exact: true }).tap();
     const dialog = page.getByRole("dialog", { name: "Ordna repositories" });
-    const hide = dialog.getByRole("button", { name: "Dölj alpha i innehållsvyn" });
+    const hide = dialog.getByRole("button", { name: "Dölj sample/alpha i innehållsvyn" });
     const box = (await hide.boundingBox())!;
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
@@ -193,10 +193,10 @@ test.describe("phone", () => {
     await expect(dialog.locator("li[data-repository='sample/quiet']")).not.toContainText("Dold i innehållsvyn");
     await dialog.getByRole("checkbox", { name: "Dölj inaktiva repositories" }).tap();
     await expect(dialog.locator("li[data-repository='sample/quiet']")).toContainText("Dold i innehållsvyn");
-    const hide = dialog.getByRole("button", { name: "Dölj hello i innehållsvyn" });
+    const hide = dialog.getByRole("button", { name: "Dölj octo/hello i innehållsvyn" });
     expect((await hide.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await hide.tap();
-    await dialog.getByRole("button", { name: "Visa quiet i innehållsvyn" }).tap();
+    await dialog.getByRole("button", { name: "Visa sample/quiet i innehållsvyn" }).tap();
     if (evidence) await dialog.screenshot({ path: `${evidence}/phone-order-dialog-390.png` });
     await dialog.getByRole("button", { name: "Klart" }).tap();
     await page.keyboard.press("Escape");

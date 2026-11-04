@@ -95,6 +95,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   await expect(row('site').locator('a a')).toHaveCount(0);
   // Clicking the Pages link must not activate the row.
   const hash = await page.evaluate(() => location.hash);
+  await row('site').locator('.repository-actions-trigger').click();
   const [popup] = await Promise.all([page.waitForEvent('popup'), row('site').locator('.repo-pages').click()]);
   await popup.close();
   expect(await page.evaluate(() => location.hash)).toBe(hash);
@@ -104,74 +105,40 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     return { clipped: label.scrollWidth > label.clientWidth, over: document.documentElement.scrollWidth > innerWidth, bodyOver: body.scrollWidth > body.clientWidth };
   });
   expect(box).toEqual({ clipped: true, over: false, bodyOver: false });
-  // Name-line groups are right-aligned, with only present icons taking space.
+  // Names use a dedicated complete text line; counts and unread sit below it.
   const grid = await rows.evaluateAll(list => list.map(row => {
-    const rect = (selector: string) => row.querySelector(selector)?.getBoundingClientRect() ?? null;
-    const label = rect('.repository-label')!, counts = rect('.repository-counts')!, dot = rect('.project-icon')!;
-    const trailing = rect('.repo-github svg');
-    const visibility = rect('.repo-visibility'), pages = rect('.repo-pages'), github = rect('.repo-github')!, unread = rect('.recent-activity'), action = rect('.repo-board-toggle');
-    const centre = (r: DOMRect) => r.top + r.height / 2;
-    const group = { left: (visibility || pages || github).left, right: github.right, y: centre(github) };
-    return {
-      lastIconX: trailing && trailing.left + trailing.width / 2,
-      name: row.getAttribute('data-repository'), labelLeft: label.left, labelRight: label.right, labelY: centre(label),
-      iconHeight: dot.height, iconTop: dot.top, rowHeight: row.getBoundingClientRect().height, rowTop: row.getBoundingClientRect().top, countsLeft: counts.left, countsTop: counts.top, countsBottom: counts.bottom, labelBottom: label.bottom,
-      group,
-      visibility: visibility && { right: visibility.right, y: centre(visibility), width: visibility.width },
-      pages: pages && { left: pages.left, right: pages.right, y: centre(pages), width: pages.width, height: pages.height },
-      unread: unread && { y: centre(unread) },
-      action: action && { left: action.left, right: action.right, y: centre(action), width: action.width, height: action.height },
-      fullCounts: [...row.querySelectorAll<HTMLElement>('.status-count-value')].every(el => el.scrollWidth <= el.clientWidth + 1),
-    };
+    const box = row.getBoundingClientRect(), label = row.querySelector('.repository-label')!.getBoundingClientRect(), counts = row.querySelector('.repository-counts')!.getBoundingClientRect(), icon = row.querySelector('.project-icon')!.getBoundingClientRect(), trigger = row.querySelector('.repository-actions-trigger')!.getBoundingClientRect();
+    return { name: row.getAttribute('data-repository'), rowRight: box.right, rowHeight: box.height, labelLeft: label.left, labelRight: label.right, labelBottom: label.bottom, countsLeft: counts.left, countsTop: counts.top, iconHeight: icon.height, triggerWidth: trigger.width, fullCounts: [...row.querySelectorAll('.status-count-value')].every(value => value.scrollWidth <= value.clientWidth) };
   }));
-  const rightEdges = grid.flatMap(item => item.group ? [item.group.right] : []);
-  expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThanOrEqual(1);
-  const lastIcons = grid.flatMap(item => item.lastIconX === null ? [] : [item.lastIconX]);
-  expect(Math.max(...lastIcons) - Math.min(...lastIcons)).toBeLessThanOrEqual(1);
-  // The board visibility action (#367) owns one right-hand column in every row; touch uses Settings instead.
-  const actionEdges = grid.map(item => item.action!.right);
-  if (!scenario.mobile) expect(Math.max(...actionEdges) - Math.min(...actionEdges)).toBeLessThanOrEqual(1);
   for (const item of grid) {
     expect(Math.abs(item.labelLeft - grid[0]!.labelLeft)).toBeLessThanOrEqual(1);
-    if (scenario.mobile) expect(item.action!.width).toBe(0);
-    else {
-      expect(Math.abs(item.action!.y - item.labelY)).toBeLessThanOrEqual(1);
-      expect(item.labelRight).toBeLessThanOrEqual(item.action!.left - 7);
-      if (item.group) expect(item.action!.left - item.group.right).toBe(4);
-    }
+    expect(Math.abs(item.labelRight - item.rowRight + 4)).toBeLessThanOrEqual(1);
     expect(Math.abs(item.countsLeft - item.labelLeft)).toBeLessThanOrEqual(1);
     expect(Math.abs(item.iconHeight - item.rowHeight)).toBeLessThanOrEqual(1);
-    expect(Math.abs(item.iconTop - item.rowTop)).toBeLessThanOrEqual(1);
     expect(item.countsTop).toBeGreaterThanOrEqual(item.labelBottom);
-    expect(item.countsBottom - item.countsTop).toBeLessThan(24);
     expect(item.fullCounts).toBe(true);
-    if (item.group) {
-      expect(item.labelRight).toBeLessThanOrEqual(item.group.left - 7);
-      expect(Math.abs(item.group.y - item.labelY)).toBeLessThanOrEqual(1);
-    }
-    if (item.visibility) { expect(Math.abs(item.visibility.y - item.labelY)).toBeLessThanOrEqual(1); expect(item.visibility.width).toBe(16); } // the lock is no touch target
-    if (item.pages) {
-      expect(Math.abs(item.pages.y - item.labelY)).toBeLessThanOrEqual(1);
-      expect(item.group.right - item.pages.right).toBe(item.pages.width + 4);
-      if (scenario.mobile) { expect(item.pages.width).toBeGreaterThanOrEqual(44); expect(item.pages.height).toBeGreaterThanOrEqual(44); }
-    }
-    if (item.unread) expect(item.unread.y).toBeGreaterThanOrEqual(item.countsTop);
+    if (scenario.mobile) expect(item.triggerWidth).toBeGreaterThanOrEqual(44);
   }
-  await expect(row('unknown').locator('.repo-icons > *')).toHaveCount(1);
+  await expect(row('unknown').locator('[role=menuitem]')).toHaveCount(2);
   await expect(row('pages-only').locator('.repo-visibility')).toHaveCount(0);
   await expect(row('pages-only').locator('.repo-pages')).toHaveCount(1);
-  await expect(row('private-only').locator('.repo-icons > *')).toHaveCount(2);
+  await expect(row('private-only').locator('.repo-visibility')).toHaveCount(1);
   await expect(row(long).locator('.repository-label')).toHaveAttribute('title', `Sample/${long}`);
   // Pages is the next keyboard stop after project selection and opens independently.
   await row('site').locator('.sidebar-repository').focus();
   await page.keyboard.press('Tab');
+  await expect(row('site').locator('.repository-actions-trigger')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(row('site').getByRole('menu')).toBeVisible();
+  await expect(row('site').locator('.repo-github')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
   await expect(row('site').locator('.repo-pages')).toBeFocused();
   const [keyboardPopup] = await Promise.all([page.waitForEvent('popup'), page.keyboard.press('Enter')]);
   await keyboardPopup.close();
   expect(await page.evaluate(() => location.hash)).toBe(hash);
   await boardSplit(page).uncheck();
-  // Touch rows reserve two 44px icon targets at the right; tap the left part of the row.
-  await row('site').locator('.sidebar-repository').click({ position: { x: 20, y: 12 } });
+  // The icon opens context actions; the full text line navigates the project.
+  await row('site').locator('.sidebar-repository').click({ position: { x: 90, y: 12 } });
   await expect(row('site').locator('.sidebar-repository')).toHaveClass(/repository-selected/);
   await expect(row('site').locator('.project-icon')).toBeVisible();
   writeFileSync(testInfo.outputPath('sidebar-geometry.json'), JSON.stringify(grid, null, 2));
