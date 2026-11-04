@@ -18,11 +18,12 @@
       },
       {
         "text": {
-          "sv": "Välj gruppering Ingen, Dela upp eller Simbanor: en gemensam board med en rad per projekt i Kort och en kolumn per projekt i Lista.",
-          "en": "Choose None, Split or Swimlanes grouping: one combined board with a row per project in Cards and a column per project in List."
+          "sv": "Jämför projekt i simbanor: horisontella band i Kort och en sammanhängande tabell med projektkolumner och gemensamma statusrader i Lista.",
+          "en": "Compare project swimlanes: horizontal bands in Cards and a joined table with repository columns and shared status rows in List."
         },
         "issues": [
-          390
+          390,
+          402
         ]
       },
       {

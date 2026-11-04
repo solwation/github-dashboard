@@ -3,22 +3,23 @@ import ProjectIcon from "./ProjectIcon.vue";
 import { ArrowRight, ChevronDown, ChevronRight } from "@lucide/vue";
 import type { Repo } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
-defineProps<{
+withDefaults(defineProps<{
   repository: Repo;
   collapsed?: boolean;
+  collapsible?: boolean;
   controls: string;
   headingId?: string;
   label?: string;
   toggleName?: string;
   toggleClass?: string;
-}>();
+}>(), { collapsible: true });
 const emit = defineEmits<{ toggle: [] }>();
 const { t } = useLanguage();
 </script>
 
 <template>
   <div class="lane-title">
-    <button type="button" class="collapse-project icon-button" :class="toggleClass"
+    <button v-if="collapsible !== false" type="button" class="collapse-project icon-button" :class="toggleClass"
       :aria-label="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: toggleName || repository.full_name })"
       :title="t(collapsed ? 'Expandera {name}' : 'Kollapsa {name}', { name: toggleName || repository.full_name })"
       :aria-expanded="!collapsed" :aria-controls="controls" @click="emit('toggle')">

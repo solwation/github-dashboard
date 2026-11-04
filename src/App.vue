@@ -367,7 +367,7 @@ async function revealRepository(name: string, toggle = false) {
   if (!repo) return;
   const targetId = (currentView.value === "statistics" ? "statistics-repo-" : "repo-") + repo.id;
   repositoryNavigationTarget = targetId;
-  if (currentView.value === "overview" && groupedByRepository.value && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
+  if (currentView.value === "overview" && groupedByRepository.value && !(swimlanes.value && listMode.value) && (toggle || collapsedRepos.value.includes(name))) toggleCollapsed(name);
   if (currentView.value === "overview" && !groupedByRepository.value) {
     selectedCombinedRepository.value = toggle && selectedCombinedRepository.value === name ? null : name;
   }
@@ -2717,6 +2717,39 @@ onMounted(async () => {
         </RepositorySection>
         </template>
         <section v-else-if="swimlanes && contentLanes.length" class="swimlane-board" :class="{ 'list-mode': listMode }" :aria-label="t('Simbanor per repository')">
+          <div v-if="listMode" class="swimlane-table-viewport" tabindex="0" :aria-label="t('Simbanor per repository')">
+            <table class="swimlane-table" :style="{ '--project-count': contentLanes.length }">
+              <caption class="sr-only">{{ t('Simbanor per repository') }}</caption>
+              <thead><tr>
+                <th v-for="lane in contentLanes" :id="'repo-' + lane.repo.id" :key="lane.repo.id" scope="col" class="swimlane-table-project" tabindex="-1" :data-repository="lane.repo.full_name" :style="{ '--repository-color': workspaceRepositoryColors[lane.repo.full_name] }">
+                  <RepositoryHeading :repository="lane.repo" :collapsible="false" :controls="'swimlane-content-' + lane.repo.id" :heading-id="'swimlane-title-' + lane.repo.id"
+                    :label="sidebarRepositoryDisplayName(lane.repo.full_name, orderedLanes.map(item => item.repo.full_name), repositoryOwnerDisplay)" />
+                </th>
+              </tr></thead>
+              <tbody v-for="col in columns" :key="col.key" :data-status="col.key">
+                <tr class="swimlane-table-status"><th :id="'swimlane-status-' + col.key" :colspan="contentLanes.length" scope="rowgroup">
+                  <BoardColumn header-only floating-sort :column="col" :items="combinedColumns[col.key]!" :estimate-groups="combinedEstimateGroups"
+                    :sort="columnSorts[col.key]" :loading="contentLanes.some(lane => lane.loading || lane.error)" :card-props="cardProps" :row-props="rowProps"
+                    @update:sort="setColumnSort(col.key, $event)" />
+                </th></tr>
+                <tr class="swimlane-table-status-cells">
+                  <td v-for="(lane, laneIndex) in contentLanes" :key="lane.repo.id" :headers="'repo-' + lane.repo.id + ' swimlane-status-' + col.key" :data-repository="lane.repo.full_name" class="swimlane-table-cell">
+                    <div v-if="lane.loading" class="repository-loading" role="status">{{ t('Hämtar issues för {name}…', { name: lane.repo.full_name }) }}</div>
+                    <template v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)">
+                      <span class="swimlane-cell-count" :aria-label="t('{status}: {count}', { status: col.title, count: items(lane, col.key).length })">{{ items(lane, col.key).length }}</span>
+                      <BoardColumn cell list-mode :id="'board-' + lane.repo.id + '-' + col.key"
+                        :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
+                        :column="col" :lane="lane" :items="items(lane, col.key)" :limit="shownLimit(lane.repo.full_name, col.key)" :limit-increment="initialLimit(lane.repo.full_name)"
+                        :estimate-groups="laneEstimateGroups.get(lane.repo.full_name) ?? []" :sort="columnSorts[col.key]" :filtered="Boolean(query)" :card-props="cardProps" :row-props="rowProps"
+                        @show-more="visibleLimit[lane.repo.full_name + col.key] = shownLimit(lane.repo.full_name, col.key) + initialLimit(lane.repo.full_name)"
+                        @read="readIssue" @parent-select="revealParentIssue" @child-select="revealParentIssue" />
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <template v-else>
           <!-- #390: Cards share one status header row; lanes are horizontal bands below it. In List each lane is a vertical column. -->
           <div v-if="!listMode" class="swimlane-board-head">
             <BoardColumn
@@ -2785,6 +2818,7 @@ onMounted(async () => {
               </div>
             </div>
           </section>
+          </template>
         </section>
         <section v-else-if="contentLanes.length" class="combined-board" :aria-label="t('Gemensam board')">
           <template v-for="lane in contentLanes" :key="lane.repo.full_name">

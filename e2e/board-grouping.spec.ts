@@ -55,13 +55,29 @@ test("None, Split and Swimlanes keep counts, filters and the choice across Cards
   await page.getByRole("button", { name: "Lista", exact: true }).click();
   await expect(groupingOption(page, "swimlanes")).toHaveAttribute("aria-pressed", "true");
   await expect(board).toHaveClass(/list-mode/);
-  await expect(board.locator(".swimlane-board-head")).toHaveCount(0);
-  await expect(board.locator(".issue-row")).toHaveCount(11);
-  const [left, right] = [await box(bands.nth(0)), await box(bands.nth(1))];
-  expect(right.x).toBeGreaterThanOrEqual(left.x + left.width - 1);
-  expect(Math.abs(left.y - right.y)).toBeLessThanOrEqual(1);
-  const groups = await Promise.all(["backlog", "progress", "closed"].map(key => box(page.locator(`#board-${repos[0]!.id}-${key}`))));
-  expect(groups[1]!.y).toBeGreaterThan(groups[0]!.y); expect(Math.abs(groups[0]!.x - groups[1]!.x)).toBeLessThanOrEqual(1);
+  const table = board.locator(".swimlane-table");
+  await expect(table.locator("thead th")).toHaveCount(3);
+  await expect(table.locator(".collapse-project")).toHaveCount(0);
+  await expect(table.locator(".issue-row")).toHaveCount(11);
+  const [left, right] = [await box(table.locator("thead th").nth(0)), await box(table.locator("thead th").nth(1))];
+  expect(Math.abs(right.x - left.x - left.width)).toBeLessThanOrEqual(1);
+  for (const status of ["backlog", "progress", "closed"]) {
+    const cells = table.locator(`tbody[data-status="${status}"] td`);
+    const rectangles = await cells.evaluateAll(elements => elements.map(element => { const b = element.getBoundingClientRect(); return { y: b.y, height: b.height }; }));
+    expect(Math.max(...rectangles.map(b => b.y)) - Math.min(...rectangles.map(b => b.y))).toBeLessThanOrEqual(1);
+    expect(Math.max(...rectangles.map(b => b.height)) - Math.min(...rectangles.map(b => b.height))).toBeLessThanOrEqual(1);
+  }
+  // Expanding an issue grows the shared status row, keeping later statuses aligned across projects.
+  await table.locator(".row-title").first().click();
+  await expect(table.locator(".issue-row.expanded")).toHaveCount(1);
+  const progressCells = await table.locator('tbody[data-status="progress"] td').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y));
+  expect(Math.max(...progressCells) - Math.min(...progressCells)).toBeLessThanOrEqual(1);
+  await table.locator(".row-title").first().click();
+  // Repeated repository navigation reveals its column without collapsing a table column.
+  const tableSidebar = page.locator(`.sidebar-repository-row[data-repository="${repos[1]!.full_name}"] .sidebar-repository`);
+  await tableSidebar.click(); await tableSidebar.click();
+  await expect(table.locator(".issue-row")).toHaveCount(11);
+  await page.locator(`.sidebar-repository-row[data-repository="${repos[0]!.full_name}"] .sidebar-repository`).click();
   expect(await noPageOverflow(page)).toBe(true);
   await page.getByRole("button", { name: "Kort", exact: true }).click();
   await expect(groupingOption(page, "swimlanes")).toHaveAttribute("aria-pressed", "true");
@@ -95,7 +111,7 @@ test("None, Split and Swimlanes keep counts, filters and the choice across Cards
 for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }]) {
   test.describe(`touch ${viewport.width}x${viewport.height}`, () => {
     test.use({ viewport, isMobile: true, hasTouch: true });
-    test("swimlanes stack without page overflow and keep 44px grouping targets", async ({ page }) => {
+    test("Cards stack and List keeps a joined table without page overflow", async ({ page }) => {
       const repos = await groupingFixture(page, 4);
       await page.setViewportSize({ width: 1200, height: 900 });
       await connectGrouping(page, repos);
@@ -106,12 +122,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       }
       for (const mode of ["Kort", "Lista"]) {
         await page.getByRole("button", { name: mode, exact: true }).click();
-        const bands = page.locator(".swimlane-band");
-        await expect(bands).toHaveCount(4);
-        await expect(page.locator(".swimlane-board-head")).toBeHidden();
-        await expect(page.locator(`#board-${repos[0]!.id}-backlog .column-header`)).toBeVisible();
-        const [first, second] = [await box(bands.nth(0)), await box(bands.nth(1))];
-        expect(second.y).toBeGreaterThanOrEqual(first.y + first.height - 1);
+        if (mode === "Kort") {
+          const bands = page.locator(".swimlane-band"); await expect(bands).toHaveCount(4);
+          const [first, second] = [await box(bands.nth(0)), await box(bands.nth(1))];
+          expect(second.y).toBeGreaterThanOrEqual(first.y + first.height - 1);
+        } else {
+          const table = page.locator(".swimlane-table"); await expect(table.locator("thead th")).toHaveCount(4);
+          await expect(table.locator(".collapse-project")).toHaveCount(0);
+          const viewport = page.locator(".swimlane-table-viewport");
+          expect(await viewport.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+          await table.locator("thead th").last().scrollIntoViewIfNeeded();
+          expect(await viewport.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+          await table.locator(".row-title").last().click();
+          await expect(page.getByRole("dialog").filter({ has: page.locator(".issue-card") })).toBeVisible();
+          await page.keyboard.press("Escape");
+        }
         expect(await noPageOverflow(page)).toBe(true);
       }
     });

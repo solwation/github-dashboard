@@ -1,14 +1,10 @@
 {
-  "baseCommit": "22624f6b14e0e2b1f2f46d069c28156edeab39b0",
+  "baseCommit": "e044f85da01e4e55ade3c1e0ee531a45a775df80",
   "summary": {
-    "sv": "Rymligare vänstermeny med åtgärdsmenyer, GitHub-länk på #numret, fler projektikoner och färgade händelsenotiser. Info räknas bara i bakgrunden.",
-    "en": "Roomier sidebar with action menus, GitHub links on #numbers, more project artwork and severity-colored event badges. Info counts only in the background."
+    "sv": "List-simbanor är nu en sammanhängande tabell med projektkolumner och gemensamma statusrader, även på telefon.",
+    "en": "List swimlanes now form one joined table with repository columns and shared status rows, including on phones."
   },
   "issues": [
-    397,
-    398,
-    399,
-    400,
-    401
+    402
   ]
 }

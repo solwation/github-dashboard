@@ -3211,14 +3211,28 @@ a.sidebar-repository:focus-visible {
 .swimlane-board:not(.list-mode) .swimlane-cell > .column-header { display: none; }
 .swimlane-board:not(.list-mode) .swimlane-cell { min-height: 0; }
 .swimlane-cell .column-empty { min-height: 0; flex-direction: row; gap: var(--space-2); padding: var(--space-2); }
-/* List: each repository is a vertical column; wide boards scroll inside the board, never the page. */
-.swimlane-board.list-mode { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(min(100%, 22rem), 1fr); align-items: start; gap: var(--space-3); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-bottom: var(--space-1); }
-.swimlane-board.list-mode .swimlane-band { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; scroll-snap-align: start; }
-.swimlane-board.list-mode .swimlane-band + .swimlane-band { border-top: 1px solid var(--line); }
-.swimlane-board.list-mode .swimlane-band-header { flex-wrap: wrap; row-gap: var(--space-1); }
-.swimlane-board.list-mode .swimlane-band-header .lane-title { flex-basis: 100%; }
-.swimlane-board.list-mode .swimlane-counts { justify-content: flex-start; padding-left: var(--space-8); }
-.swimlane-board.list-mode .repo-owner { display: none; }
+/* List swimlanes are one joined table: repository columns and shared status bands. */
+.swimlane-table-viewport { width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid var(--line); border-radius: var(--space-2); container-type: inline-size; background: var(--surface); }
+.swimlane-table-viewport:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.swimlane-table { width: 100%; min-width: calc(var(--project-count) * min(22rem, 100cqi)); table-layout: fixed; border-collapse: collapse; text-align: left; }
+.swimlane-table th, .swimlane-table td { padding: 0; vertical-align: top; font-weight: normal; }
+.swimlane-table-project { padding: var(--space-3) !important; border-inline-end: 1px solid var(--line); border-bottom: 1px solid var(--line); box-shadow: inset 0 3px var(--repository-color); scroll-margin: calc(var(--topbar-height, 58px) + var(--space-2)) var(--space-2); }
+.swimlane-table-project:last-child, .swimlane-table-cell:last-child { border-inline-end: 0; }
+.swimlane-table-project .lane-title { min-width: 0; gap: var(--space-2); }
+.swimlane-table-project .lane-title > div { min-width: 0; }
+.swimlane-table-project h2 { margin: 0; font-size: 12px; }
+.swimlane-table-project h2 a { min-width: 0; }
+.swimlane-table-project .repository-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.swimlane-table-project .repo-owner { display: none; }
+.swimlane-table-status th { border-block: 1px solid var(--line); background: var(--surface-sunken, var(--surface)); }
+.swimlane-table-status .board-column { min-height: 0; position: sticky; left: 0; width: min(100cqi, 100%); background: transparent; }
+.swimlane-table-cell { position: relative; border-inline-end: 1px solid var(--line); background: var(--surface-sunken, var(--surface)); }
+.swimlane-table-cell .board-column { min-height: 0; background: transparent; }
+.swimlane-table-cell .column-header { display: none; }
+.swimlane-table-cell .cards { padding: var(--space-2); gap: var(--space-1); }
+.swimlane-table-cell .column-empty { min-height: 0; }
+.swimlane-cell-count { display: block; padding: var(--space-1) var(--space-2) 0; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.swimlane-table-cell .row-slot-status { display: none; }
 @media (max-width: 950px) {
   .swimlane-band-header .lane-title > div { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 }
@@ -3231,16 +3245,13 @@ a.sidebar-repository:focus-visible {
   .swimlane-band-header .lane-title h2 { max-width: 100%; }
   .swimlane-band-header .repo-owner { flex-basis: auto; width: 100%; }
   .swimlane-counts { justify-content: flex-start; padding-left: var(--space-8); }
-  .swimlane-board.list-mode { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); overflow-x: visible; scroll-snap-type: none; padding-bottom: 0; }
 }
-:root[data-theme="dark"] .swimlane-board:not(.list-mode),
-:root[data-theme="dark"] .swimlane-board.list-mode .swimlane-band { background: var(--surface); border-color: var(--line); }
+:root[data-theme="dark"] .swimlane-board:not(.list-mode) { background: var(--surface); border-color: var(--line); }
 @media (min-width: 951px) {
   /* Narrow repository columns: the status group heading already names the status, so its fixed chip slot gives way. */
   .swimlane-board.list-mode .row-slot-status { display: none; }
 }
 /* Open lanes show their counts in the status headers wherever those headers are visible. */
-.swimlane-board.list-mode .swimlane-band:not(.is-collapsed) .swimlane-counts { display: none; }
 @media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
   .swimlane-band:not(.is-collapsed) .swimlane-counts { display: none; }
 }
@@ -3259,3 +3270,5 @@ a.sidebar-repository:focus-visible {
   .sidebar .workspace-navigation .nav-item > svg { width: var(--icon-md); height: var(--icon-md); flex: 0 0 var(--icon-md); margin-inline: calc((var(--workspace-project-icon-slot) - var(--icon-md)) / 2); }
 }
 @media (pointer: coarse), (max-width: 650px), (max-width: 950px) and (max-height: 500px) { .sidebar { --workspace-project-icon-slot: 52px; } }
+
+@media (pointer: coarse) { .swimlane-table-status .column-sort-button { min-height: 44px; } }

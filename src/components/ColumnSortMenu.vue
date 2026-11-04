@@ -5,12 +5,13 @@ import { useLanguage } from "../lib/i18n";
 import { COLUMN_SORT_OPTIONS, type ColumnSort } from "../lib/model";
 const { t } = useLanguage();
 /** Column sort menu (#286): the hint under the column title opens a small menu of that column's orders. */
-const props = defineProps<{ column: string; modelValue: ColumnSort }>();
+const props = defineProps<{ column: string; modelValue: ColumnSort; floating?: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: ColumnSort] }>();
 const open = ref(false);
 const root = ref<HTMLElement>();
 const trigger = ref<HTMLButtonElement>();
 const menu = ref<HTMLElement>();
+let anchorAtOpen: { x: number; y: number } | null = null;
 const labels = (): Record<string, Record<string, { label: string; hint?: string }>> => ({
   backlog: {
     default: { label: t("Högst prioritet först") }, lowest: { label: t("Lägst prioritet först") },
@@ -31,15 +32,32 @@ const options = () => COLUMN_SORT_OPTIONS[props.column] ?? [];
 const items = () => [...(menu.value?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [])];
 function onOutside(event: Event) { if (!root.value?.contains(event.target as Node)) close(false); }
 function close(refocus: boolean) {
+  if (props.floating && menu.value?.matches(":popover-open")) menu.value.hidePopover();
   open.value = false;
+  anchorAtOpen = null;
+  window.removeEventListener("resize", anchorMoved); document.removeEventListener("scroll", anchorMoved, true);
   document.removeEventListener("pointerdown", onOutside, true);
   if (refocus) trigger.value?.focus();
+}
+function anchorMoved(event: Event) {
+  if (menu.value?.contains(event.target as Node)) return;
+  const anchor = trigger.value?.getBoundingClientRect();
+  if (event.type === "resize" || (anchor && anchorAtOpen && (Math.abs(anchor.x - anchorAtOpen.x) > 1 || Math.abs(anchor.y - anchorAtOpen.y) > 1))) close(false);
 }
 async function show(focusIndex = Math.max(0, options().indexOf(props.modelValue))) {
   open.value = true;
   document.addEventListener("pointerdown", onOutside, true);
   await nextTick();
-  items()[focusIndex]?.focus();
+  if (props.floating && menu.value && trigger.value) {
+    menu.value.showPopover();
+    const box = menu.value.getBoundingClientRect(), anchor = trigger.value.getBoundingClientRect();
+    const gutter = parseFloat(getComputedStyle(trigger.value).getPropertyValue("--space-2")) || 8;
+    anchorAtOpen = { x: anchor.x, y: anchor.y };
+    menu.value.style.left = Math.max(gutter, Math.min(anchor.right - box.width, innerWidth - box.width - gutter)) + "px";
+    menu.value.style.top = Math.max(gutter, Math.min(anchor.bottom + gutter, innerHeight - box.height - gutter)) + "px";
+    window.addEventListener("resize", anchorMoved); document.addEventListener("scroll", anchorMoved, true);
+  }
+  items()[focusIndex]?.focus({ preventScroll: props.floating });
 }
 function toggle() { open.value ? close(true) : void show(); }
 function choose(sort: ColumnSort) { emit("update:modelValue", sort); close(true); }
@@ -56,7 +74,7 @@ function onMenuKey(event: KeyboardEvent) {
   else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(true); }
   else if (event.key === "Tab") close(false);
 }
-onBeforeUnmount(() => document.removeEventListener("pointerdown", onOutside, true));
+onBeforeUnmount(() => close(false));
 </script>
 <template>
   <div ref="root" class="column-sort">
@@ -64,9 +82,13 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onOutside, tru
       :aria-label="t('Sortering: {order}', { order: hint() })" :title="t('Välj sortering') + ' · ' + hint()" @click="toggle" @keydown="onTriggerKey">
       <span>{{ hint() }}</span><ChevronDown :size="12" aria-hidden="true" />
     </button>
-    <div v-if="open" ref="menu" class="column-sort-menu" role="menu" :aria-label="t('Sortering')" @keydown="onMenuKey">
+    <div v-if="open" ref="menu" class="column-sort-menu" :class="{ 'column-sort-floating': floating }" :popover="floating ? 'manual' : undefined" role="menu" :aria-label="t('Sortering')" @keydown="onMenuKey">
       <button v-for="sort in options()" :key="sort" type="button" role="menuitemradio" :aria-checked="sort === modelValue"
         :tabindex="-1" @click="choose(sort)">{{ optionLabel(sort) }}</button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.column-sort-floating { position: fixed; inset: auto; margin: 0; }
+</style>

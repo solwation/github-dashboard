@@ -78,6 +78,7 @@ const props = withDefaults(
     selectedRepository?: string | null;
     /** Swimlanes (#390): the shared status header row above the lanes renders only the header. */
     headerOnly?: boolean;
+    floatingSort?: boolean;
     /** Swimlanes (#390): one repository's status cell inside a lane. */
     cell?: boolean;
     cardProps: (lane: Lane, issue: Issue, showRepository?: boolean) => CardPropsResult;
@@ -100,6 +101,7 @@ const props = withDefaults(
     showRepository: false,
     selectedRepository: null,
     headerOnly: false,
+    floatingSort: false,
     cell: false,
   },
 );
@@ -178,6 +180,7 @@ const canCollapse = computed(() => {
           <span>{{ t("Fäll ihop") }}</span>
         </button>
         <ColumnSortMenu
+          :floating="floatingSort"
           :column="column.key"
           :model-value="sort"
           @update:model-value="emit('update:sort', $event)"
