@@ -159,7 +159,7 @@ function lastChange(changedAt: string | null) {
 .sidebar-placeholder { display: grid; gap: 16px; padding: 18px 0; }
 .sidebar-placeholder span { height: 24px; width: 80%; border-radius: 4px; background: currentColor; opacity: .06; }
 .sidebar-placeholder span:nth-child(2) { width: 65%; }
-.sidebar-projects { min-height: 0; overflow-y: auto; margin-inline: calc(var(--space-1) - var(--sidebar-padding-inline)); }
+.sidebar-projects { flex: 0 0 auto; overflow: visible; margin-inline: calc(var(--space-1) - var(--sidebar-padding-inline)); }
 .repositories-heading { padding-inline: 0; }
 .repositories-heading .nav-caption { padding-left: 0; }
 /* Name-line icons share a right edge; the next line keeps counts and unread separate. */

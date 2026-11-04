@@ -138,8 +138,11 @@ input[type="checkbox"] {
   padding: 32px 20px;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 10;
 }
+.sidebar > * { flex-shrink: 0; }
 .brand {
   font-family: Manrope, sans-serif;
   font-size: 26px;

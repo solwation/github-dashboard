@@ -4,9 +4,9 @@ import { boardSplit } from "./support/board-grouping";
 const evidence = process.env.SIDEBAR_LAYOUT_EVIDENCE;
 const before = process.env.SIDEBAR_LAYOUT_BEFORE === "1";
 const scenarios = [{ width: 1600, height: 1000 }, { width: 1000, height: 900 }, { width: 1000, height: 1100, touch: true }, { width: 950, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }];
-async function fixture(page: Page, mobile: boolean) {
+async function fixture(page: Page, mobile: boolean, many = false) {
   await page.goto("/");
-  await page.evaluate(async mobile => {
+  await page.evaluate(async ({ mobile, many }) => {
     const vuePath = "/node_modules/.vite/deps/vue.js", sidebarPath = "/src/components/SidebarRepositories.vue", iconsPath = "/src/composables/useProjectIcon.ts", namesPath = "/src/lib/repository-display-name.ts";
     const [{ createApp, h, ref }, { default: SidebarRepositories }, { provideProjectIcons }, { sidebarRepositoryDisplayName }] = await Promise.all([import(vuePath), import(sidebarPath), import(iconsPath), import(namesPath)]);
     const host = document.querySelector("#app") as HTMLElement & { __vue_app__?: { unmount: () => void } };
@@ -17,6 +17,7 @@ async function fixture(page: Page, mobile: boolean) {
       { id: 3, fullName: "sample/quiet", name: "quiet", backlog: 0, progress: 0, closed: 0 },
       { id: 4, fullName: "other/alpha", name: "alpha", backlog: 8, progress: 2, closed: 5, external: true, private: false },
     ].map((row, index) => ({ ...row, changedAt: index === 0 ? new Date().toISOString() : null, unreadAt: index === 0 ? new Date().toISOString() : null }));
+    if (many) for (let index = 0; index < 40; index++) rows.push({ id: 20 + index, fullName: `sample/project-${index}`, name: `project-${index}`, backlog: 1, progress: 0, closed: 0, changedAt: null, unreadAt: null });
     const mode = ref("auto"), hidden = ref(false), selected = ref("sample/alpha");
     const canvas = document.createElement("canvas"); canvas.width = 64; canvas.height = 64;
     const paint = canvas.getContext("2d")!; paint.fillStyle = "#147d69"; paint.fillRect(0, 0, 64, 64); paint.fillStyle = "white"; paint.fillRect(14, 14, 10, 36); paint.fillRect(36, 14, 10, 36);
@@ -29,14 +30,15 @@ async function fixture(page: Page, mobile: boolean) {
           h("span", { class: "nav-caption" }, "WORKSPACE"),
           h("nav", { class: "workspace-navigation" }, [h("a", { class: "nav-item", href: "#overview" }, "Översikt")]),
           h(SidebarRepositories, { repos: rows.map(row => ({ ...row, name: sidebarRepositoryDisplayName(row.fullName, rows.map(item => item.fullName), mode.value) })), canSelect: true, selectedRepository: selected.value, visibility: { "sample/alpha": "visible", "sample/a-very-long-project-name-that-needs-ellipsis": hidden.value ? "visible" : "hidden", "sample/quiet": "inactive", "other/alpha": "visible" }, onToggleVisibility: () => { hidden.value = !hidden.value; }, onActivate: (name: string) => { selected.value = name; } }),
+          h("a", { class: "sidebar-footer", href: "#license" }, "Synthetic license footer"),
         ]),
         h("main", { class: "workspace" }, "Synthetic sidebar layout fixture"),
       ]);
     } };
     createApp(component).mount(host);
     (window as any).sidebarLayoutFixture = { setMode: (value: string) => { mode.value = value; } };
-  }, mobile);
-  if (mobile || await page.viewportSize()!.width > 950) await expect(page.locator(".sidebar-repository-row")).toHaveCount(4);
+  }, { mobile, many });
+  if (mobile || await page.viewportSize()!.width > 950) await expect(page.locator(".sidebar-repository-row")).toHaveCount(many ? 44 : 4);
 }
 
 test("sidebar project rows use full-height artwork and a small inset across themes, owner modes and touch layouts", async ({ browser }) => {
@@ -147,4 +149,50 @@ test("repository context actions support keyboard, touch, dismissal and viewport
     await context.close();
   }
   if (evidence) await writeFile(`${evidence}/menu-geometry.json`, JSON.stringify(menuGeometry, null, 2));
+});
+
+
+test("whole sidebar owns scrolling for few and many projects while every project and context action stays reachable", async ({ browser }) => {
+  const measurements: unknown[] = [];
+  const baseline = process.env.SIDEBAR_SCROLL_BEFORE === "1";
+  if (evidence) await mkdir(evidence, { recursive: true });
+  for (const viewport of scenarios) for (const many of [false, true]) {
+    const mobile = viewport.width < 651 || viewport.height < 501 || viewport.touch === true;
+    const context = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, locale: "sv-SE", reducedMotion: "reduce" });
+    const page = await context.newPage(); await fixture(page, mobile, many);
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(async theme => { const modulePath = "/src/lib/theme.ts"; (await import(modulePath)).setTheme(theme); await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }, theme);
+      const sidebar = page.locator(".sidebar"), projects = page.locator(".sidebar-projects");
+      await sidebar.evaluate(element => { element.scrollTop = 0; });
+      if (viewport.width === 950) { await expect(projects).toBeHidden(); continue; }
+      const metrics = await page.evaluate(() => {
+        const sidebar = document.querySelector<HTMLElement>(".sidebar")!, list = document.querySelector<HTMLElement>(".sidebar-projects")!;
+        const workspace = document.querySelector(".workspace-navigation")!.getBoundingClientRect(), project = document.querySelector(".sidebar-repository-row")!.getBoundingClientRect();
+        return { outerOverflow: getComputedStyle(sidebar).overflowY, innerOverflow: getComputedStyle(list).overflowY, outerHeight: sidebar.clientHeight, outerContent: sidebar.scrollHeight, innerHeight: list.clientHeight, innerContent: list.scrollHeight, innerScrollable: /auto|scroll/.test(getComputedStyle(list).overflowY) && list.scrollHeight > list.clientHeight, pageOverflow: document.documentElement.scrollWidth - innerWidth, widthDrift: Math.abs(workspace.width - project.width), leftDrift: Math.abs(workspace.left - project.left) };
+      });
+      if (!baseline) {
+        expect(metrics.innerOverflow).toBe("visible"); expect(metrics.innerScrollable).toBe(false);
+        expect(metrics.outerOverflow).toBe("auto"); expect(metrics.pageOverflow).toBeLessThanOrEqual(0); expect(metrics.widthDrift).toBeLessThanOrEqual(1); expect(metrics.leftDrift).toBeLessThanOrEqual(1);
+      }
+      if (evidence && viewport.width !== 844) await page.screenshot({ path: `${evidence}/scroll-${baseline ? "before" : "after"}-${viewport.width}x${viewport.height}-${many ? "many" : "few"}-${theme}-top.png` });
+      if (!baseline) {
+        const last = page.locator(".sidebar-repository-row").last();
+        await last.locator(".sidebar-repository").focus();
+        const row = (await last.boundingBox())!, aside = (await sidebar.boundingBox())!;
+        expect(row.y).toBeGreaterThanOrEqual(aside.y); expect(row.y + row.height).toBeLessThanOrEqual(aside.y + aside.height);
+        expect(await projects.evaluate(element => element.scrollTop)).toBe(0);
+        if (many) expect(await sidebar.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+        await page.keyboard.press("Tab"); await expect(last.locator(".repository-actions-trigger")).toBeFocused();
+        await page.keyboard.press("Enter"); const menu = last.getByRole("menu"); await expect(menu).toBeVisible(); await expect(menu.locator(".repo-github")).toBeFocused();
+        const menuBox = (await menu.boundingBox())!; expect(menuBox.y).toBeGreaterThanOrEqual(0); expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(viewport.height); expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(viewport.width);
+        await page.keyboard.press("Escape"); await expect(menu).toBeHidden(); await expect(last.locator(".repository-actions-trigger")).toBeFocused();
+        await page.locator(".sidebar-footer").focus(); const footer = (await page.locator(".sidebar-footer").boundingBox())!;
+        expect(footer.y + footer.height).toBeLessThanOrEqual(viewport.height);
+        if (evidence && many) await page.screenshot({ path: `${evidence}/scroll-after-${viewport.width}x${viewport.height}-many-${theme}-bottom.png` });
+      }
+      measurements.push({ viewport, many, theme, ...metrics });
+    }
+    await context.close();
+  }
+  if (evidence) await writeFile(`${evidence}/scroll-${baseline ? "before" : "after"}-geometry.json`, JSON.stringify(measurements, null, 2));
 });

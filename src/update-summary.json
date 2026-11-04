@@ -1,11 +1,12 @@
 {
   "baseCommit": "e044f85da01e4e55ade3c1e0ee531a45a775df80",
   "summary": {
-    "sv": "List-simbanor är en sammanhängande tabell med projektkolumner. Dölj koordinationsärenden finns nu i Settings.",
-    "en": "List swimlanes form one joined table with repository columns. Hide coordination issues now lives in Settings."
+    "sv": "List-simbanor sitter ihop som en tabell. Koordinationsfiltret finns i Settings, och vänstermenyn slipper den interna scrollbaren.",
+    "en": "List swimlanes form one joined table. Coordination filtering lives in Settings, and the sidebar no longer has a nested project scrollbar."
   },
   "issues": [
     402,
-    403
+    403,
+    404
   ]
 }

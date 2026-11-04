@@ -29,8 +29,8 @@
       },
       {
         "text": {
-          "sv": "Identifiera projekten med ikoner, valbara användarnamn och tydliga färger; få mer namnrymd och en åtgärdsmeny i den bredare vänstermenyn.",
-          "en": "Recognize projects with artwork, optional usernames and consistent colors, with more name space and contextual actions in the wider sidebar."
+          "sv": "Få mer plats för projektnamn och åtgärder i vänstermenyn, med ikoner, valbara användarnamn och smidigare scrollning av långa listor.",
+          "en": "Give project names and actions more room in the sidebar, with artwork, optional usernames and smoother scrolling of long project lists."
         },
         "issues": [
           393,
@@ -39,7 +39,8 @@
           396,
           397,
           399,
-          401
+          401,
+          404
         ]
       },
       {
