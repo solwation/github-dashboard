@@ -264,7 +264,12 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
           v-else
           :size="13"
         /></span>
-        #{{ issue.number }}</span
+        <a :href="demo ? undefined : issue.html_url" :aria-disabled="demo || undefined"
+          target="_blank" rel="noopener noreferrer" class="card-issue-link"
+          :aria-label="t('Öppna #{number} på GitHub', { number: issue.number })"
+          :title="t('Öppna #{number} på GitHub', { number: issue.number })"
+          @click="emit('read')" @auxclick="emit('read')"
+          >#{{ issue.number }}<ArrowUpRight :size="12" aria-hidden="true" /></a></span
       >
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="repository && showRepository" class="card-repository" :title="repository"><span class="card-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
@@ -291,17 +296,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
         >
       </div>
     </div>
-    <a
-      v-if="!rowDetails"
-      :href="demo ? undefined : issue.html_url"
-      :aria-disabled="demo || undefined"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="issue-title"
-      :title="issue.title"
-      @click="emit('read')" @auxclick="emit('read')"
-      >{{ issue.title }}<ArrowUpRight :size="13"
-    /></a>
+    <span v-if="!rowDetails" class="issue-title" :title="issue.title">{{ issue.title }}</span>
       <span v-show="!rowDetails && allLabels.length" class="card-label-line">
         <span ref="labelsContainer" class="card-labels">
         <span
@@ -421,6 +416,11 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
 /* Pointer events reach the real content; keyboard activation uses the native button. */
 .card-open { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: transparent; pointer-events: none; }
 .card-open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.card-issue-link { display: inline-flex; align-items: center; gap: var(--space-1); color: inherit; }
+.card-issue-link:hover { color: var(--green); text-decoration: underline; }
+.card-issue-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--space-1); }
+@media (pointer: coarse) { .card-issue-link { min-width: 44px; min-height: 44px; } }
 
 .card-top-meta { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
 .subtask-badge, .parent-task-badge {

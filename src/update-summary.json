@@ -1,12 +1,10 @@
 {
-  "baseCommit": "fc7b9ca8024dfa9f2b1236a9a9dfe3ef3a5a8c3b",
+  "baseCommit": "22624f6b14e0e2b1f2f46d069c28156edeab39b0",
   "summary": {
-    "sv": "Välj gruppering Ingen, Dela upp eller Simbanor. Färdigt arbete med integration-ready stannar i Pågående med väntemarkering, utan aktiv tid eller timeout.",
-    "en": "Choose None, Split or Swimlanes grouping. Finished work marked integration-ready stays in In progress with a waiting badge, without active time or timeouts."
+    "sv": "Öppna ärendet på GitHub via #numret på kortet. Titeln och kortytan visar beskrivningen i dashboarden.",
+    "en": "Open the issue on GitHub using the card’s #number. The title and card surface show its description in the dashboard."
   },
   "issues": [
-    390,
-    391,
-    392
+    398
   ]
 }

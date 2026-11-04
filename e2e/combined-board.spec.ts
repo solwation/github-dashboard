@@ -163,11 +163,11 @@ test("combined cards with colliding IDs use their own comments, commits and pers
   await boardSplit(page).uncheck();
   const board = page.locator(".combined-board"); await expect(board.locator(".issue-card")).toHaveCount(6);
   for (const name of ["alpha", "beta"]) {
-    const card = board.locator(".issue-card").filter({ has: page.getByRole("link", { name: `${name} task 1`, exact: true }) });
+    const card = board.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: `${name} task 1` }) });
     await card.getByRole("button", { name: "1 kommentar", exact: true }).click();
     await expect(page.getByRole("dialog").getByText(`${name} independent comment`, { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
-    const closed = board.locator(".issue-card").filter({ has: page.getByRole("link", { name: `${name} task 3`, exact: true }) });
+    const closed = board.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: `${name} task 3` }) });
     await closed.scrollIntoViewIfNeeded();
     await expect(closed.locator(".closing-commit a")).toHaveAttribute("href", `https://github.com/sample/${name}/commit/abcdef123456789`);
   }

@@ -40,7 +40,7 @@ test("native sub-issue progress and parent links survive filters, update on sync
     return route.fulfill({ json: [] });
   });
   await connect(page);
-  const card = (title: string) => page.locator(".issue-card").filter({ has: page.getByRole("link", { name: title, exact: true }) });
+  const card = (title: string) => page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: title }) });
   const roadmap = card(parent.title);
   await roadmap.scrollIntoViewIfNeeded();
   await expect(roadmap.locator("progress")).toHaveCount(0);

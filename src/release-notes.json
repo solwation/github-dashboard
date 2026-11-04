@@ -45,6 +45,15 @@
           391,
           392
         ]
+      },
+      {
+        "text": {
+          "sv": "Öppna GitHub via ärendenumret på kortet; klick på titeln och kortytan visar beskrivningen i dashboarden.",
+          "en": "Open GitHub through the card’s issue number; clicking the title and card surface shows the description in the dashboard."
+        },
+        "issues": [
+          398
+        ]
       }
     ]
   },

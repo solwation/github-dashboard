@@ -44,7 +44,7 @@ for (const scenario of [
     await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
     await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: mode, exact: true }).click();
     if (mode === "Lista") await page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Detailed task", exact: true }) }).locator(".row-title").click();
-    const card = mode === "Kort" ? page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Detailed task" }) }) : page.locator(".issue-card").filter({ visible: true }).first();
+    const card = mode === "Kort" ? page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Detailed task" }) }) : page.locator(".issue-card").filter({ visible: true }).first();
     await expect(card.getByRole("button", { name: "7 kommentarer" })).toBeVisible();
     if (mode === "Kort") {
       await expect(card.getByRole("heading", { name: "Implementation plan" })).toHaveCount(0);
@@ -67,7 +67,7 @@ for (const scenario of [
         const range = document.createRange(); range.selectNodeContents(element);
         const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
       });
-      await card.locator(".issue-number").dispatchEvent("click", { button: 0 });
+      await card.locator(".card-top-meta").dispatchEvent("click", { button: 0 });
       await expect(action).toHaveAttribute("aria-expanded", "false");
       await page.evaluate(() => window.getSelection()?.removeAllRanges());
       await card.getByRole("button", { name: "7 kommentarer" }).click();
@@ -75,8 +75,16 @@ for (const scenario of [
       await page.keyboard.press("Escape");
       await expect(action).toHaveAttribute("aria-expanded", "false");
       await context.route("https://github.com/sample/details-project/issues/1", route => route.fulfill({ body: "Fictional issue" }));
+      await expect(card.locator(".issue-title")).not.toHaveAttribute("href");
+      await card.locator(".issue-title").click();
+      await expect(action).toHaveAttribute("aria-expanded", "true");
+      expect(context.pages()).toHaveLength(1);
+      await card.locator(".issue-title").click();
+      await expect(action).toHaveAttribute("aria-expanded", "false");
       const popupPromise = page.waitForEvent("popup");
-      await card.getByRole("link", { name: "Detailed task", exact: true }).click();
+      const github = card.getByRole("link", { name: "Öppna #1 på GitHub", exact: true });
+      if (scenario.mobile) await github.tap();
+      else await github.press("Enter");
       await (await popupPromise).close();
       await expect(action).toHaveAttribute("aria-expanded", "false");
       await page.keyboard.press("Tab");
@@ -87,8 +95,8 @@ for (const scenario of [
       await expect(action).toHaveAttribute("aria-expanded", "true");
       await page.keyboard.press("Space");
       await expect(action).toHaveAttribute("aria-expanded", "false");
-      if (scenario.mobile) await card.locator(".issue-number").tap();
-      else await card.locator(".issue-number").click();
+      if (scenario.mobile) await card.locator(".card-top-meta").tap();
+      else await card.locator(".card-top-meta").click();
     }
     if (mode === "Kort") await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "true");
     await expect(card.getByRole("heading", { name: "Implementation plan" })).toBeVisible();
@@ -106,8 +114,8 @@ for (const scenario of [
       if (scenario.mobile) await heading.tap();
       else await heading.click();
       await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "false");
-      if (scenario.mobile) await card.locator(".issue-number").tap();
-      else await card.locator(".issue-number").click();
+      if (scenario.mobile) await card.locator(".card-top-meta").tap();
+      else await card.locator(".card-top-meta").click();
       await expect(card.locator(".details-panel")).toBeVisible();
     }
     await expect(card.locator(".issue-markdown")).not.toContainText("internal marker");
@@ -145,14 +153,14 @@ for (const scenario of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await card.locator("pre").evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
     if (mode === "Kort") {
-      if (scenario.mobile) await card.locator(".issue-number").tap();
-      else await card.locator(".issue-number").click();
+      if (scenario.mobile) await card.locator(".card-top-meta").tap();
+      else await card.locator(".card-top-meta").click();
       await expect(card.locator(".card-open")).toHaveAttribute("aria-expanded", "false");
       await expect(card.locator(".details-panel")).toHaveCount(0);
     } else if (scenario.mobile) await page.keyboard.press("Escape");
     else await page.locator(".row-title").filter({ hasText: "Detailed task" }).click();
     if (mode === "Lista") await page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Empty task", exact: true }) }).locator(".row-title").click();
-    const empty = mode === "Kort" ? page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Empty task" }) }) : page.locator(".issue-card").filter({ visible: true }).first();
+    const empty = mode === "Kort" ? page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Empty task" }) }) : page.locator(".issue-card").filter({ visible: true }).first();
     await expect(empty.getByRole("button", { name: "0 kommentarer" })).toBeVisible();
     if (mode === "Kort") await empty.locator(".card-open").press("Enter");
     await expect(empty.getByText("Ingen beskrivning har lagts till.")).toBeVisible();

@@ -94,7 +94,7 @@ for (const device of viewports) test(`mobile relation indicators stay compact an
       }
       if (device.width <= 390) await page.screenshot({ path: info.outputPath(`${device.width}-${combined ? "combined" : "split"}-list.png`), fullPage: true });
       await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: "Kort", exact: true }).click();
-      const childCard = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Long child title and a long repository label", exact: true }) });
+      const childCard = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Long child title and a long repository label" }) });
       await childCard.scrollIntoViewIfNeeded();
       await expect(childCard.locator(".subtask-badge")).toHaveCount(1);
       if (device.width <= 390) await page.screenshot({ path: info.outputPath(`${device.width}-${combined ? "combined" : "split"}-cards.png`), fullPage: true });

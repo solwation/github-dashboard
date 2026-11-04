@@ -100,7 +100,7 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
     const context = await browser.newContext({ viewport: size, isMobile: size.mobile, hasTouch: size.mobile, locale: "sv-SE" });
     const page = await context.newPage();
     await fixture(page);
-    await page.evaluate(value => { document.documentElement.dataset.theme = value; }, theme);
+    await page.evaluate(async value => { const path = "/src/lib/theme.ts"; (await import(path)).setTheme(value); }, theme);
     await page.evaluate(() => document.fonts.ready);
     // Theme surfaces transition for 250ms; measure the settled theme, not the blend.
     await expect(page.locator(".stat").first()).toHaveCSS("background-color", theme === "dark" ? "rgb(23, 33, 36)" : "rgb(255, 255, 255)");
@@ -130,9 +130,9 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
         await writeFile(info.outputPath(`${split ? "split" : "combined"}-${view}-text.json`), JSON.stringify(text, null, 2));
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
         if (view === "Kort") {
-          const plain = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Plain task 1", exact: true }) });
+          const plain = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Plain task 1" }) });
           if (size.width >= 1366) expect((await plain.boundingBox())!.height).toBeLessThanOrEqual(100);
-          const labeled = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: /^A long issue title/ }) });
+          const labeled = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: /^A long issue title/ }) });
           const title = await labeled.locator(".issue-title").boundingBox();
           const line = await labeled.locator(".card-label-line").boundingBox();
           expect(line!.y).toBeGreaterThanOrEqual(title!.y + title!.height);
@@ -166,7 +166,7 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
       }
     }
     await mode.getByRole("button", { name: "Kort", exact: true }).click();
-    const labeled = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: /^A long issue title/ }) });
+    const labeled = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: /^A long issue title/ }) });
     const more = labeled.locator(".label-more");
     await more.focus(); await page.keyboard.press("Enter");
     await expect(labeled.getByRole("tooltip")).toContainText("touch target audit");

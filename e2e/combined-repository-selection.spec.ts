@@ -164,7 +164,7 @@ for (const size of sizes) for (const theme of ["light", "dark"] as const) {
         }));
         expect(geometry.every(item => item.overflow <= 1)).toBe(true);
         if (view === "Lista") expect(Math.max(...geometry.map(item => item.height))).toBeLessThanOrEqual(100);
-        if (view === "Kort" && size.width === 1600) expect((await entries(page, view, "alpha").filter({ has: page.getByRole("link", { name: "alpha task 1", exact: true }) }).boundingBox())!.height).toBeLessThanOrEqual(100);
+        if (view === "Kort" && size.width === 1600) expect((await entries(page, view, "alpha").filter({ has: page.locator(".issue-title").filter({ hasText: "alpha task 1" }) }).boundingBox())!.height).toBeLessThanOrEqual(100);
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
         await writeFile(info.outputPath(`${splitMode ? "split" : "combined"}-${view}-geometry.json`), JSON.stringify(geometry, null, 2));
         const timeout = entries(page, view, "alpha").filter({ hasText: "alpha task 5" });

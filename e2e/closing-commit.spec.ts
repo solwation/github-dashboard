@@ -28,7 +28,7 @@ test("closing commit details appear only for available associations and survive 
   await page.getByRole("button", { name: "Visa översikt", exact: true }).click();
   await expect(page.locator(".issue-card")).toHaveCount(4);
   for (const [index, title] of titles.entries()) {
-    const card = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: title, exact: true }) });
+    const card = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: title }) });
     await card.scrollIntoViewIfNeeded();
     await expect.poll(() => loaded.has(index + 1)).toBe(true);
     if (index < 2) {
@@ -43,7 +43,7 @@ test("closing commit details appear only for available associations and survive 
     }
   }
   // A normal data refresh replaces issue objects but should keep existing metadata visible.
-  const linked = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Linked zero diff", exact: true }) });
+  const linked = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Linked zero diff" }) });
   await linked.scrollIntoViewIfNeeded();
   await linked.evaluate(element => {
     const state = { loadingFlashes: 0 };

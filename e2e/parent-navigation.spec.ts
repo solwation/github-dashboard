@@ -70,7 +70,7 @@ for (const mode of ["Cards", "List"] as const) {
       await expect(target).toHaveClass(/issue-navigation-highlight/);
       await expect(target).toBeFocused();
       await expect(target.locator(".issue-title, .row-title").first()).toContainText("Parent target");
-      const githubLink = mode === "List" ? target.locator("a.issue-number") : target.locator("a.issue-title");
+      const githubLink = mode === "List" ? target.locator("a.issue-number") : target.locator("a.card-issue-link");
       await expect(githubLink).toHaveAttribute("href", "https://github.com/sample/parent/issues/42");
       await expect(page.getByRole("textbox", { name: "Sök issues", exact: true })).toHaveValue("");
       if (combined) await expect(target.locator(".row-repository, .card-repository")).toHaveAttribute("title", "sample/parent");
@@ -83,10 +83,10 @@ for (const mode of ["Cards", "List"] as const) {
       await expect(githubLink).toBeVisible();
       if (combined) await split.check();
       }
-      // The separate GitHub title/number link remains an external action.
+      // The separate GitHub number link remains an external action.
       const target = page.locator('[id="issue-sample%2Fparent-42"]');
       const popupPromise = page.waitForEvent("popup");
-      const githubLink = mode === "List" ? target.locator("a.issue-number") : target.locator("a.issue-title");
+      const githubLink = mode === "List" ? target.locator("a.issue-number") : target.locator("a.card-issue-link");
       await githubLink.click();
       const external = await popupPromise;
       await expect(external).toHaveURL("https://github.com/sample/parent/issues/42");

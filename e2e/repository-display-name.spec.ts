@@ -59,7 +59,7 @@ for (const mode of ['Kort', 'Lista'] as const) {
     await expect(label('shared/first').locator('.sr-only')).toHaveText('shared/first');
     await expect(visibleName('shared/first')).toHaveAttribute('aria-hidden', 'true');
     expect(await indicator('shared/first').evaluate(element => getComputedStyle(element).backgroundColor)).toBe(color);
-    await expect(board.locator(mode === 'Kort' ? '.issue-title' : '.row-number')).toHaveAttribute('href', 'https://github.com/shared/first/issues/1');
+    await expect(board.locator(mode === 'Kort' ? '.card-issue-link' : '.row-number')).toHaveAttribute('href', 'https://github.com/shared/first/issues/1');
     await page.getByRole('textbox', { name: 'Sök issues', exact: true }).clear();
     await expect(visibleName('SHARED/second')).toHaveText('second');
     await expect(page.locator('.board-toolbar')).toHaveAttribute('data-busy', 'false');

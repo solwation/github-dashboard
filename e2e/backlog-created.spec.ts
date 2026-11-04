@@ -37,7 +37,7 @@ test("new Backlog issues are green, persist through sync and comments, and ackno
   createdAt = await page.evaluate(() => new Date().toISOString());
   version = 1;
   await refresh();
-  const fresh = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Fresh backlog item", exact: true }) });
+  const fresh = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Fresh backlog item" }) });
   await expect(fresh).toHaveClass(/unread-created/);
   await expect(fresh.getByRole("button", { name: "Nyligen skapat i Backlog. Markera som läst", exact: true })).toContainText("Skapat i Backlog");
   const green = await fresh.evaluate(element => getComputedStyle(element).backgroundColor);
@@ -48,7 +48,7 @@ test("new Backlog issues are green, persist through sync and comments, and ackno
   version = 3;
   await refresh();
   await expect(fresh).toHaveClass(/unread-created/);
-  const returning = page.locator(".issue-card").filter({ has: page.getByRole("link", { name: "Returning work", exact: true }) });
+  const returning = page.locator(".issue-card").filter({ has: page.locator(".issue-title").filter({ hasText: "Returning work" }) });
   await expect(returning).toHaveClass(/unread-move/);
   await expect(returning).not.toHaveClass(/unread-created/);
   await expect(returning.getByRole("button", { name: "Nyligen flyttad. Markera som läst", exact: true })).toContainText("Flyttad till Backlog");

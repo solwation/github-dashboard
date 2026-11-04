@@ -149,7 +149,7 @@ test("desktop expands row details in place with open description while phone ope
       const popupCard = dialog.locator(".issue-card:not(.row-details-card)");
       await expect(popupCard).toBeVisible();
       await expect(popupCard.locator(".card-repository")).toHaveAttribute("title", "sample/beta");
-      await expect(popupCard.getByRole("link", { name: /beta task 1/ })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
+      await expect(popupCard.getByRole("link", { name: "Öppna #1 på GitHub", exact: true })).toHaveAttribute("href", "https://github.com/sample/beta/issues/1");
       // #197: the enhancement label is shown by the type icon instead of a chip.
       await expect(popupCard.locator(".type-circle.type-feature")).toBeVisible();
       await expect(popupCard.locator(".label")).toHaveCount(0);
