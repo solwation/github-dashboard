@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProjectIcon from "./ProjectIcon.vue";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
 import { estimateLabel } from "../lib/estimates";
 import IssueRelationsView from "./IssueRelations.vue";
@@ -253,6 +254,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
     </button>
     <div v-if="!rowDetails" class="card-top">
       <div class="card-top-main">
+      <ProjectIcon v-if="repository" :repository="repository" :decorative="false" />
       <span class="issue-number"
         ><span v-if="type" class="type-circle" :class="'type-' + type" :title="typeTitle" role="img" :aria-label="typeTitle"
           ><component :is="typeIcons[type]" :size="10" aria-hidden="true" /><CircleCheck v-if="col === 'closed'" class="type-closed" :size="8" aria-hidden="true"
@@ -264,7 +266,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
         #{{ issue.number }}</span
       >
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
-      <span v-if="repository && showRepository" class="card-repository" :title="repository"><i aria-hidden="true" /><span class="card-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
+      <span v-if="repository && showRepository" class="card-repository" :title="repository"><span class="card-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span>
       </div>
       <div class="card-top-meta">
         <span v-if="isSubtask && parent" class="subtask-badge"

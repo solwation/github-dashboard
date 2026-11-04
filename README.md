@@ -26,6 +26,8 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
 - **Keep track of sync problems.** One project-error summary opens full details and retries.
   The header bell keeps the latest 100 info, warning and error events, with an unread badge;
   signed-in history stays encrypted per account, while public browsing history lasts for the session.
+- **Recognize your projects.** Shared project-icon boxes use each repository’s own safe artwork,
+  or initials when no icon is available, with your project color in the lower-right corner.
 - **Private by design.** Your token and cached data stay on your device, encrypted with
   non-exportable AES-GCM keys. There is no backend.
 - **Works everywhere.** Installable app with background notifications, phone layout, QR
@@ -61,6 +63,21 @@ npm run dev
 `npm test` runs unit tests, `npm run test:e2e` runs browser tests and `npm run build` type-checks
 and builds. See the [setup and technical guide](docs/guide.md) for OAuth sign-in, security and
 deployment.
+
+## Project icons
+
+Issueflow looks for favicon/icon/logo, apple-touch-icon, icon-192/icon-512, rooticon and
+repository-name artwork in the repository root and existing `public`, `assets`, `icons`,
+`public/icons` and `public/assets` directories, in that order. Discovery uses at most six
+GitHub Contents requests per selected project, with a quota reserve for core board data.
+Results, including missing artwork, are cached for 24 hours; routine refreshes do not rescan.
+
+PNG, JPEG, WebP and ICO files up to 64 KiB are decoded as images. SVG icons use a conservative
+subset that rejects scripts, external references, CSS, animation and embedded documents;
+accepted SVGs render through an inert image into a small PNG. Unavailable, unsupported or
+broken images fall back to initials. No owner avatars or external download URLs are used.
+Icon content follows the existing encrypted account/public content caches and is never stored
+in plaintext browser preferences or shared through QR transfers.
 
 ## Learn more
 

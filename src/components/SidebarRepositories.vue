@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProjectIcon from "./ProjectIcon.vue";
 import { Circle, CircleCheck, Clock3, Eye, EyeOff, Globe, Lock, Plus, SquareArrowOutUpRight } from "@lucide/vue";
 import { repositoryColor } from "../lib/repository-color";
 import { useLanguage } from "../lib/i18n";
@@ -44,7 +45,7 @@ function hiddenFromBoard(repo: SidebarRepository) {
   return (props.visibility?.[repo.fullName] ?? "visible") !== "visible";
 }
 function visibilityAction(repo: SidebarRepository) {
-  return t(hiddenFromBoard(repo) ? "Visa {name} i innehållsvyn" : "Dölj {name} i innehållsvyn", { name: repo.name });
+  return t(hiddenFromBoard(repo) ? "Visa {name} i innehållsvyn" : "Dölj {name} i innehållsvyn", { name: repo.fullName });
 }
 // GitHub address from the full name; the sidebar summary carries no html_url.
 function githubUrl(repo: SidebarRepository) { return `https://github.com/${repo.fullName}`; }
@@ -82,8 +83,8 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
     <div class="repo-body">
-    <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-      <span class="repo-dot" aria-hidden="true" />
+    <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+      <ProjectIcon :repository="repo.fullName" :size="20" />
       <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
       <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
         <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
@@ -99,8 +100,8 @@ function lastChange(changedAt: string | null) {
     </a>
     <span class="repo-icons">
       <span v-if="repo.private && !repo.pagesUrl" class="repo-visibility is-private" role="img" :title="t('Privat repository')" :aria-label="t('Privat repository')"><Lock aria-hidden="true" /></span>
-      <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><Globe aria-hidden="true" /></a>
-      <a class="repo-github" :href="githubUrl(repo)" target="_blank" rel="noopener" :title="t('Öppna {repo} på GitHub', { repo: repo.name })" :aria-label="t('Öppna {repo} på GitHub', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+      <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.fullName })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.fullName })"><Globe aria-hidden="true" /></a>
+      <a class="repo-github" :href="githubUrl(repo)" target="_blank" rel="noopener" :title="t('Öppna {repo} på GitHub', { repo: repo.fullName })" :aria-label="t('Öppna {repo} på GitHub', { repo: repo.fullName })"><SquareArrowOutUpRight aria-hidden="true" /></a>
     </span>
     <button v-if="visibility" type="button" class="repo-board-toggle" :aria-label="visibilityAction(repo)" :title="visibilityAction(repo)" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo) ? Eye : EyeOff" aria-hidden="true" /></button>
     </div>
@@ -115,8 +116,8 @@ function lastChange(changedAt: string | null) {
     <div v-if="inactiveRepos.length > 0" id="sidebar-inactive-repositories" class="sidebar-inactive-group">
       <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-        <span class="repo-dot" aria-hidden="true" />
+      <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+        <ProjectIcon :repository="repo.fullName" :size="20" />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
           <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
@@ -132,8 +133,8 @@ function lastChange(changedAt: string | null) {
       </a>
       <span class="repo-icons">
         <span v-if="repo.private && !repo.pagesUrl" class="repo-visibility is-private" role="img" :title="t('Privat repository')" :aria-label="t('Privat repository')"><Lock aria-hidden="true" /></span>
-        <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><Globe aria-hidden="true" /></a>
-        <a class="repo-github" :href="githubUrl(repo)" target="_blank" rel="noopener" :title="t('Öppna {repo} på GitHub', { repo: repo.name })" :aria-label="t('Öppna {repo} på GitHub', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+        <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.fullName })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.fullName })"><Globe aria-hidden="true" /></a>
+        <a class="repo-github" :href="githubUrl(repo)" target="_blank" rel="noopener" :title="t('Öppna {repo} på GitHub', { repo: repo.fullName })" :aria-label="t('Öppna {repo} på GitHub', { repo: repo.fullName })"><SquareArrowOutUpRight aria-hidden="true" /></a>
       </span>
       <button v-if="visibility" type="button" class="repo-board-toggle" :aria-label="visibilityAction(repo)" :title="visibilityAction(repo)" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo) ? Eye : EyeOff" aria-hidden="true" /></button>
       </div>
@@ -144,8 +145,8 @@ function lastChange(changedAt: string | null) {
       <h3 id="sidebar-external-heading" class="nav-caption sidebar-external-heading">{{ t("Andras publika projekt") }}</h3>
       <div v-for="repo in externalRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
-        <span class="repo-dot" aria-hidden="true" />
+      <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+        <ProjectIcon :repository="repo.fullName" :size="20" />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
           <span class="recent-activity" :title="t('Oläst aktivitet')" role="img" :aria-label="t('Oläst aktivitet')" />
@@ -161,8 +162,8 @@ function lastChange(changedAt: string | null) {
       </a>
       <span class="repo-icons">
         <span v-if="repo.private && !repo.pagesUrl" class="repo-visibility is-private" role="img" :title="t('Privat repository')" :aria-label="t('Privat repository')"><Lock aria-hidden="true" /></span>
-        <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.name })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.name })"><Globe aria-hidden="true" /></a>
-        <a class="repo-github" :href="githubUrl(repo)" target="_blank" rel="noopener" :title="t('Öppna {repo} på GitHub', { repo: repo.name })" :aria-label="t('Öppna {repo} på GitHub', { repo: repo.name })"><SquareArrowOutUpRight aria-hidden="true" /></a>
+        <a v-if="repo.pagesUrl" class="repo-pages" :href="repo.pagesUrl" target="_blank" rel="noopener" :title="t('Öppna GitHub Pages för {repo}', { repo: repo.fullName })" :aria-label="t('Öppna GitHub Pages för {repo}', { repo: repo.fullName })"><Globe aria-hidden="true" /></a>
+        <a class="repo-github" :href="githubUrl(repo)" target="_blank" rel="noopener" :title="t('Öppna {repo} på GitHub', { repo: repo.fullName })" :aria-label="t('Öppna {repo} på GitHub', { repo: repo.fullName })"><SquareArrowOutUpRight aria-hidden="true" /></a>
       </span>
       <button v-if="visibility" type="button" class="repo-board-toggle" :aria-label="visibilityAction(repo)" :title="visibilityAction(repo)" @click="emit('toggleVisibility', repo.fullName)"><component :is="hiddenFromBoard(repo) ? Eye : EyeOff" aria-hidden="true" /></button>
       </div>
@@ -192,7 +193,7 @@ function lastChange(changedAt: string | null) {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: var(--space-2) minmax(0, 1fr) var(--space-2);
+  grid-template-columns: var(--icon-md) minmax(0, 1fr) var(--space-2);
   column-gap: var(--space-2);
   row-gap: 0;
   align-items: center;

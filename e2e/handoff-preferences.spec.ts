@@ -66,8 +66,8 @@ async function scanCode(page: Page, image: string) {
 }
 
 async function expectTransferredColors(page: Page) {
-  await expect(page.locator('.sidebar-repository-row[data-repository="sample/test"] .repo-dot')).toHaveCSS("background-color", "rgb(139, 67, 181)");
-  await expect(page.locator('.sidebar-repository-row[data-repository="sample/second"] .repo-dot')).toHaveCSS("background-color", "rgb(152, 112, 22)");
+  await expect(page.locator('.sidebar-repository-row[data-repository="sample/test"] .project-icon-color')).toHaveCSS("background-color", "rgb(139, 67, 181)");
+  await expect(page.locator('.sidebar-repository-row[data-repository="sample/second"] .project-icon-color')).toHaveCSS("background-color", "rgb(152, 112, 22)");
 }
 
 test("desktop and mobile optically sync all preferences repeatedly without logout or document reload", async ({ page, browser }) => {

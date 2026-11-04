@@ -66,13 +66,13 @@ for (const size of sizes) {
       expect(box.height, `repository ${index} touch height`).toBeGreaterThanOrEqual(44);
       expect(box.y, `repository ${index} stacks vertically`).toBeGreaterThanOrEqual(previousBottom - 1);
       previousBottom = box.y + box.height;
-      await expect(row.locator(".repo-dot")).toBeVisible();
+      await expect(row.locator(".project-icon")).toBeVisible();
       await expect(row.locator(".repository-counts, .repo-slots").first()).toBeVisible();
       const label = row.locator(".repository-label");
       expect(await label.evaluate(node => getComputedStyle(node).textOverflow)).toBe("ellipsis");
     }
     // Icon slots share left/right edges across rows (+-1px).
-    for (const selector of [".repo-github", ".repo-board-toggle", ".repo-dot"]) {
+    for (const selector of [".repo-github", ".repo-board-toggle", ".project-icon"]) {
       const edges = await panel.locator(selector).evaluateAll(nodes => nodes.map(node => { const box = node.getBoundingClientRect(); return [box.left, box.right]; }));
       expect(edges.length, selector).toBeGreaterThan(1);
       for (const [l, r] of edges) {
@@ -97,7 +97,7 @@ for (const size of sizes) {
     const edge = await left(panel.getByText("WORKSPACE", { exact: true }));
     expect(Math.abs(await left(panel.getByText("REPOSITORIES", { exact: true })) - edge), "captions share a left edge").toBeLessThanOrEqual(1);
     expect(Math.abs(await left(panel.locator(".nav-item > svg")) - edge), "nav icon aligns with captions").toBeLessThanOrEqual(1);
-    expect(Math.abs(await left(panel.locator(".sidebar-repository .repo-dot")) - edge), "repository dot aligns with captions").toBeLessThanOrEqual(1);
+    expect(Math.abs(await left(panel.locator(".sidebar-repository .project-icon")) - edge), "repository dot aligns with captions").toBeLessThanOrEqual(1);
     expect(await panel.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await panel.evaluate(node => { node.scrollTop = 0; });

@@ -41,12 +41,13 @@ for (const mode of ['Kort', 'Lista'] as const) {
     const chips = board.locator(mode === 'Kort' ? '.card-repository' : '.row-repository');
     const label = (name: string) => chips.filter({ has: page.locator(`.sr-only`, { hasText: name }) });
     const visibleName = (name: string) => label(name).locator(mode === 'Kort' ? '.card-repository-name' : '.row-repository-name');
+    const indicator = (name: string) => (mode === 'Kort' ? label(name).locator('..') : label(name)).locator('.project-icon-color');
     await expect(chips).toHaveCount(2);
     // The third owner has no issues at all, but is selected: both labels stay full.
     await expect(visibleName('shared/first')).toHaveText('shared/first');
     await expect(visibleName('SHARED/second')).toHaveText('SHARED/second');
     await expect(label('shared/first')).toHaveAttribute('title', 'shared/first');
-    const color = await label('shared/first').locator('.project-icon-color, i').evaluate(element => getComputedStyle(element).backgroundColor);
+    const color = await indicator('shared/first').evaluate(element => getComputedStyle(element).backgroundColor);
     await page.getByRole('textbox', { name: 'Sök issues', exact: true }).fill('Unique first');
     await expect(chips).toHaveCount(1);
     await expect(visibleName('shared/first')).toHaveText('shared/first');
@@ -56,7 +57,7 @@ for (const mode of ['Kort', 'Lista'] as const) {
     await expect(visibleName('shared/first')).toHaveText('first');
     await expect(label('shared/first').locator('.sr-only')).toHaveText('shared/first');
     await expect(visibleName('shared/first')).toHaveAttribute('aria-hidden', 'true');
-    expect(await label('shared/first').locator('.project-icon-color, i').evaluate(element => getComputedStyle(element).backgroundColor)).toBe(color);
+    expect(await indicator('shared/first').evaluate(element => getComputedStyle(element).backgroundColor)).toBe(color);
     await expect(board.locator(mode === 'Kort' ? '.issue-title' : '.row-number')).toHaveAttribute('href', 'https://github.com/shared/first/issues/1');
     await page.getByRole('textbox', { name: 'Sök issues', exact: true }).clear();
     await expect(visibleName('SHARED/second')).toHaveText('second');
@@ -81,7 +82,7 @@ for (const mode of ['Kort', 'Lista'] as const) {
 
 // Run OWNER_DISPLAY_MATRIX=1 for the conductor's integrated responsive/theme review.
 const ownerScenarios = process.env.OWNER_DISPLAY_MATRIX ? [
-  { width: 1600, height: 1000, mobile: false }, { width: 1000, height: 900, mobile: false },
+  { width: 1600, height: 1000, mobile: false }, { width: 1000, height: 900, mobile: false }, { width: 950, height: 900, mobile: false },
   { width: 390, height: 844, mobile: true }, { width: 844, height: 390, mobile: true },
   { width: 320, height: 568, mobile: true },
 ] : [{ width: 1600, height: 1000, mobile: false }];

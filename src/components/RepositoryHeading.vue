@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProjectIcon from "./ProjectIcon.vue";
 import { ArrowRight, ChevronDown, ChevronRight } from "@lucide/vue";
 import type { Repo } from "../lib/model";
 import { useLanguage } from "../lib/i18n";
@@ -23,7 +24,7 @@ const { t } = useLanguage();
       :aria-expanded="!collapsed" :aria-controls="controls" @click="emit('toggle')">
       <ChevronRight v-if="collapsed" :size="16" aria-hidden="true" /><ChevronDown v-else :size="16" aria-hidden="true" />
     </button>
-    <span class="repo-avatar" aria-hidden="true">{{ repository.name.slice(0, 2).toUpperCase() }}</span>
+    <ProjectIcon :repository="repository.full_name" :size="20" />
     <div>
       <h2 :id="headingId">
         <a :href="repository.html_url" :title="repository.full_name" :aria-label="repository.full_name" target="_blank" rel="noopener noreferrer"><span class="repository-name-text">{{ label || repository.name }}</span><ArrowRight :size="12" aria-hidden="true" /></a>

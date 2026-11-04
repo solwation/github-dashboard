@@ -2,8 +2,8 @@
   {
     "date": "2026-11-04",
     "summary": {
-      "sv": "Samlad felöversikt, händelsehistorik och valbar visning av projektens användarnamn.",
-      "en": "A grouped error summary, event history and optional project usernames."
+      "sv": "Tydligare projektikoner, valbara användarnamn samt samlad felöversikt och händelsehistorik.",
+      "en": "Clearer project icons, optional usernames, a grouped error summary and event history."
     },
     "sections": [
       {
@@ -17,10 +17,11 @@
       },
       {
         "text": {
-          "sv": "Välj Auto, Yes eller No i Inställningar för att visa eller dölja projektens GitHub-användarnamn i labels och vänstermeny.",
-          "en": "Choose Auto, Yes or No in Settings to show or hide project GitHub usernames in repository labels and the sidebar."
+          "sv": "Se projektikoner med färgprick och initialer som reserv, och välj om användarnamn visas i labels och vänstermeny.",
+          "en": "Recognize projects by icons, color dots and fallback initials, and choose whether usernames appear in repository labels and the sidebar."
         },
         "issues": [
+          393,
           394
         ]
       }

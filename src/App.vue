@@ -49,6 +49,8 @@ import { useAppUpdate } from "./composables/useAppUpdate";
 import { PUBLIC_CONTENT_LIFETIME_MS, readPublicContent, writePublicContent, type PublicLaneSnapshot } from "./lib/public-content-cache";
 import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
 import { normalizeRepositoryOwnerDisplay, sidebarRepositoryDisplayName, type RepositoryOwnerDisplay } from "./lib/repository-display-name";
+import { PROJECT_ICON_LIFETIME, restoreProjectIcon } from "./lib/project-icon";
+import { provideProjectIcons } from "./composables/useProjectIcon";
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
 import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
@@ -1192,6 +1194,32 @@ const stats = computed(() => {
 const workspaceRepositoryColors = computed(() => reconcileRepositoryColors(
   isDemo.value ? lanes.value.map(lane => lane.repo.full_name) : selected.value, repositoryColors.value,
 ));
+provideProjectIcons(() => [...lanes.value.map(lane => lane.repo), ...repos.value], () => workspaceRepositoryColors.value);
+// Optional artwork never delays the board and is looked up once per client/day, not each poll.
+let projectIconPass = 0;
+watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.value.join("\n"), authBusy, restoring, publicMode, isDemo, activityClock], async () => {
+  const pass = ++projectIconPass, client = api, run = generation;
+  if (!client || authBusy.value || restoring.value || isDemo.value) return;
+  const targets = repos.value.filter(repo => selected.value.includes(repo.full_name));
+  for (const repo of targets) {
+    if (pass !== projectIconPass || client !== api || run !== generation) return;
+    const previous = restoreProjectIcon(repo.projectIcon);
+    if (previous && Date.now() - previous.checkedAt < PROJECT_ICON_LIFETIME) continue;
+    const icon = await client.projectIcon(repo);
+    if (pass !== projectIconPass || client !== api || run !== generation) return;
+    if (!icon || !selected.value.includes(repo.full_name)) continue;
+    const current = repos.value.find(item => item.full_name === repo.full_name);
+    if (current && JSON.stringify(current.projectIcon) !== JSON.stringify(icon)) {
+      repos.value = repos.value.map(item => item === current ? { ...item, projectIcon: icon } : item);
+      lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? { ...lane, repo: { ...lane.repo, projectIcon: icon } } : lane);
+      if (publicMode.value) {
+        publicSnapshots = publicSnapshots.map(entry => entry.lane.repo.full_name === repo.full_name ? { ...entry, lane: { ...entry.lane, repo: { ...entry.lane.repo, projectIcon: icon } } } : entry);
+        void save();
+      }
+      void persistContent();
+    }
+  }
+});
 const eventHistory = ref(emptyEventHistory());
 const eventHistoryOpen = ref(false);
 const eventHistoryErrors = ref(false);
@@ -1521,6 +1549,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     if (cached && cachedSettings) {
       generation++;
       next.restoreResponses(cached.responses);
+      next.restoreProjectIcons(cached.repos);
       clearClosureFeedback();
       api = next;
       user.value = cached.user;

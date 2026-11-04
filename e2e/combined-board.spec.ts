@@ -4,7 +4,7 @@ import { encodeHandoff } from "../src/lib/handoff";
 import { openSettings } from "./support/phone-menu";
 
 async function matchingColors(page: Page) {
-  const colors = await page.locator(".sidebar-repository-row").evaluateAll(rows => Object.fromEntries(rows.map(row => [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".repo-dot")!).backgroundColor])));
+  const colors = await page.locator(".sidebar-repository-row").evaluateAll(rows => Object.fromEntries(rows.map(row => [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".project-icon-color")!).backgroundColor])));
   // Split lanes already name their repository, so only the combined board labels each card.
   if (await page.locator(".repo-lane").count()) {
     await expect(page.locator(".repo-lane .issue-card").first()).toBeVisible();
@@ -14,7 +14,7 @@ async function matchingColors(page: Page) {
   await expect(page.locator(".combined-board .issue-card .card-repository")).toHaveCount(await page.locator(".combined-board .issue-card").count());
   for (const card of await page.locator(".issue-card").all()) {
     const name = (await card.locator(".card-repository").getAttribute("title"))!;
-    expect(await card.locator(".card-repository i").evaluate(element => getComputedStyle(element).backgroundColor)).toBe(colors[name]);
+    expect(await card.locator(".card-top-main > .project-icon .project-icon-color").evaluate(element => getComputedStyle(element).backgroundColor)).toBe(colors[name]);
   }
   return colors;
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProjectIcon from "./ProjectIcon.vue";
 import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
 import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, HandHelping, Hourglass, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
@@ -317,7 +318,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
       </span>
       <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
-      <span v-if="showRepository" class="row-mobile-repository-slot"><span class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span>
+      <span v-if="showRepository" class="row-mobile-repository-slot"><span class="row-repository" :title="repository"><ProjectIcon :repository="repository" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span>
       <!-- A moved row's highlighted border already shows the move on phones; screen readers still hear it (#275). -->
       <span v-if="recentMove === true" class="row-mobile-move-note sr-only">{{ t('Flyttad till {column}', { column: status }) }}</span>
       <button v-if="recentMove === 'created'" type="button" class="row-mobile-activity row-movement-marker" @click="emit('read')"
@@ -360,7 +361,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
-      ><span v-if="showRepository" class="row-slot row-slot-repository row-meta-repository"><span class="row-repository" :title="repository"><i aria-hidden="true" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span
+      ><span v-if="showRepository" class="row-slot row-slot-repository row-meta-repository"><span class="row-repository" :title="repository"><ProjectIcon :repository="repository" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span
       ><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
         :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
         :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"

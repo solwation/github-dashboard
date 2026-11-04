@@ -127,8 +127,8 @@ test("combined-list repository chips keep row content aligned at every card/list
       } else await expect(row.locator(".row-mobile-summary .row-repository")).toHaveCount(1);
 
       if (scenario.theme === "light") {
-        const sidebarColor = await contextPage.locator(`[data-repository="${repository.full_name}"] .repo-dot`).evaluate(node => getComputedStyle(node).backgroundColor);
-        const chipColor = await chip.locator("i").evaluate(node => getComputedStyle(node).backgroundColor);
+        const sidebarColor = await contextPage.locator(`.sidebar-repository-row[data-repository="${repository.full_name}"] .project-icon-color`).evaluate(node => getComputedStyle(node).backgroundColor);
+        const chipColor = await chip.locator(".project-icon-color").evaluate(node => getComputedStyle(node).backgroundColor);
         expect(chipColor).toBe(sidebarColor);
       }
       if (["wide", "narrow", "portrait", "landscape", "tiny"].includes(scenario.name)) {

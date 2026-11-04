@@ -41,6 +41,8 @@ export interface Issue {
   pendingClosure?: boolean;
 }
 export interface Repo {
+  /** Safe raster artwork/negative result, persisted only in encrypted account content. */
+  projectIcon?: import("./project-icon").ProjectIconMetadata;
   id: number;
   name: string;
   full_name: string;

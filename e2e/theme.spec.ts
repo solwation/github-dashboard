@@ -65,9 +65,9 @@ test("dark demo board keeps text and repository colors readable", async ({ page 
     return {
       title: ratio(getComputedStyle(card.querySelector(".issue-title")!).color, cardBackground),
       number: ratio(getComputedStyle(card.querySelector(".issue-number")!).color, cardBackground),
-      dots: [...document.querySelectorAll(".sidebar-repository .repo-dot")].map(dot => ratio(getComputedStyle(dot).backgroundColor, sidebarBackground)),
-      dotColors: new Set([...document.querySelectorAll(".sidebar-repository .repo-dot")].map(dot => getComputedStyle(dot).backgroundColor)).size,
-      dotCount: document.querySelectorAll(".sidebar-repository .repo-dot").length,
+      dots: [...document.querySelectorAll(".sidebar-repository .project-icon-color")].map(dot => ratio(getComputedStyle(dot).backgroundColor, sidebarBackground)),
+      dotColors: new Set([...document.querySelectorAll(".sidebar-repository .project-icon-color")].map(dot => getComputedStyle(dot).backgroundColor)).size,
+      dotCount: document.querySelectorAll(".sidebar-repository .project-icon-color").length,
     };
   });
   expect(contrast.title).toBeGreaterThanOrEqual(4.5);

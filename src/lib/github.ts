@@ -1,3 +1,4 @@
+import { ProjectIconResolver } from "./project-icon";
 import { SubIssuesCache, parseSubIssues } from "./sub-issues";
 import { publicRepositoryName, publicRepositoryRecord } from "./public-workspace";
 import { permissionDefinitions, permissionEndpoint, permissionForPath, permissionResult, type PermissionObservation, type PermissionReport } from "./permissions";
@@ -116,6 +117,12 @@ export class GitHub {
   });
   subIssues(repository: string, issue: Issue) { return this.subIssuesCache.get(repository, issue); }
   invalidateIssueRelations(repositories?: readonly string[]) { this.relations.clear(repositories); this.subIssuesCache.clear(repositories); }
+  private readonly projectIcons = new ProjectIconResolver(
+    async (path, store = true) => (await this.request<unknown>(path, { store })).data,
+    () => !this.retryAfterMs() && (!this.rateLimit() || this.rateLimit()!.remaining > (this.token ? 30 : 10)),
+  );
+  projectIcon(repo: Repo) { this.projectIcons.restore([repo]); return this.projectIcons.get(repo.full_name); }
+  restoreProjectIcons(repositories: Repo[]) { this.projectIcons.restore(repositories); }
   constructor(private token: string = "") {}
   get authenticated() { return Boolean(this.token); }
   async publicRepository(input: string): Promise<Repo> {

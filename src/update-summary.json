@@ -1,10 +1,11 @@
 {
   "baseCommit": "1884fa6a5d569beac8f8b09ac8d452cff1dafe47",
   "summary": {
-    "sv": "Välj Auto, Yes eller No i Inställningar för att styra om projektens GitHub-användarnamn visas i labels och vänstermeny.",
-    "en": "Choose Auto, Yes or No in Settings to control whether project GitHub usernames appear in repository labels and the sidebar."
+    "sv": "Se projektikoner med färgprick och initialer som reserv. Välj Auto, Yes eller No för GitHub-användarnamn i labels och vänstermeny.",
+    "en": "Recognize projects by icons, color dots and fallback initials. Choose Auto, Yes or No for GitHub usernames in labels and the sidebar."
   },
   "issues": [
+    393,
     394
   ]
 }

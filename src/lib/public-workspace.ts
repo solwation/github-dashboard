@@ -1,3 +1,4 @@
+import { restoreProjectIcon } from "./project-icon";
 import type { Repo } from "./model";
 /** Separate from every valid GitHub login; contents still use the encrypted settings store. */
 export const PUBLIC_SETTINGS_ACCOUNT = ':public-workspace:';
@@ -32,6 +33,7 @@ export function publicRepositoryRecord(value: unknown): Repo | null {
   const [owner, short] = name.split("/");
   return { id: repo.id!, name: short!, full_name: name, private: false, owner: { login: owner! },
     html_url: `https://github.com/${name}`, description: typeof repo.description === "string" ? repo.description : null,
+    ...(restoreProjectIcon(repo.projectIcon) ? { projectIcon: restoreProjectIcon(repo.projectIcon) } : {}),
     ...(repo.has_pages === true ? { has_pages: true } : {}),
     ...(typeof repo.language === "string" ? { language: repo.language } : {}) };
 }

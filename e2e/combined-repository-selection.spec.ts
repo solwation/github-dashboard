@@ -43,10 +43,10 @@ async function fixture(page: Page) {
 const sidebar = (page: Page, name: string) => page.locator(`.sidebar-repository-row[data-repository="sample/${name}"] .sidebar-repository`);
 const entries = (page: Page, view: string, name?: string) => page.locator(`${view === "Kort" ? ".issue-card" : ".issue-row"}${name ? `[data-repository="sample/${name}"]` : ""}`);
 async function frameColors(page: Page, view: string, name: string) {
-  const dot = await sidebar(page, name).locator(".repo-dot").evaluate(element => getComputedStyle(element).backgroundColor);
+  const dot = await sidebar(page, name).locator(".project-icon-color").evaluate(element => getComputedStyle(element).backgroundColor);
   for (const entry of await entries(page, view, name).all()) {
     await expect(entry).toHaveClass(/repository-selected/);
-    const values = await entry.evaluate(element => ({ frame: getComputedStyle(element, "::before").borderTopColor, width: getComputedStyle(element, "::before").borderTopWidth, chip: getComputedStyle(element.querySelector(".card-repository i, .row-repository i")!).backgroundColor }));
+    const values = await entry.evaluate(element => ({ frame: getComputedStyle(element, "::before").borderTopColor, width: getComputedStyle(element, "::before").borderTopWidth, chip: getComputedStyle(element.querySelector(".project-icon-color")!).backgroundColor }));
     expect(values.frame).toBe(dot); expect(values.chip).toBe(dot); expect(values.width).toBe("2px");
   }
   return dot;
@@ -99,7 +99,7 @@ test("selection survives pulse, refresh, filters, view switches and palette sync
   await page.getByRole("button", { name: "Skanna QR-kod från annan enhet", exact: true }).click();
   await page.getByLabel("Välj QR-bild", { exact: true }).setInputFiles({ name: "fictional-palette.png", mimeType: "image/png", buffer: image });
   await expect(page.getByRole("dialog", { name: "Läs QR-kod", exact: true })).toHaveCount(0);
-  await expect(alpha.locator(".repo-dot")).toHaveCSS("background-color", "rgb(139, 67, 181)");
+  await expect(alpha.locator(".project-icon-color")).toHaveCSS("background-color", "rgb(139, 67, 181)");
   await expect(entries(page, "Lista")).toHaveCount(14);
   await page.locator(".combined-board .closed").getByRole("button", { name: "Visa fler", exact: true }).click();
   await expect(entries(page, "Lista")).toHaveCount(16);

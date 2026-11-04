@@ -81,10 +81,10 @@ test("one global list mode for every repository and the combined board keeps fil
   await expect(board.locator(".issue-row")).toHaveCount(6);
   await expect(board.locator(".issue-card")).toHaveCount(0);
   const colors = await page.locator(".sidebar-repository-row").evaluateAll(rows => Object.fromEntries(rows.map(row =>
-    [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".repo-dot")!).backgroundColor])));
+    [row.getAttribute("data-repository"), getComputedStyle(row.querySelector(".project-icon-color")!).backgroundColor])));
   for (const row of await board.locator(".issue-row").all()) {
     const name = (await row.locator(".row-repository").getAttribute("title"))!;
-    expect(await row.locator(".row-repository i").evaluate(element => getComputedStyle(element).backgroundColor)).toBe(colors[name]);
+    expect(await row.locator(".row-repository .project-icon-color").evaluate(element => getComputedStyle(element).backgroundColor)).toBe(colors[name]);
   }
   await board.locator(".backlog").getByRole("button", { name: "Visa fler", exact: true }).click();
   await expect(board.locator(".backlog .issue-row")).toHaveCount(4);

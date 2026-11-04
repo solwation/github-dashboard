@@ -37,7 +37,7 @@ for (const mixed of [false, true]) test(`statistics aligns repository filters an
       return { radius: style.borderRadius, background: style.backgroundColor, border: style.borderTopWidth, titleSize: heading.fontSize };
     });
     expect(style).toEqual(overviewStyle);
-    await expect(section.locator('.repo-avatar')).toBeVisible();
+    await expect(section.locator('.project-icon')).toBeVisible();
     await expect(section.locator('.repo-owner')).toBeVisible();
   }
   const fields = page.locator('.statistics-repo-filters select');

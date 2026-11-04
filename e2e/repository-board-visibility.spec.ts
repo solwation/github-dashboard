@@ -69,7 +69,7 @@ test.describe("desktop", () => {
     await expect(page.locator("#repo-1, #repo-2, #repo-11")).toHaveCount(3);
 
     // Hover reveals Hide; it is not shown on an untouched row.
-    const alphaHide = row(page, "sample/alpha").getByRole("button", { name: "Dölj alpha i innehållsvyn" });
+    const alphaHide = row(page, "sample/alpha").getByRole("button", { name: "Dölj sample/alpha i innehållsvyn" });
     await page.mouse.move(1500, 900);
     await expect(alphaHide).toHaveCSS("opacity", "0");
     await row(page, "sample/alpha").hover();
@@ -91,7 +91,7 @@ test.describe("desktop", () => {
     await expect(helloAction).toBeFocused();
     await expect(helloAction).toHaveCSS("opacity", "1");
     await page.keyboard.press("Enter");
-    await expect(helloAction).toHaveAccessibleName("Visa hello i innehållsvyn");
+    await expect(helloAction).toHaveAccessibleName("Visa octo/hello i innehållsvyn");
     await expect(helloAction).toBeFocused();
     await expect(page.locator("#repo-11")).toHaveCount(0);
     // Hidden rows always show their Show action and carry the state in their accessible text.
@@ -101,14 +101,14 @@ test.describe("desktop", () => {
 
     // Private project via the same action; the board is left with nothing to show.
     await row(page, "sample/beta").hover();
-    await row(page, "sample/beta").getByRole("button", { name: "Dölj beta i innehållsvyn" }).click();
+    await row(page, "sample/beta").getByRole("button", { name: "Dölj sample/beta i innehållsvyn" }).click();
     await expect(page.locator(".repo-lane")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Alla repositories är dolda" })).toBeVisible();
 
     // Combined view: no empty sections, and only shown projects contribute cards.
     await page.getByRole("checkbox", { name: "Dela upp per repository", exact: true }).uncheck();
     await expect(page.locator(".combined-board")).toHaveCount(0);
-    await row(page, "sample/beta").getByRole("button", { name: "Visa beta i innehållsvyn" }).click();
+    await row(page, "sample/beta").getByRole("button", { name: "Visa sample/beta i innehållsvyn" }).click();
     await expect(page.locator(".combined-board")).toBeVisible();
     expect((await boardRepositories(page)).items).toEqual(["sample/beta"]);
 
