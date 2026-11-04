@@ -37,7 +37,7 @@ import RepositoryHeading from "./components/RepositoryHeading.vue";
 import RepositoryFilter from "./components/RepositoryFilter.vue";
 import OverviewSummary from "./components/OverviewSummary.vue";
 import EventHistory from "./components/EventHistory.vue";
-import { emptyEventHistory, restoreEventHistory, reconcileEventHistory, seeEvents, type EventSignal } from "./lib/event-history";
+import { emptyEventHistory, restoreEventHistory, reconcileEventHistory, seeEvents, appendEvents, unseenSeverity, type EventSignal } from "./lib/event-history";
 import ColumnLimitField from "./components/ColumnLimitField.vue";
 import { defaultColumnLimit, effectiveColumnLimit, restoreColumnLimits } from "./lib/column-limits";
 import VersionUpdate from "./components/VersionUpdate.vue";
@@ -63,6 +63,7 @@ import ExternalRepositoryForm from "./components/ExternalRepositoryForm.vue";
 import { groupedLaneOrder, MAX_EXTERNAL_REPOSITORIES, mergeExternalRepositories, parseExternalRepositories } from "./lib/external-repositories";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
 import { countUnreadActivity, ActivityTracker } from "./lib/activity";
+import { IssueStateEventTracker, type IssueEventStatus } from "./lib/issue-state-events";
 import { StatusSoundPlayer, StatusTransitionTracker } from "./lib/status-sounds";
 import { createIssueSync, RefreshQueue, RepositoryBackoff } from "./lib/sync";
 import { createBackgroundCheckScheduler } from "./lib/background-sync";
@@ -826,6 +827,7 @@ const notificationPending = ref<string | null>(null);
 const recentClosures = ref(new Set<string>());
 const closureTracker = new ClosureTracker();
 const statusTracker = new StatusTransitionTracker();
+const issueEventTracker = new IssueStateEventTracker();
 const audioUnavailableText = "Ljud kunde inte aktiveras. Klicka eller tryck på en tangent i dashboarden för att försöka igen. Notiser fungerar fortfarande.";
 // Background playback failures stay silent. Explain unavailable audio only when
 // the user explicitly enables repository notifications below.
@@ -904,7 +906,7 @@ const pendingClosures = new PendingClosures({
       changed ||= merged !== lane;
       return merged;
     });
-    if (changed) { lanes.value = next; void persistContent(true); }
+    if (changed) { recordIssueStateEvents(next); lanes.value = next; void persistContent(true); }
   },
   reconcile(repository) {
     if (selected.value.includes(repository)) void refresh(false, false, true, false, [repository]).catch(() => {});
@@ -916,6 +918,7 @@ function clearClosureFeedback() {
   timeoutTracker.clear();
   timedOut.value = [];
   statusTracker.clear();
+  issueEventTracker.clear();
   statusPlayer.clear();
   activity.clear();
   closureTracker.clear();
@@ -1005,14 +1008,30 @@ async function sendClosure(lane: Lane, issue: import("./lib/model").Issue) {
     );
   }
 }
+function recordIssueStateEvents(result: Lane[]) {
+  // Preserve the last verified state while GitHub’s issue lists lag a closure.
+  const observed = result.map(lane => ({ ...lane, issues: [...lane.issues, ...pendingClosureEntries.value
+    .filter(entry => entry.repository.toLowerCase() === lane.repo.full_name.toLowerCase() && !lane.issues.some(issue => issue.id === entry.issue.id))
+    .map(entry => entry.issue)] }));
+  const changes = issueEventTracker.update(observed, rules.value, hideCoordination.value);
+  if (changes.length) {
+    eventHistory.value = appendEvents(eventHistory.value, changes.map(({ repository, issue, from, to }) => ({
+      source: `issue:${repository}:${issue.id}`, severity: "info", repository,
+      message: t("#{number}: {title} · {from} → {to}", { number: issue.number, title: issue.title, from: eventStatusLabel(from), to: eventStatusLabel(to) }),
+    })), Date.now(), dashboardForeground());
+    void save();
+  }
+}
 function closureFeedback(result: Lane[], fullSnapshot = true) {
   result = result.filter(lane => !lane.loading);
   relationsRevisions.value = { ...relationsRevisions.value, ...Object.fromEntries(result.map(lane => [lane.repo.full_name, (relationsRevisions.value[lane.repo.full_name] ?? 0) + 1])) };
   activity.retain(selected.value);
   activity.update(result, rules.value, Date.now(), { discoverNew: fullSnapshot, observedAt: Object.fromEntries(lastSynced) });
   activityRevision.value++;
+  recordIssueStateEvents(result);
   permission.value = notificationPermission();
   statusTracker.retain(selected.value);
+  issueEventTracker.retain(selected.value);
   statusPlayer.play(statusTracker.update(result, rules.value, repo => notificationSounds.value && notificationsEnabled(repo), hideCoordination.value));
   for (const lane of result) {
     for (const issue of closureTracker.update(lane)) {
@@ -1236,6 +1255,9 @@ watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.
 const eventHistory = ref(emptyEventHistory());
 const eventHistoryOpen = ref(false);
 const eventHistoryErrors = ref(false);
+function dashboardForeground() { return document.visibilityState === "visible" && document.hasFocus(); }
+function eventStatusLabel(status: IssueEventStatus) { return status === "closed" ? t("Stängda") : status === "integration" ? t("Väntar på integration") : status === "progress" ? t("Pågående") : "Backlog"; }
+const eventBadgeSeverity = computed(() => unseenSeverity(eventHistory.value.entries));
 const unseenEvents = computed(() => eventHistory.value.entries.filter(item => !item.seen).length);
 const projectErrors = computed(() => contentLanes.value.filter(lane => lane.error).map(lane => ({ repository: lane.repo.full_name, message: lane.error! })));
 function openEventHistory(showErrors = false) {
@@ -1277,7 +1299,7 @@ watch(() => ({
   if (state.publicRepository) signals.push({ source: "public-repository", severity: "error", message: state.publicRepository });
   if (state.cache) signals.push({ source: "cache", severity: "warning", message: t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") + " " + t(state.cache) });
   if (state.notice) signals.push({ source: "notification", severity: permission.value === "denied" ? "warning" : "info", message: state.notice, repository: notificationNoticeRepo.value ?? undefined });
-  const next = reconcileEventHistory(eventHistory.value, signals, Date.now(), scope);
+  const next = reconcileEventHistory(eventHistory.value, signals, Date.now(), scope, dashboardForeground());
   if (JSON.stringify(next) !== JSON.stringify(eventHistory.value)) {
     eventHistory.value = next;
     void save();
@@ -1665,6 +1687,7 @@ function reconcileSelection() {
   activity.retain(selected.value);
   activityRevision.value++;
   statusTracker.retain(selected.value);
+  issueEventTracker.retain(selected.value);
   statusPlayer.clear();
   recentClosures.value = new Set([...recentClosures.value].filter(key => selected.value.some(name => key.startsWith(name + ":"))));
   timedOut.value = timedOut.value.filter(entry => selected.value.includes(entry.repo));
@@ -2336,8 +2359,8 @@ onMounted(async () => {
           </button>
         </div>
       </div>
-      <button type="button" class="icon-button event-history-toggle" aria-haspopup="dialog" :aria-label="t('Händelsehistorik') + (unseenEvents ? ', ' + t(unseenEvents === 1 ? 'En oläst händelse' : '{count} olästa händelser', { count: unseenEvents }) : '')" :title="t('Händelsehistorik')" @click="openEventHistory()">
-        <Bell :size="20" aria-hidden="true" /><span v-if="unseenEvents" class="event-unseen-badge" aria-hidden="true">{{ unseenEvents > 99 ? '99+' : unseenEvents }}</span>
+      <button type="button" class="icon-button event-history-toggle" aria-haspopup="dialog" :aria-description="eventBadgeSeverity ? t(eventBadgeSeverity === 'error' ? 'Fel' : eventBadgeSeverity === 'warning' ? 'Varning' : 'Information') : undefined" :aria-label="t('Händelsehistorik') + (unseenEvents ? ', ' + t(unseenEvents === 1 ? 'En oläst händelse' : '{count} olästa händelser', { count: unseenEvents }) : '')" :title="t('Händelsehistorik')" @click="openEventHistory()">
+        <Bell :size="20" aria-hidden="true" /><span v-if="unseenEvents" class="event-unseen-badge" :data-severity="eventBadgeSeverity" aria-hidden="true">{{ unseenEvents > 99 ? '99+' : unseenEvents }}</span>
       </button>
       <div class="mobile-tools" :class="{ 'mobile-tools-open': mobileToolsOpen }">
       <!-- Phones hide the sidebar, so its update badge is repeated beside the menu (#270). -->

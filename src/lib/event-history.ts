@@ -26,7 +26,7 @@ export function restoreEventHistory(value: unknown): EventHistoryState {
 }
 /** Identical active failures/notices add nothing; clearing a recoverable source adds one info event.
  * Removing a repository is not recovery: callers retain only sources still in their scope. */
-export function reconcileEventHistory(state: EventHistoryState, signals: EventSignal[], now: number, scope?: Set<string>): EventHistoryState {
+export function reconcileEventHistory(state: EventHistoryState, signals: EventSignal[], now: number, scope?: Set<string>, foreground = false): EventHistoryState {
   const active = signals.map(item => ({ ...item, message: item.message.slice(0, MESSAGE_LIMIT) }));
   const previous = new Map(state.active.map(item => [item.source, item]));
   const current = new Map(active.map(item => [item.source, item]));
@@ -40,9 +40,18 @@ export function reconcileEventHistory(state: EventHistoryState, signals: EventSi
       additions.push({ source: old.source, severity: "info", repository: old.repository, message: old.recovery });
     }
   }
+  return appendEvents({ ...state, active }, additions, now, foreground);
+}
+/** Foreground information stays in the timeline without creating a notification. */
+export function appendEvents(state: EventHistoryState, additions: EventSignal[], now: number, foreground: boolean): EventHistoryState {
+  if (!additions.length) return state;
   let id = Math.max(0, ...state.entries.map(item => item.id));
-  const entries = [...state.entries, ...additions.map(({ recovery: _, ...item }) => ({ ...item, id: ++id, timestamp: now, seen: false }))].slice(-EVENT_HISTORY_LIMIT);
-  return { entries, active };
+  const entries = [...state.entries, ...additions.map(({ recovery: _, ...item }) => ({ ...item, message: item.message.slice(0, MESSAGE_LIMIT), id: ++id, timestamp: now, seen: foreground && item.severity === "info" }))].slice(-EVENT_HISTORY_LIMIT);
+  return { ...state, entries };
+}
+export function unseenSeverity(entries: AppEvent[]): EventSeverity | null {
+  const unseen = entries.filter(item => !item.seen);
+  return unseen.some(item => item.severity === "error") ? "error" : unseen.some(item => item.severity === "warning") ? "warning" : unseen.length ? "info" : null;
 }
 /** Only the snapshot rendered by the user is acknowledged; later arrivals remain unseen. */
 export function seeEvents(state: EventHistoryState, ids: number[]): EventHistoryState {

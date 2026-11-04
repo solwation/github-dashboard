@@ -7,18 +7,29 @@ const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, ful
 async function fixture(page: Page) {
   const failures = new Set(["alpha", "beta"]);
   let login = "history-account";
+  let status: string | null = null;
+  let verificationGate: Promise<void> | undefined; let releaseVerification: (() => void) | undefined;
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     if (url.pathname === "/user") return route.fulfill({ json: { login, avatar_url: "" } });
     if (url.pathname === "/user/repos") return route.fulfill({ json: repos });
+    if (url.pathname === "/repos/sample/alpha/issues/1" && status === "pending-close") {
+      await verificationGate;
+      const at = new Date().toISOString();
+      return route.fulfill({ json: { id: 1, number: 1, title: "Moving fixture", body: "Synthetic event", comments: 0, state: "closed", created_at: "2026-11-01T00:00:00Z", updated_at: at, closed_at: at, labels: [], assignees: [], html_url: "https://github.com/sample/alpha/issues/1" } });
+    }
     if (url.pathname.endsWith("/issues") && url.searchParams.has("state")) {
       const repo = repos.find(repo => url.pathname.includes(`/${repo.name}/`))!;
       if (failures.has(repo.name)) return route.fulfill({ status: 500, json: { message: `Synthetic ${repo.name} failure: ` + "Long diagnostic context ".repeat(12) } });
+      if (status && repo.name === "alpha") {
+        const closed = status === "closed", at = new Date().toISOString();
+        return route.fulfill({ json: status !== "pending-close" && url.searchParams.get("state") === (closed ? "closed" : "open") ? [{ id: 1, number: 1, title: "Moving fixture", body: "Synthetic event", comments: 0, state: closed ? "closed" : "open", created_at: "2026-11-01T00:00:00Z", updated_at: at, closed_at: closed ? at : null, labels: status === "progress" ? [{ name: "in-progress", color: "fff" }] : [], assignees: [], html_url: "https://github.com/sample/alpha/issues/1" }] : [] });
+      }
     }
     return route.fulfill({ json: [] });
   });
   await page.goto("/");
-  return { failures, account(value: string) { login = value; } };
+  return { failures, holdVerification() { verificationGate = new Promise<void>(resolve => { releaseVerification = resolve; }); return () => releaseVerification?.(); }, status(value: string) { status = value; failures.clear(); }, account(value: string) { login = value; } };
 }
 async function seed(page: Page, events = false) {
   await page.evaluate(async ({ events, repositories }) => {
@@ -69,7 +80,7 @@ test("groups project failures, deduplicates reloads, keeps new arrivals unseen a
   await historyDialog(page).locator(".event-current-error").first().getByRole("button", { name: "Försök igen" }).click();
   await expect(historyDialog(page).locator(".event-current-error")).toHaveCount(1);
   await expect(historyDialog(page).getByRole("button", { name: "Visa nya händelser" })).toBeVisible();
-  await expect(historyButton(page).locator(".event-unseen-badge")).toHaveText("1");
+  await expect(historyButton(page).locator(".event-unseen-badge")).toHaveCount(0); // Foreground recovery stays in history without notifying.
   await historyDialog(page).getByRole("button", { name: "Visa nya händelser" }).click();
   await expect(historyDialog(page).locator(".event-history-item").first()).toContainText("Synkroniseringen fungerar igen.");
   await closeHistory(page); await expect(summary).toBeFocused();
@@ -113,7 +124,7 @@ test("diagnostics fit desktop, rail and touch phones with aligned rows and keybo
     const page = await context.newPage(); await fixture(page); await seed(page, true); await signIn(page);
     await expect(page.locator(".project-error-summary")).toContainText("2 projektfel");
     for (const theme of ["light", "dark"]) {
-      await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+      await page.evaluate(async theme => { const path = "/src/lib/theme.ts"; (await import(path)).setTheme(theme); }, theme);
       await expect(historyButton(page)).toBeVisible();
       const button = (await historyButton(page).boundingBox())!;
       if (mobile) { expect(button.width).toBeGreaterThanOrEqual(44); expect(button.height).toBeGreaterThanOrEqual(44); }
@@ -139,4 +150,43 @@ test("diagnostics fit desktop, rail and touch phones with aligned rows and keybo
     await context.close();
   }
   if (evidence) await writeFile(`${evidence}/event-history-geometry.json`, JSON.stringify(measurements, null, 2));
+});
+
+test("state changes stay in history while only background info increments the green badge", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const api = await fixture(page); api.status("backlog"); await seed(page);
+  await page.evaluate(() => { (window as any).eventsForeground = true; Object.defineProperty(document, "hasFocus", { value: () => (window as any).eventsForeground }); });
+  await signIn(page); await expect(page.locator(".issue-title")).toHaveText("Moving fixture");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
+  await expect(historyButton(page).locator(".event-unseen-badge")).toHaveCount(0);
+  api.status("progress"); await page.keyboard.press("Control+r");
+  await expect.poll(() => readSettings(page, "history-account").then(saved => saved?.eventHistory?.entries.length)).toBe(1);
+  await expect(historyButton(page).locator(".event-unseen-badge")).toHaveCount(0);
+  await historyButton(page).click(); await expect(historyDialog(page).locator(".event-history-item")).toContainText("Backlog → Pågående"); await closeHistory(page);
+  await page.evaluate(() => { (window as any).eventsForeground = false; });
+  const release = api.holdVerification(); api.status("pending-close"); await page.keyboard.press("Control+r");
+  await expect(page.locator(".issue-card.pending-closure")).toHaveCount(1);
+  await expect(historyButton(page).locator(".event-unseen-badge")).toHaveCount(0); // Unverified closing is not an event.
+  release();
+  const badge = historyButton(page).locator(".event-unseen-badge"); await expect(badge).toHaveText("1"); await expect(badge).toHaveAttribute("data-severity", "info");
+  await page.evaluate(() => { (window as any).eventsForeground = true; });
+  await page.keyboard.press("Control+r"); await expect(badge).toHaveText("1"); // Return/unchanged poll does not clear or duplicate.
+  await page.screenshot({ path: testInfo.outputPath("green-background-info.png") });
+  api.failures.add("beta"); await page.keyboard.press("Control+r");
+  await expect(badge).toHaveText("2"); await expect(badge).toHaveAttribute("data-severity", "error");
+  await historyButton(page).click(); await expect(historyDialog(page).locator(".event-history-item")).toHaveCount(3); await expect(historyDialog(page).locator(".event-history-item").filter({ hasText: "Pågående → Stängda" })).toHaveCount(1); await closeHistory(page);
+  await expect(badge).toHaveCount(0);
+});
+
+test("unseen warnings use an orange badge in both themes and disappear when read", async ({ page }, testInfo) => {
+ await page.emulateMedia({ reducedMotion: "reduce" });
+ const api = await fixture(page); api.failures.clear(); await seed(page, true); await signIn(page);
+ const badge = historyButton(page).locator(".event-unseen-badge"); await expect(badge).toHaveText("2"); await expect(badge).toHaveAttribute("data-severity", "warning");
+ for (const theme of ["light", "dark"]) {
+  await page.evaluate(async theme => { const path = "/src/lib/theme.ts"; (await import(path)).setTheme(theme); }, theme);
+  await expect(badge).toHaveCSS("background-color", theme === "light" ? "rgb(148, 96, 0)" : "rgb(224, 183, 101)");
+  await expect(page.locator(".stat").first()).toHaveCSS("background-color", theme === "dark" ? "rgb(23, 33, 36)" : "rgb(255, 255, 255)");
+  await page.screenshot({ path: testInfo.outputPath(`orange-warning-${theme}.png`) });
+ }
+ await historyButton(page).click(); await expect(historyDialog(page).locator(".event-history-item")).toHaveCount(2); await closeHistory(page); await expect(badge).toHaveCount(0);
 });

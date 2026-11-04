@@ -8,11 +8,12 @@
     "sections": [
       {
         "text": {
-          "sv": "Öppna projektfel från en samlad rad och följ information, varningar och fel via headerns klocka, med krypterad historik per konto.",
-          "en": "Open project errors from one summary and follow information, warnings and errors through the header bell, with encrypted history per account."
+          "sv": "Öppna samlade projektfel och följ statusbyten i historiken, med färgade osedda notiser och informationsnotiser bara i bakgrunden.",
+          "en": "Open grouped project errors and follow status changes in history, with severity-colored unread badges and information notifications only in the background."
         },
         "issues": [
-          389
+          389,
+          400
         ]
       },
       {

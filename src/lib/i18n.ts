@@ -719,6 +719,7 @@ export const english: Record<string, string> = {
   "Nyligen flyttad. Markera som läst": "Recently moved. Mark as read",
   "Flyttad till {column}": "Moved to {column}",
   "Verifierar stängning": "Verifying closure",
+  "#{number}: {title} · {from} → {to}": "#{number}: {title} · {from} → {to}",
   "Väntar på integration": "Awaiting integration",
   "Väntar": "Waiting",
   "Väntar på integration. Aktiv arbetstid {duration}; väntan räknas inte som arbete.": "Awaiting integration. Active working time {duration}; waiting does not count as work.",
