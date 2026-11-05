@@ -97,8 +97,9 @@ in plaintext browser preferences or shared through QR transfers.
 - [Issue workflow instructions for AI assistants](public/ISSUEFLOW.md)
 - [Repository development workflow](AI.md) and [design rules](DESIGN.md)
 - [Orchestra policy](.orchestra/project.md): `/orkester` uses
-  [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern) **v0.7.1**,
-  pinned as a squashed Git subtree in `.orchestra/shared`
+  [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern) **v0.8.0**,
+  pinned as a squashed Git subtree in `.orchestra/shared`, with `integration-ready`
+  handoffs retaining their integration owner while freeing worker capacity
   ([update policy](.orchestra/project.md#upstream-update-discovery),
   [installation guide](.orchestra/shared/INSTALL.md))
 

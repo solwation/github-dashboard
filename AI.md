@@ -14,9 +14,8 @@ This file applies to all work in this repository, regardless of which AI tool pe
   shared [authority procedure](.orchestra/shared/ISSUE-WORKFLOW.md) for labels/status.
   Add `in-progress` immediately before actual work. A finished handoff awaiting integration
   replaces `in-progress` with `integration-ready` and keeps its owner label; integration,
-  or a correction, sets `in-progress` again. This project overrides the shared v0.7.1
-  rule that pauses an integration wait by removing its work labels. Remove all recognized
-  work labels, including `integration-ready`, when paused, handed back, closed or
+  or a correction, sets `in-progress` again. Remove all recognized work labels, including
+  `integration-ready`, when paused, handed back, closed or
   reopened. Owner labels are separate from work status and priority. Share one resolved
   guide per session.
   When the first sub-issue starts, also mark its parent `in-progress`, and keep the parent's

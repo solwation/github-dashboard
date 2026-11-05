@@ -44,11 +44,15 @@ applicable [phase hooks](#project-phase-hooks) and the
   the earlier valid claim wins. Never seize another session's active issue.
 - Use one stable `orkester: <id>` plus `in-progress` only during actual work. Maintain
   one editable status comment in #97 with issue, owner/phase, file responsibilities,
-  worktree, capacity and latest checkpoint. Preserve the same identity when resuming.
+  worktree, capacity and latest checkpoint. Track the integration queue there and in
+  the private checkpoint: integration owner, owner/session label, branch/checkout,
+  exact revision, checks/evidence, remaining acceptance and next action. Reconcile
+  owned handoffs at every queue check before dispatch or declaring drain; a missing
+  label does not make a documented handoff available for reassignment. Preserve the
+  same identity when resuming.
 - Remove all recognized work labels (including `integration-ready`) and this session's
-  owner labels on pause, completion or reopening. **Project override** of the shared
-  v0.7.1 rule that a worker waiting for integration is paused with its work labels
-  removed: a finished worker handoff delivered into the integration queue replaces
+  owner labels on pause, completion or reopening. A finished worker handoff delivered
+  into the integration queue follows the shared handoff procedure: it replaces
   `in-progress` with `integration-ready` and keeps the session's owner label as
   ownership. It consumes no active slot and is not a work queue for other workers or
   sessions; the owning conductor sets `in-progress` again when integration review starts
@@ -208,8 +212,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.7.1**,
-commit **94c81f236bf892e979ecf1b20ede9d12885cc3d2** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.8.0**,
+commit **6ee6dd23ed85e5a91641d1939d553e4f789027d4** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
