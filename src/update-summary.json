@@ -1,10 +1,10 @@
 {
-  "baseCommit": "fc6b7f4da4d9fc7acf05bf0116faec457bce5bd3",
+  "baseCommit": "6f457086ee879791971803a801e31f02ead364a4",
   "summary": {
-    "sv": "List-simbanor visar cellräknare bara när fler ärenden finns än de som visas. Tomma celler och fullt visade listor blir renare.",
-    "en": "List swimlanes show cell counts only when more issues exist than are displayed. Empty cells and fully displayed lists look cleaner."
+    "sv": "Grupperingsläget för en gemensam board heter nu Samlad (Joined på engelska), så det blir tydligare vad valet gör.",
+    "en": "The combined-board grouping mode is now called Joined (Samlad in Swedish), making its purpose clearer."
   },
   "issues": [
-    406
+    407
   ]
 }

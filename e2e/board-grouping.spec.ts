@@ -6,7 +6,7 @@ import { connectGrouping, groupingFixture, groupingOption, setBoardGrouping } fr
 const box = async (locator: Locator) => (await locator.boundingBox())!;
 const noPageOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
-test("None, Split and Swimlanes keep counts, filters and the choice across Cards/List, reloads and transfers (#390)", async ({ page }) => {
+test("Joined, Split and Swimlanes keep counts, filters and the choice across Cards/List, reloads and transfers (#390)", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   const repos = await groupingFixture(page, 3);
   await connectGrouping(page, repos);
@@ -97,7 +97,7 @@ test("None, Split and Swimlanes keep counts, filters and the choice across Cards
   await expect(bands).toHaveCount(3);
   await expect(groupingOption(page, "swimlanes")).toHaveAttribute("aria-pressed", "true");
 
-  // Older transfers carry only the boolean: true stays Split and false stays None.
+  // Older transfers carry only the boolean: true stays Split and false stays Joined.
   const selected = repos.map(repo => repo.full_name);
   for (const [splitByRepository, grouping, locator] of [[false, "none", ".combined-board"], [true, "split", ".repo-lane"]] as const) {
     await page.goto("about:blank");

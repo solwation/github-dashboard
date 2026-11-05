@@ -45,7 +45,7 @@ export interface HandoffPreferences {
   hideCoordination?: boolean;
   /** Legacy boolean, still written as `boardGrouping === "split"` for older readers (#390). */
   splitByRepository?: boolean;
-  /** None, split per repository or swimlanes (#390); wins over splitByRepository when present. */
+  /** Joined, split per repository or swimlanes (#390); wins over splitByRepository when present. */
   boardGrouping?: BoardGrouping;
   /** One global card/list choice for every repository and the combined board (#147). */
   listMode?: boolean;

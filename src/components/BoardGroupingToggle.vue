@@ -5,13 +5,13 @@ import { useLanguage } from "../lib/i18n";
 import type { BoardGrouping } from "../lib/board-grouping";
 const { t } = useLanguage();
 /**
- * Grouping choice (#390): None, Split and Swimlanes share the board-mode toggle's segmented
+ * Grouping choice (#390): Joined, Split and Swimlanes share the board-mode toggle's segmented
  * pattern. Swimlanes are rows in Cards and columns in List, so its icon follows the mode.
  */
 const props = defineProps<{ modelValue: BoardGrouping; list: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: BoardGrouping] }>();
 const options = computed(() => [
-  { value: "none" as const, label: t("Ingen"), hint: t("En gemensam board utan gruppering"), icon: StretchHorizontal },
+  { value: "none" as const, label: t("Samlad"), hint: t("En gemensam board utan gruppering"), icon: StretchHorizontal },
   { value: "split" as const, label: t("Dela upp"), hint: t("En separat board per repository"), icon: SquareSplitVertical },
   { value: "swimlanes" as const, label: t("Simbanor"),
     hint: props.list ? t("En gemensam lista med en kolumn per repository") : t("En gemensam board med en rad per repository"),

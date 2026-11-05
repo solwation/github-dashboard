@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-05",
+    "summary": {
+      "sv": "Tydligare namn på den gemensamma boarden.",
+      "en": "A clearer name for the combined board."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Grupperingsläget för alla projekt tillsammans heter nu Samlad på svenska och Joined på engelska.",
+          "en": "The grouping mode for all projects together is now called Joined in English and Samlad in Swedish."
+        },
+        "issues": [
+          407
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-04",
     "summary": {
       "sv": "Tydligare projektikoner, valbara användarnamn, simbanor per projekt, samlad felöversikt och händelsehistorik samt arbete som väntar på integration.",

@@ -162,7 +162,7 @@ export const english: Record<string, string> = {
   "Äldsta omvalideringen av återanvänd commithistorik: {time} UTC.": "Oldest revalidation of reused commit history: {time} UTC.",
   "Dela upp per repository": "Split by repository",
   "Gruppering per repository": "Group by repository",
-  "Ingen": "None",
+  "Samlad": "Joined",
   "Dela upp": "Split",
   "Simbanor": "Swimlanes",
   "En gemensam board utan gruppering": "One combined board without grouping",

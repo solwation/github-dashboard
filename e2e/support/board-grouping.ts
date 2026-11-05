@@ -1,9 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
 export type BoardGrouping = "none" | "split" | "swimlanes";
-const optionNames: Record<BoardGrouping, RegExp> = { none: /^(Ingen|None)$/, split: /^(Dela upp|Split)$/, swimlanes: /^(Simbanor|Swimlanes)$/ };
+const optionNames: Record<BoardGrouping, RegExp> = { none: /^(Samlad|Joined)$/, split: /^(Dela upp|Split)$/, swimlanes: /^(Simbanor|Swimlanes)$/ };
 
-/** The None/Split/Swimlanes control (#390) in either language. */
+/** The Joined/Split/Swimlanes control (#390) in either language. */
 export function groupingControl(page: Page) {
   return page.getByRole("group", { name: /^(Gruppering per repository|Group by repository)$/ });
 }
@@ -16,7 +16,7 @@ export async function setBoardGrouping(page: Page, grouping: BoardGrouping) {
 }
 /**
  * Checkbox-like access for specs written for the former "Split by repository" checkbox:
- * checked means Split and unchecked means None.
+ * checked means Split and unchecked means Joined.
  */
 export function boardSplit(page: Page) {
   return {
