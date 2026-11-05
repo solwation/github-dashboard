@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isInactiveRepository, pagesUrl, recentlyChanged, summarizeLanes } from "../src/lib/sidebar";
+import { isInactiveRepository, pagesUrl, websiteUrl, recentlyChanged, summarizeLanes } from "../src/lib/sidebar";
 import type { Issue, Lane } from "../src/lib/model";
 const issue = (id: number, labels: string[] = [], overrides: Partial<Issue> = {}): Issue => ({
   id, number: id, title: `Task ${id}`, html_url: "https://github.com/example/project/issues/1",
@@ -52,14 +52,26 @@ describe("sidebar visibility and Pages link", () => {
     expect(pagesUrl(repo("project", { private: false, has_pages: true }))).toBe("https://example.github.io/project/");
     expect(pagesUrl(repo("Example.github.io", { private: false, has_pages: true }))).toBe("https://example.github.io/");
   });
+  it("prefers a configured HTTP(S) Website even with Pages enabled", () => {
+    for (const homepage of ["https://project.example/custom?q=1#about", "http://project.example/"]) {
+      const r = repo("project", { has_pages: true, homepage });
+      expect(websiteUrl(r)).toBe(homepage);
+      expect(summarizeLanes([{ repo: r, labels: [], issues: [] }], {}, true)[0]?.websiteUrl).toBe(homepage);
+    }
+    expect(websiteUrl(repo("project", { homepage: "  HTTPS://Project.Example  " }))).toBe("https://project.example/");
+  });
+  it.each([undefined, null, "", "   ", "example.com", "/relative", "https://", "javascript:alert(1)", "data:text/html,hi", "ftp://example.com", "https://user:secret@example.com"])("falls back safely for unusable Website %s", homepage => {
+    expect(websiteUrl(repo("project", { homepage, has_pages: true }))).toBe("https://example.github.io/project/");
+    expect(websiteUrl(repo("project", { homepage, has_pages: false }))).toBeNull();
+  });
   it("hides visibility and Pages when the data is unknown or Pages is off", () => {
     const summary = (r: object) => summarizeLanes([{ repo: r, labels: [], issues: [] } as Lane], {}, true)[0]!;
     const unknown = summary(repo("project"));
     expect(unknown).not.toHaveProperty("private");
-    expect(unknown).not.toHaveProperty("pagesUrl");
+    expect(unknown).not.toHaveProperty("websiteUrl");
     expect(summary(repo("project", { private: true, has_pages: false }))).toMatchObject({ private: true });
-    expect(summary(repo("project", { private: true, has_pages: false }))).not.toHaveProperty("pagesUrl");
-    expect(summary(repo("project", { private: false, has_pages: true }))).toMatchObject({ private: false, pagesUrl: "https://example.github.io/project/" });
+    expect(summary(repo("project", { private: true, has_pages: false }))).not.toHaveProperty("websiteUrl");
+    expect(summary(repo("project", { private: false, has_pages: true }))).toMatchObject({ private: false, websiteUrl: "https://example.github.io/project/" });
   });
 });
 

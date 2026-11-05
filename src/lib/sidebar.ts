@@ -13,7 +13,9 @@ export interface SidebarRepository {
   unavailable?: boolean;
   /** Absent when the repository data does not say (demo, older cache). */
   private?: boolean;
-  /** Public GitHub Pages address, only when the repository reports Pages. */
+  /** Configured HTTP(S) website, falling back to the standard GitHub Pages address. */
+  websiteUrl?: string;
+  /** Pages metadata also preserves the existing private/Pages visibility indicator. */
   pagesUrl?: string;
   /** Another person's public repository, shown in its own group below the account's own. */
   external?: boolean;
@@ -28,6 +30,17 @@ export function pagesUrl(repo: Pick<Repo, "name" | "has_pages" | "owner" | "full
   return repo.name.toLowerCase() === host ? `https://${host}/` : `https://${host}/${encodeURIComponent(repo.name)}/`;
 }
 
+/** Prefer GitHub's configured Website; reject non-web and credential-bearing addresses. */
+export function websiteUrl(repo: Pick<Repo, "name" | "has_pages" | "owner" | "full_name" | "homepage">): string | null {
+  if (typeof repo.homepage === "string" && /^https?:\/\//i.test(repo.homepage.trim())) {
+    try {
+      const url = new URL(repo.homepage.trim());
+      if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) return url.href;
+    } catch { /* Invalid Website: keep the existing Pages fallback. */ }
+  }
+  return pagesUrl(repo);
+}
+
 /** Summarize the loaded lanes before text search. Closed issues already use the API's 30-day window. */
 export function summarizeLanes(
   lanes: Lane[],
@@ -37,6 +50,7 @@ export function summarizeLanes(
   external?: ReadonlySet<string>,
 ): SidebarRepository[] {
   return lanes.map((lane) => {
+    const website = websiteUrl(lane.repo);
     const summary: SidebarRepository = {
       id: lane.repo.id,
       name: lane.repo.name,
@@ -46,6 +60,7 @@ export function summarizeLanes(
       closed: 0,
       changedAt: null,
       ...(typeof lane.repo.private === "boolean" ? { private: lane.repo.private } : {}),
+      ...(website ? { websiteUrl: website } : {}),
       ...(pagesUrl(lane.repo) ? { pagesUrl: pagesUrl(lane.repo)! } : {}),
       ...(external?.has(lane.repo.full_name) ? { external: true } : {}),
       ...(lane.loading ? { loading: true } : {}),

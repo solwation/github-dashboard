@@ -34,6 +34,7 @@ export function publicRepositoryRecord(value: unknown): Repo | null {
   return { id: repo.id!, name: short!, full_name: name, private: false, owner: { login: owner! },
     html_url: `https://github.com/${name}`, description: typeof repo.description === "string" ? repo.description : null,
     ...(restoreProjectIcon(repo.projectIcon) ? { projectIcon: restoreProjectIcon(repo.projectIcon) } : {}),
+    ...(typeof repo.homepage === "string" ? { homepage: repo.homepage } : {}),
     ...(repo.has_pages === true ? { has_pages: true } : {}),
     ...(typeof repo.language === "string" ? { language: repo.language } : {}) };
 }

@@ -10,18 +10,18 @@ describe('public repository input', () => {
     expect(PUBLIC_SETTINGS_ACCOUNT).not.toMatch(/^[a-z\d-]+$/i);
   });
   it('restores only public metadata with canonical URLs', () => {
-    const repo = { id: 1, full_name: 'sample/project', private: false, html_url: 'https://example.com', description: 'Public' };
-    expect(publicRepositoryRecord(repo)).toMatchObject({ html_url: 'https://github.com/sample/project', owner: { login: 'sample' } });
+    const repo = { id: 1, full_name: 'sample/project', private: false, html_url: 'https://example.com', description: 'Public', homepage: 'https://website.example/', has_pages: true };
+    expect(publicRepositoryRecord(repo)).toMatchObject({ html_url: 'https://github.com/sample/project', owner: { login: 'sample' }, homepage: 'https://website.example/', has_pages: true });
     for (const value of [{ ...repo, private: true }, { ...repo, private: undefined }, { ...repo, id: -1 }, { ...repo, full_name: '../private' }, null]) expect(publicRepositoryRecord(value)).toBeNull();
   });
 });
 describe('anonymous GitHub transport', () => {
   it('omits Authorization and skips GraphQL-only optional data', async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 1, full_name: 'sample/project', private: false })));
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 1, full_name: 'sample/project', private: false, homepage: 'https://website.example/', has_pages: true })));
     vi.stubGlobal('fetch', fetcher);
     const client = new GitHub();
     expect(client.authenticated).toBe(false);
-    await expect(client.publicRepository('https://github.com/sample/project')).resolves.toMatchObject({ full_name: 'sample/project', private: false });
+    await expect(client.publicRepository('https://github.com/sample/project')).resolves.toMatchObject({ full_name: 'sample/project', private: false, homepage: 'https://website.example/', has_pages: true });
     expect(fetcher.mock.calls[0]![0].pathname).toBe('/repos/sample/project');
     expect(new Headers(fetcher.mock.calls[0]![1].headers).has('Authorization')).toBe(false);
     const issue = { number: 1 } as Issue;

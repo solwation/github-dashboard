@@ -68,6 +68,18 @@ function lastChange(changedAt: string | null) {
       })
     : t("Ingen registrerad aktivitet");
 }
+function repositoryStatus(repo: SidebarRepository) {
+  return [
+    hiddenFromBoard(repo) ? t("Dold i innehållsvyn") : "",
+    repo.loading ? t("Hämtar…") : !repo.unavailable ? [
+      t("Backlog: {count}", { count: repo.backlog }),
+      t("Pågående: {count}", { count: repo.progress }),
+      t("Stängda senaste 30 dagarna: {count}", { count: repo.closed }),
+    ].join(" · ") : "",
+    recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now.value) ? t("Oläst aktivitet") : "",
+    lastChange(repo.changedAt),
+  ].filter(Boolean).join(" · ");
+}
 </script>
 <template>
   <div class="sidebar-projects" :aria-busy="restoring || undefined">
@@ -79,7 +91,7 @@ function lastChange(changedAt: string | null) {
     </div>
     <div v-for="repo in activeRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
     <div class="repo-body">
-    <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+    <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName" :aria-describedby="`sidebar-repository-status-${repo.id}`" :aria-busy="repo.loading || undefined">
       <ProjectIcon :repository="repo.fullName" sidebar />
       <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
       <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
@@ -91,8 +103,7 @@ function lastChange(changedAt: string | null) {
         <span class="status-count progress" :title="t('Pågående: {count}', { count: repo.progress })"><Clock3 aria-hidden="true" /><span class="sr-only">{{ t('Pågående') }}: </span><span class="status-count-value">{{ repo.progress }}</span></span>
         <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
       </span>
-      <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
-      <span v-if="hiddenFromBoard(repo)" class="sr-only">{{ t("Dold i innehållsvyn") }}</span>
+      <span :id="`sidebar-repository-status-${repo.id}`" class="sr-only">{{ repositoryStatus(repo) }}</span>
     </a>
     <RepositoryActions :repository="repo" :hidden="hiddenFromBoard(repo)" :can-toggle="!!visibility" @toggle-visibility="emit('toggleVisibility', repo.fullName)" />
     </div>
@@ -107,7 +118,7 @@ function lastChange(changedAt: string | null) {
     <div v-if="inactiveRepos.length > 0" id="sidebar-inactive-repositories" class="sidebar-inactive-group">
       <div v-for="repo in inactiveRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+      <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName" :aria-describedby="`sidebar-repository-status-${repo.id}`" :aria-busy="repo.loading || undefined">
         <ProjectIcon :repository="repo.fullName" sidebar />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
@@ -119,8 +130,7 @@ function lastChange(changedAt: string | null) {
           <span class="status-count progress" :title="t('Pågående: {count}', { count: repo.progress })"><Clock3 aria-hidden="true" /><span class="sr-only">{{ t('Pågående') }}: </span><span class="status-count-value">{{ repo.progress }}</span></span>
           <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
         </span>
-        <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
-        <span v-if="hiddenFromBoard(repo)" class="sr-only">{{ t("Dold i innehållsvyn") }}</span>
+        <span :id="`sidebar-repository-status-${repo.id}`" class="sr-only">{{ repositoryStatus(repo) }}</span>
       </a>
     <RepositoryActions :repository="repo" :hidden="hiddenFromBoard(repo)" :can-toggle="!!visibility" @toggle-visibility="emit('toggleVisibility', repo.fullName)" />
       </div>
@@ -131,7 +141,7 @@ function lastChange(changedAt: string | null) {
       <h3 id="sidebar-external-heading" class="nav-caption sidebar-external-heading">{{ t("Andras publika projekt") }}</h3>
       <div v-for="repo in externalRepos" :key="repo.id" class="sidebar-repository-row" :class="{ 'has-wide-counts': Math.max(repo.backlog, repo.progress, repo.closed) >= 100, 'repository-hidden': hiddenFromBoard(repo) }" :data-repository="repo.fullName">
       <div class="repo-body">
-      <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName + ' · ' + (hiddenFromBoard(repo) ? t('Dold i innehållsvyn') + ' · ' : '') + (repo.loading ? t('Hämtar…') : lastChange(repo.changedAt))" :aria-busy="repo.loading || undefined">
+      <a class="repo-nav sidebar-repository" :aria-label="repo.fullName" :class="{ 'repository-selected': selectedRepository === repo.fullName }" :aria-current="selectedRepository === repo.fullName ? 'true' : undefined" :style="{ '--repository-color': repositoryColor(repo.fullName, repositoryColors) }" :href="(statistics ? '#statistics-repo-' : '#repo-') + repo.id" @click="activateRepository($event, repo)" @focus="emit('interest', repo.fullName)" @pointerenter="$event.pointerType === 'mouse' && hoverStart(repo.fullName)" @pointerleave="hoverEnd" :title="repo.fullName" :aria-describedby="`sidebar-repository-status-${repo.id}`" :aria-busy="repo.loading || undefined">
         <ProjectIcon :repository="repo.fullName" sidebar />
         <span class="repository-label" :title="repo.fullName">{{ repo.name }}</span>
         <span v-if="recentlyChanged(repo.unreadAt === undefined ? repo.changedAt : repo.unreadAt, now)" class="repo-slots">
@@ -143,8 +153,7 @@ function lastChange(changedAt: string | null) {
           <span class="status-count progress" :title="t('Pågående: {count}', { count: repo.progress })"><Clock3 aria-hidden="true" /><span class="sr-only">{{ t('Pågående') }}: </span><span class="status-count-value">{{ repo.progress }}</span></span>
           <span class="status-count closed" :title="t('Stängda senaste 30 dagarna: {count}', { count: repo.closed })"><CircleCheck aria-hidden="true" /><span class="sr-only">{{ t('Stängda senaste 30 dagarna') }}: </span><span class="status-count-value">{{ repo.closed }}</span></span>
         </span>
-        <time v-if="repo.changedAt" class="sr-only" :datetime="repo.changedAt">{{ lastChange(repo.changedAt) }}</time>
-        <span v-if="hiddenFromBoard(repo)" class="sr-only">{{ t("Dold i innehållsvyn") }}</span>
+        <span :id="`sidebar-repository-status-${repo.id}`" class="sr-only">{{ repositoryStatus(repo) }}</span>
       </a>
     <RepositoryActions :repository="repo" :hidden="hiddenFromBoard(repo)" :can-toggle="!!visibility" @toggle-visibility="emit('toggleVisibility', repo.fullName)" />
       </div>

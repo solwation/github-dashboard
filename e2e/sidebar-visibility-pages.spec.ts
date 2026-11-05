@@ -5,12 +5,12 @@ import { boardSplit } from "./support/board-grouping";
 
 const long = 'a-very-long-repository-name-that-must-keep-its-ellipsis-in-the-slim-sidebar';
 const repositories = [
-  { id: 1, name: 'site', full_name: 'Sample/site', private: false, has_pages: true },
+  { id: 1, name: 'site', full_name: 'Sample/site', private: false, has_pages: true, homepage: 'https://website.example/custom/' },
   { id: 2, name: 'Sample.github.io', full_name: 'Sample/Sample.github.io', private: false, has_pages: true },
   { id: 3, name: long, full_name: `Sample/${long}`, private: true, has_pages: true },
   { id: 4, name: 'unknown', full_name: 'Sample/unknown' },
   { id: 5, name: 'notes', full_name: 'Sample/notes', private: true, has_pages: false },
-  { id: 6, name: 'pages-only', full_name: 'Sample/pages-only', has_pages: true },
+  { id: 6, name: 'pages-only', full_name: 'Sample/pages-only', has_pages: true, homepage: 'javascript:alert(1)' },
   { id: 7, name: 'private-only', full_name: 'Sample/private-only', private: true, has_pages: false },
 ].map(repo => ({ ...repo, description: 'Fixture', html_url: `https://github.com/${repo.full_name}`, owner: { login: 'Sample' } }));
 
@@ -47,6 +47,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     }
     await route.fulfill({ json: data });
   });
+  await page.route('https://website.example/**', route => route.fulfill({ body: '<title>Fixture Website</title>' }));
   await page.route('https://sample.github.io/**', route => route.fulfill({ body: '<title>Fixture Pages</title>' }));
   await page.goto('/');
   await page.getByRole('button', { name: 'Anslut GitHub', exact: true }).click();
@@ -80,7 +81,7 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   // Globe = Pages link (only with Pages); lock only for private repositories without Pages; GitHub link on every row.
   await expect(row('site').locator('.repo-visibility')).toHaveCount(0);
   await expect(row(long).locator('.repo-visibility')).toHaveCount(0);
-  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna GitHub Pages för Sample/${long}`);
+  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna webbplatsen för Sample/${long}`);
   await expect(row('notes').locator('.repo-visibility')).toHaveAttribute('aria-label', 'Privat repository');
   await expect(row('notes').locator('.repo-pages')).toHaveCount(0);
   for (const repo of repositories) {
@@ -89,9 +90,13 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
     await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('aria-label', `Öppna ${repo.full_name} på GitHub`);
   }
   await expect(row('unknown').locator('.repo-pages')).toHaveCount(0);
-  await expect(row('site').locator('.repo-pages')).toHaveAttribute('href', 'https://sample.github.io/site/');
+  await expect(row('site').locator('.repo-pages')).toHaveAttribute('href', 'https://website.example/custom/');
   await expect(row('Sample.github.io').locator('.repo-pages')).toHaveAttribute('href', 'https://sample.github.io/');
   await expect(row('site').locator('.repo-pages')).toHaveAttribute('target', '_blank');
+  await expect(row('pages-only').locator('.repo-pages')).toHaveAttribute('href', 'https://sample.github.io/pages-only/');
+  await expect(row('site').locator('.repo-pages')).toHaveAttribute('title', 'Öppna webbplatsen för Sample/site');
+  for (const repo of repositories) await expect(row(repo.name).locator('.sidebar-repository')).toHaveAttribute('title', repo.full_name);
+  await expect(row('site').locator('.sidebar-repository')).toHaveAccessibleDescription(/Pågående: 1.*Oläst aktivitet.*Senaste ändring:/);
   await expect(row('site').locator('a a')).toHaveCount(0);
   // Clicking the Pages link must not activate the row.
   const hash = await page.evaluate(() => location.hash);

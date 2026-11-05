@@ -528,7 +528,7 @@ export const english: Record<string, string> = {
     "From backlog to done. Keep track of what is moving.",
   "Hämtar…": "Loading…",
   "Privat repository": "Private repository",
-  "Öppna GitHub Pages för {repo}": "Open GitHub Pages for {repo}",
+  "Öppna webbplatsen för {repo}": "Open website for {repo}",
   "Öppna {repo} på GitHub": "Open {repo} on GitHub",
   Uppdatera: "Refresh",
   "Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.":

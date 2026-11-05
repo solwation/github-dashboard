@@ -13,9 +13,9 @@ async function fixture(page: Page, mobile: boolean, many = false) {
     host.__vue_app__?.unmount();
     const rows = [
       { id: 1, fullName: "sample/alpha", name: "alpha", backlog: 1234, progress: 12, closed: 98, private: true },
-      { id: 2, fullName: "sample/a-very-long-project-name-that-needs-ellipsis", name: "a-very-long-project-name-that-needs-ellipsis", backlog: 1, progress: 0, closed: 3, pagesUrl: "https://sample.github.io/example/" },
-      { id: 3, fullName: "sample/quiet", name: "quiet", backlog: 0, progress: 0, closed: 0 },
-      { id: 4, fullName: "other/alpha", name: "alpha", backlog: 8, progress: 2, closed: 5, external: true, private: false },
+      { id: 2, fullName: "sample/a-very-long-project-name-that-needs-ellipsis", name: "a-very-long-project-name-that-needs-ellipsis", backlog: 1, progress: 0, closed: 3, websiteUrl: "https://configured.example/" },
+      { id: 3, fullName: "sample/quiet", name: "quiet", backlog: 0, progress: 0, closed: 0, websiteUrl: "https://inactive.example/" },
+      { id: 4, fullName: "other/alpha", name: "alpha", backlog: 8, progress: 2, closed: 5, external: true, private: false, websiteUrl: "https://external.example/" },
     ].map((row, index) => ({ ...row, changedAt: index === 0 ? new Date().toISOString() : null, unreadAt: index === 0 ? new Date().toISOString() : null }));
     if (many) for (let index = 0; index < 40; index++) rows.push({ id: 20 + index, fullName: `sample/project-${index}`, name: `project-${index}`, backlog: 1, progress: 0, closed: 0, changedAt: null, unreadAt: null });
     const mode = ref("auto"), hidden = ref(false), selected = ref("sample/alpha");
@@ -195,4 +195,29 @@ test("whole sidebar owns scrolling for few and many projects while every project
     await context.close();
   }
   if (evidence) await writeFile(`${evidence}/scroll-${baseline ? "before" : "after"}-geometry.json`, JSON.stringify(measurements, null, 2));
+});
+
+
+test("concise project hover and accessible website actions work in every group and language", async ({ browser }) => {
+  for (const mobile of [false, true]) {
+    const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1600, height: 1000 }, isMobile: mobile, hasTouch: mobile });
+    const page = await context.newPage(); await fixture(page, mobile);
+    for (const language of ["sv", "en"]) {
+      await page.evaluate(async language => { const path = "/src/lib/i18n.ts"; (await import(path)).setLanguage(language); }, language);
+      for (const [repository, website] of [["sample/a-very-long-project-name-that-needs-ellipsis", "https://configured.example/"], ["sample/quiet", "https://inactive.example/"], ["other/alpha", "https://external.example/"]]) {
+        const row = page.locator(`.sidebar-repository-row[data-repository="${repository}"]`);
+        const link = row.locator(".sidebar-repository");
+        await expect(link).toHaveAttribute("title", repository!);
+        await expect(link).toHaveAccessibleName(repository!);
+        await expect(link).toHaveAccessibleDescription(language === "sv" ? /Backlog:.*Pågående:.*Stängda senaste 30 dagarna:/ : /Backlog:.*In progress:.*Closed in the last 30 days:/);
+        if (repository!.includes("very-long")) await expect(link).toHaveAccessibleDescription(language === "sv" ? /Dold i innehållsvyn/ : /Hidden from the content view/);
+        await row.locator(".repository-actions-trigger").focus(); await page.keyboard.press("ArrowDown");
+        await expect(row.locator(".repo-github")).toBeFocused(); await page.keyboard.press("ArrowDown");
+        const action = row.locator(".repo-pages"), label = (language === "sv" ? "Öppna webbplatsen för " : "Open website for ") + repository;
+        await expect(action).toBeFocused(); await expect(action).toHaveAttribute("href", website!); await expect(action).toHaveAccessibleName(label); await expect(action).toHaveAttribute("title", label);
+        await page.keyboard.press("Escape");
+      }
+    }
+    await context.close();
+  }
 });
