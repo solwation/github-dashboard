@@ -26,7 +26,7 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
 - **Statistics that answer real questions.** Issue flow, pull requests, code churn and estimate
   accuracy per repository, label or contributor.
 - **Keep track of sync problems.** One project-error summary opens full details and retries.
-  The header bell keeps the latest 100 info, warning and error events, with an unread badge;
+  The header bell shows the latest 100 info, warning and error events in compact rows, with an unread badge;
   signed-in history stays encrypted per account, while public browsing history lasts for the session.
 - **Recognize your projects.** Shared project-icon boxes use each repository’s own safe artwork,
   or initials when no icon is available, with your project color in the lower-right corner.

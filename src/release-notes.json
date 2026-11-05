@@ -2,8 +2,8 @@
   {
     "date": "2026-11-05",
     "summary": {
-      "sv": "Tydligare gruppering och enklare projektnavigering.",
-      "en": "Clearer grouping and simpler project navigation."
+      "sv": "Tydligare gruppering, enklare projektnavigering och kompaktare notifieringar.",
+      "en": "Clearer grouping, simpler project navigation and more compact notifications."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           409
+        ]
+      },
+      {
+        "text": {
+          "sv": "Klockikonens notifieringslista visar fler händelser på samma yta med tätare rader och samlad projekt- och tidsinformation.",
+          "en": "The bell’s notification history fits more events in the same space with compact rows and grouped repository and time details."
+        },
+        "issues": [
+          411
         ]
       }
     ]
