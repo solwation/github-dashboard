@@ -198,26 +198,71 @@ test("whole sidebar owns scrolling for few and many projects while every project
 });
 
 
-test("concise project hover and accessible website actions work in every group and language", async ({ browser }) => {
-  for (const mobile of [false, true]) {
-    const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1600, height: 1000 }, isMobile: mobile, hasTouch: mobile });
+test("concise project actions keep identity once and accessible context in every group and language", async ({ browser }) => {
+  const measurements: unknown[] = [];
+  const baseline = process.env.PROJECT_ACTIONS_BEFORE === "1";
+  if (evidence) await mkdir(evidence, { recursive: true });
+  for (const viewport of [{ width: 1600, height: 1000 }, { width: 950, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
+    const mobile = viewport.width < 651;
+    const context = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, reducedMotion: "reduce" });
     const page = await context.newPage(); await fixture(page, mobile);
+    if (viewport.width === 950) {
+      await expect(page.locator(".sidebar-projects")).toBeHidden();
+      expect((await page.locator(".sidebar").boundingBox())!.width).toBe(70);
+      if (evidence) for (const theme of ["light", "dark"]) {
+        await page.evaluate(async theme => { const path = "/src/lib/theme.ts"; (await import(path)).setTheme(theme); }, theme);
+        await page.screenshot({ path: `${evidence}/${baseline ? "before" : "after"}-actions-950-${theme}.png` });
+      }
+      await context.close(); continue;
+    }
     for (const language of ["sv", "en"]) {
       await page.evaluate(async language => { const path = "/src/lib/i18n.ts"; (await import(path)).setLanguage(language); }, language);
-      for (const [repository, website] of [["sample/a-very-long-project-name-that-needs-ellipsis", "https://configured.example/"], ["sample/quiet", "https://inactive.example/"], ["other/alpha", "https://external.example/"]]) {
+      for (const [repository, website] of [["sample/alpha", null], ["sample/a-very-long-project-name-that-needs-ellipsis", "https://configured.example/"], ["sample/quiet", "https://inactive.example/"], ["other/alpha", "https://external.example/"]] as const) {
         const row = page.locator(`.sidebar-repository-row[data-repository="${repository}"]`);
-        const link = row.locator(".sidebar-repository");
-        await expect(link).toHaveAttribute("title", repository!);
-        await expect(link).toHaveAccessibleName(repository!);
+        const link = row.locator(".sidebar-repository"), trigger = row.locator(".repository-actions-trigger"), menu = row.getByRole("menu");
+        await expect(link).toHaveAttribute("title", repository);
+        await expect(link).toHaveAccessibleName(repository);
         await expect(link).toHaveAccessibleDescription(language === "sv" ? /Backlog:.*Pågående:.*Stängda senaste 30 dagarna:/ : /Backlog:.*In progress:.*Closed in the last 30 days:/);
-        if (repository!.includes("very-long")) await expect(link).toHaveAccessibleDescription(language === "sv" ? /Dold i innehållsvyn/ : /Hidden from the content view/);
-        await row.locator(".repository-actions-trigger").focus(); await page.keyboard.press("ArrowDown");
-        await expect(row.locator(".repo-github")).toBeFocused(); await page.keyboard.press("ArrowDown");
-        const action = row.locator(".repo-pages"), label = (language === "sv" ? "Öppna webbplatsen för " : "Open website for ") + repository;
-        await expect(action).toBeFocused(); await expect(action).toHaveAttribute("href", website!); await expect(action).toHaveAccessibleName(label); await expect(action).toHaveAttribute("title", label);
-        await page.keyboard.press("Escape");
+        const hidden = repository.includes("very-long") || repository === "sample/quiet";
+        if (hidden) await expect(link).toHaveAccessibleDescription(language === "sv" ? /Dold i innehållsvyn/ : /Hidden from the content view/);
+        await trigger.focus(); await page.keyboard.press("ArrowDown");
+        await expect(menu).toHaveAccessibleName((language === "sv" ? "Åtgärder för " : "Actions for ") + repository);
+        await expect(menu.locator(".repository-actions-name")).toHaveText(repository);
+        const github = menu.locator(".repo-github"), action = menu.locator(".repo-pages"), toggle = menu.locator(".repo-board-toggle");
+        await expect(github).toBeFocused();
+        await expect(github).toHaveAttribute("href", `https://github.com/${repository}`);
+        await expect(github).toHaveAccessibleName(language === "sv" ? `Öppna ${repository} på GitHub` : `Open ${repository} on GitHub`);
+        if (website) {
+          await page.keyboard.press("ArrowDown");
+          const label = (language === "sv" ? "Öppna webbplatsen för " : "Open website for ") + repository;
+          await expect(action).toBeFocused(); await expect(action).toHaveAttribute("href", website); await expect(action).toHaveAccessibleName(label); await expect(action).toHaveAttribute("title", label);
+        } else await expect(action).toHaveCount(0);
+        if (!baseline) {
+          await expect(github).toHaveText(language === "sv" ? "Öppna på GitHub" : "Open on GitHub");
+          if (website) await expect(action).toHaveText(language === "sv" ? "Öppna webbplats" : "Open website");
+          await expect(toggle).toHaveText(language === "sv" ? `${hidden ? "Visa" : "Dölj"} i innehållsvyn` : `${hidden ? "Show in" : "Hide from"} the content view`);
+          await expect(toggle).toHaveAccessibleName(language === "sv" ? `${hidden ? "Visa" : "Dölj"} ${repository} i innehållsvyn` : `${hidden ? "Show" : "Hide"} ${repository} ${hidden ? "in" : "from"} the content view`);
+          expect((await menu.innerText()).split(repository)).toHaveLength(2);
+        }
+        await page.keyboard.press("End"); await expect(toggle).toBeFocused();
+        await page.keyboard.press("Home"); await expect(github).toBeFocused();
+        for (const theme of ["light", "dark"]) {
+          await page.evaluate(async theme => { const path = "/src/lib/theme.ts"; (await import(path)).setTheme(theme); await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }, theme);
+          const geometry = await menu.evaluate(menu => {
+            const box = menu.getBoundingClientRect();
+            return { x: box.x, y: box.y, width: box.width, height: box.height, overflow: document.documentElement.scrollWidth - innerWidth, items: [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')].map(item => { const box = item.getBoundingClientRect(), icon = item.querySelector("svg")!.getBoundingClientRect(); return { x: box.x, right: box.right, width: box.width, height: box.height, centerDrift: Math.abs(box.y + box.height / 2 - icon.y - icon.height / 2) }; }) };
+          });
+          expect(geometry.overflow).toBeLessThanOrEqual(0);
+          expect(geometry.x).toBeGreaterThanOrEqual(0); expect(geometry.y).toBeGreaterThanOrEqual(0);
+          expect(geometry.x + geometry.width).toBeLessThanOrEqual(viewport.width); expect(geometry.y + geometry.height).toBeLessThanOrEqual(viewport.height);
+          for (const item of geometry.items) { expect(item.height).toBeGreaterThanOrEqual(44); expect(item.width).toBeGreaterThanOrEqual(44); expect(item.centerDrift).toBeLessThanOrEqual(1); expect(Math.abs(item.x - geometry.items[0]!.x)).toBeLessThanOrEqual(1); expect(Math.abs(item.right - geometry.items[0]!.right)).toBeLessThanOrEqual(1); if (!baseline) expect(item.height).toBe(44); }
+          measurements.push({ viewport, mobile, language, repository, theme, ...geometry });
+          if (evidence && repository.includes("very-long")) await page.screenshot({ path: `${evidence}/${baseline ? "before" : "after"}-actions-${viewport.width}-${language}-${theme}.png` });
+        }
+        await page.keyboard.press("Escape"); await expect(menu).toBeHidden(); await expect(trigger).toBeFocused();
       }
     }
     await context.close();
   }
+  if (evidence) await writeFile(`${evidence}/${baseline ? "before" : "after"}-actions-geometry.json`, JSON.stringify(measurements, null, 2));
 });

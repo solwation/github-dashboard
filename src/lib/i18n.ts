@@ -530,6 +530,8 @@ export const english: Record<string, string> = {
   "Privat repository": "Private repository",
   "Öppna webbplatsen för {repo}": "Open website for {repo}",
   "Öppna {repo} på GitHub": "Open {repo} on GitHub",
+  "Öppna på GitHub": "Open on GitHub",
+  "Öppna webbplats": "Open website",
   Uppdatera: "Refresh",
   "Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.":
     "You are exploring a demo with fictional projects. Connect GitHub to see your own.",
@@ -589,6 +591,8 @@ export const english: Record<string, string> = {
   "Dölj inaktiva repositories": "Hide inactive repositories",
   "Dölj {name} i innehållsvyn": "Hide {name} from the content view",
   "Visa {name} i innehållsvyn": "Show {name} in the content view",
+  "Dölj i innehållsvyn": "Hide from the content view",
+  "Visa i innehållsvyn": "Show in the content view",
   "Dold i innehållsvyn": "Hidden from the content view",
   "{name} dold i innehållsvyn": "{name} hidden from the content view",
   "{name} visas i innehållsvyn": "{name} shown in the content view",
