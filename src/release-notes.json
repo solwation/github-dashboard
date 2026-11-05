@@ -17,11 +17,12 @@
       },
       {
         "text": {
-          "sv": "Kortare hovertext i vänstermenyn och webbplatslänkar som prioriterar projektets konfigurerade hemsida framför GitHub Pages.",
-          "en": "Shorter sidebar hover text and website links that prefer the project’s configured homepage over GitHub Pages."
+          "sv": "Kortare hovertext och projektmenyer utan upprepade namn; webbplatslänkar prioriterar den konfigurerade hemsidan framför GitHub Pages.",
+          "en": "Shorter sidebar hover text, concise project actions and website links that prefer the configured homepage over GitHub Pages."
         },
         "issues": [
-          409
+          409,
+          412
         ]
       },
       {

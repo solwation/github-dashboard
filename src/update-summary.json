@@ -1,10 +1,11 @@
 {
   "baseCommit": "e95f703dfe481aa0f7dc83523d65700168b0a14a",
   "summary": {
-    "sv": "Klockikonens notifieringslista har tätare rader och samlad projekt- och tidsinformation.",
-    "en": "The bell’s notification history now has more compact rows with grouped repository and time details."
+    "sv": "Tätare notifieringslista och enklare projektmenyer utan upprepade projektnamn.",
+    "en": "A more compact notification history and simpler project menus without repeated project names."
   },
   "issues": [
-    411
+    411,
+    412
   ]
 }

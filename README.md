@@ -31,7 +31,7 @@ server and nothing to set up: it runs in your browser and talks to GitHub direct
 - **Recognize your projects.** Shared project-icon boxes use each repository’s own safe artwork,
   or initials when no icon is available, with your project color in the lower-right corner.
   Sidebar artwork fills each compact project row; a small inset gives names, counts and actions more room.
-  Project hover shows the full repository name; the website action prefers the configured GitHub Website over Pages.
+  Project hover and the action-menu heading show the full repository name; concise actions open GitHub or the configured Website before Pages.
 - **Private by design.** Your token and cached data stay on your device, encrypted with
   non-exportable AES-GCM keys. There is no backend.
 - **Works everywhere.** Installable app with background notifications, phone layout, QR
