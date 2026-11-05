@@ -8,7 +8,11 @@ evidence reuse and one integration review. This file supplies this project's set
 and overrides; explicit user instructions and platform limits take precedence.
 
 `/orkester`, `$orkester` or a plain-language request to run orchestration invokes this
-workflow. Reading, updating or installing these instructions does not start the queue.
+workflow. Ordinary chat change requests follow the core’s [chat intake](shared/ORCHESTRA.md#turn-chat-requests-into-work):
+create/reuse issues and start or resume scoped work, even after a watch ends. Respect
+explicit deferral and reuse an active conductor. A scoped request adds no whole-backlog
+run or timer; reading or installing instructions alone starts no work. Requested
+instruction changes are scoped work too.
 Keep explicit user scope. Empty scope: a queue session, replacing the shared core's
 default [bounded pass](shared/COORDINATION.md#run-a-bounded-pass): work the repository's startable
 issue backlog, then run the [final review and watch](#final-review-and-watch).
@@ -212,8 +216,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.8.0**,
-commit **6ee6dd23ed85e5a91641d1939d553e4f789027d4** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.8.1**,
+commit **264e867d17b4f938b09cdb01794025e7b0113c5d** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt

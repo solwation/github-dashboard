@@ -72,8 +72,12 @@ update procedure in [.orchestra/project.md](.orchestra/project.md#upstream-updat
 retain project overrides, track the upgrade in an issue and run the required checks; do
 not ask for approval again or label routine upgrades `user question`.
 
-`/orkester`, `$orkester` or an explicit request starts the workflow; reading or
-maintaining these files does not start a queue session.
+`/orkester`, `$orkester` or an explicit orchestration request starts the workflow.
+Ordinary change requests also create/reuse issues and start or resume scoped work
+under the shared [chat intake](.orchestra/shared/ORCHESTRA.md#turn-chat-requests-into-work),
+even after the idle watch ends. Respect explicit deferral and reuse the active
+conductor. A scoped request enables no whole-backlog run or timer; merely reading
+these files starts no work. Requested instruction changes are scoped work too.
 
 The user authorizes parallel subagents when useful. The local policy retains measured
 capacity including conductor work, one issue per worker, isolated ownership, fresh queue
