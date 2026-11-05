@@ -81,13 +81,13 @@ for (const scenario of scenarios) test.describe(scenario.name, () => {
   // Globe = Pages link (only with Pages); lock only for private repositories without Pages; GitHub link on every row.
   await expect(row('site').locator('.repo-visibility')).toHaveCount(0);
   await expect(row(long).locator('.repo-visibility')).toHaveCount(0);
-  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna webbplatsen för Sample/${long}`);
+  await expect(row(long).locator('.repo-pages')).toHaveAttribute('aria-label', `Öppna webbplats, Sample/${long}`);
   await expect(row('notes').locator('.repo-visibility')).toHaveAttribute('aria-label', 'Privat repository');
   await expect(row('notes').locator('.repo-pages')).toHaveCount(0);
   for (const repo of repositories) {
     await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('href', `https://github.com/${repo.full_name}`);
     await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('target', '_blank');
-    await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('aria-label', `Öppna ${repo.full_name} på GitHub`);
+    await expect(row(repo.name).locator('.repo-github')).toHaveAttribute('aria-label', `Öppna på GitHub, ${repo.full_name}`);
   }
   await expect(row('unknown').locator('.repo-pages')).toHaveCount(0);
   await expect(row('site').locator('.repo-pages')).toHaveAttribute('href', 'https://website.example/custom/');

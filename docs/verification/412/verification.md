@@ -2,13 +2,13 @@
 
 Verified on 2026-11-05 against base `e95f703` plus this issue's changes. Synthetic repositories only; no account or issue snapshots.
 
-The menu keeps the complete owner/repository once in its heading. Swedish and English action text is short; menu and action accessible names retain the repository context. Existing link tooltips, destinations, new-tab behavior and keyboard handling remain intact. The visibility action now explicitly preserves its former full accessible name.
+The menu keeps the complete owner/repository once in its heading. Swedish and English action text is short; menu and action accessible names retain the repository context. Existing link tooltips, destinations, new-tab behavior and keyboard handling remain intact. Every action’s accessible name begins with its complete visible label, followed by a comma and the full repository name. This preserves label-in-name for voice access while retaining repository context.
 
 ## Checks
 
 - `npx vitest run tests/i18n.test.ts`: 4 passed.
 - `npm run build`: passed (source integrity, TypeScript and production output).
-- `npx playwright test e2e/sidebar-project-layout.spec.ts e2e/sidebar-visibility-pages.spec.ts -g 'concise project actions|repository context actions|sidebar shows visibility' --workers=1`: 12 passed.
+- `npx playwright test e2e/sidebar-project-layout.spec.ts e2e/sidebar-visibility-pages.spec.ts -g 'concise project actions|repository context actions|sidebar shows visibility' --workers=1`: 12 passed before the accessibility review correction.
 - The focused before-capture test also passed with `PROJECT_ACTIONS_BEFORE=1` against the original component, then the final component was restored.
 
 Browser verification used isolated ports 5412/4412. Explicitly started servers and `E2E_REUSE_SERVER=1` avoid this environment's slow connection probes to unopened ports. The dev response was checked against the intended source before capture; both servers were stopped afterward.
@@ -35,3 +35,9 @@ Visually inspected full-size screenshots show a complete header, compact aligned
 - 950px rail [light](after-actions-950-light.png) / [dark](after-actions-950-dark.png).
 
 Raw screenshots, before/final geometry and run logs remain in the session's `/home/devcontainers/orkester-20261105/evidence-412/`. Integration, repository feature docs, release metadata and publication follow-up belong to the conductor.
+
+## Accessibility review correction
+
+The integrator identified that inserting the repository inside an accessible name interrupted the visible phrase (for example “Open on GitHub”). Accessible names now use the exact visible action as a contiguous prefix, followed by `, owner/repository`; full contextual link tooltips remain. The focused test explicitly checks this label-in-name relationship for every action in both languages and all groups. The four affected desktop board-visibility selectors were updated; Settings dialog names are unaffected.
+
+The corrected source passed `npm run build`. `npx playwright test e2e/sidebar-project-layout.spec.ts e2e/sidebar-visibility-pages.spec.ts e2e/repository-board-visibility.spec.ts -g 'concise project actions|sidebar shows visibility|hides projects from the board while' --workers=1` passed all 12 cases, including the affected desktop split/combined visibility flow. The existing screenshots and geometry remain applicable because this correction only changes accessible names.

@@ -70,7 +70,7 @@ test.describe("desktop", () => {
     await expect(page.locator("#repo-1, #repo-2, #repo-11")).toHaveCount(3);
 
     // Hover/focus reveals the context action cue; the menu retains visibility actions.
-    const alphaHide = row(page, "sample/alpha").getByRole("menuitem", { name: "Dölj sample/alpha i innehållsvyn" });
+    const alphaHide = row(page, "sample/alpha").getByRole("menuitem", { name: "Dölj i innehållsvyn, sample/alpha" });
     await page.mouse.move(1500, 900);
     await expect(row(page, "sample/alpha").locator(".repository-actions-trigger")).toHaveCSS("opacity", "0");
     await row(page, "sample/alpha").hover();
@@ -91,7 +91,7 @@ test.describe("desktop", () => {
     await expect(helloTrigger).toBeFocused(); await page.keyboard.press("Enter");
     const helloAction = row(page, "octo/hello").locator(".repo-board-toggle");
     await helloAction.click(); await expect(helloTrigger).toBeFocused();
-    await helloTrigger.click(); await expect(helloAction).toHaveAccessibleName("Visa octo/hello i innehållsvyn"); await page.keyboard.press("Escape");
+    await helloTrigger.click(); await expect(helloAction).toHaveAccessibleName("Visa i innehållsvyn, octo/hello"); await page.keyboard.press("Escape");
     await expect(page.locator("#repo-11")).toHaveCount(0);
     // Hidden rows always show their Show action and carry the state in their accessible text.
     await page.mouse.move(1500, 900);
@@ -101,7 +101,7 @@ test.describe("desktop", () => {
     // Private project via the same action; the board is left with nothing to show.
     await row(page, "sample/beta").hover();
     await row(page, "sample/beta").locator(".repository-actions-trigger").click();
-    await row(page, "sample/beta").getByRole("menuitem", { name: "Dölj sample/beta i innehållsvyn" }).click();
+    await row(page, "sample/beta").getByRole("menuitem", { name: "Dölj i innehållsvyn, sample/beta" }).click();
     await expect(page.locator(".repo-lane")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Alla repositories är dolda" })).toBeVisible();
 
@@ -109,7 +109,7 @@ test.describe("desktop", () => {
     await boardSplit(page).uncheck();
     await expect(page.locator(".combined-board")).toHaveCount(0);
     await row(page, "sample/beta").locator(".repository-actions-trigger").click();
-    await row(page, "sample/beta").getByRole("menuitem", { name: "Visa sample/beta i innehållsvyn" }).click();
+    await row(page, "sample/beta").getByRole("menuitem", { name: "Visa i innehållsvyn, sample/beta" }).click();
     await expect(page.locator(".combined-board")).toBeVisible();
     expect((await boardRepositories(page)).items).toEqual(["sample/beta"]);
 

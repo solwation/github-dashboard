@@ -231,17 +231,18 @@ test("concise project actions keep identity once and accessible context in every
         const github = menu.locator(".repo-github"), action = menu.locator(".repo-pages"), toggle = menu.locator(".repo-board-toggle");
         await expect(github).toBeFocused();
         await expect(github).toHaveAttribute("href", `https://github.com/${repository}`);
-        await expect(github).toHaveAccessibleName(language === "sv" ? `Öppna ${repository} på GitHub` : `Open ${repository} on GitHub`);
+        await expect(github).toHaveAccessibleName(baseline ? (language === "sv" ? `Öppna ${repository} på GitHub` : `Open ${repository} on GitHub`) : (language === "sv" ? `Öppna på GitHub, ${repository}` : `Open on GitHub, ${repository}`));
         if (website) {
           await page.keyboard.press("ArrowDown");
           const label = (language === "sv" ? "Öppna webbplatsen för " : "Open website for ") + repository;
-          await expect(action).toBeFocused(); await expect(action).toHaveAttribute("href", website); await expect(action).toHaveAccessibleName(label); await expect(action).toHaveAttribute("title", label);
+          await expect(action).toBeFocused(); await expect(action).toHaveAttribute("href", website); await expect(action).toHaveAccessibleName(baseline ? label : (language === "sv" ? `Öppna webbplats, ${repository}` : `Open website, ${repository}`)); await expect(action).toHaveAttribute("title", label);
         } else await expect(action).toHaveCount(0);
         if (!baseline) {
           await expect(github).toHaveText(language === "sv" ? "Öppna på GitHub" : "Open on GitHub");
           if (website) await expect(action).toHaveText(language === "sv" ? "Öppna webbplats" : "Open website");
           await expect(toggle).toHaveText(language === "sv" ? `${hidden ? "Visa" : "Dölj"} i innehållsvyn` : `${hidden ? "Show in" : "Hide from"} the content view`);
-          await expect(toggle).toHaveAccessibleName(language === "sv" ? `${hidden ? "Visa" : "Dölj"} ${repository} i innehållsvyn` : `${hidden ? "Show" : "Hide"} ${repository} ${hidden ? "in" : "from"} the content view`);
+          await expect(toggle).toHaveAccessibleName(language === "sv" ? `${hidden ? "Visa" : "Dölj"} i innehållsvyn, ${repository}` : `${hidden ? "Show in" : "Hide from"} the content view, ${repository}`);
+          for (const item of await menu.getByRole("menuitem").all()) expect(await item.getAttribute("aria-label")).toBe(`${await item.innerText()}, ${repository}`);
           expect((await menu.innerText()).split(repository)).toHaveLength(2);
         }
         await page.keyboard.press("End"); await expect(toggle).toBeFocused();
