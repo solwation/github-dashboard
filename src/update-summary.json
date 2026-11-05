@@ -1,10 +1,10 @@
 {
-  "baseCommit": "6f457086ee879791971803a801e31f02ead364a4",
+  "baseCommit": "af00601733d343a7472078a98f0fa87bbda127fc",
   "summary": {
-    "sv": "Grupperingsläget för en gemensam board heter nu Samlad (Joined på engelska), så det blir tydligare vad valet gör.",
-    "en": "The combined-board grouping mode is now called Joined (Samlad in Swedish), making its purpose clearer."
+    "sv": "Kortare hovertext i vänstermenyn. Projektets konfigurerade hemsida används före GitHub Pages.",
+    "en": "Shorter sidebar hover text. The project’s configured website takes precedence over GitHub Pages."
   },
   "issues": [
-    407
+    409
   ]
 }

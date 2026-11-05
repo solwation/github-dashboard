@@ -2,8 +2,8 @@
   {
     "date": "2026-11-05",
     "summary": {
-      "sv": "Tydligare namn på den gemensamma boarden.",
-      "en": "A clearer name for the combined board."
+      "sv": "Tydligare gruppering och enklare projektnavigering.",
+      "en": "Clearer grouping and simpler project navigation."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           407
+        ]
+      },
+      {
+        "text": {
+          "sv": "Kortare hovertext i vänstermenyn och webbplatslänkar som prioriterar projektets konfigurerade hemsida framför GitHub Pages.",
+          "en": "Shorter sidebar hover text and website links that prefer the project’s configured homepage over GitHub Pages."
+        },
+        "issues": [
+          409
         ]
       }
     ]
