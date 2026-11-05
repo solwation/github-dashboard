@@ -1,0 +1,602 @@
+[
+  {
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "mobile": false,
+    "theme": "light",
+    "historyButton": {
+      "x": 821,
+      "y": 10.5,
+      "width": 32,
+      "height": 32
+    },
+    "dialog": {
+      "width": 670,
+      "scrollWidth": 670,
+      "left": 464,
+      "right": 1136
+    },
+    "rows": [
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:51",
+        "datetime": "2026-11-05T14:12:51.043Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:51",
+        "datetime": "2026-11-05T14:12:51.043Z",
+        "overflow": 0
+      },
+      {
+        "height": 178.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:49",
+        "datetime": "2026-11-05T14:12:49.738Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:48",
+        "datetime": "2026-11-05T14:12:48.738Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "mobile": false,
+    "theme": "dark",
+    "historyButton": {
+      "x": 821,
+      "y": 10.5,
+      "width": 32,
+      "height": 32
+    },
+    "dialog": {
+      "width": 670,
+      "scrollWidth": 670,
+      "left": 464,
+      "right": 1136
+    },
+    "rows": [
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:51",
+        "datetime": "2026-11-05T14:12:51.043Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:51",
+        "datetime": "2026-11-05T14:12:51.043Z",
+        "overflow": 0
+      },
+      {
+        "height": 178.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:49",
+        "datetime": "2026-11-05T14:12:49.738Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:48",
+        "datetime": "2026-11-05T14:12:48.738Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 950,
+      "height": 900
+    },
+    "mobile": false,
+    "theme": "light",
+    "historyButton": {
+      "x": 481,
+      "y": 24.1875,
+      "width": 32,
+      "height": 32
+    },
+    "dialog": {
+      "width": 670,
+      "scrollWidth": 670,
+      "left": 139,
+      "right": 811
+    },
+    "rows": [
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:52",
+        "datetime": "2026-11-05T14:12:52.808Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:52",
+        "datetime": "2026-11-05T14:12:52.808Z",
+        "overflow": 0
+      },
+      {
+        "height": 178.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:51",
+        "datetime": "2026-11-05T14:12:51.363Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:50",
+        "datetime": "2026-11-05T14:12:50.363Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 950,
+      "height": 900
+    },
+    "mobile": false,
+    "theme": "dark",
+    "historyButton": {
+      "x": 481,
+      "y": 24.1875,
+      "width": 32,
+      "height": 32
+    },
+    "dialog": {
+      "width": 670,
+      "scrollWidth": 670,
+      "left": 139,
+      "right": 811
+    },
+    "rows": [
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:52",
+        "datetime": "2026-11-05T14:12:52.808Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:52",
+        "datetime": "2026-11-05T14:12:52.808Z",
+        "overflow": 0
+      },
+      {
+        "height": 178.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:51",
+        "datetime": "2026-11-05T14:12:51.363Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:50",
+        "datetime": "2026-11-05T14:12:50.363Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "mobile": true,
+    "theme": "light",
+    "historyButton": {
+      "x": 255,
+      "y": 7,
+      "width": 44,
+      "height": 44
+    },
+    "dialog": {
+      "width": 350,
+      "scrollWidth": 350,
+      "left": 19,
+      "right": 371
+    },
+    "rows": [
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:54",
+        "datetime": "2026-11-05T14:12:54.300Z",
+        "overflow": 0
+      },
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:54",
+        "datetime": "2026-11-05T14:12:54.300Z",
+        "overflow": 0
+      },
+      {
+        "height": 316.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:53",
+        "datetime": "2026-11-05T14:12:53.034Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:52",
+        "datetime": "2026-11-05T14:12:52.034Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "mobile": true,
+    "theme": "dark",
+    "historyButton": {
+      "x": 255,
+      "y": 7,
+      "width": 44,
+      "height": 44
+    },
+    "dialog": {
+      "width": 350,
+      "scrollWidth": 350,
+      "left": 19,
+      "right": 371
+    },
+    "rows": [
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:54",
+        "datetime": "2026-11-05T14:12:54.300Z",
+        "overflow": 0
+      },
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:54",
+        "datetime": "2026-11-05T14:12:54.300Z",
+        "overflow": 0
+      },
+      {
+        "height": 316.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:53",
+        "datetime": "2026-11-05T14:12:53.034Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:52",
+        "datetime": "2026-11-05T14:12:52.034Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "mobile": true,
+    "theme": "light",
+    "historyButton": {
+      "x": 709,
+      "y": 7,
+      "width": 44,
+      "height": 44
+    },
+    "dialog": {
+      "width": 670,
+      "scrollWidth": 670,
+      "left": 86,
+      "right": 758
+    },
+    "rows": [
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:55",
+        "datetime": "2026-11-05T14:12:55.722Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:55",
+        "datetime": "2026-11-05T14:12:55.722Z",
+        "overflow": 0
+      },
+      {
+        "height": 178.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:54",
+        "datetime": "2026-11-05T14:12:54.417Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:53",
+        "datetime": "2026-11-05T14:12:53.417Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "mobile": true,
+    "theme": "dark",
+    "historyButton": {
+      "x": 709,
+      "y": 7,
+      "width": 44,
+      "height": 44
+    },
+    "dialog": {
+      "width": 670,
+      "scrollWidth": 670,
+      "left": 86,
+      "right": 758
+    },
+    "rows": [
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:55",
+        "datetime": "2026-11-05T14:12:55.722Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:55",
+        "datetime": "2026-11-05T14:12:55.722Z",
+        "overflow": 0
+      },
+      {
+        "height": 178.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:54",
+        "datetime": "2026-11-05T14:12:54.417Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:53",
+        "datetime": "2026-11-05T14:12:53.417Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "mobile": true,
+    "theme": "light",
+    "historyButton": {
+      "x": 177.5,
+      "y": 7,
+      "width": 44,
+      "height": 44
+    },
+    "dialog": {
+      "width": 280,
+      "scrollWidth": 280,
+      "left": 19,
+      "right": 301
+    },
+    "rows": [
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:57",
+        "datetime": "2026-11-05T14:12:57.481Z",
+        "overflow": 0
+      },
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:57",
+        "datetime": "2026-11-05T14:12:57.481Z",
+        "overflow": 0
+      },
+      {
+        "height": 414.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:56",
+        "datetime": "2026-11-05T14:12:56.097Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:55",
+        "datetime": "2026-11-05T14:12:55.097Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  },
+  {
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "mobile": true,
+    "theme": "dark",
+    "historyButton": {
+      "x": 177.5,
+      "y": 7,
+      "width": 44,
+      "height": 44
+    },
+    "dialog": {
+      "width": 280,
+      "scrollWidth": 280,
+      "left": 19,
+      "right": 301
+    },
+    "rows": [
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/beta",
+        "time": "2026-11-05 15:12:57",
+        "datetime": "2026-11-05T14:12:57.481Z",
+        "overflow": 0
+      },
+      {
+        "height": 100,
+        "message": "GitHub svarade 500. Kontrollera att du har åtkomst till repot.",
+        "messageFontSize": "13px",
+        "repository": "sample/alpha",
+        "time": "2026-11-05 15:12:57",
+        "datetime": "2026-11-05T14:12:57.481Z",
+        "overflow": 0
+      },
+      {
+        "height": 414.5,
+        "message": "Synthetic warning with a very long unbroken field contextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontextcontext",
+        "messageFontSize": "13px",
+        "repository": "sample/long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-long-repository-name-",
+        "time": "2026-11-05 15:12:56",
+        "datetime": "2026-11-05T14:12:56.097Z",
+        "overflow": 0
+      },
+      {
+        "height": 60.5,
+        "message": "Synthetic informational notice",
+        "messageFontSize": "13px",
+        "time": "2026-11-05 15:12:55",
+        "datetime": "2026-11-05T14:12:55.097Z",
+        "overflow": 0
+      }
+    ],
+    "rowDrift": 0,
+    "maxIconCenterDrift": 0,
+    "pageOverflow": 0
+  }
+]

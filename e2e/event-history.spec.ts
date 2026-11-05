@@ -139,11 +139,16 @@ test("diagnostics fit desktop, rail and touch phones with aligned rows and keybo
       expect(rowDrift).toBeLessThanOrEqual(1);
       const centers = await historyDialog(page).locator(".event-history-item").evaluateAll(elements => elements.map(element => {
         const icon = element.querySelector("svg")!.getBoundingClientRect();
-        const meta = element.querySelector(".event-history-meta")!.getBoundingClientRect();
+        const meta = element.querySelector(".event-history-meta strong")!.getBoundingClientRect();
         return Math.abs(icon.top + icon.height / 2 - meta.top - meta.height / 2);
       }));
       expect(Math.max(...centers)).toBeLessThanOrEqual(1);
-      measurements.push({ viewport, mobile, theme, historyButton: button, dialog: geometry, rowDrift, maxIconCenterDrift: Math.max(...centers), pageOverflow: await page.evaluate(() => document.documentElement.scrollWidth - innerWidth) });
+      const rows = await historyDialog(page).locator(".event-history-item").evaluateAll(elements => elements.map(element => {
+        const message = element.querySelector("p")!, repository = element.querySelector(".event-history-repository"), time = element.querySelector("time")!;
+        return { height: element.getBoundingClientRect().height, message: message.textContent, messageFontSize: getComputedStyle(message).fontSize, repository: repository?.textContent, time: time.textContent, datetime: time.getAttribute("datetime"), overflow: element.scrollWidth - element.clientWidth };
+      }));
+      expect(rows.every(row => row.message && row.time && row.datetime && row.overflow <= 0 && row.messageFontSize === "13px")).toBe(true);
+      measurements.push({ viewport, mobile, theme, historyButton: button, dialog: geometry, rows, rowDrift, maxIconCenterDrift: Math.max(...centers), pageOverflow: await page.evaluate(() => document.documentElement.scrollWidth - innerWidth) });
       if (evidence) await page.screenshot({ path: `${evidence}/events-${viewport.width}x${viewport.height}-${theme}-dialog.png` });
       await closeHistory(page); await expect(historyButton(page)).toBeFocused();
     }

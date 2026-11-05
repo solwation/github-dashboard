@@ -62,8 +62,11 @@ const severityText = (severity: string) => t(severity === "error" ? "Fel" : seve
         <AlertTriangle v-else-if="item.severity === 'warning'" :size="20" aria-hidden="true" />
         <Info v-else :size="20" aria-hidden="true" />
         <div class="event-history-content">
-          <div class="event-history-meta"><strong>{{ severityText(item.severity) }}</strong><time :datetime="new Date(item.timestamp).toISOString()">{{ new Date(item.timestamp).toLocaleString(locale) }}</time></div>
-          <span v-if="item.repository" class="event-history-repository">{{ item.repository }}</span>
+          <div class="event-history-meta">
+            <strong>{{ severityText(item.severity) }}</strong>
+            <span v-if="item.repository" class="event-history-repository">{{ item.repository }}</span>
+            <time :datetime="new Date(item.timestamp).toISOString()">{{ new Date(item.timestamp).toLocaleString(locale) }}</time>
+          </div>
           <p>{{ item.message }}</p>
         </div>
       </li>
@@ -77,20 +80,27 @@ const severityText = (severity: string) => t(severity === "error" ? "Fel" : seve
 .event-history-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 h2 { margin: 0; font-family: Manrope, sans-serif; font-size: 22px; }
 h3 { margin: 0 0 var(--space-3); font-size: 14px; }
-.event-history-description { color: var(--muted); font-size: 12px; margin: var(--space-4) 0; }
+.event-history-description { color: var(--muted); font-size: 12px; margin: var(--space-2) 0; }
 .event-history-list, .event-current-errors ul { list-style: none; padding: 0; margin: 0; }
-.event-history-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: var(--space-3); padding: var(--space-4) 0; border-top: 1px solid var(--line); }
+.event-history-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: var(--space-2); padding: var(--space-2) 0; border-top: 1px solid var(--line); }
 .event-history-item > svg { color: var(--muted); }
 .event-history-item[data-severity="error"] > svg { color: var(--accent-red); }
 .event-history-item[data-severity="warning"] > svg { color: var(--accent-amber); }
-.event-history-meta { min-height: 20px; display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); font-size: 11px; }
-.event-history-meta time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.event-history-meta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: var(--space-2); font-size: 11px; }
+.event-history-meta strong, .event-history-meta time { min-height: 20px; display: inline-flex; align-items: center; }
+.event-history-meta time { grid-column: 3; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .event-history-content, .event-current-error { min-width: 0; overflow-wrap: anywhere; }
-.event-history-repository { display: block; margin-top: var(--space-2); font-size: 12px; color: var(--muted); }
+.event-history-repository { min-width: 0; font-size: 12px; line-height: 20px; color: var(--muted); }
 .event-history-content p, .event-current-error p { margin: var(--space-2) 0 0; white-space: pre-wrap; font-size: 13px; line-height: 1.5; }
+.event-history-content p { margin-top: var(--space-1); }
 .event-current-errors { margin-top: var(--space-4); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--space-2); }
 .event-current-error + .event-current-error { border-top: 1px solid var(--line); margin-top: var(--space-4); padding-top: var(--space-4); }
 .event-current-error .button { margin-top: var(--space-3); }
 .event-current-errors > p { margin: var(--space-4) 0 0; font-size: 12px; color: var(--muted); }
 @media (pointer: coarse), (max-width: 650px), (max-width: 950px) and (max-height: 500px) { .event-history-dialog button { min-width: 44px; min-height: 44px; } }
+@media (max-width: 650px) {
+  .event-history-meta { grid-template-columns: minmax(0, 1fr) auto; }
+  .event-history-meta time { grid-column: 2; grid-row: 1; }
+  .event-history-repository { grid-column: 1 / -1; }
+}
 </style>
