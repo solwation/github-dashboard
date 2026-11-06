@@ -1,8 +1,8 @@
 {
   "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
   "summary": {
-    "sv": "Nya projekt i väljaren med ikoner, vänstermeny som inte skymmer på telefon, tåligare synkronisering och snabbare statistik.",
-    "en": "New projects in the picker with icons, a phone menu that no longer covers content, sturdier sync and faster statistics."
+    "sv": "Stories glider mellan kolumner, nya projekt syns i väljaren, menyn skymmer inte på telefon och synkroniseringen är stabilare.",
+    "en": "Stories glide between columns, new projects appear in the picker, the phone menu no longer covers content and sync is sturdier."
   },
   "issues": [
     414,
@@ -10,6 +10,7 @@
     416,
     417,
     418,
+    419,
     421,
     424,
     427
