@@ -1,11 +1,10 @@
 {
-  "baseCommit": "e95f703dfe481aa0f7dc83523d65700168b0a14a",
+  "baseCommit": "0834e76c0871ac24109d423986b465158ab3a12f",
   "summary": {
-    "sv": "Tätare notifieringslista och enklare projektmenyer utan upprepade projektnamn.",
-    "en": "A more compact notification history and simpler project menus without repeated project names."
+    "sv": "Issue-numret visas som en tydlig märkning i projektets färg i kort och listor.",
+    "en": "Issue numbers now appear as clear badges in the project's color in cards and lists."
   },
   "issues": [
-    411,
-    412
+    420
   ]
 }
