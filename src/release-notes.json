@@ -17,6 +17,15 @@
       },
       {
         "text": {
+          "sv": "Listrader visar mer av titeln: id-märkningen med typikon, poäng och tider står samlat till vänster och övriga etiketter på rad två.",
+          "en": "List rows show more of the title: the id badge with type icon, points and times sit together on the left, other chips on line two."
+        },
+        "issues": [
+          426
+        ]
+      },
+      {
+        "text": {
           "sv": "Stories glider synligt mellan Backlog, In progress och Closed när statusen ändras på GitHub.",
           "en": "Stories visibly glide between Backlog, In progress and Closed when their status changes on GitHub."
         },

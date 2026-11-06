@@ -85,18 +85,23 @@ for (const theme of ["light", "dark"]) {
     await expect(page.locator(".issue-row.closed")).toHaveCount(3);
     await expect(page.locator(".issue-row .issue-time-remaining")).toHaveCount(1);
     const columns: Record<string, string> = {
-      number: ".row-number", title: ".row-title", meta: ".row-meta", commentSlot: ".row-slot-comment", status: ".row-status",
+      // #426: SP and the time stack belong to the fixed left block; the empty new-comment slot collapses.
+      number: ".row-number", points: ".issue-points", title: ".row-title", meta: ".row-meta", status: ".row-status",
       priority: ".row-slot-priority", label: ".row-meta .label", commentIcon: ".row-comments .comment-count svg",
-      commentCount: ".row-comments .comment-count-value", time: ".row-time",
+      commentCount: ".row-comments .comment-count-value", time: ".row-time", outcome: ".row-outcome",
     };
     for (const [name, selector] of Object.entries(columns)) {
-      const edges = new Set<number>();
-      for (let index = 0; index < await rows.count(); index++) {
-        const row = rows.nth(index);
-        if (name === "priority" && (await row.getAttribute("class"))!.includes("closed")) continue;
-        edges.add(await left(row, selector));
+      // #426: Closed lists have no priority, so their line 2 starts with status; compare status and labels per section.
+      for (const section of ["status", "label"].includes(name) ? ["backlog", "progress", "closed"] : [""]) {
+        const edges = new Set<number>();
+        for (let index = 0; index < await rows.count(); index++) {
+          const row = rows.nth(index), classes = (await row.getAttribute("class"))!;
+          if (name === "priority" && classes.includes("closed")) continue;
+          if (section && !classes.includes(section)) continue;
+          edges.add(await left(row, selector));
+        }
+        expect(edges.size, `${name} ${section} left edges ${[...edges]}`).toBe(1);
       }
-      expect(edges.size, `${name} left edges ${[...edges]}`).toBe(1);
     }
     // The new-comment marker icon also starts at one x position regardless of digit count.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -106,18 +111,21 @@ for (const theme of ["light", "dark"]) {
   });
 }
 
-test("compact layout keeps status flowing without page overflow", async ({ page }) => {
+test("compact layout keeps status in its line-2 slot without page overflow", async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 900 });
   await fixture(page);
+  // #426: every desktop/tablet width keeps the same fixed status slot on line 2 instead of a wrapping flow.
   const slot = page.locator(".issue-row").first().locator(".row-slot-status");
-  expect(await slot.evaluate(node => getComputedStyle(node).display)).toBe("contents");
+  expect(await slot.evaluate(node => getComputedStyle(node).display)).toBe("flex");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 
 for (const combined of [false, true]) {
-  test(`activity occupies a stable slot before status in ${combined ? "combined" : "split"} rows`, async ({ page }) => {
+  test(`activity occupies a stable slot after status in ${combined ? "combined" : "split"} rows`, async ({ page }) => {
     await page.setViewportSize({ width: 1800, height: 1000 });
+    // #419 slides a moved row to its new column; measure the settled geometry.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     const api = await fixture(page);
     if (combined) await boardSplit(page).uncheck();
     const row = page.locator(".issue-row").filter({ has: page.getByRole("button", { name: "Backlog one", exact: true }) });
@@ -144,9 +152,10 @@ for (const combined of [false, true]) {
     const marker = (await moved.boundingBox())!;
     const status = (await row.locator(".row-status").boundingBox())!;
     const rowBox = (await row.boundingBox())!;
-    expect(marker.x + marker.width).toBeLessThanOrEqual(status.x);
+    // #426: unread markers end line 2 (after status and labels) instead of preceding status.
+    expect(marker.x).toBeGreaterThanOrEqual(status.x + status.width);
     expect(marker.y + marker.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
-    expect(marker.y + marker.height / 2).toBeCloseTo(rowBox.y + rowBox.height / 2, 0);
+    expect(marker.y).toBeGreaterThan(rowBox.y + rowBox.height / 2 - 4);
     expect(await row.locator(".issue-points").count()).toBe(1);
     await expect(row.locator(".issue-time-remaining")).toBeVisible();
     await moved.focus(); await page.keyboard.press("Enter");
@@ -164,7 +173,7 @@ for (const combined of [false, true]) {
       const beforeRead = (await fresh.boundingBox())!;
       const badge = (await created.boundingBox())!;
       const status = (await fresh.locator(".row-status").boundingBox())!;
-      expect(badge.x + badge.width).toBeLessThanOrEqual(status.x);
+      expect(badge.x).toBeGreaterThanOrEqual(status.x + status.width);
       expect(badge.y + badge.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       // Reading leaves the reserved movement slot in place.
@@ -184,9 +193,9 @@ for (const combined of [false, true]) {
       const badge = (await moved.boundingBox())!;
       const status = (await row.locator(".row-status").boundingBox())!;
       const commentBox = (await comments.boundingBox())!;
-      expect(badge.x + badge.width).toBeLessThanOrEqual(status.x);
+      expect(badge.x).toBeGreaterThanOrEqual(status.x + status.width);
       expect(badge.y + badge.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
-      expect(commentBox.x + commentBox.width <= badge.x || commentBox.y + commentBox.height <= badge.y || commentBox.y >= badge.y + badge.height).toBe(true);
+      expect(commentBox.x + commentBox.width <= badge.x || commentBox.x >= badge.x + badge.width || commentBox.y + commentBox.height <= badge.y || commentBox.y >= badge.y + badge.height).toBe(true);
       await comments.click();
       await expect(moved).toHaveCount(0);
       await expect(comments).toHaveCount(0);
@@ -315,12 +324,15 @@ test("interrupted work keeps its actual duration without inflating future issue 
 
 for (const combined of [false, true]) test(`timeout keeps its own slot with long labels in ${combined ? 'combined' : 'split'} rows`, async ({ page }) => {
   await page.setViewportSize({ width: 1800, height: 1000 });
+  // #419 slides a moved row to its new column; measure the settled geometry.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const api = await fixture(page, false, false, true);
   if (combined) await boardSplit(page).uncheck();
   const row = page.locator('.issue-row').filter({ has: page.getByRole('button', { name: 'Backlog one', exact: true }) });
   const snapshot = () => row.evaluate(element => {
     const row = element.getBoundingClientRect();
-    return { height: row.height, slots: ['.row-slot-timeout', '.row-status', '.row-slot-priority', '.row-labels'].map(selector => {
+    // #426: the timeout chip no longer reserves an empty slot; priority and status stay put, labels follow it.
+    return { height: row.height, slots: ['.row-status', '.row-slot-priority', '.row-labels'].map(selector => {
       const box = element.querySelector(selector)!.getBoundingClientRect(); return { x: box.x, y: box.y, width: box.width, height: box.height };
     }) };
   });
@@ -331,18 +343,18 @@ for (const combined of [false, true]) test(`timeout keeps its own slot with long
   await expect(row.getByRole('button', { name: '2 nya kommentarer. Markera som läst', exact: true })).toBeVisible();
   const active = await snapshot();
   expect(active.height).toBe(empty.height);
-  for (let index = 0; index < active.slots.length; index++) expect(active.slots[index]!.x).toBeCloseTo(empty.slots[index]!.x, 0);
+  for (let index = 0; index < 2; index++) expect(active.slots[index]!.x).toBeCloseTo(empty.slots[index]!.x, 0);
   for (const width of [1800, 1600, 1450, 1380, 1100, 800]) {
     await page.setViewportSize({ width, height: 1000 });
     const geometry = await snapshot();
     const timeout = (await row.locator('.row-timeout').boundingBox())!;
     const status = (await row.locator('.row-status').boundingBox())!;
     const moved = (await row.locator('.row-movement-marker').boundingBox())!;
-    expect(timeout.x + timeout.width).toBeLessThanOrEqual(status.x);
-    expect(moved.x + moved.width).toBeLessThanOrEqual(timeout.x);
+    expect(timeout.x).toBeGreaterThanOrEqual(status.x + status.width);
+    expect(moved.x).toBeGreaterThanOrEqual(timeout.x + timeout.width);
     expect(timeout.y + timeout.height / 2).toBeCloseTo(status.y + status.height / 2, 0);
     const labels = await row.locator('.row-labels .label').all();
-    for (const label of labels) expect((await label.boundingBox())!.y).toBeCloseTo(geometry.slots[3]!.y, 0);
+    for (const label of labels) expect((await label.boundingBox())!.y).toBeCloseTo(geometry.slots[2]!.y, 0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.setViewportSize({ width: 1800, height: 1000 });
@@ -352,7 +364,7 @@ for (const combined of [false, true]) test(`timeout keeps its own slot with long
   await expect(row.locator('.row-timeout')).toHaveCount(0);
   const cleared = await snapshot();
   expect(cleared.height).toBe(active.height);
-  for (let index = 0; index < active.slots.length; index++) expect(cleared.slots[index]!.x).toBeCloseTo(active.slots[index]!.x, 0);
+  for (let index = 0; index < 2; index++) expect(cleared.slots[index]!.x).toBeCloseTo(active.slots[index]!.x, 0);
 });
 
 
@@ -407,11 +419,15 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     for (const row of await page.locator('.issue-row').all()) {
       const geometry = await row.evaluate(element => {
         const time = element.querySelector('.row-time')!.getBoundingClientRect(), forecast = element.querySelector('.row-outcome')!.getBoundingClientRect();
-        return { timeRight: time.right, forecastX: forecast.x, forecastRight: forecast.right, rowRight: element.getBoundingClientRect().right,
+        // #426: desktop/tablet stack the forecast under the time in the left block; phones keep it to the right.
+        const stacked = forecast.top >= time.bottom - 1;
+        return { stacked, timeX: time.x, timeRight: time.right, forecastX: forecast.x, forecastRight: forecast.right, rowRight: element.getBoundingClientRect().right,
           clipped: [...element.querySelectorAll('.row-outcome > *')].some(item => item.scrollWidth > item.clientWidth + 1),
-          forecastClashes: [...element.querySelectorAll('.row-outcome > *')].some(item => item.getBoundingClientRect().left < time.right - 1 || item.getBoundingClientRect().right > element.getBoundingClientRect().right + 1) };
+          forecastClashes: [...element.querySelectorAll('.row-outcome > *')].some(item => (!stacked && item.getBoundingClientRect().left < time.right - 1) || item.getBoundingClientRect().right > element.getBoundingClientRect().right + 1) };
       });
-      expect(geometry.timeRight).toBeLessThanOrEqual(geometry.forecastX);
+      if (compact) expect(geometry.stacked).toBe(false);
+      if (geometry.stacked) expect(Math.abs(geometry.timeX - geometry.forecastX)).toBeLessThanOrEqual(1);
+      else expect(geometry.timeRight).toBeLessThanOrEqual(geometry.forecastX);
       expect(geometry.forecastRight).toBeLessThanOrEqual(geometry.rowRight);
       expect(geometry.clipped).toBe(false);
       expect(geometry.forecastClashes).toBe(false);
@@ -423,13 +439,21 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
       await expect(row.locator('.closed-date')).toBeVisible();
       const geometry = await row.evaluate(element => {
         const bounds = element.getBoundingClientRect(), date = element.querySelector('.row-time')!.getBoundingClientRect(), actual = element.querySelector('.row-outcome')!.getBoundingClientRect();
-        return { row: { x: bounds.x, right: bounds.right, height: bounds.height }, date: { right: date.right, y: date.y, height: date.height }, actual: { x: actual.x, right: actual.right, y: actual.y, height: actual.height } };
+        return { row: { x: bounds.x, right: bounds.right, height: bounds.height }, date: { x: date.x, right: date.right, y: date.y, height: date.height }, actual: { x: actual.x, right: actual.right, y: actual.y, height: actual.height } };
       });
-      expect(geometry.date.right).toBeLessThanOrEqual(geometry.actual.x);
       expect(geometry.actual.right).toBeLessThanOrEqual(geometry.row.right);
-      expect(geometry.date.y + geometry.date.height / 2).toBeCloseTo(geometry.actual.y + geometry.actual.height / 2, 0);
       if (compact) expect(geometry.row.height).toBeLessThanOrEqual(60);
-      rightEdges.push(Math.round(geometry.actual.right));
+      if (compact || geometry.actual.y < geometry.date.y + geometry.date.height - 1) {
+        // Phones, and lists narrower than 600px that give the times their own line, place them side by side.
+        expect(geometry.date.right).toBeLessThanOrEqual(geometry.actual.x);
+        expect(geometry.date.y + geometry.date.height / 2).toBeCloseTo(geometry.actual.y + geometry.actual.height / 2, 0);
+      } else {
+        // #426: closing date on line 1 and actual time under it share the left time column.
+        expect(geometry.actual.y).toBeGreaterThanOrEqual(geometry.date.y + geometry.date.height - 1);
+        expect(Math.abs(geometry.date.x - geometry.actual.x)).toBeLessThanOrEqual(1);
+      }
+      // Phones keep a straight right edge; desktop rows share the time column's left edge.
+      rightEdges.push(Math.round(compact ? geometry.actual.right : geometry.actual.x - geometry.row.x));
       if ((await row.locator('.row-title').innerText()).includes('unknown')) await expect(actual.locator('.implementation-time')).toHaveCount(0);
       else await expect(actual.locator('.implementation-time')).toHaveAttribute('aria-label', /Faktisk arbetstid:/);
     }

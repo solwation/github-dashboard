@@ -305,7 +305,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       :aria-label="t('Öppna #{number} på GitHub', { number: issue.number })"
       :title="t('Öppna #{number} på GitHub', { number: issue.number })"
       @click="emit('read')" @auxclick="emit('read')"
-      >#{{ issue.number }}<ArrowUpRight :size="11" aria-hidden="true"
+      >#{{ issue.number }}<ArrowUpRight v-if="issue.number < 100000" :size="11" aria-hidden="true"
     /></a>
     </span>
     <button
@@ -319,12 +319,12 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><IssueWorkActivity :issue="issue" :rules="rules" :now="now" compact /><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     </span>
+    <span class="row-points"><IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" /></span>
     <span v-if="isPhone" class="row-mobile-summary">
       <span v-if="col !== 'closed'" class="row-mobile-priority" :class="['high', 'medium', 'low'][rank]" role="img"
         :aria-label="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]">
         <component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />
       </span>
-      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
       <span v-if="showRepository" class="row-mobile-repository-slot"><span class="row-repository" :title="repository"><ProjectIcon :repository="repository" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span>
       <!-- A moved row's highlighted border already shows the move on phones; screen readers still hear it (#275). -->
       <span v-if="recentMove === true" class="row-mobile-move-note sr-only">{{ t('Flyttad till {column}', { column: status }) }}</span>
@@ -349,7 +349,13 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       </span>
     </span>
     <span v-else class="row-meta">
-      <IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" />
+      <span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
+        ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
+      ></span>
+      <span v-if="showRepository" class="row-slot row-slot-repository row-meta-repository"><span class="row-repository" :title="repository"><ProjectIcon :repository="repository" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span>
+      <span class="row-status-group"><span class="row-slot row-slot-status"><span class="row-status" :class="[col, { pending }]">{{ status }}</span></span><span class="row-slot row-slot-timeout"><span v-if="timeout && work.label.value" class="row-timeout"
+        :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: work.label.value, estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
+        >{{ t("Timeout") }}</span></span></span>
       <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
         :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
       >
@@ -364,29 +370,22 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         <span>{{ progress.completed }}/{{ progress.total }}</span>
         <span class="row-parent-label">{{ t("klara") }}</span>
       </span>
-      <span class="row-slot row-slot-comment"><button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
-        :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
-        :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
-        ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span
-      ><span v-if="showRepository" class="row-slot row-slot-repository row-meta-repository"><span class="row-repository" :title="repository"><ProjectIcon :repository="repository" /><span class="row-repository-name" aria-hidden="true">{{ repositoryLabel }}</span><span class="sr-only">{{ repository }}</span></span></span
-      ><span class="row-status-group"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
-        :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
-        :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
-        >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button></span
-      ><span class="row-slot row-slot-timeout"><span v-if="timeout && work.label.value" class="row-timeout"
-        :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: work.label.value, estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
-        >{{ t("Timeout") }}</span></span
-      ><span class="row-slot row-slot-status"><span class="row-status" :class="[col, { pending }]">{{ status }}</span></span></span
-      ><span class="row-slot row-slot-priority"><span v-if="col !== 'closed'" class="priority" :class="['high', 'medium', 'low'][rank]" :title="t('Prioritet: ') + [t('hög'), 'medium', t('låg')][rank]"
-        ><component :is="[ArrowUp, Minus, ArrowDown][rank]" :size="12" aria-hidden="true" />{{ [t("Hög"), "Medium", t("Låg")][rank] }}</span
-      ></span><span ref="labelsContainer" class="row-labels"><span v-for="label in visibleLabels" :key="label.name" class="label" :title="label.name"
+      <span ref="labelsContainer" class="row-labels"><span v-for="label in visibleLabels" :key="label.name" class="label" :title="label.name"
         ><i :style="{ background: '#' + label.color }" /><span class="label-text">{{ label.name }}</span></span
       ><button v-if="hiddenLabels.length > 0" type="button" class="label label-more" :title="hiddenLabelsTitle" :aria-label="hiddenLabelsAria" @click.stop="setExpanded(true)"
         >+{{ hiddenLabels.length }}</button></span>
+      <span class="row-activity"><span class="row-slot row-slot-movement"><button v-if="recentMove" type="button" class="row-marker row-movement-marker" @click="emit('read')"
+        :aria-label="recentMove === 'created' ? t('Nyligen skapat i Backlog. Markera som läst') : t('Nyligen flyttad. Markera som läst')"
+        :title="recentMove === 'created' ? t('Skapat i Backlog') : t('Flyttad till {column}', { column: status })"
+        >{{ recentMove === "created" ? t("Ny") : t("Flyttad") }} <span aria-hidden="true">✓</span></button></span><span class="row-slot row-slot-comment"><button v-if="newComments && newComments > 0" type="button" class="row-marker row-comment-marker" @click="emit('read')"
+        :aria-label="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
+        :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
+        ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span></span>
     </span>
     <div v-if="!isPhone" class="row-comments" @click.stop>
       <IssueComments :show-new-badge="false" :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
+    <span class="row-times">
     <span class="row-time">
       <time v-if="col === 'backlog' && Number.isFinite(Date.parse(issue.created_at))" class="backlog-age"
         :datetime="issue.created_at" :title="new Date(issue.created_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
@@ -397,7 +396,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       ><span v-else-if="col === 'progress'" class="timer" :title="work.timerTitle.value"
         ><Clock3 :size="12" aria-hidden="true" /><span class="row-elapsed-label">{{ work.label.value ?? t("Starttid okänd") }}</span></span
       ><span v-else-if="pending" class="pending-closure-badge" :title="t('Väntar på att GitHub bekräftar att issuet är stängt')"
-        ><Hourglass :size="12" aria-hidden="true" /><span v-if="isPhone" class="pending-closure-text">{{ t("Verifieras") }}</span></span
+        ><Hourglass :size="12" aria-hidden="true" /><span class="pending-closure-text">{{ t("Verifieras") }}</span></span
       ><time v-else-if="issue.closed_at" class="closed-date" :datetime="issue.closed_at"
         :title="new Date(issue.closed_at).toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
         >{{ closedTimeLabel(issue.closed_at, now, locale) }}</time
@@ -407,6 +406,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       <template v-if="col === 'closed'"><IssueImplementationTime v-if="!pending" :issue="issue" :repository="repository" /></template>
       <IssueTimeRemaining v-else-if="col === 'progress'" :issue="issue" :repository="repository" :active="visible" />
       <IssueTimeEstimate v-else :issue="issue" :repository="repository" :active="visible" />
+    </span>
     </span>
     <div v-if="expanded && !isPhone" :id="panelId" class="row-card">
       <div v-if="allLabels.length" class="row-expanded-labels" role="group" :aria-label="t('Labels')">
@@ -453,15 +453,17 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 </template>
 
 <style scoped>
-.row-heading { display: contents; }
+.row-heading, .row-times { display: contents; }
 .row-time { flex-wrap: nowrap; overflow: hidden; }
 .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-elapsed-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .row-comments { display: none; min-width: 0; }
-.row-comments :deep(.comment-count) { max-width: 100%; gap: var(--space-1); padding-inline: var(--space-1); }
+.row-comments :deep(.comment-count) { max-width: 100%; min-height: var(--space-4); gap: var(--space-1); padding: 0 var(--space-1); font-size: 10px; line-height: 1.4; }
 .row-comments :deep(.comment-count-value) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-mobile-summary { display: none; }
-.row-outcome { display: flex; align-items: center; justify-content: flex-end; min-width: 0; grid-column: -2 / -1; }
+.row-points { display: flex; align-items: center; min-width: 0; }
+.row-outcome { display: flex; align-items: center; justify-content: flex-start; min-width: 0; overflow: hidden; }
+.row-outcome > * { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 951px) {
   .row-outcome :deep(.issue-time-estimate),
   .row-outcome :deep(.implementation-time),
@@ -469,90 +471,80 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     font-size: 10px; font-family: inherit; font-weight: inherit; font-style: normal; line-height: inherit;
   }
 }
-/* Keep a full metadata line until title, fixed slots and both time columns fit. */
-@media (min-width: 951px) {
-  .issue-row { grid-template-columns: 6.2rem minmax(0, 1fr) 6rem 7.25rem; padding: var(--space-1) var(--space-2); row-gap: 0; }
-  .row-meta { grid-column: 1 / -1; grid-row: 2; }
-  .row-meta :deep(.issue-points), .row-meta :deep(.row-repository),
-  .row-meta :deep(.label), .row-meta :deep(.priority), .row-meta :deep(.row-status),
-  .row-meta :deep(.row-timeout), .row-meta :deep(.row-marker) { padding-block: 0; }
+/* #426: one two-line row everywhere above phone width. A fixed left block holds the id badge
+   (type icon inside) with SP directly under it, and the times stacked beside it: start/age or
+   closed date on line 1, estimate/remaining/actual time on line 2. The title owns the rest of
+   line 1; status, priority, labels and markers share line 2. */
+.issue-row {
+  /* Lead fits a badge up to #99999 with ↗ (longer numbers drop the arrow); times fit "Stängd 30 nov. 22:04". */
+  --row-lead: 5.25rem; --row-times: 5.75rem;
+  grid-template-columns: var(--row-lead) var(--row-times) minmax(0, 1fr) auto;
+  grid-template-areas: "id time title title" "points outcome meta comments";
+  align-items: center; gap: 0 var(--space-2); padding: var(--space-1) var(--space-2);
 }
+.row-id { grid-area: id; }
+.row-title { grid-area: title; }
+.row-points { grid-area: points; }
+.row-time { grid-area: time; justify-self: stretch; justify-content: flex-start; text-align: left; }
+.row-outcome { grid-area: outcome; }
+.row-meta { grid-area: meta; }
+.row-comments { grid-area: comments; justify-self: end; }
+.row-meta :deep(.row-repository), .row-meta :deep(.label), .row-meta :deep(.priority), .row-meta :deep(.row-status),
+.row-meta :deep(.row-timeout), .row-meta :deep(.row-marker) { padding-block: 0; }
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 6.2rem minmax(0, 1fr) 3.5rem 6rem 7.25rem; }
-  .row-meta { grid-column: 1 / -1; grid-row: 2; }
-  .row-comments { display: flex; align-items: center; }
+  /* A fixed slot keeps the comment icon at one x whatever the count's digits. */
+  .row-comments { display: flex; align-items: center; justify-self: start; width: 3.5rem; }
 }
-@media (min-width: 951px) and (pointer: fine) {
-  @container issue-list (850px <= width < 1250px) {
-    .row-comments :deep(.comment-count) { min-height: var(--space-4); padding: 0 var(--space-1); font-size: 10px; line-height: 1.4; }
-  }
-}
-@container issue-list (min-width: 1250px) {
-  .issue-row { grid-template-columns: 6.2rem minmax(12rem, 1fr) minmax(38rem, 1.8fr) 3.5rem 6rem 7.25rem; }
-  .issue-row .row-meta { grid-column: auto; grid-row: auto; }
-}
-@media (min-width: 651px) and (max-width: 950px) {
-  .issue-row { grid-template-columns: auto minmax(0, 1fr) auto 7.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; }
-  .row-outcome { grid-area: outcome; }
+/* Narrow lists (many swimlanes, rail tablets): the times move to their own third line, still left-aligned. */
+@container issue-list (max-width: 600px) {
+  .issue-row { grid-template-columns: var(--row-lead) minmax(0, 1fr); grid-template-areas: "id title" "points meta" "times times"; }
+  .row-times { grid-area: times; display: flex; align-items: center; gap: var(--space-3); min-width: 0; overflow: hidden; }
+  .row-time { flex: 0 1 auto; }
+  .row-outcome { flex: 0 1 auto; }
 }
 @media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
   .issue-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 4.5rem) auto;
-    grid-template-areas: "heading heading heading" "meta time outcome";
+    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 4.5rem) auto;
+    grid-template-areas: "heading heading heading heading" "points meta time outcome";
     gap: 2px 6px; min-height: 56px; padding: 6px 8px;
   }
+  /* Phones keep number and title on one line; SP opens line 2 directly under the number in a fixed slot. */
   .row-heading { grid-area: heading; display: flex; align-items: center; gap: 6px; min-width: 0; }
   .row-heading > .row-id { flex-shrink: 0; }
   .row-heading > .row-title { flex: 1; }
-  .row-outcome { grid-area: outcome; }
+  .row-times { display: contents; overflow: visible; }
+  .row-points { justify-self: start; max-width: 100%; }
+  .row-outcome { grid-area: outcome; justify-content: flex-end; }
   .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
   .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; min-height: 24px; overflow: hidden; }
   .row-mobile-summary > * { flex: 0 0 auto; }
-  .row-mobile-summary > .row-mobile-repository-slot { display: flex; align-items: center; order: 4; flex: 1 1 0; }
   .row-mobile-summary > .row-mobile-priority { order: 2; }
-  .row-mobile-summary > .issue-points { order: 3; flex-shrink: 1; }
   .row-mobile-summary > .row-mobile-activity { order: 6; }
   .row-mobile-summary > .row-mobile-relation { order: 4; }
-  .row-mobile-summary > .row-mobile-repository-slot { order: 5; min-width: 0; max-width: 9rem; }
+  .row-mobile-summary > .row-mobile-repository-slot { display: flex; align-items: center; order: 5; flex: 1 1 0; min-width: 0; max-width: 9rem; }
   .row-mobile-repository-slot > .row-repository { width: fit-content; max-width: 100%; padding: 1px 4px; font-size: 10px; }
   .row-mobile-relation { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: 0 0 auto; min-width: 22px; height: 20px; padding: 0 3px; font-size: 10px; line-height: 1; white-space: nowrap; }
   .row-mobile-priority { display: inline-flex; }
   .row-mobile-priority.high { color: var(--accent-red, #b42332); }
   .row-mobile-activity { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 24px; height: 24px; padding: 0 3px; border: 0; border-radius: 4px; background: var(--marker-move-bg); color: var(--marker-move-text); font-size: 10px; cursor: pointer; }
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
-  .row-time { grid-area: time; justify-self: end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
+  .row-time { grid-area: time; justify-self: end; justify-content: flex-end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
   .row-time > .timer, .row-time > .integration-wait { flex: 1 1 auto; min-width: 0; }
-  .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
-  .issue-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2.75rem) auto;
-    grid-template-areas: "heading heading heading" "meta time outcome";
-    min-height: 56px;
-  }
+  .issue-row { grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 2.75rem) auto; }
   .row-mobile-summary { gap: 1px; }
   .row-mobile-summary > .row-mobile-repository-slot { flex: 0 0 auto; }
   .row-mobile-repository-slot > .row-repository { padding: 1px; }
   .row-mobile-summary .row-repository-name { display: none; }
-  .row-mobile-summary > .issue-points { padding: 1px; font-size: 10px; }
+  .row-points :deep(.issue-points) { padding: 1px; }
   .row-mobile-priority svg { width: 9px; height: 9px; }
   .row-mobile-activity { padding: 0; }
   .row-time { max-width: 2.75rem; }
   /* Narrow phones keep the icon badge; the full status stays in screen-reader text and the card (#392). */
   .integration-wait .row-elapsed-label { display: none; }
-  .row-outcome { width: 5rem; max-width: 5rem; overflow: hidden; font-size: 10px; }
+  .row-outcome { width: 5rem; max-width: 5rem; font-size: 10px; }
   .row-outcome .issue-time-estimate,
   .row-outcome :deep(.issue-time-remaining-label) { font-size: 10px; }
-}
-/* Narrow desktop lists (swimlane columns, #390) reuse the narrow-content layout so the title keeps its width. */
-@media (min-width: 951px) {
-  @container issue-list (max-width: 600px) {
-    .issue-row { grid-template-columns: auto minmax(0, 1fr) auto 7.25rem; grid-template-areas: "number title title title" "meta meta meta meta" "time time time outcome"; padding: var(--space-1) var(--space-2); }
-    .row-id { grid-area: number; }
-    .row-title { grid-area: title; }
-    .row-meta { grid-area: meta; }
-    .row-time { grid-area: time; }
-    .row-outcome { grid-area: outcome; }
-  }
 }
 </style>

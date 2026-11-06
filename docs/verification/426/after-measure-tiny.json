@@ -1,0 +1,2235 @@
+{
+ "none-Lista": [
+  {
+   "cls": "backlog",
+   "title": "Kontrollera spelfångst o",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 42.2,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 66.2,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.8,
+    "y": 32.5,
+    "w": 20.2,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 81.2,
+    "y": 7,
+    "w": 179.8,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Kontrollera spelfångst o",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 51.4,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 75.4,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.8,
+    "y": 32.5,
+    "w": 20.2,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 90.4,
+    "y": 7,
+    "w": 170.6,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Kontrollera spelfångst o",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44.5,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 68.5,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.8,
+    "y": 32.5,
+    "w": 20.2,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 83.5,
+    "y": 7,
+    "w": 177.5,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "a-very-long-repository-n",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44.8,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 68.8,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.5,
+    "y": 32.5,
+    "w": 20.5,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 83.8,
+    "y": 7,
+    "w": 177.2,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "alpha-service: utan typ ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.1,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 57.1,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.5,
+    "y": 32.5,
+    "w": 20.5,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 72.1,
+    "y": 7,
+    "w": 188.9,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "gamma: utan typ och utan",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.1,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 71.1,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.5,
+    "y": 32.5,
+    "w": 20.5,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 86.1,
+    "y": 7,
+    "w": 174.9,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress",
+   "title": "Pågående utan känd start",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 45,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 69,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": null,
+   "titleBox": {
+    "x": 84,
+    "y": 7,
+    "w": 177,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress",
+   "title": "Pågående utan känd start",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 57.3,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": null,
+   "titleBox": {
+    "x": 72.3,
+    "y": 7,
+    "w": 188.8,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress",
+   "title": "Pågående utan känd start",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 71.3,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": null,
+   "titleBox": {
+    "x": 86.3,
+    "y": 7,
+    "w": 174.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress issue-timeout",
+   "title": "Långsamt pågående arbete",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 45.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 69.3,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 203.8,
+    "y": 31.3,
+    "w": 57.2,
+    "h": 15.5
+   },
+   "titleBox": {
+    "x": 84.3,
+    "y": 7,
+    "w": 176.7,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress issue-timeout",
+   "title": "Långsamt pågående arbete",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.6,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 57.6,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 203.8,
+    "y": 31.3,
+    "w": 57.2,
+    "h": 15.5
+   },
+   "titleBox": {
+    "x": 72.6,
+    "y": 7,
+    "w": 188.4,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress issue-timeout",
+   "title": "Långsamt pågående arbete",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.6,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 71.6,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 203.8,
+    "y": 31.3,
+    "w": 57.2,
+    "h": 15.5
+   },
+   "titleBox": {
+    "x": 86.6,
+    "y": 7,
+    "w": 174.4,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt arbete med faktis",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 45.1,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 69.1,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 181,
+    "y": 32,
+    "w": 80,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 84.1,
+    "y": 7,
+    "w": 176.9,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 29
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt utan typ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 68,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 205.2,
+    "y": 32,
+    "w": 55.8,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 83,
+    "y": 7,
+    "w": 178,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 29
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt arbete med faktis",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.4,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 57.4,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 181,
+    "y": 32,
+    "w": 80,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 72.4,
+    "y": 7,
+    "w": 188.6,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 29
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt utan typ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 32.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 56.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 205.2,
+    "y": 32,
+    "w": 55.8,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 71.3,
+    "y": 7,
+    "w": 189.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 29
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt arbete med faktis",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.4,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 71.4,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 181,
+    "y": 32,
+    "w": 80,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 86.4,
+    "y": 7,
+    "w": 174.6,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 29
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt utan typ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 46.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 70.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 205.2,
+    "y": 32,
+    "w": 55.8,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 85.3,
+    "y": 7,
+    "w": 175.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 29
+   },
+   "overflow": 0
+  }
+ ],
+ "split-Lista": [
+  {
+   "cls": "backlog",
+   "title": "Kontrollera spelfångst o",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 42.2,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 66.2,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.8,
+    "y": 32.5,
+    "w": 20.2,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 81.2,
+    "y": 7,
+    "w": 179.8,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "a-very-long-repository-n",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44.8,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 68.8,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.5,
+    "y": 32.5,
+    "w": 20.5,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 83.8,
+    "y": 7,
+    "w": 177.2,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Begränsa API-timeout gen",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44.5,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 68.5,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 33.1,
+    "h": 16
+   },
+   "time": {
+    "x": 154.7,
+    "y": 32.5,
+    "w": 20.3,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.3,
+    "y": 32.5,
+    "w": 43.7,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 83.5,
+    "y": 7,
+    "w": 177.5,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress",
+   "title": "Pågående utan känd start",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 45,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 69,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": null,
+   "titleBox": {
+    "x": 84,
+    "y": 7,
+    "w": 177,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress issue-timeout",
+   "title": "Långsamt pågående arbete",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 45.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 69.3,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 203.8,
+    "y": 31.3,
+    "w": 57.2,
+    "h": 15.5
+   },
+   "titleBox": {
+    "x": 84.3,
+    "y": 7,
+    "w": 176.7,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt arbete med faktis",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 45.1,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 69.1,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 181,
+    "y": 32,
+    "w": 80,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 84.1,
+    "y": 7,
+    "w": 176.9,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt utan typ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 68,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 205.2,
+    "y": 32,
+    "w": 55.8,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 83,
+    "y": 7,
+    "w": 178,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 41.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 65.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 80.3,
+    "y": 7,
+    "w": 180.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 43.7,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 67.7,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 82.7,
+    "y": 7,
+    "w": 178.3,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 68,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 83,
+    "y": 7,
+    "w": 178,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Kontrollera spelfångst o",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 51.4,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 75.4,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.8,
+    "y": 32.5,
+    "w": 20.2,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 90.4,
+    "y": 7,
+    "w": 170.6,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "alpha-service: utan typ ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.1,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 57.1,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.5,
+    "y": 32.5,
+    "w": 20.5,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 72.1,
+    "y": 7,
+    "w": 188.9,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Begränsa API-timeout gen",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 32.8,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 56.8,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 33.1,
+    "h": 16
+   },
+   "time": {
+    "x": 154.7,
+    "y": 32.5,
+    "w": 20.3,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.3,
+    "y": 32.5,
+    "w": 43.7,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 71.8,
+    "y": 7,
+    "w": 189.2,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress",
+   "title": "Pågående utan känd start",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 57.3,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": null,
+   "titleBox": {
+    "x": 72.3,
+    "y": 7,
+    "w": 188.8,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress issue-timeout",
+   "title": "Långsamt pågående arbete",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.6,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 57.6,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 203.8,
+    "y": 31.3,
+    "w": 57.2,
+    "h": 15.5
+   },
+   "titleBox": {
+    "x": 72.6,
+    "y": 7,
+    "w": 188.4,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt arbete med faktis",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 33.4,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 57.4,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 181,
+    "y": 32,
+    "w": 80,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 72.4,
+    "y": 7,
+    "w": 188.6,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt utan typ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 32.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 56.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 205.2,
+    "y": 32,
+    "w": 55.8,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 71.3,
+    "y": 7,
+    "w": 189.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 37.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 61.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 76.3,
+    "y": 7,
+    "w": 184.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 39.7,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 63.7,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 78.7,
+    "y": 7,
+    "w": 182.3,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 40,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 64,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 79,
+    "y": 7,
+    "w": 182,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Kontrollera spelfångst o",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 44.5,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 68.5,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.8,
+    "y": 32.5,
+    "w": 20.2,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 83.5,
+    "y": 7,
+    "w": 177.5,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "gamma: utan typ och utan",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.1,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 71.1,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 154.5,
+    "y": 32.5,
+    "w": 20.5,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.8,
+    "y": 32.5,
+    "w": 43.3,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 86.1,
+    "y": 7,
+    "w": 174.9,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "backlog",
+   "title": "Begränsa API-timeout gen",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 46.8,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 70.8,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 33.1,
+    "h": 16
+   },
+   "time": {
+    "x": 154.7,
+    "y": 32.5,
+    "w": 20.3,
+    "h": 13
+   },
+   "outcome": {
+    "x": 217.3,
+    "y": 32.5,
+    "w": 43.7,
+    "h": 13
+   },
+   "titleBox": {
+    "x": 85.8,
+    "y": 7,
+    "w": 175.2,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress",
+   "title": "Pågående utan känd start",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 71.3,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": null,
+   "titleBox": {
+    "x": 86.3,
+    "y": 7,
+    "w": 174.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "progress issue-timeout",
+   "title": "Långsamt pågående arbete",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.6,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 71.6,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 203.8,
+    "y": 31.3,
+    "w": 57.2,
+    "h": 15.5
+   },
+   "titleBox": {
+    "x": 86.6,
+    "y": 7,
+    "w": 174.4,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": {
+    "x": 66.2,
+    "y": 34.5
+   },
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt arbete med faktis",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 47.4,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7,
+    "w": 71.4,
+    "h": 18
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 181,
+    "y": 32,
+    "w": 80,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 86.4,
+    "y": 7,
+    "w": 174.6,
+    "h": 18
+   },
+   "titleTruncated": true,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Stängt utan typ",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 46.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 70.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 205.2,
+    "y": 32,
+    "w": 55.8,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 85.3,
+    "y": 7,
+    "w": 175.7,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 43.6,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 67.6,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 82.6,
+    "y": 7,
+    "w": 178.4,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 46,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 70,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 85,
+    "y": 7,
+    "w": 176,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  },
+  {
+   "cls": "closed",
+   "title": "Historik",
+   "height": 58,
+   "width": 270,
+   "badge": {
+    "x": 31,
+    "y": 8.3,
+    "w": 46.3,
+    "h": 15.4
+   },
+   "id": {
+    "x": 9,
+    "y": 7.3,
+    "w": 70.3,
+    "h": 17.4
+   },
+   "points": {
+    "x": 9,
+    "y": 31,
+    "w": 30.8,
+    "h": 16
+   },
+   "time": {
+    "x": 131,
+    "y": 32.5,
+    "w": 44,
+    "h": 13
+   },
+   "outcome": {
+    "x": 210.6,
+    "y": 32,
+    "w": 50.4,
+    "h": 14
+   },
+   "titleBox": {
+    "x": 85.3,
+    "y": 7,
+    "w": 175.8,
+    "h": 18
+   },
+   "titleTruncated": false,
+   "line2": null,
+   "overflow": 0
+  }
+ ]
+}

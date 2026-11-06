@@ -124,8 +124,9 @@ test("combined-list repository chips keep row content aligned at every card/list
         await expect(row.locator(".row-meta > .row-meta-repository")).toHaveCount(1);
         const statusBox = (await row.locator(".row-status").boundingBox())!;
         const priorityBox = (await row.locator(".row-slot-priority").boundingBox())!;
+        // #426: line 2 reads priority, repository chip, then status.
+        expect(priorityBox.x).toBeLessThan(chipBox.x);
         expect(chipBox.x).toBeLessThan(statusBox.x);
-        expect(statusBox.x).toBeLessThanOrEqual(priorityBox.x);
       } else await expect(row.locator(".row-mobile-summary .row-repository")).toHaveCount(1);
 
       if (scenario.theme === "light") {

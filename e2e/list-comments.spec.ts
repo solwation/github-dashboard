@@ -51,9 +51,10 @@ test("wide list rows show correct counts and reuse the comments dialog without e
   const unreadGeometry = await row.evaluate(el => {
     const button = el.querySelector('.row-comments .comment-count')!.getBoundingClientRect();
     const slot = el.querySelector('.row-comments')!.getBoundingClientRect();
-    const time = el.querySelector('.row-time')!.getBoundingClientRect();
+    // #426: the comment total ends line 2, after the metadata (the times moved to the left block).
+    const meta = el.querySelector('.row-meta')!.getBoundingClientRect();
     const value = el.querySelector('.comment-count-value') as HTMLElement;
-    return { contained: button.right <= slot.right + 1, gap: time.left - button.right, fullCount: value.scrollWidth <= value.clientWidth };
+    return { contained: button.right <= slot.right + 1, gap: button.left - meta.right, fullCount: value.scrollWidth <= value.clientWidth };
   });
   await expect(row.locator(".row-time")).toContainText("23");
   expect(unreadGeometry.contained).toBe(true);
@@ -74,8 +75,9 @@ test("wide list rows show correct counts and reuse the comments dialog without e
   await expect(comments).toBeFocused();
   expect(api.requests).toEqual([1]);
   const [commentBounds, rowBounds, timeBounds] = await Promise.all([comments.boundingBox(), row.boundingBox(), row.locator(".row-time").boundingBox()]);
-  expect(commentBounds!.x + commentBounds!.width).toBeLessThanOrEqual(timeBounds!.x);
-  expect(commentBounds!.x).toBeGreaterThanOrEqual(rowBounds!.x);
+  // #426: the time stack sits in the left block and the comment total at the row's right end.
+  expect(commentBounds!.x).toBeGreaterThanOrEqual(timeBounds!.x + timeBounds!.width);
+  expect(commentBounds!.x + commentBounds!.width).toBeLessThanOrEqual(rowBounds!.x + rowBounds!.width);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   // The independent mark-read action still works for the other row.
   await other.locator('.row-comment-marker').click();

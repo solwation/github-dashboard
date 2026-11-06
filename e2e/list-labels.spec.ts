@@ -35,6 +35,12 @@ async function setupListFixture(page: Page) {
         { name: "backend-service", color: "f9d0c4" },
         { name: "database-migration", color: "c2e0c6" },
         { name: "security-audit", color: "bfdadc" },
+        // #426 gives labels most of line 2, so more labels are needed to overflow into +N on wide screens.
+        { name: "performance-regression-watch", color: "fef2c0" },
+        { name: "accessibility-review", color: "d4c5f9" },
+        { name: "localization: swedish and english", color: "c5def5" },
+        { name: "release-notes-required", color: "bfd4f2" },
+        { name: "customer-reported", color: "f9d0c4" },
       ],
     },
     {
