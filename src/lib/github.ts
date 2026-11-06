@@ -181,9 +181,8 @@ export class GitHub {
       if (externalSignal.aborted) controller.abort(externalSignal.reason);
       else externalSignal.addEventListener("abort", () => controller.abort(externalSignal.reason), { once: true });
     }
-    let response: Response;
     try {
-      response = await fetch(url, {
+      const response = await fetch(url, {
         ...init,
         signal: controller.signal,
         cache: "no-store",
@@ -195,81 +194,87 @@ export class GitHub {
           ...(init.body ? { "Content-Type": "application/json" } : {}),
         },
       });
+      this.observeQuota(url, response.headers);
+      if (response.status === 304 && cached) {
+        this.observePermission(url.pathname, true);
+        // Keep revalidated entries most recent so exportResponses() retains them (#108).
+        this.responses.delete(url.href);
+        this.responses.set(url.href, cached);
+        this.validatedAt.set(cached, Date.now());
+        return { data: cached.data as T, next: cached.next };
+      }
+      if (!response.ok) {
+        const body = await response.json().catch((error) => {
+          if (controller.signal.aborted) throw error;
+          return null;
+        }) as { message?: unknown } | null;
+        const isSecondaryRateLimit = (response.status === 403 || response.status === 429) &&
+          typeof body?.message === "string" &&
+          /secondary rate limit|abuse/i.test(body.message);
+        const retry = response.headers.get("retry-after");
+        const resetAt = response.headers.get("x-ratelimit-reset");
+        if (retry)
+          this.limitedUntil = Math.max(
+            this.limitedUntil,
+            /^\d+$/.test(retry)
+              ? Date.now() + Number(retry) * 1000
+              : Date.parse(retry) || 0,
+          );
+        else if (isSecondaryRateLimit)
+          this.limitedUntil = Math.max(this.limitedUntil, Date.now() + 60000);
+        if (resetAt && response.headers.get("x-ratelimit-remaining") === "0")
+          this.limitedUntil = Math.max(this.limitedUntil, Number(resetAt) * 1000);
+        const rateLimited = response.status === 429 || !!retry || response.headers.get("x-ratelimit-remaining") === "0" || isSecondaryRateLimit;
+        // Only a genuine rate limit shows a retry time; GitHub sends X-RateLimit-Reset on every response (#107).
+        const retryAt = rateLimited
+          ? this.limitedUntil > Date.now() ? this.limitedUntil : Number(resetAt) * 1000 || 0
+          : 0;
+        const permissionDenied = response.status === 403 && !rateLimited && typeof body?.message === "string" &&
+          /^Resource not accessible by (personal access token|integration)\.?$/i.test(body.message);
+        this.observePermission(url.pathname, false, permissionDenied);
+        throw new GitHubApiError(
+          response.status === 401
+            ? this.token ? t("Sessionen har gått ut. Logga in igen.") : t("Åtkomst nekad.")
+            : response.status === 403 || response.status === 429
+              ? rateLimited
+                ? t("GitHubs API-gräns är nådd.") +
+                  (retryAt > Date.now()
+                    ? t(" Försök efter {time}.", {
+                        time: new Date(retryAt).toLocaleTimeString(locale.value),
+                      })
+                    : t(" Försök igen senare."))
+                : t("Åtkomst nekad.") + (this.token ? t(" Kontrollera tokenens behörigheter.") : "")
+              : t(
+                  "GitHub svarade {status}. Kontrollera att du har åtkomst till repot.",
+                  { status: response.status },
+                ),
+          response.status, permissionDenied, rateLimited,
+          response.status === 409 && typeof body?.message === "string" && /^Git Repository is empty\.?$/i.test(body.message),
+        );
+      }
+      this.observePermission(url.pathname, true);
+      const result = {
+        data: (await response.json()) as T,
+        next:
+          response.headers.get("link")?.match(/<([^>]+)>; rel="next"/)?.[1] ||
+          null,
+      };
+      const etag = response.headers.get("etag");
+      if (cacheable && etag) {
+        const entry = { etag, ...result };
+        this.responses.delete(url.href);
+        this.responses.set(url.href, entry);
+        this.validatedAt.set(entry, Date.now());
+        if (this.responses.size > 600)
+          this.responses.delete(this.responses.keys().next().value!);
+      }
+      return result;
+    } catch (error) {
+      if (controller.signal.aborted) throw controller.signal.reason;
+      throw error;
     } finally {
       clearTimeout(timeout);
     }
-    this.observeQuota(url, response.headers);
-    if (response.status === 304 && cached) {
-      this.observePermission(url.pathname, true);
-      // Keep revalidated entries most recent so exportResponses() retains them (#108).
-      this.responses.delete(url.href);
-      this.responses.set(url.href, cached);
-      this.validatedAt.set(cached, Date.now());
-      return { data: cached.data as T, next: cached.next };
-    }
-    if (!response.ok) {
-      const body = await response.json().catch(() => null) as { message?: unknown } | null;
-      const isSecondaryRateLimit = (response.status === 403 || response.status === 429) &&
-        typeof body?.message === "string" &&
-        /secondary rate limit|abuse/i.test(body.message);
-      const retry = response.headers.get("retry-after");
-      const resetAt = response.headers.get("x-ratelimit-reset");
-      if (retry)
-        this.limitedUntil = Math.max(
-          this.limitedUntil,
-          /^\d+$/.test(retry)
-            ? Date.now() + Number(retry) * 1000
-            : Date.parse(retry) || 0,
-        );
-      else if (isSecondaryRateLimit)
-        this.limitedUntil = Math.max(this.limitedUntil, Date.now() + 60000);
-      if (resetAt && response.headers.get("x-ratelimit-remaining") === "0")
-        this.limitedUntil = Math.max(this.limitedUntil, Number(resetAt) * 1000);
-      const rateLimited = response.status === 429 || !!retry || response.headers.get("x-ratelimit-remaining") === "0" || isSecondaryRateLimit;
-      // Only a genuine rate limit shows a retry time; GitHub sends X-RateLimit-Reset on every response (#107).
-      const retryAt = rateLimited
-        ? this.limitedUntil > Date.now() ? this.limitedUntil : Number(resetAt) * 1000 || 0
-        : 0;
-      const permissionDenied = response.status === 403 && !rateLimited && typeof body?.message === "string" &&
-        /^Resource not accessible by (personal access token|integration)\.?$/i.test(body.message);
-      this.observePermission(url.pathname, false, permissionDenied);
-      throw new GitHubApiError(
-        response.status === 401
-          ? this.token ? t("Sessionen har gått ut. Logga in igen.") : t("Åtkomst nekad.")
-          : response.status === 403 || response.status === 429
-            ? rateLimited
-              ? t("GitHubs API-gräns är nådd.") +
-                (retryAt > Date.now()
-                  ? t(" Försök efter {time}.", {
-                      time: new Date(retryAt).toLocaleTimeString(locale.value),
-                    })
-                  : t(" Försök igen senare."))
-              : t("Åtkomst nekad.") + (this.token ? t(" Kontrollera tokenens behörigheter.") : "")
-            : t(
-                "GitHub svarade {status}. Kontrollera att du har åtkomst till repot.",
-                { status: response.status },
-              ),
-        response.status, permissionDenied, rateLimited,
-        response.status === 409 && typeof body?.message === "string" && /^Git Repository is empty\.?$/i.test(body.message),
-      );
-    }
-    this.observePermission(url.pathname, true);
-    const result = {
-      data: (await response.json()) as T,
-      next:
-        response.headers.get("link")?.match(/<([^>]+)>; rel="next"/)?.[1] ||
-        null,
-    };
-    const etag = response.headers.get("etag");
-    if (cacheable && etag) {
-      const entry = { etag, ...result };
-      this.responses.delete(url.href);
-      this.responses.set(url.href, entry);
-      this.validatedAt.set(entry, Date.now());
-      if (this.responses.size > 600)
-        this.responses.delete(this.responses.keys().next().value!);
-    }
-    return result;
   }
 
   /**
