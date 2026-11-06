@@ -1,10 +1,11 @@
 {
   "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
   "summary": {
-    "sv": "Nyligen delade projekt dyker upp i projektväljaren inom ungefär en timme, och väljaren visar projektikoner.",
-    "en": "Newly shared projects appear in the project picker within about an hour, and the picker shows project icons."
+    "sv": "Nya projekt dyker upp i projektväljaren inom en timme med ikoner, och på telefon skymmer vänstermenyn inte längre innehållet.",
+    "en": "New projects appear in the picker within an hour with icons, and on phones the left menu no longer covers content."
   },
   "issues": [
-    421
+    421,
+    424
   ]
 }
