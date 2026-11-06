@@ -215,10 +215,10 @@ function changeTheme(event: Event) {
 .settings-dialog p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .settings-field :deep(p) { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .settings-field :deep(p[role="alert"]) { color: var(--accent-red); }
-.settings-toggle { display: flex; align-items: center; align-self: start; gap: var(--space-2); min-height: 44px; cursor: pointer; font-size: 12px; line-height: 1.4; }
+.settings-toggle { display: flex; align-items: center; align-self: start; gap: var(--space-2); min-height: 36px; cursor: pointer; font-size: 12px; line-height: 1.4; }
 .settings-toggle input { width: var(--space-5); height: var(--space-5); flex: 0 0 var(--space-5); margin: 0; padding: 0; accent-color: var(--green); }
 .settings-toggle:has(input:disabled) { cursor: default; }
-.settings-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); border-top: 1px solid var(--line); margin-top: var(--space-3); padding-top: var(--space-3); }
+.settings-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); border-top: 1px solid var(--line); margin-top: var(--space-3); padding-top: var(--space-3); }
 .settings-actions > .button,
 .settings-actions :deep(.repository-order-open),
 .settings-actions :deep(.permissions-open),
@@ -226,6 +226,7 @@ function changeTheme(event: Event) {
 .settings-dialog .modal-footer { justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-3); }
 .settings-dialog .modal-footer .button { min-height: 36px; }
 @media (pointer: coarse) {
+  .settings-toggle { min-height: 44px; }
   .settings-dialog select#language-preference,
   .settings-dialog select#theme-preference,
 .settings-dialog select#repository-owner-display,
