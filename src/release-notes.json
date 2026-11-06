@@ -2,8 +2,8 @@
   {
     "date": "2026-11-06",
     "summary": {
-      "sv": "Tydligare issue-nummer, automatisk upptäckt av nya projekt och en vänstermeny som inte skymmer innehåll på telefon.",
-      "en": "Clearer issue numbers, automatic discovery of new projects and a phone left menu that no longer covers content."
+      "sv": "Tydligare issue-nummer, synliga statusflyttar, nya projekt i väljaren och stabilare synkronisering.",
+      "en": "Clearer issue numbers, visible status moves, new projects in the picker and more reliable sync."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           420
+        ]
+      },
+      {
+        "text": {
+          "sv": "Stories glider synligt mellan Backlog, In progress och Closed när statusen ändras på GitHub.",
+          "en": "Stories visibly glide between Backlog, In progress and Closed when their status changes on GitHub."
+        },
+        "issues": [
+          419
         ]
       },
       {
