@@ -88,12 +88,18 @@ test("wide list rows show correct counts and reuse the comments dialog without e
   await expect(row.locator(".row-card")).toBeVisible();
 });
 
-test("narrow rows keep comments in the phone detail card and fit without horizontal overflow", async ({ page }) => {
+test("phone rows show the comment control on the row and keep it in the detail card", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 844 });
   const api = await fixture(page);
   const row = page.locator(".issue-row").first();
-  await expect(row.locator(".row-comments")).not.toBeVisible();
+  await expect(row.locator(".row-comments").getByRole("button", { name: "1234 kommentarer", exact: true })).toBeVisible();
+  await expect(page.locator(".issue-row").nth(1).locator(".row-comments").getByRole("button", { name: "0 kommentarer", exact: true })).toBeVisible();
   expect(api.requests).toEqual([]);
+  await row.locator(".row-comments .comment-count").click();
+  const direct = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+  await expect(direct.getByText("Discussion opened directly from the list", { exact: true })).toBeVisible();
+  await expect(row.locator(".row-title")).toHaveAttribute("aria-expanded", "false");
+  await direct.getByRole("button", { name: "Stäng kommentarer", exact: true }).click();
   await row.locator(".row-title").click();
   const cardDialog = page.getByRole("dialog", { name: /^Discussed task/ });
   await expect(cardDialog).toBeVisible();

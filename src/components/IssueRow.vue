@@ -382,7 +382,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :title="newComments === 1 ? t('1 ny kommentar. Markera som läst') : t('{count} nya kommentarer. Markera som läst', { count: newComments })"
         ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span></span>
     </span>
-    <div v-if="!isPhone" class="row-comments" @click.stop>
+    <div class="row-comments" @click.stop>
       <IssueComments :show-new-badge="false" :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <span class="row-times">
@@ -457,8 +457,14 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-time { flex-wrap: nowrap; overflow: hidden; }
 .row-time > * { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-elapsed-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.row-comments { display: none; min-width: 0; }
-.row-comments :deep(.comment-count) { max-width: 100%; min-height: var(--space-4); gap: var(--space-1); padding: 0 var(--space-1); font-size: 10px; line-height: 1.4; }
+/* #429: the comment total is always visible, in a fixed slot at the end of line 2 (never behind the expansion). */
+.row-comments { display: flex; align-items: center; justify-self: start; width: 3.5rem; min-width: 0; }
+.row-comments :deep(.comment-count) { position: relative; max-width: 100%; min-height: var(--space-4); min-width: 0; gap: var(--space-1); padding: 0 var(--space-1); font-size: 10px; line-height: 1.4; }
+/* Coarse pointers get a 44px hit area from a pseudo-element, so the row never grows. */
+@media (pointer: coarse) {
+  .row-comments :deep(.comment-count) { min-height: var(--space-4); min-width: 0; justify-content: flex-start; }
+  .row-comments :deep(.comment-count)::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%); }
+}
 .row-comments :deep(.comment-count-value) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-mobile-summary { display: none; }
 .row-points { display: flex; align-items: center; min-width: 0; }
@@ -489,24 +495,20 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-time { grid-area: time; justify-self: stretch; justify-content: flex-start; text-align: left; }
 .row-outcome { grid-area: outcome; }
 .row-meta { grid-area: meta; }
-.row-comments { grid-area: comments; justify-self: end; }
+.row-comments { grid-area: comments; }
 .row-meta :deep(.row-repository), .row-meta :deep(.label), .row-meta :deep(.priority), .row-meta :deep(.row-status),
 .row-meta :deep(.row-timeout), .row-meta :deep(.row-marker) { padding-block: 0; }
-@container issue-list (min-width: 850px) {
-  /* A fixed slot keeps the comment icon at one x whatever the count's digits. */
-  .row-comments { display: flex; align-items: center; justify-self: start; width: 3.5rem; }
-}
 /* Narrow lists (many swimlanes, rail tablets): the times move to their own third line, still left-aligned. */
 @container issue-list (max-width: 600px) {
-  .issue-row { grid-template-columns: var(--row-lead) minmax(0, 1fr); grid-template-areas: "id title" "points meta" "times times"; }
+  .issue-row { grid-template-columns: var(--row-lead) minmax(0, 1fr) 3.5rem; grid-template-areas: "id title title" "points meta comments" "times times times"; }
   .row-times { grid-area: times; display: flex; align-items: center; gap: var(--space-3); min-width: 0; overflow: hidden; }
   .row-time { flex: 0 1 auto; }
   .row-outcome { flex: 0 1 auto; }
 }
 @media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
   .issue-row {
-    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 4.5rem) auto;
-    grid-template-areas: "heading heading heading heading" "points meta time outcome";
+    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 4.5rem) auto 2.75rem;
+    grid-template-areas: "heading heading heading heading heading" "points meta time outcome comments";
     gap: 2px 6px; min-height: 56px; padding: 6px 8px;
   }
   /* Phones keep number and title on one line; SP opens line 2 directly under the number in a fixed slot. */
@@ -514,6 +516,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-heading > .row-id { flex-shrink: 0; }
   .row-heading > .row-title { flex: 1; }
   .row-times { display: contents; overflow: visible; }
+  .row-comments { width: 2.75rem; }
+  .row-comments :deep(.comment-count) { padding: 0; gap: 2px; }
   .row-points { justify-self: start; max-width: 100%; }
   .row-outcome { grid-area: outcome; justify-content: flex-end; overflow: visible; }
   .row-outcome > * { max-width: none; overflow: visible; }
@@ -534,7 +538,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-time > .timer, .row-time > .integration-wait { flex: 1 1 auto; min-width: 0; }
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
-  .issue-row { grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 2.75rem) auto; }
+  .issue-row { grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 2.75rem) auto 2.75rem; }
   .row-mobile-summary { gap: 1px; }
   .row-mobile-summary > .row-mobile-repository-slot { flex: 0 0 auto; }
   .row-mobile-repository-slot > .row-repository { padding: 1px; }

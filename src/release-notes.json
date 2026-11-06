@@ -26,6 +26,15 @@
       },
       {
         "text": {
+          "sv": "Kommentarsikonen med antal syns nu direkt på varje listrad, även i smala simbanor och på telefon.",
+          "en": "The comments icon and count now show directly on every list row, including narrow swimlanes and phones."
+        },
+        "issues": [
+          429
+        ]
+      },
+      {
+        "text": {
           "sv": "Stories glider synligt mellan Backlog, In progress och Closed när statusen ändras på GitHub.",
           "en": "Stories visibly glide between Backlog, In progress and Closed when their status changes on GitHub."
         },
