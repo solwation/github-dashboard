@@ -75,6 +75,7 @@ import { isDataRefreshShortcut } from "./lib/refresh-shortcuts";
 import { createSwipeHandler } from "./lib/touch-swipe";
 import { matchesIssueFilters } from "./lib/issue-filter";
 import { combinedItems, boardEntryKey } from "./lib/combined-board";
+import { createBoardMoves } from "./lib/board-moves";
 import { reconcileRepositoryColors } from "./lib/repository-color";
 import LogoutDialog from "./components/LogoutDialog.vue";
 import AccountSwitchDialog from "./components/AccountSwitchDialog.vue";
@@ -168,6 +169,9 @@ const lanes = shallowRef<Lane[]>([]);
 // never written into `lanes`, so the encrypted cache cannot keep a guessed state.
 const pendingClosureEntries = shallowRef<readonly PendingClosure[]>([]);
 const boardLanes = computed(() => withPendingClosures(lanes.value, pendingClosureEntries.value));
+// #419: a sync arms the move animation; the pre-flush watcher reads old positions before the board re-renders.
+const boardMoves = createBoardMoves({ rules: () => rules.value, nextTick });
+watch(boardLanes, (next, previous) => boardMoves.update(previous, next), { flush: "pre" });
 // A board restored from the cache mounts its repositories' cards a few per frame, so the
 // first cards draw without one long main-thread task (#121).
 const renderedLanes = ref(Number.POSITIVE_INFINITY);
@@ -924,7 +928,7 @@ const pendingClosures = new PendingClosures({
       changed ||= merged !== lane;
       return merged;
     });
-    if (changed) { recordIssueStateEvents(next); lanes.value = next; void persistContent(true); }
+    if (changed) { recordIssueStateEvents(next); boardMoves.arm(); lanes.value = next; void persistContent(true); }
   },
   reconcile(repository) {
     if (selected.value.includes(repository)) void refresh(false, false, true, false, [repository]).catch(() => {});
@@ -1858,6 +1862,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
     if (!pendingLanes.size) return;
     const updates = new Map(pendingLanes);
     pendingLanes.clear();
+    boardMoves.arm();
     lanes.value = lanes.value.map(entry => updates.get(entry.repo.full_name) || entry);
   }
 
