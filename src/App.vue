@@ -58,7 +58,7 @@ import { setBoardVisible, untilNext, useNow } from "./composables/useNow";
 import { boardNow, observeLaneTimes } from "./lib/clock";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
-import { summarizeLanes } from "./lib/sidebar";
+import { inactiveAfter, normalizeInactiveGraceMinutes, parseInactiveGraceMinutes, summarizeLanes } from "./lib/sidebar";
 import { hideRepository, repositoryVisibility, restoreHiddenRepositories, showRepository, type RepositoryVisibility } from "./lib/repository-visibility";
 import ExternalRepositoryForm from "./components/ExternalRepositoryForm.vue";
 import { groupedLaneOrder, MAX_EXTERNAL_REPOSITORIES, mergeExternalRepositories, parseExternalRepositories } from "./lib/external-repositories";
@@ -192,6 +192,9 @@ const projectOrder = ref<string[]>([]);
 const collapsedRepos = ref<string[]>([]);
 // "Hide inactive repositories" (#367): off by default so a quiet or new repository never vanishes unasked.
 const hideInactiveRepos = ref(false);
+// #430: minutes a repository without open work stays active after its last closed issue; 0 = at once.
+const inactiveGraceMinutes = ref(normalizeInactiveGraceMinutes(undefined));
+const inactiveGraceMs = computed(() => inactiveGraceMinutes.value * 60_000);
 // Board visibility (#367): saved manual choices and this session's reveals of inactive repositories.
 const hiddenRepos = ref<string[]>([]);
 const revealedRepos = ref<string[]>([]);
@@ -235,8 +238,14 @@ function setHideInactiveRepos(value: boolean) {
   revealedRepos.value = [];
   void save();
 }
+function setInactiveGraceMinutes(value: number) {
+  const parsed = parseInactiveGraceMinutes(value);
+  if (parsed === null) return;
+  inactiveGraceMinutes.value = parsed;
+  void save();
+}
 function visibilityState() {
-  return { hidden: hiddenRepos.value, hideInactive: hideInactiveRepos.value, revealed: revealedRepos.value };
+  return { hidden: hiddenRepos.value, hideInactive: hideInactiveRepos.value, revealed: revealedRepos.value, now: inactivityNow.value, inactiveGraceMs: inactiveGraceMs.value };
 }
 function setRepositoryVisible(name: string, visible: boolean) {
   const next = (visible ? showRepository : hideRepository)(visibilityState(), name);
@@ -1221,6 +1230,16 @@ const sidebarRepos = computed(() => {
   return summarizeLanes(orderedLanes.value, rules.value, hideCoordination.value,
     (repo, issue) => activity.changedAt(repo, issue, activityNow.value), externalNames.value).map(repo => ({ ...repo, name: sidebarRepositoryDisplayName(repo.fullName, names, repositoryOwnerDisplay.value) }));
 });
+// #430: wakes exactly when the next repository's grace expires; no polling and no API calls.
+const inactivityNow = useNow(at => {
+  let wait = Infinity;
+  for (const repo of sidebarRepos.value) {
+    if (repo.loading || repo.backlog || repo.progress) continue;
+    const until = inactiveAfter(repo, inactiveGraceMs.value);
+    if (until !== null && until > at) wait = Math.min(wait, until - at);
+  }
+  return wait;
+});
 const sidebarRepoByName = computed(() => new Map(sidebarRepos.value.map(repo => [repo.fullName, repo])));
 const repositoryVisibilities = computed<Record<string, RepositoryVisibility>>(() => {
   const state = visibilityState();
@@ -1387,7 +1406,7 @@ const transferablePreferences = computed<HandoffPreferences>(() => ({
   notificationRepos: notificationRepos.value, notificationSounds: notificationSounds.value, language: preference.value,
   query: query.value, repositoryQueries: repositoryQueries.value, repoQuery: repoQuery.value,
   hideCoordination: hideCoordination.value, splitByRepository: splitByRepository.value, boardGrouping: boardGrouping.value,
-  listMode: listMode.value, ...timeoutSettings.value,
+  listMode: listMode.value, inactiveGraceMinutes: inactiveGraceMinutes.value, ...timeoutSettings.value,
   currentView: currentView.value as "overview" | "statistics", statistics: statisticsPreferences.value,
 }));
 function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = false) {
@@ -1407,6 +1426,7 @@ function applyChosenPreferences(value: HandoffPreferences, preserveNavigation = 
   boardGrouping.value = boardGroupingFrom(value, boardGrouping.value);
   listMode.value = value.listMode ?? listMode.value;
   const legacyTimeout = value.timeoutMinutes !== undefined && value.timeoutEnabled === undefined && value.timeoutOverrunPercent === undefined;
+  inactiveGraceMinutes.value = value.inactiveGraceMinutes ?? inactiveGraceMinutes.value;
   timeoutSettings.value = normalizeTimeoutSettings(legacyTimeout ? {} : { ...timeoutSettings.value, ...value });
   statisticsPreferences.value = value.statistics ?? statisticsPreferences.value;
   if (value.currentView && !(preserveNavigation && /^#(?:overview|statistics(?:-repo-\d+)?|repo-\d+(?:-issue-\d+)?)$/.test(window.location.hash))) {
@@ -1459,6 +1479,7 @@ function save(): Promise<void> {
         ...(publicMode.value ? {} : { externalRepositories: externalRepos.value }),
         collapsedRepos: collapsedRepos.value,
         hideInactiveRepos: hideInactiveRepos.value,
+        inactiveGraceMinutes: inactiveGraceMinutes.value,
         hiddenRepos: hiddenRepos.value,
         rules: rules.value,
         columnLimit: columnLimit.value,
@@ -1482,6 +1503,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     projectOrder.value = reconcileOrder([], available.map(repo => repo.full_name));
     collapsedRepos.value = [];
     hideInactiveRepos.value = false;
+    inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(undefined);
     hiddenRepos.value = []; revealedRepos.value = [];
     columnLimit.value = defaultColumnLimit;
     timeoutSettings.value = normalizeTimeoutSettings({});
@@ -1497,6 +1519,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
       const saved = settings.value;
       if (saved) {
         timeoutSettings.value = normalizeTimeoutSettings(saved);
+        inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(saved.inactiveGraceMinutes);
         const limits = restoreColumnLimits(saved, available.map(repo => repo.full_name));
         columnLimit.value = limits.global;
         repositoryColumnLimits.value = limits.overrides;
@@ -1988,6 +2011,7 @@ function showDemo() {
   projectOrder.value = []; externalRepos.value = [];
   collapsedRepos.value = [];
   hideInactiveRepos.value = false;
+  inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(undefined);
   hiddenRepos.value = []; revealedRepos.value = [];
   lanes.value = demo();
   refreshed.value = Date.now();
@@ -2054,6 +2078,7 @@ function logout() {
   projectOrder.value = []; externalRepos.value = [];
   collapsedRepos.value = [];
   hideInactiveRepos.value = false;
+  inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(undefined);
   hiddenRepos.value = []; revealedRepos.value = [];
   layoutAnnouncement.value = "";
   rules.value = {};
@@ -2388,6 +2413,7 @@ onMounted(async () => {
       :can-select="loggedIn || publicMode"
       :restoring="restoring && !workspaceOpen"
       :hide-inactive="hideInactiveRepos"
+      :inactivity-now="inactivityNow" :inactive-grace-ms="inactiveGraceMs"
       :visibility="repositoryVisibilities"
       @update:hide-inactive="setHideInactiveRepos"
       @toggle-visibility="toggleRepositoryVisibility"
@@ -2456,7 +2482,7 @@ onMounted(async () => {
         :aria-label="t('Ny uppdatering tillgänglig')" :title="t('Ny uppdatering tillgänglig')" @click="openUpdateDialog"><span aria-hidden="true">!</span></button>
       <button class="mobile-menu-button" aria-controls="mobile-tools-menu" :aria-expanded="mobileToolsOpen" @click="mobileToolsOpen = !mobileToolsOpen"><Menu :size="20" /><span class="mobile-menu-label">{{ t("Meny") }}</span></button>
       <div id="mobile-tools-menu" class="topbar-right">
-        <LanguageSettings v-model:hide-coordination="hideCoordination" v-model:repository-owner-display="repositoryOwnerDisplay" :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
+        <LanguageSettings v-model:hide-coordination="hideCoordination" v-model:repository-owner-display="repositoryOwnerDisplay" :repositories="sidebarRepos" :visibility="repositoryVisibilities" @toggle-visibility="toggleRepositoryVisibility" :hide-inactive="hideInactiveRepos" @update:hide-inactive="setHideInactiveRepos" :inactive-grace-minutes="inactiveGraceMinutes" :inactivity-now="inactivityNow" @update:inactive-grace-minutes="setInactiveGraceMinutes" :add-external="loggedIn && !publicMode ? addExternalRepository : undefined" @remove-external="removeExternalRepository" @reorder="reorderProject" :notification-sounds="notificationSounds" @update:notification-sounds="setNotificationSounds" :timeout-enabled="timeoutSettings.timeoutEnabled" @update:timeout-enabled="setTimeoutEnabled" :timeout-overrun-percent="timeoutSettings.timeoutOverrunPercent" @update:timeout-overrun-percent="setTimeoutOverrunPercent" :column-limit="columnLimit" :can-edit-limit="workspaceOpen" @update:column-limit="setColumnLimit" :permissions="permissionReport" :permissions-session="generation" :permission-acknowledgements="permissionAcknowledgements" @update:permission-acknowledgements="setPermissionAcknowledgements" :permissions-checking="permissionsChecking" :can-check-permissions="loggedIn"
           :can-scan="loggedIn" @scan="scannerOpen = true" @open-updates="openUpdateDialog" @check-permissions="refreshPermissions()" @refresh-permissions="refreshPermissions(true)" />
         <InstallApp />
         <button
@@ -2648,7 +2674,7 @@ onMounted(async () => {
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <OverviewSummary :repositories="sidebarRepos" :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="contentLanes" :repository-lanes="lanes" :rules="rules" :hide-coordination="hideCoordination"
+        <OverviewSummary :repositories="sidebarRepos" :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="contentLanes" :repository-lanes="lanes" :rules="rules" :hide-coordination="hideCoordination" :inactive-grace-ms="inactiveGraceMs" :inactivity-now="inactivityNow"
           :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn || publicMode"
           @choose-repositories="picker = true" />
         <!-- data-busy (#151): non-visual "sync finished" signal for tests; per-repository and combined headers show status. -->

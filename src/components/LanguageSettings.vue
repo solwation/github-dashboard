@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RepositoryOwnerDisplay } from "../lib/repository-display-name";
 import { ref, watch } from "vue";
+import { DEFAULT_INACTIVE_GRACE_MINUTES, MAX_INACTIVE_GRACE_MINUTES, parseInactiveGraceMinutes } from "../lib/sidebar";
 import { DEFAULT_TIMEOUT_OVERRUN_PERCENT, MAX_TIMEOUT_OVERRUN_PERCENT, parseTimeoutOverrunPercent } from "../lib/timeouts";
 import RepositoryOrderDialog from "./RepositoryOrderDialog.vue";
 import type { SidebarRepository } from "../lib/sidebar";
@@ -17,7 +18,7 @@ import { useLanguage, type LanguagePreference } from "../lib/i18n";
 import { useTheme, type ThemePreference } from "../lib/theme";
 const { t, preference, setLanguage } = useLanguage();
 const { preference: themePreference, setTheme } = useTheme();
-const props = withDefaults(defineProps<{ hideCoordination?: boolean; repositoryOwnerDisplay?: RepositoryOwnerDisplay; repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean }>(), { hideCoordination: true, repositoryOwnerDisplay: "auto", repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true });
+const props = withDefaults(defineProps<{ hideCoordination?: boolean; repositoryOwnerDisplay?: RepositoryOwnerDisplay; repositories?: SidebarRepository[]; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; addExternal?: (input: string) => Promise<string | null>; permissions?: PermissionReport; permissionsSession?: number; permissionAcknowledgements?: string[]; permissionsChecking?: boolean; canCheckPermissions?: boolean; columnLimit: number; canEditLimit: boolean; canScan?: boolean; timeoutEnabled?: boolean; timeoutOverrunPercent?: number; notificationSounds?: boolean; inactiveGraceMinutes?: number; inactivityNow?: number }>(), { hideCoordination: true, repositoryOwnerDisplay: "auto", repositories: () => [], permissions: () => [], permissionAcknowledgements: () => [], timeoutEnabled: true, timeoutOverrunPercent: DEFAULT_TIMEOUT_OVERRUN_PERCENT, notificationSounds: true, inactiveGraceMinutes: DEFAULT_INACTIVE_GRACE_MINUTES });
 const acknowledgedMissing = computed(() => new Set(props.permissionAcknowledgements));
 const permissionsOpen = ref(false);
 const missingCount = computed(() => missingPermissionCount(props.permissions.map(entry => ({
@@ -35,7 +36,14 @@ watch(() => props.permissionsSession, () => { permissionsOpen.value = false; });
 watch(() => props.permissions, () => {
   if (permissionsOpen.value) acknowledgePermissions();
 }, { deep: true });
-const emit = defineEmits<{ "update:hideCoordination": [value: boolean]; "update:repositoryOwnerDisplay": [value: RepositoryOwnerDisplay]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean] }>();
+const emit = defineEmits<{ "update:hideCoordination": [value: boolean]; "update:repositoryOwnerDisplay": [value: RepositoryOwnerDisplay]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean]; reorder: [source: string, target: string]; scan: []; openUpdates: []; checkPermissions: []; refreshPermissions: []; "update:permissionAcknowledgements": [value: string[]]; "update:columnLimit": [value: number | null]; "update:timeoutEnabled": [value: boolean]; "update:timeoutOverrunPercent": [value: number]; "update:notificationSounds": [value: boolean]; "update:inactiveGraceMinutes": [value: number] }>();
+function changeInactiveGrace(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const minutes = parseInactiveGraceMinutes(input.value);
+  input.setCustomValidity(minutes === null ? t("Ange ett heltal mellan 0 och {max} minuter.", { max: MAX_INACTIVE_GRACE_MINUTES }) : "");
+  if (minutes !== null) emit("update:inactiveGraceMinutes", minutes);
+  else input.reportValidity();
+}
 function changeTimeout(event: Event) {
   const input = event.target as HTMLInputElement;
   const percent = parseTimeoutOverrunPercent(input.value);
@@ -131,6 +139,12 @@ function changeTheme(event: Event) {
             @update:model-value="emit('update:columnLimit', $event)" />
           <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
         </div>
+        <div class="settings-field">
+          <label for="inactive-grace-minutes">{{ t("Inaktivt efter (minuter sedan senaste stängning)") }}</label>
+          <input id="inactive-grace-minutes" type="number" inputmode="numeric" min="0" :max="MAX_INACTIVE_GRACE_MINUTES" step="1" required
+            :value="inactiveGraceMinutes" :disabled="!canEditLimit" aria-describedby="inactive-grace-help" @change="changeInactiveGrace" />
+          <p id="inactive-grace-help">{{ t("Ett projekt utan öppna Backlog- eller Pågående-issues räknas som aktivt så här länge efter sin senast stängda issue. 0 = direkt. Standard: 30.") }}</p>
+        </div>
       </section>
       <section class="settings-section" aria-labelledby="notification-settings-title">
         <h3 id="notification-settings-title">{{ t("Notiser") }}</h3>
@@ -161,7 +175,7 @@ function changeTheme(event: Event) {
       </section>
     </div>
     <div class="settings-actions">
-      <RepositoryOrderDialog v-if="repositories.length || addExternal" :repos="repositories" :visibility="visibility" :hide-inactive="hideInactive" @toggle-visibility="name => emit('toggleVisibility', name)" @update:hide-inactive="value => emit('update:hideInactive', value)" :add-external="addExternal" @remove-external="name => emit('removeExternal', name)" @reorder="(source, target) => emit('reorder', source, target)" />
+      <RepositoryOrderDialog v-if="repositories.length || addExternal" :repos="repositories" :visibility="visibility" :hide-inactive="hideInactive" :inactivity-now="inactivityNow" :inactive-grace-ms="inactiveGraceMinutes * 60000" @toggle-visibility="name => emit('toggleVisibility', name)" @update:hide-inactive="value => emit('update:hideInactive', value)" :add-external="addExternal" @remove-external="name => emit('removeExternal', name)" @reorder="(source, target) => emit('reorder', source, target)" />
       <GitHubPermissions :report="permissions" :notices="submenuNotices.permissions" :checking="permissionsChecking" :can-check="canCheckPermissions" @check="emit('refreshPermissions')" @opened="acknowledgePermissions" @closed="permissionsOpen = false" />
       <WorkflowGuide />
       <button class="button small" aria-haspopup="dialog" @click="emit('openUpdates')">{{ t("Automatiska uppdateringar") }}</button>

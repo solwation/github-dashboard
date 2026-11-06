@@ -94,6 +94,7 @@ export function summarizeOverviewSecondary(
   hideCoordination = false,
   filters: { query?: string; repositoryQueries?: Record<string, string> } = {},
   repositories: readonly SidebarRepository[] = summarizeLanes(lanes, rules, hideCoordination),
+  inactiveGraceMs = 0,
 ): OverviewSecondaryCounts {
   const backlogRepos = new Set<string>();
   const progressRepos = new Set<string>();
@@ -134,7 +135,7 @@ export function summarizeOverviewSecondary(
     }
   }
   return {
-    activeRepositories: countActiveRepositories(repositories),
+    activeRepositories: countActiveRepositories(repositories, now, inactiveGraceMs),
     backlogRepositories: backlogRepos.size,
     backlogIssues,
     highPriorityOpen,

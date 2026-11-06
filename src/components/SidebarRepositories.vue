@@ -19,6 +19,9 @@ const props = withDefaults(
     restoring?: boolean;
     statistics?: boolean;
     hideInactive?: boolean;
+    /** Inactivity rule (#430): the clock and the minutes-since-last-close grace in ms. */
+    inactivityNow?: number;
+    inactiveGraceMs?: number;
     /** Board visibility per repository (#367); absent means every repository is shown. */
     visibility?: Record<string, RepositoryVisibility>;
   }>(),
@@ -47,8 +50,8 @@ function hiddenFromBoard(repo: SidebarRepository) {
 }
 const ownRepos = computed(() => props.repos.filter(repo => !repo.external));
 const externalRepos = computed(() => props.repos.filter(repo => repo.external));
-const activeRepos = computed(() => ownRepos.value.filter(repo => !isInactiveRepository(repo)));
-const inactiveRepos = computed(() => ownRepos.value.filter(repo => isInactiveRepository(repo)));
+const activeRepos = computed(() => ownRepos.value.filter(repo => !isInactiveRepository(repo, props.inactivityNow, props.inactiveGraceMs)));
+const inactiveRepos = computed(() => ownRepos.value.filter(repo => isInactiveRepository(repo, props.inactivityNow, props.inactiveGraceMs)));
 // Interest in a repository (#187): click and focus act at once, hover after a short rest.
 let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 function hoverStart(name: string) { hoverEnd(); hoverTimer = setTimeout(() => emit('interest', name), HOVER_DELAY_MS); }

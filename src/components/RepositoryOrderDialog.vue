@@ -8,11 +8,11 @@ import type { RepositoryVisibility } from "../lib/repository-visibility";
 import ExternalRepositoryForm from "./ExternalRepositoryForm.vue";
 import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
-const props = defineProps<{ repos: SidebarRepository[]; addExternal?: (input: string) => Promise<string | null>; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean }>();
+const props = defineProps<{ repos: SidebarRepository[]; addExternal?: (input: string) => Promise<string | null>; visibility?: Record<string, RepositoryVisibility>; hideInactive?: boolean; inactivityNow?: number; inactiveGraceMs?: number }>();
 const emit = defineEmits<{ reorder: [source: string, target: string]; removeExternal: [name: string]; toggleVisibility: [name: string]; "update:hideInactive": [value: boolean] }>();
 // Board visibility (#367) is also reachable here, where phones and the icon rail have no repository list.
 const hiddenFromBoard = (name: string) => (props.visibility?.[name] ?? "visible") !== "visible";
-const hasInactive = computed(() => props.visibility !== undefined && props.repos.some(repo => !repo.external && isInactiveRepository(repo)));
+const hasInactive = computed(() => props.visibility !== undefined && props.repos.some(repo => !repo.external && isInactiveRepository(repo, props.inactivityNow, props.inactiveGraceMs)));
 // Two groups with their own order; a repository never moves between them.
 const groups = computed(() => [
   { key: "own", repos: props.repos.filter(repo => !repo.external), heading: "" },

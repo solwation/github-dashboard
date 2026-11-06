@@ -14,9 +14,12 @@ export interface VisibilityState {
   hideInactive: boolean;
   /** Inactive repositories shown anyway for this session. */
   revealed: readonly string[];
+  /** Clock and grace for the inactivity rule (#430); omitted means inactive at once. */
+  now?: number;
+  inactiveGraceMs?: number;
 }
 
-type VisibilityRepository = Pick<SidebarRepository, "fullName" | "backlog" | "progress" | "loading" | "external" | "unavailable">;
+type VisibilityRepository = Pick<SidebarRepository, "fullName" | "backlog" | "progress" | "loading" | "lastClosedAt" | "external" | "unavailable">;
 
 /**
  * A manual choice wins over everything. Automatic hiding uses the sidebar's own inactive group
@@ -24,7 +27,7 @@ type VisibilityRepository = Pick<SidebarRepository, "fullName" | "backlog" | "pr
  */
 export function repositoryVisibility(repo: VisibilityRepository, state: VisibilityState): RepositoryVisibility {
   if (state.hidden.includes(repo.fullName)) return "hidden";
-  if (state.hideInactive && !repo.external && !repo.unavailable && isInactiveRepository(repo) && !state.revealed.includes(repo.fullName)) return "inactive";
+  if (state.hideInactive && !repo.external && !repo.unavailable && isInactiveRepository(repo, state.now, state.inactiveGraceMs) && !state.revealed.includes(repo.fullName)) return "inactive";
   return "visible";
 }
 

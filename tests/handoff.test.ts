@@ -78,7 +78,7 @@ const preferences: Required<Omit<HandoffPreferences, "listRepos" | "combinedList
   collapsedRepos: ["sample/second"], columnLimit: 8,
   repositoryColumnLimits: { "sample/repo": 3 }, notificationRepos: ["sample/repo"], notificationSounds: false,
   language: "sv", query: "planned 🚀", repositoryQueries: { "sample/repo": "label:ready" },
-  repoQuery: "sample", hideCoordination: false, splitByRepository: false, boardGrouping: "none", listMode: true, timeoutEnabled: false, timeoutOverrunPercent: 45, currentView: "statistics",
+  repoQuery: "sample", hideCoordination: false, splitByRepository: false, boardGrouping: "none", listMode: true, timeoutEnabled: false, timeoutOverrunPercent: 45, inactiveGraceMinutes: 45, currentView: "statistics",
   statistics: { "sample/repo": { from: "2026-10-01", to: "2026-10-16", label: "ready", contributor: "sample", metric: "deletions", collapsed: true } },
 };
 describe("optical preference schema v2", () => {
@@ -150,7 +150,7 @@ describe("optical preference schema v2", () => {
     { repositoryColors: { "sample/repo": "#245bc1", "SAMPLE/REPO": "#c65d16" } },
     { repositoryColors: Object.fromEntries(Array.from({ length: 101 }, (_, n) => ["sample/repo" + n, "#245bc1"])) },
     { columnLimit: 0 }, { columnLimit: 101 }, { columnLimit: "6" },
-    { timeoutOverrunPercent: -1 }, { timeoutOverrunPercent: 1001 }, { timeoutEnabled: "yes" }, { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
+    { inactiveGraceMinutes: -1 }, { inactiveGraceMinutes: 1441 }, { inactiveGraceMinutes: "30" }, { inactiveGraceMinutes: 1.5 }, { timeoutOverrunPercent: -1 }, { timeoutOverrunPercent: 1001 }, { timeoutEnabled: "yes" }, { timeoutMinutes: 0 }, { timeoutMinutes: 10081 }, { timeoutMinutes: 1.5 },
     { language: "fr" }, { currentView: "admin" }, { hideCoordination: "false" }, { splitByRepository: "false" }, { listMode: "true" }, { combinedList: "true" }, { listRepos: ["../private"] },
     { projectOrder: ["sample/repo", "SAMPLE/REPO"] }, { collapsedRepos: ["../private"] },
     { notificationRepos: Array.from({ length: 101 }, (_, n) => "sample/repo" + n) }, { notificationSounds: "false" },
@@ -229,4 +229,11 @@ it('validates owner-display choices and preserves them when an older transfer om
   const current = { selected: ['sample/repo'], rules: {}, repositoryOwnerDisplay: 'no' as const };
   expect(mergeHandoffPreferences(current, settings, ['sample/repo']).repositoryOwnerDisplay).toBe('no');
   expect(mergeHandoffPreferences(current, { ...settings, preferences: { repositoryOwnerDisplay: 'yes' } }, ['sample/repo']).repositoryOwnerDisplay).toBe('yes');
+});
+
+it("carries the inactivity grace (#430) and leaves it unset for older transfers", () => {
+  expect(parseHandoffPreferences({ inactiveGraceMinutes: 0 })).toEqual({ inactiveGraceMinutes: 0 });
+  expect(parseHandoffPreferences({ inactiveGraceMinutes: 1440 })).toEqual({ inactiveGraceMinutes: 1440 });
+  expect(parseHandoffPreferences({ columnLimit: 6 })).not.toHaveProperty("inactiveGraceMinutes");
+  expect(decodeCompactHandoff(encodeCompactHandoff({ inactiveGraceMinutes: 45 }))).toEqual({ inactiveGraceMinutes: 45 });
 });

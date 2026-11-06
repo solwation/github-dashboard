@@ -8,6 +8,8 @@ export interface SidebarRepository {
   progress: number;
   closed: number;
   changedAt: string | null;
+  /** Most recent `closed_at` (ms) among the loaded issues, pending closures included; null when none (#430). */
+  lastClosedAt?: number | null;
   unreadAt?: string | null;
   loading?: boolean;
   unavailable?: boolean;
@@ -59,6 +61,7 @@ export function summarizeLanes(
       progress: 0,
       closed: 0,
       changedAt: null,
+      lastClosedAt: null,
       ...(typeof lane.repo.private === "boolean" ? { private: lane.repo.private } : {}),
       ...(website ? { websiteUrl: website } : {}),
       ...(pagesUrl(lane.repo) ? { pagesUrl: pagesUrl(lane.repo)! } : {}),
@@ -71,6 +74,10 @@ export function summarizeLanes(
     for (const issue of lane.issues) {
       if (issue.pull_request || (hideCoordination && isCoordination(issue))) continue;
       summary[column(issue, rules[lane.repo.full_name])]++;
+      if (issue.state === "closed" && issue.closed_at) {
+        const closed = Date.parse(issue.closed_at);
+        if (Number.isFinite(closed) && closed > (summary.lastClosedAt ?? -Infinity)) summary.lastClosedAt = closed;
+      }
       const changed = Date.parse(issue.updated_at);
       if (Number.isFinite(changed) && changed > latest) {
         latest = changed;
@@ -90,12 +97,40 @@ export function recentlyChanged(changedAt: string | null, now: number): boolean 
   return elapsed >= 0 && elapsed <= RECENT_CHANGE_MS;
 }
 
-/** A repository is inactive when it has no open issues in Backlog or In Progress, and is not actively loading. */
-export function isInactiveRepository(repo: Pick<SidebarRepository, "backlog" | "progress" | "loading">): boolean {
-  return !repo.loading && repo.backlog === 0 && repo.progress === 0;
+/** Default and limits for the "inactive after N minutes since the last closed issue" setting (#430). */
+export const DEFAULT_INACTIVE_GRACE_MINUTES = 30;
+export const MAX_INACTIVE_GRACE_MINUTES = 1440;
+/** A whole number of minutes in 0..MAX, from a number or digit string; null for anything else. */
+export function parseInactiveGraceMinutes(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !/^\d+$/.test(value.trim())) return null;
+  const minutes = Number(value);
+  return Number.isSafeInteger(minutes) && minutes >= 0 && minutes <= MAX_INACTIVE_GRACE_MINUTES ? minutes : null;
+}
+export function normalizeInactiveGraceMinutes(value: unknown): number {
+  return parseInactiveGraceMinutes(value) ?? DEFAULT_INACTIVE_GRACE_MINUTES;
+}
+/** The moment a repository without open work turns inactive; null when it is not held active. */
+export function inactiveAfter(repo: Pick<SidebarRepository, "lastClosedAt">, graceMs: number): number | null {
+  return graceMs > 0 && typeof repo.lastClosedAt === "number" ? repo.lastClosedAt + graceMs : null;
+}
+
+/**
+ * A repository is inactive when it has no open issues in Backlog or In Progress, is not loading, and
+ * (#430) its most recently closed issue is at least `graceMs` old. Without `closed_at`, or with
+ * graceMs 0, it turns inactive at once.
+ */
+export function isInactiveRepository(
+  repo: Pick<SidebarRepository, "backlog" | "progress" | "loading" | "lastClosedAt">,
+  now = Date.now(),
+  graceMs = 0,
+): boolean {
+  if (repo.loading || repo.backlog !== 0 || repo.progress !== 0) return false;
+  const until = inactiveAfter(repo, graceMs);
+  return until === null || now >= until;
 }
 
 /** Count the same active group rendered by the sidebar, independent of expansion and search. */
-export function countActiveRepositories(repositories: readonly SidebarRepository[]): number {
-  return new Set(repositories.filter(repo => !isInactiveRepository(repo)).map(repo => repo.fullName)).size;
+export function countActiveRepositories(repositories: readonly SidebarRepository[], now = Date.now(), graceMs = 0): number {
+  return new Set(repositories.filter(repo => !isInactiveRepository(repo, now, graceMs)).map(repo => repo.fullName)).size;
 }

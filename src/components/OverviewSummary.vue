@@ -20,6 +20,8 @@ const props = defineProps<{
   /** All selected repositories' lanes for the Repositories card; `lanes` holds only those shown on the board (#371). */
   repositoryLanes?: Lane[]; rules: Record<string, Rules>; hideCoordination: boolean;
   live: boolean; session: number | string; loggedIn: boolean;
+  /** Inactivity rule (#430): grace in ms and the clock that moves repositories to inactive. */
+  inactiveGraceMs?: number; inactivityNow?: number;
 }>();
 const emit = defineEmits<{ chooseRepositories: [] }>();
 const { t } = useLanguage();
@@ -39,7 +41,7 @@ const cellDeltas = reactive<Partial<Record<SecondaryKey, number>>>({});
 const cellTimers = new Map<SecondaryKey, ReturnType<typeof setTimeout>>();
 function clearCell(key: SecondaryKey) { clearTimeout(cellTimers.get(key)); cellTimers.delete(key); delete cellDeltas[key]; }
 function trackSecondary() {
-  const values = summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories);
+  const values = summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories, props.inactiveGraceMs);
   const scope = JSON.stringify([props.session, props.hideCoordination, props.query || "", props.repositoryQueries || {}, props.lanes.map(lane => lane.repo.full_name).sort(), props.rules]);
   const changes = secondaryTracker.update(values, scope, props.live);
   if (!props.live) for (const key of secondaryKeys) clearCell(key);
@@ -79,7 +81,7 @@ watch(() => [props.counts, props.lanes, props.rules, props.hideCoordination, pro
   previousDisplay = { ...props.counts };
   trackSecondary();
 }, { immediate: true, deep: 3 });
-watch(clock, () => secondaryTracker.rebaseline(summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories)));
+watch([clock, () => props.inactivityNow], () => secondaryTracker.rebaseline(summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories, props.inactiveGraceMs)));
 onBeforeUnmount(() => { for (const key of overviewKeys) clear(key); for (const key of secondaryKeys) clearCell(key); });
 const estimateGroups = computed(() => overviewEstimateGroups(props.lanes, props.rules, props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }));
 const repositoryLanes = computed(() => props.repositoryLanes ?? props.lanes);
@@ -102,7 +104,7 @@ const closedTitle = computed(() => [
   t("Poängen omfattar samma filtrerade stängda issues som antalet."),
   ...(closedMedian.value ? [t("Mediantid i arbete för {count} stängda issues med känd starttid: {time}", { count: closedSummary.value.measured, time: estimateLabel(closedSummary.value.medianMs!) })] : []),
 ].map(part => part.replace(/[.]$/, "")).join(". ") + ".");
-const secondary = computed(() => summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories));
+const secondary = computed(() => summarizeOverviewSecondary(props.lanes, props.rules, current(), props.hideCoordination, { query: props.query, repositoryQueries: props.repositoryQueries }, props.repositories, props.inactiveGraceMs));
 const activeDefinition = computed(() => t("Aktiva projekt har minst ett issue i Backlog eller In progress, eller håller på att laddas. Färdigladdade projekt med enbart stängda issues är inaktiva. Samma indelning används i sidomenyn. Anpassade arbetslabels och koordinationsfiltret respekteras. Fritextfilter påverkar inte antalet."));
 const todayDefinition = computed(() => t("Inlästa issues i valda repositories som nu är stängda och har senaste stängning idag, i din lokala tidszon. Fritextfilter påverkar inte dagsuppgiften. Detta är inte en komplett historik över stängningar."));
 interface SummaryCell { key: SecondaryKey; text: string; className?: string; title?: string }

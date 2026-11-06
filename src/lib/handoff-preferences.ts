@@ -1,4 +1,5 @@
 import { validRepositoryOwnerDisplay, type RepositoryOwnerDisplay } from "./repository-display-name";
+import { parseInactiveGraceMinutes } from "./sidebar";
 import { normalizeTimeoutSettings } from "./timeouts";
 import { reconcileRepositoryColors, validRepositoryColor } from "./repository-color";
 import { validColumnLimit } from "./column-limits";
@@ -57,6 +58,8 @@ export interface HandoffPreferences {
   timeoutMinutes?: number;
   timeoutEnabled?: boolean;
   timeoutOverrunPercent?: number;
+  /** Minutes a repository stays active after its last closed issue (#430). */
+  inactiveGraceMinutes?: number;
   currentView?: "overview" | "statistics";
   statistics?: HandoffStatisticsPreferences;
 }
@@ -97,6 +100,7 @@ const validators: Record<keyof HandoffPreferences, (value: unknown) => boolean> 
   listRepos: handoffRepositoryList, combinedList: value => typeof value === "boolean",
   timeoutEnabled: value => typeof value === "boolean",
   timeoutOverrunPercent: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 1000,
+  inactiveGraceMinutes: value => parseInactiveGraceMinutes(value) !== null && typeof value === "number",
   timeoutMinutes: value => typeof value === "number" && Number.isSafeInteger(value) && value >= 1 && value <= 10080,
   currentView: value => value === "overview" || value === "statistics",
   statistics: value => repoMap(value, filter => handoffRecord(filter) &&
