@@ -8,6 +8,7 @@ async function connect(page: Page) {
   const incrementalRequests: string[] = [];
   let gate: Promise<void> | undefined;
   let release = () => {};
+  const failingOpenReads = new Set<string>();
   const repos = ["alpha", "beta"].map((name, index) => ({
     id: index + 1, name, full_name: `sample/${name}`, private: false,
     html_url: `https://github.com/sample/${name}`, owner: { login: "sample" },
@@ -22,6 +23,10 @@ async function connect(page: Page) {
     if (url.pathname.endsWith("/issues") && url.searchParams.get("state") === "open") {
       openRequests++;
       await gate;
+      if (failingOpenReads.delete(url.pathname)) {
+        await route.fulfill({ status: 500, json: { message: "Fixture transient failure" } });
+        return;
+      }
       const date = new Date().toISOString();
       data = [{ id: 1, number: 1, title: `Keep task version ${version}`, body: "Fixture",
         comments: 0, state: "open", labels: [], assignees: [], created_at: date,
@@ -44,11 +49,35 @@ async function connect(page: Page) {
     incrementalRequests,
     pause: () => { gate = new Promise(resolve => { release = resolve; }); },
     release: () => { gate = undefined; release(); },
+    failNextOpen: (name: string) => { failingOpenReads.add(`/repos/${name}/issues`); },
   };
 }
 async function expectSameDocument(page: Page) {
   expect(await page.evaluate(() => (window as unknown as { documentMarker?: string }).documentMarker)).toBe("same-document");
 }
+
+test("a queued manual full refresh retries a repository whose preceding partial read failed", async ({ page }) => {
+  await page.clock.install();
+  const api = await connect(page);
+  await page.clock.pauseAt(new Date());
+  const before = api.requests();
+  api.next();
+  api.failNextOpen("sample/alpha");
+  api.pause();
+  await page.locator("#repo-1 .lane-sync").click();
+  await expect.poll(api.requests).toBe(before + 1);
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "true");
+  await page.keyboard.press("F5");
+  await page.keyboard.press("F5");
+  api.release();
+  // The failed targeted read enters repository backoff. The queued user action must
+  // still revalidate both projects once, just like F5 pressed after the failure.
+  await expect(page.locator("#repo-1 .issue-title")).toHaveText("Keep task version 2");
+  await expect(page.locator(".board-toolbar")).toHaveAttribute("data-busy", "false");
+  expect(api.requests()).toBe(before + 3);
+  await expect(page.locator("#repo-1 .lane-error")).toHaveCount(0);
+  await expectSameDocument(page);
+});
 
 test("refresh shortcuts fetch full data in place and preserve filters, order and collapsed lanes while busy", async ({ page }) => {
   const api = await connect(page);

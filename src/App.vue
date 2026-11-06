@@ -456,7 +456,7 @@ const refreshQueue = new RefreshQueue();
 watch(busy, (running) => {
   if (running) return;
   refreshQueue.onComplete({
-    runFullRefresh: () => refresh(),
+    runFullRefresh: () => refresh(false, false, true),
     runTargetedRefresh: (only) => refresh(false, false, true, false, only),
     onIdle: () => sync.tick(),
   });
