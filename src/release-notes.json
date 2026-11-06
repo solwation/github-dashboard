@@ -32,6 +32,17 @@
         "issues": [
           424
         ]
+      },
+      {
+        "text": {
+          "sv": "Synkroniseringen klarar långsamma svar och GitHubs väntetider bättre, och en köad manuell uppdatering provar även projekt med tillfälliga fel.",
+          "en": "Synchronization handles stalled responses and GitHub waiting periods better, and a queued manual refresh also retries projects with temporary failures."
+        },
+        "issues": [
+          414,
+          415,
+          416
+        ]
       }
     ]
   },
