@@ -1259,8 +1259,12 @@ function applyProjectIcon(name: string, icon: ProjectIconMetadata) {
 // Picker icons (#421): rows request their artwork as they become visible, three at a time,
 // through the same resolver cache/deduplication as the board; initials remain the fallback.
 const pickerIcons = new ProjectIconQueue(async name => {
+  // The picker can open inside the connect flow; rows seen then wait until the session settles.
+  if (authBusy.value || restoring.value) await new Promise<void>(resolve => {
+    const stop = watch(() => !authBusy.value && !restoring.value, ready => { if (ready) { stop(); resolve(); } });
+  });
   const client = api, run = generation, repo = repos.value.find(item => item.full_name === name);
-  if (!client || !repo || !picker.value || isDemo.value || authBusy.value || restoring.value) return;
+  if (!client || !repo || !picker.value || isDemo.value) return;
   const previous = restoreProjectIcon(repo.projectIcon);
   if (previous && Date.now() - previous.checkedAt < PROJECT_ICON_LIFETIME) return;
   const icon = await client.projectIcon(repo);
