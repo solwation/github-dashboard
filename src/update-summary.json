@@ -1,23 +1,11 @@
 {
-  "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
+  "baseCommit": "bd05aa59ba13ae93db8f85eae55bd1cb9b8d30d5",
   "summary": {
-    "sv": "Läsbarare listrader med full titel och synliga kommentarer, stories som glider mellan kolumner, nya projekt i väljaren och stabilare synk.",
-    "en": "Easier-to-read list rows with full titles and visible comments, stories gliding between columns, new projects in the picker and sturdier sync."
+    "sv": "Kommentarsknappen syns direkt på varje list- och simbanerad, och Inställningar ryms utan scroll på en laptop.",
+    "en": "The comment button now shows on every list and swimlane row, and Settings fits a laptop screen without scrolling."
   },
   "issues": [
-    414,
-    415,
-    416,
-    417,
-    418,
-    419,
-    421,
-    424,
-    426,
-    427,
-    428,
     429,
-    430,
     432
   ]
 }
