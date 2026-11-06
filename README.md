@@ -98,7 +98,7 @@ in plaintext browser preferences or shared through QR transfers.
 - [Issue workflow instructions for AI assistants](public/ISSUEFLOW.md)
 - [Repository development workflow](AI.md) and [design rules](DESIGN.md)
 - [Orchestra policy](.orchestra/project.md): change requests create/reuse issues and start or resume scoped work unless explicitly deferred, including after an idle watch ends; `/orkester` starts the configured queue workflow using
-  [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern) **v0.8.1**,
+  [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern) **v0.8.2**,
   pinned as a squashed Git subtree in `.orchestra/shared`, with `integration-ready`
   handoffs retaining their integration owner while freeing worker capacity
   ([update policy](.orchestra/project.md#upstream-update-discovery),
