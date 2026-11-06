@@ -1,8 +1,8 @@
 {
   "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
   "summary": {
-    "sv": "Stories glider mellan kolumner, nya projekt syns i väljaren, menyn skymmer inte på telefon och synkroniseringen är stabilare.",
-    "en": "Stories glide between columns, new projects appear in the picker, the phone menu no longer covers content and sync is sturdier."
+    "sv": "Läsbarare listrader med full titel, stories som glider mellan kolumner, nya projekt i väljaren och stabilare synkronisering.",
+    "en": "Easier-to-read list rows with full titles, stories gliding between columns, new projects in the picker and sturdier sync."
   },
   "issues": [
     414,
@@ -13,6 +13,7 @@
     419,
     421,
     424,
+    426,
     427,
     428
   ]
