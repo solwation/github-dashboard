@@ -463,6 +463,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-mobile-summary { display: none; }
 .row-points { display: flex; align-items: center; min-width: 0; }
 .row-outcome { display: flex; align-items: center; justify-content: flex-start; min-width: 0; overflow: hidden; }
+/* The fixed desktop time column truncates with its tooltip; phones size the outcome to its text instead. */
 .row-outcome > * { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 951px) {
   .row-outcome :deep(.issue-time-estimate),
@@ -514,7 +515,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-heading > .row-title { flex: 1; }
   .row-times { display: contents; overflow: visible; }
   .row-points { justify-self: start; max-width: 100%; }
-  .row-outcome { grid-area: outcome; justify-content: flex-end; }
+  .row-outcome { grid-area: outcome; justify-content: flex-end; overflow: visible; }
+  .row-outcome > * { max-width: none; overflow: visible; }
   .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
   .row-mobile-summary { grid-area: meta; display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; min-height: 24px; overflow: hidden; }
   .row-mobile-summary > * { flex: 0 0 auto; }
@@ -543,7 +545,8 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-time { max-width: 2.75rem; }
   /* Narrow phones keep the icon badge; the full status stays in screen-reader text and the card (#392). */
   .integration-wait .row-elapsed-label { display: none; }
-  .row-outcome { width: 5rem; max-width: 5rem; font-size: 10px; }
+  /* Narrow phones let the actual/forecast text keep its width rather than clipping it in a fixed 5rem slot. */
+  .row-outcome { width: auto; max-width: none; overflow: visible; font-size: 10px; }
   .row-outcome .issue-time-estimate,
   .row-outcome :deep(.issue-time-remaining-label) { font-size: 10px; }
 }
