@@ -57,7 +57,8 @@ test("other people's public repositories form their own ordered, removable, encr
   await picker.getByRole("button", { name: "Visa översikt" }).click();
 
   // Below the inactive toggle, own group untouched.
-  await expect(names(page)).toHaveText(["hello"]);
+  // #394 Auto: owners differ from the account's own projects, so the label keeps the owner.
+  await expect(names(page)).toHaveText(["octo/hello"]);
   const toggle = page.locator(".sidebar-inactive-toggle");
   const own1 = page.locator(".sidebar-repository-row[data-repository='sample/alpha']");
   await expect(own1).toBeVisible();
@@ -78,24 +79,24 @@ test("other people's public repositories form their own ordered, removable, encr
   await expect(dialog.getByRole("heading", { name: "Andras publika projekt" })).toBeVisible();
   // Own projects come first; moves stop at the group boundary.
   await expect.poll(() => dialog.locator("li[data-repository]").evaluateAll(items => items.map(item => item.getAttribute("data-repository")))).toEqual(["sample/alpha", "sample/beta", "octo/hello", "octo/world"]);
-  await expect(dialog.getByRole("button", { name: "Flytta hello upp" })).toBeDisabled();
-  await expect(dialog.getByRole("button", { name: "Flytta beta ned" })).toBeDisabled();
-  await dialog.getByRole("button", { name: "Flytta world upp" }).click();
+  await expect(dialog.getByRole("button", { name: "Flytta octo/hello upp" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Flytta sample/beta ned" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Flytta octo/world upp" }).click();
   await expect.poll(() => dialog.locator("li[data-repository]").evaluateAll(items => items.map(item => item.getAttribute("data-repository")))).toEqual(["sample/alpha", "sample/beta", "octo/world", "octo/hello"]);
-  await expect(names(page)).toHaveText(["world", "hello"]);
+  await expect(names(page)).toHaveText(["octo/world", "octo/hello"]);
   await expect.poll(() => readSettings(page, "external-user").then(saved => saved?.externalRepositories?.map((entry: { full_name: string }) => entry.full_name))).toEqual(["octo/world", "octo/hello"]);
   await expect.poll(() => readSettings(page, "external-user").then(saved => saved?.projectOrder?.includes("octo/world"))).not.toBe(true);
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]).includes("octo"))).toBe(false);
   await page.keyboard.press("Escape");
 
   await page.reload();
-  await expect(names(page)).toHaveText(["world", "hello"]);
+  await expect(names(page)).toHaveText(["octo/world", "octo/hello"]);
 
   await openSettings(page);
   await page.getByRole("button", { name: "Ordna repositories", exact: true }).click();
-  await dialog.getByRole("button", { name: "Ta bort world" }).click();
-  await expect(names(page)).toHaveText(["hello"]);
-  await dialog.getByRole("button", { name: "Ta bort hello" }).click();
+  await dialog.getByRole("button", { name: "Ta bort octo/world" }).click();
+  await expect(names(page)).toHaveText(["octo/hello"]);
+  await dialog.getByRole("button", { name: "Ta bort octo/hello" }).click();
   await expect(group(page)).toHaveCount(0);
   await expect(dialog.getByRole("heading", { name: "Andras publika projekt" })).toHaveCount(0);
   await expect.poll(() => readSettings(page, "external-user").then(saved => saved?.externalRepositories)).toEqual([]);
