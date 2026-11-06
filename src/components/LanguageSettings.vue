@@ -139,13 +139,8 @@ function changeTheme(event: Event) {
             @update:model-value="emit('update:columnLimit', $event)" />
           <p v-if="!canEditLimit">{{ t("Logga in för att spara inställningen för ditt konto, eller prova i demoläget.") }}</p>
         </div>
-        <div class="settings-field">
-          <label for="inactive-grace-minutes">{{ t("Inaktivt efter (minuter sedan senaste stängning)") }}</label>
-          <input id="inactive-grace-minutes" type="number" inputmode="numeric" min="0" :max="MAX_INACTIVE_GRACE_MINUTES" step="1" required
-            :value="inactiveGraceMinutes" :disabled="!canEditLimit" aria-describedby="inactive-grace-help" @change="changeInactiveGrace" />
-          <p id="inactive-grace-help">{{ t("Ett projekt utan öppna Backlog- eller Pågående-issues räknas som aktivt så här länge efter sin senast stängda issue. 0 = direkt. Standard: 30.") }}</p>
-        </div>
       </section>
+      <div class="settings-stack">
       <section class="settings-section" aria-labelledby="notification-settings-title">
         <h3 id="notification-settings-title">{{ t("Notiser") }}</h3>
         <div class="settings-field">
@@ -157,6 +152,16 @@ function changeTheme(event: Event) {
           <p id="notification-sounds-help">{{ t("Spelar ljud för repositories där notiser är på. Övriga notiser påverkas inte.") }}</p>
         </div>
       </section>
+      <section class="settings-section" aria-labelledby="activity-settings-title">
+        <h3 id="activity-settings-title">{{ t("Aktiva projekt") }}</h3>
+        <div class="settings-field">
+          <label for="inactive-grace-minutes">{{ t("Inaktivt efter (minuter sedan senaste stängning)") }}</label>
+          <input id="inactive-grace-minutes" type="number" inputmode="numeric" min="0" :max="MAX_INACTIVE_GRACE_MINUTES" step="1" required
+            :value="inactiveGraceMinutes" :disabled="!canEditLimit" aria-describedby="inactive-grace-help" @change="changeInactiveGrace" />
+          <p id="inactive-grace-help">{{ t("Ett projekt utan öppna Backlog- eller Pågående-issues räknas som aktivt så här länge efter sin senast stängda issue. 0 = direkt. Standard: 30.") }}</p>
+        </div>
+      </section>
+      </div>
       <section class="settings-section settings-wide" aria-labelledby="time-settings-title">
         <h3 id="time-settings-title">{{ t("Tidsestimat") }}</h3>
         <div class="settings-section-fields">
@@ -195,6 +200,7 @@ function changeTheme(event: Event) {
 .settings-dialog h2 { margin: 0; }
 .settings-grid, .settings-section-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
 .settings-wide { grid-column: 1 / -1; }
+.settings-stack { display: grid; align-content: start; gap: var(--space-3); min-width: 0; }
 .settings-section { min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .settings-section h3 { margin: 0 0 var(--space-2); font-size: 12px; line-height: 1.4; font-weight: 700; }
 .settings-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }

@@ -90,6 +90,7 @@ export const english: Record<string, string> = {
   "Bild, dra för att panorera": "Image, drag to pan",
   "Varna när pågående arbete överskrider estimatet": "Warn when ongoing work exceeds its estimate",
   "Tillåten överskridning (%)": "Allowed overrun (%)",
+  "Aktiva projekt": "Active projects",
   "Inaktivt efter (minuter sedan senaste stängning)": "Inactive after (minutes since last closed issue)",
   "Ange ett heltal mellan 0 och {max} minuter.": "Enter a whole number between 0 and {max} minutes.",
   "Ett projekt utan öppna Backlog- eller Pågående-issues räknas som aktivt så här länge efter sin senast stängda issue. 0 = direkt. Standard: 30.": "A project with no open Backlog or In progress issues stays active this long after its most recently closed issue. 0 = immediately. Default: 30.",

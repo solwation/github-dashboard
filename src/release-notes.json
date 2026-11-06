@@ -8,6 +8,15 @@
     "sections": [
       {
         "text": {
+          "sv": "Ett projekt räknas som inaktivt först en inställbar tid (standard 30 minuter) efter sin senast stängda issue, så att du hinner granska den.",
+          "en": "A project now counts as inactive only a configurable time (default 30 minutes) after its most recently closed issue, so you have time to review it."
+        },
+        "issues": [
+          430
+        ]
+      },
+      {
+        "text": {
           "sv": "Issue-numret visas som en tydlig märkning med projektets färg som bakgrund och text med kontrast som uppfyller WCAG AA, i både ljust och mörkt tema. Märkningen är fortfarande en länk till GitHub med tangentbordsfokus.",
           "en": "The issue number is now a clear badge filled with the project's color, with text chosen for WCAG AA contrast in both light and dark themes. It remains a link to GitHub with keyboard focus."
         },

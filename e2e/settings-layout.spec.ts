@@ -23,7 +23,7 @@ for (const width of [1366, 950, 390]) for (const theme of ["light", "dark"] as c
       return { width: box.width, height: box.height, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, overflow: element.scrollWidth - element.clientWidth, controls, alignment: fields.map(field => field.top) };
     });
     expect(metrics.overflow).toBeLessThanOrEqual(0);
-    expect(metrics.controls).toHaveLength(4);
+    expect(metrics.controls).toHaveLength(6);
     expect(Math.max(...metrics.controls.map(control => control.height)) - Math.min(...metrics.controls.map(control => control.height))).toBeLessThanOrEqual(1);
     expect(new Set(metrics.controls.map(control => control.border)).size).toBe(1);
     expect(new Set(metrics.controls.map(control => control.background)).size).toBe(1);
