@@ -28,7 +28,7 @@ async function fixture(page: Page) {
     ];
     const history = [91, 92, 93].map(k => ({ k, title: "Historik", state: "closed", labels: [] as ReturnType<typeof label>[], started: 60 * 24 * 3 + 20, closedAgo: 60 * 24 * 3 }));
     return [...plan, ...history].map(item => ({
-      id: repo.id * 1000 + item.k, number: n(item.k), title: item.title, body: "Fictional row layout fixture.", comments: item.k === 2 ? 3 : 0, state: item.state,
+      id: repo.id * 1000 + item.k, number: n(item.k), title: item.title, body: "Fictional row layout fixture.", comments: item.k === 2 ? 3 : item.k === 1 ? 1234 : item.k === 4 ? 98765 : 0, state: item.state,
       created_at: iso(60 * 24 * (item.k + 1)), updated_at: iso(30), closed_at: item.state === "closed" ? iso("closedAgo" in item ? item.closedAgo as number : 60) : null,
       startedAt: item.state === "closed" && item.started ? iso(item.started) : undefined,
       html_url: `${repo.html_url}/issues/${n(item.k)}`, labels: item.labels, assignees: [], repoIndex: r, started: item.started,
@@ -83,7 +83,7 @@ function measure(page: Page) {
     const firstChip = meta ? [...meta.querySelectorAll(".priority, .row-repository, .row-status, .row-timeout, .row-marker, .label, .row-mobile-priority, .issue-points")].map(e => e.getBoundingClientRect()).filter(b => b.width).sort((a, b) => a.x - b.x)[0] : undefined;
     return {
       cls: [...row.classList].filter(c => ["backlog", "progress", "closed", "issue-timeout"].includes(c)).join(" "), title: title.textContent!.slice(0, 24), height: +r.height.toFixed(1), width: +r.width.toFixed(1),
-      badge: box(".row-number"), id: box(".row-id"), points: box(".issue-points"), time: box(".row-time"), outcome: box(".row-outcome > *"), titleBox: box(".row-title"),
+      badge: box(".row-number"), id: box(".row-id"), points: box(".issue-points"), time: box(".row-time"), outcome: box(".row-outcome > *"), titleBox: box(".row-title"), slot: box(".row-comments"), comment: box(".row-comments .comment-count"), metaBox: box(".row-meta, .row-mobile-summary"),
       titleTruncated: title.scrollWidth > title.clientWidth + 1, line2: firstChip ? { x: +(firstChip.x - r.x).toFixed(1), y: +(firstChip.y - r.y).toFixed(1) } : null,
       overflow: row.scrollWidth - row.clientWidth,
     };
@@ -91,6 +91,21 @@ function measure(page: Page) {
 }
 
 type Rows = Awaited<ReturnType<typeof measure>>;
+/** #429: the comment control is visible on every row, in one fixed slot at the end of line 2, clear of the metadata and times. */
+function expectCommentSlot(rows: Rows, label: string) {
+  const xs = rows.map(r => r.slot!.x + r.slot!.w);
+  expect(Math.max(...xs) - Math.min(...xs), `${label} comment slot right edge spread`).toBeLessThanOrEqual(1);
+  const icons = rows.map(r => r.comment!.x);
+  expect(Math.max(...icons) - Math.min(...icons), `${label} comment x spread`).toBeLessThanOrEqual(1);
+  for (const row of rows) {
+    expect(row.comment, `${row.title} comment control`).not.toBeNull();
+    expect(row.comment!.x, `${row.title} comment after metadata`).toBeGreaterThanOrEqual(row.metaBox!.x + row.metaBox!.w - 1);
+    if (row.outcome && row.outcome.y > row.titleBox!.y + row.titleBox!.h - 2) expect(row.comment!.x, `${row.title} comment after outcome`).toBeGreaterThanOrEqual(row.outcome.x + row.outcome.w - 1);
+    expect(row.comment!.x + row.comment!.w, `${row.title} comment inside row`).toBeLessThanOrEqual(row.width + 0.5);
+    expect(row.comment!.y, `${row.title} comment on line 2`).toBeGreaterThanOrEqual(row.titleBox!.y + row.titleBox!.h - 4);
+  }
+}
+
 /** Desktop/tablet rows: badge, SP, times, title and line 2 start at one x (±1px) with or without optional fields. */
 function expectLeftBlock(rows: Rows, label: string) {
   const spread = (values: number[]) => Math.max(...values) - Math.min(...values);
@@ -130,6 +145,8 @@ for (const scenario of matrix) test(`list rows and cards in the ${scenario.name}
         if (view === "Lista") {
           const rows = await measure(page);
           for (const row of rows) expect(row.overflow, `${row.title} overflow`).toBeLessThanOrEqual(1);
+          await expect(page.locator(".issue-row .row-comments .comment-count:visible")).toHaveCount(rows.length);
+          expectCommentSlot(rows, `${scenario.name} ${grouping} ${scheme}`);
           if (!scenario.mobile) expectLeftBlock(rows, `${scenario.name} ${grouping} ${scheme}`);
           else for (const row of rows) expect(row.height, `${row.title} phone height`).toBeLessThanOrEqual(60);
           if (scheme === "light") out[`${grouping}-${view}`] = rows;
@@ -159,6 +176,7 @@ test("swimlanes with three repositories at 2560px keep long titles readable", as
     const rows = await measure(page);
     for (const row of rows) expect(row.overflow, `${row.title} overflow`).toBeLessThanOrEqual(1);
     expectLeftBlock(rows, `swimlanes ${scheme}`);
+    expectCommentSlot(rows, `swimlanes ${scheme}`);
     // Before #426 a 1/3 lane gave the title 382px of 747px; the left block now leaves it over 520px.
     for (const row of rows) expect(row.titleBox!.w / row.width, `${row.title} title share`).toBeGreaterThan(0.7);
     out[scheme] = rows;
@@ -184,5 +202,63 @@ test("the list id badge keeps its link name, focus ring and type icon name", asy
   await expect(link).toBeFocused();
   expect(await row.locator(".row-id").evaluate(node => getComputedStyle(node).outlineStyle + getComputedStyle(node).outlineWidth)).toBe("solid2px");
   if (evidence) await row.screenshot({ path: `${evidence}/after-list-badge-focus.png` });
+  await context.close();
+});
+
+/** #429: the comment control opens the comments straight from the row, by pointer and keyboard, without expanding the row. */
+// Split lanes show every backlog row of the fixture; Joined would hide the 3-comment rows behind Show more.
+const commentViews = [
+  { name: "swimlanes 2560", viewport: { width: 2560, height: 1400 }, mobile: false, grouping: "swimlanes" as BoardGrouping },
+  { name: "list 1000", viewport: { width: 1000, height: 900 }, mobile: false, grouping: "split" as BoardGrouping },
+  { name: "portrait", viewport: { width: 390, height: 844 }, mobile: true, grouping: "split" as BoardGrouping },
+  { name: "landscape", viewport: { width: 844, height: 390 }, mobile: true, grouping: "split" as BoardGrouping },
+  { name: "tiny", viewport: { width: 320, height: 568 }, mobile: true, grouping: "split" as BoardGrouping },
+];
+for (const view of commentViews) test(`list comment control opens comments in place: ${view.name}`, async ({ browser }) => {
+  test.setTimeout(90_000);
+  const { context, page } = await open(browser, view.viewport, view.mobile);
+  await setBoardGrouping(page, view.grouping);
+  await mode(page, "Lista");
+  const rows = page.locator(".issue-row");
+  // Large (1234), abbreviated (98765 → 99 tn), few (3) and zero comments are all reachable without expanding.
+  for (const name of ["1234 kommentarer", "98765 kommentarer", "3 kommentarer", "0 kommentarer"]) {
+    const control = rows.filter({ has: page.locator(`.row-comments .comment-count[aria-label="${name}"]`) }).first().locator(".row-comments .comment-count");
+    await control.scrollIntoViewIfNeeded();
+    await expect(control).toBeVisible();
+    await expect(control).toHaveAccessibleName(name);
+    const value = control.locator(".comment-count-value");
+    const m = await value.evaluate(el => ({ s: el.scrollWidth, c: el.clientWidth }));
+    expect(m.s <= m.c, `${name} count not clipped ${JSON.stringify(m)}`).toBe(true);
+    if (name.startsWith("98765")) await expect(value).toHaveText(/^99\s?tn$/);
+  }
+  const row = rows.filter({ has: page.locator('.row-comments .comment-count[aria-label="1234 kommentarer"]') }).first(), control = row.locator(".row-comments .comment-count");
+  await control.scrollIntoViewIfNeeded();
+  const before = await row.boundingBox();
+  if (view.mobile) {
+    // 44px hit area from a pseudo-element: the row stays as tall as before and the box edges still hit the button.
+    const hit = await control.evaluate(el => { const a = getComputedStyle(el, "::after"); return { w: parseFloat(a.width), h: parseFloat(a.height), height: el.getBoundingClientRect().height }; });
+    expect(hit.w).toBeGreaterThanOrEqual(44); expect(hit.h).toBeGreaterThanOrEqual(44); expect(hit.height).toBeLessThan(30);
+    expect(before!.height).toBeLessThanOrEqual(60);
+    const box = (await control.boundingBox())!;
+    const hits = await page.evaluate(({ x, y }) => (document.elementFromPoint(x, y) as HTMLElement | null)?.closest(".comment-count") !== null, { x: box.x + box.width / 2, y: box.y + box.height / 2 + 18 });
+    expect(hits, "point 18px below centre still hits the control").toBe(true);
+  }
+  await control.click();
+  const dialog = page.getByRole("dialog", { name: /^Kommentarer för #\d+$/ });
+  await expect(dialog).toBeVisible();
+  await expect(row.locator(".row-title")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".row-card, .row-popup-backdrop")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Stäng kommentarer", exact: true }).click();
+  await expect(control).toBeFocused();
+  expect((await row.boundingBox())!.height).toBeCloseTo(before!.height, 0);
+  // Keyboard: Enter and Space on the focused control open the same dialog; the row stays collapsed.
+  for (const key of ["Enter", "Space"]) {
+    await control.focus(); await page.keyboard.press(key);
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(control).toBeFocused();
+    await expect(row.locator(".row-title")).toHaveAttribute("aria-expanded", "false");
+  }
   await context.close();
 });

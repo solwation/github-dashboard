@@ -116,8 +116,10 @@ for (const size of sizes) for (const theme of ["light", "dark"]) {
             if (!button || !button.getBoundingClientRect().width) return null;
             const rect = button.getBoundingClientRect(), slotBox = slot!.getBoundingClientRect();
             // #426: the comment total ends line 2 after the metadata; the times live in the left block.
-            const meta = row.querySelector('.row-meta')!.getBoundingClientRect();
-            return { contained: rect.right <= slotBox.right + 1, gap: rect.left - meta.right, overflow: button.scrollWidth - button.clientWidth };
+            const meta = row.querySelector('.row-meta, .row-mobile-summary')!.getBoundingClientRect();
+            // #429: measure the count text itself; touch screens add a 44px ::after hit area beyond the button box.
+            const value = button.querySelector('.comment-count-value')!;
+            return { contained: rect.right <= slotBox.right + 1, gap: rect.left - meta.right, overflow: value.scrollWidth - value.clientWidth };
           }).filter(Boolean));
           for (const item of geometry) { expect(item!.contained).toBe(true); expect(item!.gap).toBeGreaterThanOrEqual(4); expect(item!.overflow).toBeLessThanOrEqual(1); }
           await writeFile(info.outputPath(`${split ? "split" : "combined"}-comments-geometry.json`), JSON.stringify(geometry, null, 2));

@@ -14,15 +14,21 @@ const props = withDefaults(defineProps<{
   newComments?: number;
   showNewBadge?: boolean;
   showCountText?: boolean;
+  /** Fixed-width row slots abbreviate totals from 10,000 (10 tn / 10K); the accessible name keeps the exact count. */
+  compactCount?: boolean;
   demo?: boolean;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   session?: number;
-}>(), { showNewBadge: true, showCountText: false });
+}>(), { showNewBadge: true, showCountText: false, compactCount: false });
 const emit = defineEmits<{ read: [] }>();
 const { t, locale } = useLanguage();
 const hasNew = computed(() => Boolean(props.newComments && props.newComments > 0));
 const countLabel = computed(() => {
-  if (!props.showCountText) return props.count;
+  if (!props.showCountText) {
+    return props.compactCount && props.count >= 10000
+      ? new Intl.NumberFormat(locale.value, { notation: "compact", maximumFractionDigits: 0 }).format(props.count)
+      : props.count;
+  }
   return props.count === 1
     ? t("1 kommentar")
     : t("{count} kommentarer", { count: props.count });

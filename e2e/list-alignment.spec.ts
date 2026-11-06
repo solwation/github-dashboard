@@ -228,15 +228,18 @@ for (const combined of [false, true]) {
     await page.setViewportSize({ width: 320, height: 844 });
     const before = (await row.boundingBox())!.height;
     api.move(); await page.keyboard.press('Control+r');
-    const comments = row.getByRole('button', { name: '2 nya kommentarer. Markera som läst', exact: true });
+    // #429: phones show the unread total on the row's own comment control instead of a separate marker.
+    const comments = row.locator('.row-comments').getByRole('button', { name: '3 kommentarer, 2 nya', exact: true });
     await expect(comments).toBeVisible();
+    await expect(row.locator('.row-comment-marker')).toHaveCount(0);
     // Phones mark a move with the row border alone, plus screen-reader text instead of a ⇄ button (#275).
     await expect(row).toHaveClass(/unread-move/);
     await expect(row.locator('.row-movement-marker')).toBeHidden();
     await expect(row.locator('.row-mobile-move-note')).toHaveText(/^Flyttad till /);
     expect((await row.boundingBox())!.height).toBe(before);
-    const commentBox = (await comments.boundingBox())!, timeBox = (await row.locator('.row-time').boundingBox())!;
-    expect(commentBox.x + commentBox.width).toBeLessThanOrEqual(timeBox.x);
+    const commentBox = (await comments.boundingBox())!, outcomeBox = (await row.locator('.row-outcome > *').first().boundingBox())!, rowBox = (await row.boundingBox())!;
+    expect(commentBox.x).toBeGreaterThanOrEqual(outcomeBox.x + outcomeBox.width);
+    expect(commentBox.x + commentBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width);
     await page.screenshot({ path: test.info().outputPath('compact-phone-list.png'), fullPage: true });
     await row.locator('.row-title').click();
     const popup = page.locator('.row-popup');
@@ -246,6 +249,7 @@ for (const combined of [false, true]) {
     await page.keyboard.press('Escape');
     await expect(popup).toHaveCount(0);
     await expect(row).not.toHaveClass(/unread-move/); await expect(comments).toHaveCount(0);
+    await expect(row.locator('.row-comments').getByRole('button', { name: '3 kommentarer', exact: true })).toBeVisible();
     expect((await row.boundingBox())!.height).toBe(before);
   });
 }
@@ -257,7 +261,7 @@ for (const combined of [false, true]) {
     const api = await fixture(page);
     if (combined) await boardSplit(page).uncheck();
     api.move(); await page.keyboard.press("Control+r");
-    const marked = page.locator(".issue-row").filter({ has: page.locator(".row-comment-marker") });
+    const marked = page.locator(".issue-row").filter({ has: page.locator(".row-comments .comment-count.has-new-comments") });
     await expect(marked).toHaveCount(1);
     const plain = page.locator(".issue-row", { hasText: "Backlog none" });
     for (const width of [390, 320]) {
@@ -387,9 +391,11 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
     await expect(unread.locator('.row-number')).toHaveText('#12345');
     await expect(unread.locator('.issue-points')).toContainText('13 SP');
     if (combined) await expect(unread.locator('.row-repository').first()).toHaveAttribute('title', /a-very-long-repository-name/);
-    await expect(unread.locator('.row-comment-marker')).toBeVisible();
     await expect(page.locator('.issue-row.issue-timeout').first()).toBeVisible();
     const compact = scenario.width <= 650 || (scenario.mobile && scenario.width <= 950 && scenario.height <= 500);
+    // #429: phones carry the unread total on the row's comment control; wider rows keep the +N ✓ marker too.
+    await expect(unread.locator('.row-comments .comment-count.has-new-comments')).toBeVisible();
+    await expect(unread.locator('.row-comment-marker')).toBeVisible({ visible: !compact });
     // Desktop rows keep the Flyttad ✓ marker; compact phone rows show the move by their border (#275).
     await expect(unread).toHaveClass(/unread-move/);
     await expect(unread.locator('.row-movement-marker')).toBeVisible({ visible: !compact });
@@ -400,7 +406,7 @@ for (const scenario of outcomeScenarios) test.describe(`actual time layout ${sce
         await expect(row.locator('.row-time')).toBeVisible();
         await expect(row.locator('.row-meta')).toHaveCount(0);
         const overlapping = await row.evaluate(element => {
-          const boxes = [...element.querySelectorAll('.row-number,.row-title,.issue-points,.row-mobile-priority,.row-mobile-summary .row-repository,.row-movement-marker,.row-comment-marker,.row-time,.row-outcome > *')]
+          const boxes = [...element.querySelectorAll('.row-number,.row-title,.issue-points,.row-mobile-priority,.row-mobile-summary .row-repository,.row-movement-marker,.row-comment-marker,.row-time,.row-outcome > *,.row-comments .comment-count')]
             .map(item => ({ name: item.className, box: item.getBoundingClientRect() })).filter(item => item.box.width && item.box.height);
           return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left) > 1 && Math.min(a.box.bottom, b.box.bottom) - Math.max(a.box.top, b.box.top) > 1).map(b => `${a.name}/${b.name}`));
         });

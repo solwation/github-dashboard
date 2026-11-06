@@ -26,11 +26,12 @@
       },
       {
         "text": {
-          "sv": "Listrader visar mer av titeln: id-märkningen med typikon, poäng och tider står samlat till vänster och övriga etiketter på rad två.",
-          "en": "List rows show more of the title: the id badge with type icon, points and times sit together on the left, other chips on line two."
+          "sv": "Listrader visar mer av titeln: id-märkning, poäng och tider står till vänster, och varje rad visar kommentarsknappen med antal, även i smala simbanor och på telefon.",
+          "en": "List rows show more of the title: id badge, points and times sit on the left, and every row shows the comments button with its count, even in narrow swimlanes and on phones."
         },
         "issues": [
-          426
+          426,
+          429
         ]
       },
       {
