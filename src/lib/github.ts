@@ -168,6 +168,14 @@ export class GitHub {
     const url = new URL(path, "https://api.github.com");
     if (url.origin !== "https://api.github.com")
       throw new Error(t("Ogiltig API-adress."));
+    // Queued enrichment and pagination must also honor a wait recorded by an in-flight request.
+    if (this.retryAfterMs())
+      throw new GitHubApiError(
+        t("GitHubs API-gräns är nådd.") + t(" Försök efter {time}.", {
+          time: new Date(this.limitedUntil).toLocaleTimeString(locale.value),
+        }),
+        429, false, true,
+      );
     // One-shot URLs (store: false) would never be revalidated and only evict reusable ETags (#108).
     const { store = true, ...init } = options;
     const cacheable = store && (!init.method || init.method === "GET");
