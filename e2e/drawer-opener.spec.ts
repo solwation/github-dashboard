@@ -11,7 +11,7 @@ async function shot(page: Page, name: string) {
 const sizes = [{ width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }];
 for (const size of sizes) {
   test(`drawer opener never overlaps content at ${size.width}x${size.height}`, async ({ browser }) => {
-    const context = await browser.newContext({ viewport: size, isMobile: true, hasTouch: true, locale: "sv-SE" });
+    const context = await browser.newContext({ viewport: size, isMobile: true, hasTouch: true, locale: "sv-SE", reducedMotion: "reduce" });
     const page = await context.newPage();
     await page.goto("/");
     await page.getByRole("button", { name: "Utforska en demo" }).click();
@@ -53,7 +53,7 @@ for (const size of sizes) {
   });
 
   test(`drawer opens by opener and edge swipe, closes by Esc at ${size.width}x${size.height}`, async ({ browser }) => {
-    const context = await browser.newContext({ viewport: size, isMobile: true, hasTouch: true, locale: "sv-SE" });
+    const context = await browser.newContext({ viewport: size, isMobile: true, hasTouch: true, locale: "sv-SE", reducedMotion: "reduce" });
     const page = await context.newPage();
     await page.goto("/");
     await page.getByRole("button", { name: "Utforska en demo" }).click();
