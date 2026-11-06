@@ -11,6 +11,7 @@ const iso = (offset: number) => new Date(NOW + offset).toISOString();
 const repos = ["alpha", "beta"].map((name, index) => ({ id: index + 1, name, full_name: `sample/${name}`, private: false, html_url: `https://github.com/sample/${name}`, owner: { login: "sample" }, description: "Fixture" }));
 type State = "backlog" | "progress" | "closed";
 const domId = (repo: string, number: number) => `issue-${encodeURIComponent(`sample/${repo}`)}-${number}`;
+const byId = (repo: string, number: number) => `[id="${domId(repo, number)}"]`;
 
 function issue(repo: string, number: number, state: State, title: string) {
   return {
@@ -66,7 +67,7 @@ async function setup(page: Page, grouping: BoardGrouping, view: "Kort" | "Lista"
   await page.getByRole("button", { name: "Visa översikt" }).click();
   await setBoardGrouping(page, grouping);
   await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: view, exact: true }).click();
-  await expect(page.locator(`#${domId("alpha", 2)}`)).toHaveCount(1);
+  await expect(page.locator(byId("alpha", 2))).toHaveCount(1);
   await expect(page.locator(".board-toolbar").first()).toHaveAttribute("data-busy", "false");
   // None of the setup steps (first load, grouping, Cards/List) started a move.
   expect(await moveAnimations(page)).toEqual([]);
@@ -95,7 +96,7 @@ async function sync(page: Page, states: Record<string, State>, pause = false) {
   await page.keyboard.press("Control+r");
 }
 const columnOf = (page: Page, repo: string, number: number) =>
-  page.locator(`#${domId(repo, number)}`).evaluate((element) => [...element.closest(".board-column")!.classList].find((name) => ["backlog", "progress", "closed"].includes(name)));
+  page.locator(byId(repo, number)).evaluate((element) => [...(element.closest(".board-column")?.classList ?? [element.outerHTML.slice(0, 300), element.parentElement?.outerHTML.slice(0, 200) ?? ""])].find((name) => ["backlog", "progress", "closed"].includes(name) || name.length > 20));
 
 async function expectFinalBoard(page: Page) {
   await expect.poll(() => columnOf(page, "alpha", 1)).toBe("progress");
@@ -105,7 +106,7 @@ async function expectFinalBoard(page: Page) {
   // Exactly one card/row per issue: no duplicates and no lost items.
   for (const key of Object.keys(moved)) {
     const [repo, number] = key.split("#");
-    await expect(page.locator(`#${domId(repo!, Number(number))}`)).toHaveCount(1);
+    await expect(page.locator(byId(repo!, Number(number)))).toHaveCount(1);
   }
 }
 
@@ -115,9 +116,9 @@ for (const grouping of ["split", "none"] as const) {
       await page.setViewportSize({ width: 1600, height: 1000 });
       const { states } = await setup(page, grouping, view);
       // Focus the control inside the card/row that is about to move.
-      const opener = page.locator(`#${domId("alpha", 1)}`).locator(view === "Kort" ? ".card-open" : ".row-title").first();
+      const opener = page.locator(byId("alpha", 1)).locator(view === "Kort" ? ".card-open" : ".row-title").first();
       await opener.focus();
-      const scrollY = await page.evaluate(() => scrollY);
+      const startY = await page.evaluate(() => window.scrollY);
       await sync(page, states, !!evidence);
       await expect.poll(async () => (await moveAnimations(page)).filter((item) => item.id === "board-move").length).toBeGreaterThanOrEqual(3);
       const label = `${grouping === "split" ? "split" : "joined"}-${view === "Kort" ? "cards" : "list"}`;
@@ -136,9 +137,9 @@ for (const grouping of ["split", "none"] as const) {
       expect(await page.evaluate(() => document.getAnimations().filter((animation) => animation.id.startsWith("board-move")).length)).toBe(0);
       // Focus stays on the same control of the moved issue, without scrolling the page.
       expect(await page.evaluate((id) => !!document.activeElement?.closest(`#${CSS.escape(id)}`), domId("alpha", 1))).toBe(true);
-      expect(Math.abs(await page.evaluate(() => scrollY) - scrollY)).toBeLessThanOrEqual(1);
+      expect(Math.abs(await page.evaluate(() => window.scrollY) - startY)).toBeLessThanOrEqual(1);
       // The existing unread-move marker still marks the moved card.
-      if (view === "Kort") await expect(page.locator(`#${domId("alpha", 1)} .movement-marker`)).toBeVisible();
+      if (view === "Kort") await expect(page.locator(`${byId("alpha", 1)} .movement-marker`)).toBeVisible();
       if (evidence) await page.screenshot({ path: `${evidence}/after-${label}-1600x1000.png` });
 
       // A later filter, sort, Cards/List switch or limit change starts no move.
@@ -158,7 +159,7 @@ test("reduced motion shows the final state at once without any move animation", 
   const page = await context.newPage();
   try {
     const { states } = await setup(page, "split", "Kort");
-    await page.locator(`#${domId("alpha", 1)} .card-open`).focus();
+    await page.locator(`${byId("alpha", 1)} .card-open`).focus();
     await sync(page, states);
     await expectFinalBoard(page);
     await page.waitForTimeout(600);
@@ -172,14 +173,16 @@ test("an off-screen end gives a short pulse instead of a flight, without scrolli
   const page = await context.newPage();
   try {
     const { states } = await setup(page, "split", "Kort");
-    const scrollY = await page.evaluate(() => scrollY);
+    const startY = await page.evaluate(() => window.scrollY);
     await sync(page, states);
     await expectFinalBoard(page);
     await expect.poll(async () => (await moveAnimations(page)).length).toBeGreaterThan(0);
     const all = await moveAnimations(page);
-    // Stacked phone columns: Closed lies below the fold, so issue #2 pulses where it landed.
-    expect(all.find((item) => item.target === domId("alpha", 2))?.id).toBe("board-move-feedback");
-    expect(Math.abs(await page.evaluate(() => scrollY) - scrollY)).toBeLessThanOrEqual(1);
+    // Stacked phone columns: #3 leaves the visible Backlog for Closed below the fold, so it pulses
+    // where it landed instead of flying across the page; nothing flies with an off-screen end.
+    expect(all.find((item) => item.target === domId("alpha", 3))?.id).toBe("board-move-feedback");
+    expect(all.filter((item) => item.id === "board-move")).toEqual([]);
+    expect(Math.abs(await page.evaluate(() => window.scrollY) - startY)).toBeLessThanOrEqual(1);
     await expect.poll(async () => (await moveAnimations(page)).filter((item) => item.state === "running").length, { timeout: 5000 }).toBe(0);
   } finally { await context.close(); }
 });
@@ -202,7 +205,7 @@ async function finalState(browser: Browser, size: (typeof sizes)[number], view: 
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     if (evidence) {
       await mkdir(evidence, { recursive: true });
-      await page.locator(`#${domId("alpha", 1)}`).scrollIntoViewIfNeeded();
+      await page.locator(byId("alpha", 1)).scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${evidence}/final-${view === "Kort" ? "cards" : "list"}-${size.width}x${size.height}.png` });
     }
   } finally { await context.close(); }
