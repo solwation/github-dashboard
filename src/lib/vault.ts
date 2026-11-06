@@ -74,20 +74,29 @@ function openDatabase(): Promise<IDBDatabase> {
 async function transact<T>(
   mode: IDBTransactionMode,
   operation: (store: IDBObjectStore, abort: (cause: unknown) => void) => IDBRequest<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const db = await openDatabase();
   const code = mode === "readonly" ? "read" : "write";
   try {
     return await new Promise<T>((resolve, reject) => {
+      signal?.throwIfAborted();
       const tx = db.transaction(STORE, mode);
+      const cancel = () => { try { tx.abort(); } catch { /* Already committed: persistence boundary passed. */ } };
+      signal?.addEventListener("abort", cancel, { once: true });
+      const cleanup = () => signal?.removeEventListener("abort", cancel);
       let operationError: unknown;
       const request = operation(tx.objectStore(STORE), cause => { operationError = cause; tx.abort(); });
       // Wait for commit; a successful request can still belong to an aborted transaction.
-      tx.oncomplete = () => resolve(request.result);
-      tx.onabort = () =>
+      tx.oncomplete = () => { cleanup(); resolve(request.result); };
+      tx.onabort = () => {
+        cleanup();
         reject(new VaultError(code, { cause: operationError ?? tx.error ?? request.error }));
-      tx.onerror = () =>
+      };
+      tx.onerror = () => {
+        cleanup();
         reject(new VaultError(code, { cause: operationError ?? tx.error ?? request.error }));
+      };
     });
   } catch (cause) {
     throw cause instanceof VaultError ? cause : new VaultError(code, { cause });
@@ -104,10 +113,12 @@ function serialize<T>(operation: () => Promise<T>): Promise<T> {
   return result;
 }
 
-export function saveToken(token: string): Promise<void> {
+/** Cancellation before the IDB commit preserves the existing credential and its cache. */
+export function saveToken(token: string, signal?: AbortSignal): Promise<void> {
   return serialize(async () => {
     if (!globalThis.crypto?.subtle) throw new VaultError("unavailable");
     try {
+      signal?.throwIfAborted();
       const previous = await transact<Credential | undefined>("readonly", store => store.get(RECORD));
       if (previous) {
         try { if (await decryptToken(previous) === token) return; } catch { /* A fresh validated sign-in may replace a damaged credential. */ }
@@ -123,10 +134,11 @@ export function saveToken(token: string): Promise<void> {
         key,
         new TextEncoder().encode(token),
       );
+      signal?.throwIfAborted();
       await transact("readwrite", (store) => {
         store.clear(); // Changed credentials invalidate all cached private content.
         return store.put({ key, iv, ciphertext } satisfies Credential, RECORD);
-      });
+      }, signal);
     } catch (cause) {
       throw cause instanceof VaultError
         ? cause

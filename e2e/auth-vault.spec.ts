@@ -102,3 +102,47 @@ test("corruption reports an unlock error and preserves the record for explicit l
   await vault(page, "clear");
   expect(await recordInfo(page)).toBeNull();
 });
+
+for (const phase of ["queued", "encrypting", "writing"] as const) {
+  test(`canceled ${phase} credential replacement preserves the previous token and content`, async ({ page }) => {
+    await page.goto("/");
+    const result = await page.evaluate(async phase => {
+      const path = "/src/lib/vault.ts";
+      const api = await import(/* @vite-ignore */ path);
+      await api.saveToken("fixture-existing-token");
+      await api.saveContent("fixture-existing-token", { marker: "existing-private-cache" });
+      const controller = new AbortController();
+      let started!: () => void, release!: () => void;
+      const entered = new Promise<void>(resolve => { started = resolve; });
+      const gate = new Promise<void>(resolve => { release = resolve; });
+      const originalEncrypt = crypto.subtle.encrypt.bind(crypto.subtle);
+      const originalPut = IDBObjectStore.prototype.put;
+      if (phase === "encrypting") {
+        crypto.subtle.encrypt = (async (...args: Parameters<SubtleCrypto["encrypt"]>) => {
+          started();
+          await gate;
+          return originalEncrypt(...args);
+        }) as SubtleCrypto["encrypt"];
+      }
+      if (phase === "writing") {
+        IDBObjectStore.prototype.put = function (...args: Parameters<IDBObjectStore["put"]>) {
+          const request = originalPut.apply(this, args);
+          if (args[1] === "github") controller.abort(); // After clear/put, before the transaction commits.
+          return request;
+        };
+      }
+      if (phase === "queued") controller.abort();
+      const saving = api.saveToken("fixture-canceled-token", controller.signal).catch(() => {});
+      if (phase === "encrypting") {
+        await entered;
+        controller.abort();
+        release();
+      }
+      await saving;
+      crypto.subtle.encrypt = originalEncrypt;
+      IDBObjectStore.prototype.put = originalPut;
+      return { token: await api.loadToken(), content: await api.loadContent("fixture-existing-token") };
+    }, phase);
+    expect(result).toEqual({ token: "fixture-existing-token", content: { marker: "existing-private-cache" } });
+  });
+}

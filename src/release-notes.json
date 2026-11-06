@@ -53,6 +53,15 @@
           418,
           427
         ]
+      },
+      {
+        "text": {
+          "sv": "Om du öppnar demon eller går tillbaka under en pågående inloggning kan ett sent svar inte längre spara token eller byta vy.",
+          "en": "Opening the demo or going back during a pending sign-in no longer lets a late response save the token or switch views."
+        },
+        "issues": [
+          417
+        ]
       }
     ]
   },

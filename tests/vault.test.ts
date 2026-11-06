@@ -14,3 +14,12 @@ test("storage denied by the browser is reported as a stable vault error", async 
   vi.stubGlobal("indexedDB", { open() { throw new DOMException("Denied", "SecurityError"); } });
   await expect(loadToken()).rejects.toMatchObject({ code: "unavailable" });
 });
+
+test("a canceled credential save never opens storage", async () => {
+  const open = vi.fn(() => { throw new Error("storage must not be opened"); });
+  vi.stubGlobal("indexedDB", { open });
+  const controller = new AbortController();
+  controller.abort();
+  await expect(saveToken("test-only", controller.signal)).rejects.toMatchObject({ name: "VaultError", code: "write" });
+  expect(open).not.toHaveBeenCalled();
+});

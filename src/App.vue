@@ -738,6 +738,15 @@ function setRepositoryColumnLimit(repo: string, value: number | null) {
   save();
 }
 const authBusy = ref(false);
+// Demo/welcome navigation ends a pending sign-in (#417): stale awaits, catches and vault writes see the aborted signal.
+// Startup restore needs no check: the welcome actions are not rendered while `restoring`.
+let sessionLifetime = new AbortController();
+function cancelAuthentication() {
+  sessionLifetime.abort();
+  sessionLifetime = new AbortController();
+  authBusy.value = false;
+  answerAccountSwitch(false);
+}
 const restoring = ref(true);
 const savedSession = ref(false);
 const sessionToken = ref("");
@@ -766,7 +775,9 @@ function answerAccountSwitch(confirmed: boolean) {
 }
 /** Unsigned handoff payloads may come from anyone; never replace a different saved sign-in silently. */
 async function confirmAccountSwitch(current: string | null, token: string): Promise<boolean> {
+  const signal = sessionLifetime.signal;
   const incoming = (await new GitHub(token).user()).login;
+  if (signal.aborted) return false;
   answerAccountSwitch(false);
   return new Promise(resolve => {
     resolveAccountSwitch = resolve;
@@ -774,17 +785,18 @@ async function confirmAccountSwitch(current: string | null, token: string): Prom
   });
 }
 async function importScanned(payload: HandoffSettings) {
+  const signal = sessionLifetime.signal;
   scannerOpen.value = false;
   // A user-started scan while signed in is meant to sync preferences, so a different account still needs consent.
   if (user.value && !isDemo.value && sessionToken.value && payload.token !== sessionToken.value) {
     try {
       if (!await confirmAccountSwitch(user.value.login, payload.token)) return;
     } catch (e) {
-      error.value = message(e);
+      if (!signal.aborted) error.value = message(e);
       return;
     }
   }
-  await connect(payload.token, payload);
+  if (!signal.aborted) await connect(payload.token, payload);
 }
 const commitRetry = ref(0);
 // Bumped per repository so a sync only revalidates relations on that repository's cards (#149).
@@ -1521,6 +1533,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
 /** Anonymous workspaces never create, replace or delete a credential. */
 async function openPublicWorkspace() {
   if (authBusy.value) return;
+  const signal = sessionLifetime.signal;
   authBusy.value = true;
   const run = ++generation;
   selectionRevision++; repositoryRequests.clear(); clearClosureFeedback();
@@ -1541,8 +1554,8 @@ async function openPublicWorkspace() {
     error.value = ""; tokenPanel.value = false; tokenInput.value = "";
     if (selected.value.length) await refreshPublicSelection();
     else picker.value = true;
-  } catch (cause) { error.value = message(cause); }
-  finally { authBusy.value = false; }
+  } catch (cause) { if (!signal.aborted) error.value = message(cause); }
+  finally { if (!signal.aborted) authBusy.value = false; }
 }
 /** Restoring or changing public selection only fetches missing/expired whole repositories. */
 async function refreshPublicSelection() {
@@ -1618,6 +1631,8 @@ function removeExternalRepository(name: string) {
 /** Resolves true when the account connected live; failures are shown in `error` instead of thrown. */
 async function connect(token: string, imported?: HandoffSettings, cached?: ContentSnapshot | null): Promise<boolean> {
   if (authBusy.value) return false;
+  const signal = sessionLifetime.signal;
+  const current = () => !signal.aborted;
   authBusy.value = true;
   error.value = "";
   const previousToken = sessionToken.value;
@@ -1628,18 +1643,22 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
   try {
     if (imported && token === sessionToken.value && api && user.value && !isDemo.value) {
       ownRepos = await api.repos();
+      if (!current()) return false;
       externalRepos.value = parseExternalRepositories(externalRepos.value, ownRepos);
       const available = mergeExternalRepositories(ownRepos, externalRepos.value);
       repos.value = available;
       catalog.markFresh();
       await applyImportedPreferences(imported, available);
+      if (!current()) return false;
       reconcileSelection();
       await refresh(false, true);
+      if (!current()) return false;
       return true;
     }
     const next = new GitHub(token);
     // Read before changing any state, so the cached board appears with its settings at once.
     const cachedSettings = cached ? await readSettings(cached.user.login) : null;
+    if (!current()) return false;
     if (cached && cachedSettings) {
       generation++;
       next.restoreResponses(cached.responses);
@@ -1664,8 +1683,11 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       for (const lane of lanes.value) closureTracker.update(lane);
     }
     const identity = await next.user();
+    if (!current()) return false;
     ownRepos = await next.repos();
+    if (!current()) return false;
     const liveSettings = cached?.user.login === identity.login ? null : await readSettings(identity.login);
+    if (!current()) return false;
     const liveExternal = parseExternalRepositories(liveSettings ? liveSettings.value?.externalRepositories : externalRepos.value, ownRepos);
     const available = mergeExternalRepositories(ownRepos, liveExternal);
     connected = true;
@@ -1674,17 +1696,20 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     if (credentialChanged || accountChanged) {
       try {
         await closeActiveNotifications();
+        if (!current()) return false;
       } catch {
         // Closing is best-effort and never blocks connect (#312).
       }
     }
     let storageWarning = "";
     try {
-      await saveToken(token);
+      await saveToken(token, signal);
+      if (!current()) return false;
       savedSession.value = true;
     } catch (cause) {
       storageWarning = message(cause);
     }
+    if (!current()) return false;
     if (!cached) generation++;
     lastSynced.clear();
     lastFullSynced.clear();
@@ -1720,17 +1745,22 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       rules.value = Object.fromEntries(Object.entries(rules.value).filter(([name]) => accessible.has(name)));
     } else restorePreferences(available, liveSettings!);
     // Commit imported settings before their lanes appear, so an immediate reload keeps them.
-    if (imported) await applyImportedPreferences(imported, available);
+    if (imported) {
+      await applyImportedPreferences(imported, available);
+      if (!current()) return false;
+    }
     reconcileSelection();
     if (selected.value.length) await refresh(false, true);
     else { picker.value = true; showingCache.value = false; await persistContent(); }
+    if (!current()) return false;
     if (storageWarning) error.value = storageWarning;
     return true;
   } catch (e) {
+    if (!current()) return false;
     error.value = message(e);
     return connected;
   } finally {
-    authBusy.value = false;
+    if (current()) authBusy.value = false;
   }
 }
 function message(e: unknown) {
@@ -1932,6 +1962,7 @@ async function applyRepos() {
   else await refresh(false, true);
 }
 function showDemo() {
+  cancelAuthentication();
   resetEventHistory();
   timeoutSettings.value = normalizeTimeoutSettings({});
   notificationSounds.value = true;
@@ -1979,6 +2010,7 @@ async function confirmLogout() {
   }
 }
 function logout() {
+  cancelAuthentication();
   resetEventHistory();
   try {
     void closeActiveNotifications();
