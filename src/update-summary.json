@@ -1,13 +1,14 @@
 {
   "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
   "summary": {
-    "sv": "Nya projekt syns i väljaren med ikoner, vänstermenyn skymmer inte innehåll på telefon och synkroniseringen tål nätverksproblem bättre.",
-    "en": "New projects appear in the picker with icons, the phone left menu no longer covers content and sync copes better with network trouble."
+    "sv": "Nya projekt i väljaren med ikoner, vänstermeny som inte skymmer på telefon, tåligare synkronisering och snabbare statistik.",
+    "en": "New projects in the picker with icons, a phone menu that no longer covers content, sturdier sync and faster statistics."
   },
   "issues": [
     414,
     415,
     416,
+    418,
     421,
     424
   ]
