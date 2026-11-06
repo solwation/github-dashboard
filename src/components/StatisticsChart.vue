@@ -89,18 +89,6 @@ function tickText(tick: number, axis: number) {
 const axisLabels = computed(() => dual.value
   ? axes.value.flatMap((axis, index) => axis.ticks.map((tick, position) => ({ key: `${index}-${tick}`, tick, axis: index, show: axis.labeled[position] })).filter(item => item.show))
   : []);
-/** Connected runs of defined values; missing estimate buckets break the line. */
-function segments(series: { days: StatisticsDay[]; metric?: StatisticsMetric }) {
-  const result: string[] = [];
-  let current: string[] = [];
-  series.days.forEach((day, index) => {
-    const value = valueOf(series, day);
-    if (value === null) { if (current.length) result.push(current.join(" ")); current = []; }
-    else current.push(`${x(index)},${y(value, axisOf(series))}`);
-  });
-  if (current.length) result.push(current.join(" "));
-  return result;
-}
 function number(value: number) { return value.toLocaleString(locale.value, { maximumFractionDigits: 2 }); }
 function formatted(series: Series, value: number) { return series.format ? series.format(value) : number(value); }
 const bucketStarts = computed(() => new Map((props.series[0]?.days || []).map(day => [day.date, day.start ?? bucketTime(day.date)])));
@@ -113,12 +101,51 @@ function clock(date: string) {
   const time = pointTime(date);
   return Number.isFinite(time) ? new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : "";
 }
-function fullTime(date: string) {
+function formatFullTime(date: string) {
   const time = pointTime(date);
   if (!Number.isFinite(time)) return date;
   const day = new Date(time).toLocaleDateString(locale.value, { day: "numeric", month: "short", year: "numeric" });
   return subDay.value && hasTime(date) ? `${day} ${new Date(time).toLocaleTimeString(locale.value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", ...(isAmbiguousBrowserTime(time) ? { timeZoneName: "shortOffset" as const } : {}) })}` : day;
 }
+// Shared labels are independent of cursor state and reused by every metric at a timestamp.
+const timeTitles = computed(() => {
+  const cache = new Map<string, string>();
+  return new Map(props.series.flatMap(series => series.days.map(day => {
+    const key = `${pointTime(day.date)}:${subDay.value && hasTime(day.date)}`;
+    let title = cache.get(key);
+    if (title === undefined) {
+      title = formatFullTime(day.date);
+      // Invalid dates retain their original text rather than sharing a NaN label.
+      if (Number.isFinite(pointTime(day.date))) cache.set(key, title);
+    }
+    return [day.date, title] as const;
+  })));
+});
+function fullTime(date: string) { return timeTitles.value.get(date) ?? formatFullTime(date); }
+const pointTitles = computed(() => props.series.map(series => series.days.map(day => {
+  const value = valueOf(series, day);
+  return value === null ? "" : `${series.name} · ${fullTime(day.date)}: ${formatted(series, value)}`;
+})));
+/** Geometry and defined points change with data/size/axes, never with selection. */
+const preparedSeries = computed(() => props.series.map((series, seriesIndex) => {
+  const segments: string[] = [];
+  const points: { date: string; index: number; x: number; y: number; title: string }[] = [];
+  let current: string[] = [];
+  const axis = axisOf(series);
+  series.days.forEach((day, index) => {
+    const value = valueOf(series, day);
+    if (value === null) {
+      if (current.length) segments.push(current.join(" "));
+      current = [];
+      return;
+    }
+    const point = { date: day.date, index, x: x(index), y: y(value, axis), title: pointTitles.value[seriesIndex]![index]! };
+    points.push(point);
+    current.push(`${point.x},${point.y}`);
+  });
+  if (current.length) segments.push(current.join(" "));
+  return { name: series.name, segments, points };
+}));
 const xTicks = computed(() => {
   let previousDay = "";
   return axisTickIndices(dates.value.length, plotEnd.value - plotStart.value).map((index, position, all) => {
@@ -170,11 +197,9 @@ function selectFromPointer(event: PointerEvent | MouseEvent) {
         <tspan v-if="tick.dateLine" :x="x(tick.index)" dy="14">{{ tick.dateLine }}</tspan>
       </text>
       <line v-if="showPopover" class="chart-cursor chart-axis" :x1="x(selected)" :y1="plotTop" :x2="x(selected)" :y2="plotBottom" stroke-dasharray="3 4" />
-      <g v-for="(series, index) in series" :key="series.name">
-        <polyline v-for="(line, lineIndex) in segments(series)" :key="lineIndex" :points="line" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
-        <template v-for="(day, dayIndex) in series.days" :key="day.date">
-          <circle v-if="valueOf(series, day) !== null" :cx="x(dayIndex)" :cy="y(valueOf(series, day)!, axisOf(series))" :r="showPopover && selected === dayIndex ? 5 : 3" :style="{ fill: color(index) }"><title>{{ series.name }} · {{ fullTime(day.date) }}: {{ formatted(series, valueOf(series, day)!) }}</title></circle>
-        </template>
+      <g v-for="(series, index) in preparedSeries" :key="series.name">
+        <polyline v-for="(line, lineIndex) in series.segments" :key="lineIndex" :points="line" fill="none" :style="{ stroke: color(index) }" stroke-width="2" vector-effect="non-scaling-stroke" :stroke-dasharray="dash(index)" />
+        <circle v-for="point in series.points" :key="point.date" :cx="point.x" :cy="point.y" :r="showPopover && selected === point.index ? 5 : 3" :style="{ fill: color(index) }"><title>{{ point.title }}</title></circle>
       </g>
       <g v-if="coverage" class="chart-coverage" role="img" :aria-label="coverage.percent > 0 ? t('Färdighämtat tidsspann: {from} – {to}', { from: new Date(coverage.from).toLocaleString(locale), to: new Date(coverage.to).toLocaleString(locale) }) : t('Tidsspannet är ännu inte bekräftat hämtat')">
         <line :x1="plotStart" :x2="plotEnd" :y1="baseHeight + 13" :y2="baseHeight + 13" class="chart-coverage-track" />
