@@ -43,6 +43,15 @@
           415,
           416
         ]
+      },
+      {
+        "text": {
+          "sv": "Statistikdiagrammet reagerar snabbare när du pekar på eller bläddrar mellan punkter i täta diagram.",
+          "en": "The statistics chart responds faster when you point at or step through points in dense charts."
+        },
+        "issues": [
+          418
+        ]
       }
     ]
   },
