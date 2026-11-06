@@ -64,6 +64,7 @@ const phoneViewport = typeof window === "undefined" ? null : window.matchMedia(
 );
 const isPhone = ref(phoneViewport?.matches ?? false);
 const panelId = "issue-row-card-" + useId();
+const titleTextId = "issue-row-title-" + useId();
 let lockedScrollY = 0;
 let lockedBodyStyle = "";
 let inertElements: Array<{ element: HTMLElement; inert: boolean }> = [];
@@ -316,7 +317,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       :aria-controls="panelId"
       :title="issue.title"
       @click="setExpanded(!expanded)"
-      ><IssueWorkActivity :issue="issue" :rules="rules" :now="now" compact /><span class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
+      ><IssueWorkActivity :issue="issue" :rules="rules" :now="now" compact /><span :id="titleTextId" class="row-title-text">{{ issue.title }}</span><ChevronDown :size="13" aria-hidden="true" class="row-chevron"
     /></button>
     </span>
     <span class="row-points"><IssuePoints :issue="issue" :repository="repository" :in-progress="col === 'progress'" :active="visible" /></span>
@@ -379,7 +380,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         ><MessageCircle :size="12" aria-hidden="true" class="comment-icon-animated" /> +{{ newComments }} <span aria-hidden="true">✓</span></button></span></span>
     </span>
     <div class="row-comments" @click.stop>
-      <IssueComments :show-new-badge="false" compact-count :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
+      <IssueComments :show-new-badge="false" compact-count :described-by="titleTextId" :issue="issue" :count="Math.max(0, Math.floor(issue.comments ?? 0))" :new-comments="newComments" :load-comments="loadComments" :session="commentsSession" :demo="demo" @read="emit('read')" />
     </div>
     <span class="row-times">
     <span class="row-time">

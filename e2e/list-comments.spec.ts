@@ -43,6 +43,8 @@ test("wide list rows show correct counts and reuse the comments dialog without e
   await expect(other.locator(".row-comment-marker")).toContainText("+1");
   const comments = row.locator(".row-comments .comment-count");
   await expect(comments).toHaveAccessibleName("1357 kommentarer, 123 nya");
+  // #429: identical row button names stay distinguishable by the issue title as description.
+  await expect(comments).toHaveAccessibleDescription((await row.locator(".row-title-text").textContent())!.trim());
   await expect(comments.locator('.comment-count-value')).toHaveText('1357');
   await expect(comments.locator('.new-comments-badge')).toHaveCount(0);
   await expect(comments).toHaveClass(/has-new-comments/);

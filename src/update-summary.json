@@ -1,8 +1,8 @@
 {
   "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
   "summary": {
-    "sv": "Läsbarare listrader med full titel, stories som glider mellan kolumner, nya projekt i väljaren och stabilare synkronisering.",
-    "en": "Easier-to-read list rows with full titles, stories gliding between columns, new projects in the picker and sturdier sync."
+    "sv": "Läsbarare listrader med full titel och synliga kommentarer, stories som glider mellan kolumner, nya projekt i väljaren och stabilare synk.",
+    "en": "Easier-to-read list rows with full titles and visible comments, stories gliding between columns, new projects in the picker and sturdier sync."
   },
   "issues": [
     414,
@@ -16,6 +16,7 @@
     426,
     427,
     428,
+    429,
     430,
     432
   ]

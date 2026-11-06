@@ -16,6 +16,8 @@ const props = withDefaults(defineProps<{
   showCountText?: boolean;
   /** Fixed-width row slots abbreviate totals from 10,000 (10 tn / 10K); the accessible name keeps the exact count. */
   compactCount?: boolean;
+  /** Id of the element that names the issue, so identical "N kommentarer" buttons on rows stay distinguishable (#429). */
+  describedBy?: string;
   demo?: boolean;
   loadComments?: (issue: Issue) => Promise<IssueComment[]>;
   session?: number;
@@ -145,6 +147,7 @@ onBeforeUnmount(clear);
     class="comment-count"
     :class="{ 'has-new-comments': hasNew, 'comment-count-text': showCountText }"
     :aria-label="buttonLabel"
+    :aria-describedby="describedBy"
     aria-haspopup="dialog"
     @click="show"
   >
