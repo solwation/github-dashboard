@@ -2,8 +2,8 @@
   {
     "date": "2026-11-06",
     "summary": {
-      "sv": "Tydligare issue-nummer i kort och listor.",
-      "en": "Clearer issue numbers in cards and lists."
+      "sv": "Tydligare issue-nummer, automatisk upptäckt av nya projekt och ikoner i projektväljaren.",
+      "en": "Clearer issue numbers, automatic discovery of new projects and icons in the project picker."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           420
+        ]
+      },
+      {
+        "text": {
+          "sv": "Nyligen delade repositories dyker upp i projektväljaren inom ungefär en timme utan ny inloggning, och väljaren visar projektikoner för synliga rader.",
+          "en": "Newly shared repositories appear in the project picker within about an hour without signing in again, and the picker shows icons for visible rows."
+        },
+        "issues": [
+          421
         ]
       }
     ]

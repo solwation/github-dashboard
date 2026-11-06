@@ -83,6 +83,8 @@ repository-name artwork in the repository root and existing `public`, `assets`, 
 `public/icons` and `public/assets` directories, in that order. Discovery uses at most six
 GitHub Contents requests per selected project, with a quota reserve for core board data.
 Results, including missing artwork, are cached for 24 hours; routine refreshes do not rescan.
+The repository selection dialog also shows icons for the rows currently in view, at most three
+lookups at a time through the same cache, while the list itself appears immediately.
 
 PNG, JPEG, WebP and ICO files up to 64 KiB are decoded as images. SVG icons use a conservative
 subset that rejects scripts, external references, CSS, animation and embedded documents;
