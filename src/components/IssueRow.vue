@@ -14,7 +14,7 @@ import { closedTimeLabel } from "../lib/time";
 import { useIssueClock } from "../composables/useIssueClock";
 import { useIssueRelations } from "../composables/useIssueRelations";
 import { useRepositoryDisplayName } from "../composables/useRepositoryDisplayName";
-import { repositoryColor } from "../lib/repository-color";
+import { repositoryColor, repositoryTextColor } from "../lib/repository-color";
 import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
 import { column, hidesWorkLabel, priority, type Issue, type IssueComment, type Rules } from "../lib/model";
 import { useWorkTime } from "../composables/useWorkTime";
@@ -49,6 +49,11 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ read: [] }>();
 const repositoryLabel = useRepositoryDisplayName(() => props.repository);
+const repositoryStyle = computed(() => {
+  if (!props.repository) return undefined;
+  const color = props.assignedColor || repositoryColor(props.repository);
+  return { "--repository-color": color, "--repository-on-color": repositoryTextColor(color) };
+});
 const row = ref<HTMLElement>();
 const visible = ref(false);
 const toggle = ref<HTMLButtonElement>();
@@ -282,7 +287,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     class="issue-row"
     tabindex="-1"
     :data-repository="repository"
-    :style="{ '--repository-color': assignedColor || repositoryColor(repository) }"
+    :style="repositoryStyle"
     @click="rowClick"
     :class="[col, { expanded, 'just-closed': celebrate && col === 'closed', 'unread-move': recentMove === true, 'unread-created': recentMove === 'created', 'issue-timeout': timeout, 'pending-closure': pending }]"
   >
@@ -466,14 +471,14 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 }
 /* Keep a full metadata line until title, fixed slots and both time columns fit. */
 @media (min-width: 951px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 6rem 7.25rem; padding: var(--space-1) var(--space-2); row-gap: 0; }
+  .issue-row { grid-template-columns: 6.2rem minmax(0, 1fr) 6rem 7.25rem; padding: var(--space-1) var(--space-2); row-gap: 0; }
   .row-meta { grid-column: 1 / -1; grid-row: 2; }
   .row-meta :deep(.issue-points), .row-meta :deep(.row-repository),
   .row-meta :deep(.label), .row-meta :deep(.priority), .row-meta :deep(.row-status),
   .row-meta :deep(.row-timeout), .row-meta :deep(.row-marker) { padding-block: 0; }
 }
 @container issue-list (min-width: 850px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(0, 1fr) 3.5rem 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 6.2rem minmax(0, 1fr) 3.5rem 6rem 7.25rem; }
   .row-meta { grid-column: 1 / -1; grid-row: 2; }
   .row-comments { display: flex; align-items: center; }
 }
@@ -483,7 +488,7 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   }
 }
 @container issue-list (min-width: 1250px) {
-  .issue-row { grid-template-columns: 4.6rem minmax(12rem, 1fr) minmax(38rem, 1.8fr) 3.5rem 6rem 7.25rem; }
+  .issue-row { grid-template-columns: 6.2rem minmax(12rem, 1fr) minmax(38rem, 1.8fr) 3.5rem 6rem 7.25rem; }
   .issue-row .row-meta { grid-column: auto; grid-row: auto; }
 }
 @media (min-width: 651px) and (max-width: 950px) {

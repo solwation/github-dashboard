@@ -16,7 +16,7 @@ import { useLanguage } from "../lib/i18n";
 import { issueType, issueTypeLabel, type IssueType } from "../lib/issue-type";
 const { t, locale } = useLanguage();
 import { computed, onMounted, onBeforeUnmount, ref, useId, watch } from "vue";
-import { repositoryColor } from "../lib/repository-color";
+import { repositoryColor, repositoryTextColor } from "../lib/repository-color";
 import type { ClosingCommit } from "../lib/commits";
 import type { ActivityMarker } from "../lib/activity";
 import {
@@ -73,6 +73,11 @@ const props = defineProps<{
   timeoutEstimateMs?: number;
 }>();
 const repositoryLabel = useRepositoryDisplayName(() => props.repository);
+const repositoryStyle = computed(() => {
+  if (!props.repository) return undefined;
+  const color = props.assignedColor || repositoryColor(props.repository);
+  return { "--repository-color": color, "--repository-on-color": repositoryTextColor(color) };
+});
 const emit = defineEmits<{ read: []; parentSelect: [repository: string, number: number]; childSelect: [repository: string, number: number] }>();
 const card = ref<HTMLElement>();
 const details = ref<InstanceType<typeof IssueDetails>>();
@@ -240,7 +245,7 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
     tabindex="-1"
     @click="toggleFromSurface"
     :data-repository="rowDetails ? undefined : repository"
-    :style="repository ? { '--repository-color': assignedColor || repositoryColor(repository) } : undefined"
+    :style="repositoryStyle"
     :class="[col, { 'row-details-card': rowDetails, 'has-repository': !!repository && !rowDetails, 'just-closed': celebrate && col === 'closed' && !rowDetails, 'unread-move': recentMove === true && !rowDetails, 'unread-created': recentMove === 'created' && !rowDetails, 'issue-timeout': timedOut && col === 'progress' && !rowDetails, 'pending-closure': issue.pendingClosure && !rowDetails }]"
   >
     <!-- A separate native control keeps nested links/buttons out of its accessibility subtree. -->

@@ -44,3 +44,18 @@ describe("workspace repository palette", () => {
     many.slice(1).forEach(name => expect(replaced[name]).toBe(assigned[name]));
   });
 });
+
+import { contrastRatio, repositoryTextColor } from "../src/lib/repository-color";
+describe("issue number badge contrast (#420)", () => {
+  it("gives every palette color text with at least WCAG AA contrast, independent of theme", () => {
+    for (const color of repositoryPalette) {
+      const text = repositoryTextColor(color);
+      expect(contrastRatio(color, text), color).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+  it("picks the better of white and black", () => {
+    expect(repositoryTextColor("#ffffff")).toBe("#000000");
+    expect(repositoryTextColor("#000000")).toBe("#ffffff");
+    expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 0);
+  });
+});

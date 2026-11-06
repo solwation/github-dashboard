@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-06",
+    "summary": {
+      "sv": "Tydligare issue-nummer i kort och listor.",
+      "en": "Clearer issue numbers in cards and lists."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Issue-numret visas som en tydlig märkning med projektets färg som bakgrund och text med kontrast som uppfyller WCAG AA, i både ljust och mörkt tema. Märkningen är fortfarande en länk till GitHub med tangentbordsfokus.",
+          "en": "The issue number is now a clear badge filled with the project's color, with text chosen for WCAG AA contrast in both light and dark themes. It remains a link to GitHub with keyboard focus."
+        },
+        "issues": [
+          420
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-05",
     "summary": {
       "sv": "Tydligare gruppering, enklare projektnavigering och kompaktare notifieringar.",
