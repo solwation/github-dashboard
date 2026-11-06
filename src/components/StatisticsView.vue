@@ -486,6 +486,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
     <div v-if="repositories.length && !initialLoading" class="statistics-time-controls" role="region" :aria-label="t('Tidsintervall')">
       <div class="statistics-time-row">
         <p v-if="periodLabel" class="statistics-period-label" aria-live="polite">{{ periodLabel }}</p>
+        <label class="coord-toggle statistics-split-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label>
         <div class="statistics-time-selects">
           <label class="statistics-range-select">{{ t("Tidsintervall") }}
             <select :value="activeRange || 'custom'" @change="changeRange">
@@ -506,7 +507,6 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
         <label>{{ t("Till") }}<input ref="toInput" :value="localTo" type="datetime-local" step="60" :min="pickerMin" :max="pickerMax" @input="($event.target as HTMLInputElement).setCustomValidity('')" @change="setLocalBound($event, 'end')" /></label>
       </div>
     </div>
-    <label v-if="repositories.length" class="coord-toggle statistics-split-toggle"><input type="checkbox" v-model="splitByRepository" />{{ t("Dela upp per repository") }}</label>
     <p v-if="cacheFailed" class="notice" role="status">{{ t("Statistiken kunde inte sparas på enheten. De hämtade graferna kan fortfarande användas.") }}</p>
     <p v-if="demo" class="notice">{{ t("Demostatistiken visar fiktiva data.") }}</p>
     <p v-if="invalidRange" role="status" class="statistics-message">{{ t("Välj ett giltigt datumintervall inom de senaste 30 dagarna.") }}</p>
@@ -544,7 +544,7 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
 </template>
 <style scoped>
 .statistics-view { width: 100%; min-width: 0; }
-.statistics-split-toggle { color: var(--text); font-size: 12px; display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.statistics-split-toggle { color: var(--text); font-size: 12px; display: inline-flex; align-items: center; gap: var(--space-2); }
 @media (pointer: coarse), (max-width: 650px), (max-width: 950px) and (max-height: 500px) { .statistics-split-toggle { min-height: 44px; } }
 .statistics-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-3); }
 .statistics-heading h1 { margin: 6px 0; font-size: 32px; }

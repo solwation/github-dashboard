@@ -55,12 +55,13 @@
       },
       {
         "text": {
-          "sv": "Statistikdiagrammet reagerar snabbare i täta diagram, och projektrubrikerna i Statistik har samma storlek som i översikten.",
-          "en": "The statistics chart responds faster in dense charts, and Statistics project headings match the Overview size."
+          "sv": "Statistikdiagrammet reagerar snabbare i täta diagram, och projektrubrikerna i Statistik har samma storlek som i översikten. På en laptop ryms diagrammet nu i vyn utan scroll.",
+          "en": "The statistics chart responds faster in dense charts, and Statistics project headings match the Overview size. On a laptop the chart now fits the view without scrolling."
         },
         "issues": [
           418,
-          427
+          427,
+          428
         ]
       },
       {
