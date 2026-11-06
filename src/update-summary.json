@@ -1,10 +1,10 @@
 {
-  "baseCommit": "0834e76c0871ac24109d423986b465158ab3a12f",
+  "baseCommit": "83b65392bb09a91e1fa3ba6c7bfdc889e8af3862",
   "summary": {
-    "sv": "Issue-numret visas som en tydlig märkning i projektets färg i kort och listor.",
-    "en": "Issue numbers now appear as clear badges in the project's color in cards and lists."
+    "sv": "Nyligen delade projekt dyker upp i projektväljaren inom ungefär en timme, och väljaren visar projektikoner.",
+    "en": "Newly shared projects appear in the project picker within about an hour, and the picker shows project icons."
   },
   "issues": [
-    420
+    421
   ]
 }
