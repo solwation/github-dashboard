@@ -46,11 +46,12 @@
       },
       {
         "text": {
-          "sv": "Statistikdiagrammet reagerar snabbare när du pekar på eller bläddrar mellan punkter i täta diagram.",
-          "en": "The statistics chart responds faster when you point at or step through points in dense charts."
+          "sv": "Statistikdiagrammet reagerar snabbare i täta diagram, och projektrubrikerna i Statistik har samma storlek som i översikten.",
+          "en": "The statistics chart responds faster in dense charts, and Statistics project headings match the Overview size."
         },
         "issues": [
-          418
+          418,
+          427
         ]
       }
     ]
