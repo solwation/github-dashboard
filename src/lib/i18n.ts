@@ -86,6 +86,7 @@ export const english: Record<string, string> = {
   "Anpassa": "Fit",
   "Originalstorlek": "Original size",
   "Stäng bild": "Close image",
+  "Öppna vänstermeny": "Open left menu",
   "Bild, dra för att panorera": "Image, drag to pan",
   "Varna när pågående arbete överskrider estimatet": "Warn when ongoing work exceeds its estimate",
   "Tillåten överskridning (%)": "Allowed overrun (%)",

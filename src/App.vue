@@ -13,11 +13,10 @@ import {
   CircleAlert,
   ArrowRight,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   EyeOff,
   Layers3,
+  PanelLeft,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -292,6 +291,10 @@ watch(mobileSidebarOpen, async (open) => {
   if (open) {
     await nextTick();
     sidebarElement.value?.querySelector<HTMLElement>("a, button")?.focus();
+  } else if (sidebarElement.value?.contains(document.activeElement)) {
+    // Return focus to the top-bar opener when the drawer closes with focus inside it (#424).
+    await nextTick();
+    document.querySelector<HTMLElement>(".mobile-drawer-opener")?.focus();
   }
 });
 const mobileBoardNavigatorOpen = ref(false);
@@ -2313,7 +2316,7 @@ onMounted(async () => {
 });
 </script>
 <template>
-  <aside ref="sidebarElement" class="sidebar" :class="{ 'sidebar-mobile-open': mobileSidebarOpen }">
+  <aside id="app-sidebar" ref="sidebarElement" class="sidebar" :class="{ 'sidebar-mobile-open': mobileSidebarOpen }">
     <button
       type="button"
       class="sidebar-mobile-close"
@@ -2372,19 +2375,10 @@ onMounted(async () => {
     @click="closeMobileSidebar"
     aria-hidden="true"
   ></div>
-  <button
-    type="button"
-    class="sidebar-drag-handle"
-    :class="{ 'sidebar-open': mobileSidebarOpen }"
-    :aria-label="mobileSidebarOpen ? t('Stäng vänstermeny') : t('Öppna vänstermeny')"
-    :aria-expanded="mobileSidebarOpen"
-    @click="toggleMobileSidebar"
-  >
-    <ChevronRight v-if="!mobileSidebarOpen" :size="16" aria-hidden="true" />
-    <ChevronLeft v-else :size="16" aria-hidden="true" />
-  </button>
   <div class="workspace">
     <header ref="topbar" class="topbar">
+      <button type="button" class="mobile-drawer-opener" :aria-label="t('Öppna vänstermeny')" :title="t('Öppna vänstermeny')"
+        aria-controls="app-sidebar" :aria-expanded="mobileSidebarOpen" @click="openMobileSidebar"><PanelLeft :size="20" aria-hidden="true" /></button>
       <div class="breadcrumb">
         <!-- Deliberate brand/workspace breadcrumb context (#315) -->
         <span class="breadcrumb-context">Workspace <i>/</i></span><strong>{{ currentView === "statistics" && workspaceOpen ? t("Statistik") : t("Översikt") }}</strong>

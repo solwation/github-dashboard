@@ -2,8 +2,8 @@
   {
     "date": "2026-11-06",
     "summary": {
-      "sv": "Tydligare issue-nummer, automatisk upptäckt av nya projekt och ikoner i projektväljaren.",
-      "en": "Clearer issue numbers, automatic discovery of new projects and icons in the project picker."
+      "sv": "Tydligare issue-nummer, automatisk upptäckt av nya projekt och en vänstermeny som inte skymmer innehåll på telefon.",
+      "en": "Clearer issue numbers, automatic discovery of new projects and a phone left menu that no longer covers content."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           421
+        ]
+      },
+      {
+        "text": {
+          "sv": "På telefon öppnas vänstermenyn från en knapp i toppfältet eller med svep, och inget handtag skymmer längre innehållet.",
+          "en": "On phones the left menu opens from a top-bar button or by swiping, and no handle covers content anymore."
+        },
+        "issues": [
+          424
         ]
       }
     ]
