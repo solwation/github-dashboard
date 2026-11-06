@@ -29,8 +29,10 @@ for (const width of [1366, 950, 390]) for (const theme of ["light", "dark"] as c
     expect(new Set(metrics.controls.map(control => control.background)).size).toBe(1);
     expect(new Set(metrics.controls.map(control => control.radius)).size).toBe(1);
     if (width === 1366) {
-      // Same demo and viewport as the measured pre-change client691/content1010px dialog.
-      expect(metrics.clientHeight).toBeLessThan(691);
+      // #432: Settings grew (#394 owner display, timeouts, #430 active projects), so the old
+      // 691px bound no longer applies. The requirement is no scrolling at 1366x768: the content
+      // fits under the dialog's 100dvh - 2rem cap (736px), with headroom, below the 777px it had before #432.
+      expect(metrics.clientHeight).toBeLessThanOrEqual(720);
       expect(metrics.scrollHeight).toBeLessThan(1010);
       expect(metrics.scrollHeight - metrics.clientHeight).toBeLessThanOrEqual(1);
     }

@@ -165,17 +165,19 @@ function changeTheme(event: Event) {
       <section class="settings-section settings-wide" aria-labelledby="time-settings-title">
         <h3 id="time-settings-title">{{ t("Tidsestimat") }}</h3>
         <div class="settings-section-fields">
-          <label class="settings-toggle" for="issue-timeout-enabled">
-            <input id="issue-timeout-enabled" type="checkbox" :checked="timeoutEnabled" :disabled="!canEditLimit" aria-describedby="issue-timeout-help"
-              @change="emit('update:timeoutEnabled', ($event.target as HTMLInputElement).checked)" />
-            <span>{{ t("Varna när pågående arbete överskrider estimatet") }}</span>
-          </label>
+          <div class="settings-field">
+            <label class="settings-toggle" for="issue-timeout-enabled">
+              <input id="issue-timeout-enabled" type="checkbox" :checked="timeoutEnabled" :disabled="!canEditLimit" aria-describedby="issue-timeout-help"
+                @change="emit('update:timeoutEnabled', ($event.target as HTMLInputElement).checked)" />
+              <span>{{ t("Varna när pågående arbete överskrider estimatet") }}</span>
+            </label>
+            <p id="issue-timeout-help">{{ t("Varnar först efter uppskattad totaltid plus tillåten procent. Kräver känd starttid och tillräcklig historik. Standard: 25 %.") }}</p>
+          </div>
           <div class="settings-field">
             <label for="issue-timeout-overrun">{{ t("Tillåten överskridning (%)") }}</label>
             <input id="issue-timeout-overrun" type="number" min="0" :max="MAX_TIMEOUT_OVERRUN_PERCENT" step="1" required
               :value="timeoutOverrunPercent" :disabled="!canEditLimit || !timeoutEnabled" aria-describedby="issue-timeout-help" @change="changeTimeout" />
           </div>
-          <p id="issue-timeout-help" class="settings-wide">{{ t("Varnar först efter uppskattad totaltid plus tillåten procent. Kräver känd starttid och tillräcklig historik. Standard: 25 %.") }}</p>
         </div>
       </section>
     </div>
@@ -195,12 +197,13 @@ function changeTheme(event: Event) {
 </template>
 
 <style scoped>
-.settings-dialog { width: 640px; max-width: calc(100% - var(--space-8)); max-height: calc(100dvh - var(--space-8)); padding: var(--space-4); border-radius: var(--space-3); }
+.settings-dialog { width: 760px; max-width: calc(100% - var(--space-8)); max-height: calc(100dvh - var(--space-8)); padding: var(--space-4); border-radius: var(--space-3); }
 .settings-dialog .modal-heading { gap: var(--space-3); margin-bottom: var(--space-3); }
 .settings-dialog h2 { margin: 0; }
 .settings-grid, .settings-section-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+.settings-grid { row-gap: var(--space-2); }
 .settings-wide { grid-column: 1 / -1; }
-.settings-stack { display: grid; align-content: start; gap: var(--space-3); min-width: 0; }
+.settings-stack { display: grid; align-content: start; gap: var(--space-2); min-width: 0; }
 .settings-section { min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .settings-section h3 { margin: 0 0 var(--space-2); font-size: 12px; line-height: 1.4; font-weight: 700; }
 .settings-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
@@ -215,10 +218,10 @@ function changeTheme(event: Event) {
 .settings-dialog p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .settings-field :deep(p) { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .settings-field :deep(p[role="alert"]) { color: var(--accent-red); }
-.settings-toggle { display: flex; align-items: center; align-self: start; gap: var(--space-2); min-height: 44px; cursor: pointer; font-size: 12px; line-height: 1.4; }
+.settings-toggle { display: flex; align-items: center; align-self: start; gap: var(--space-2); min-height: 36px; cursor: pointer; font-size: 12px; line-height: 1.4; }
 .settings-toggle input { width: var(--space-5); height: var(--space-5); flex: 0 0 var(--space-5); margin: 0; padding: 0; accent-color: var(--green); }
 .settings-toggle:has(input:disabled) { cursor: default; }
-.settings-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); border-top: 1px solid var(--line); margin-top: var(--space-3); padding-top: var(--space-3); }
+.settings-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--space-2); border-top: 1px solid var(--line); margin-top: var(--space-3); padding-top: var(--space-3); }
 .settings-actions > .button,
 .settings-actions :deep(.repository-order-open),
 .settings-actions :deep(.permissions-open),
@@ -226,6 +229,7 @@ function changeTheme(event: Event) {
 .settings-dialog .modal-footer { justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-3); }
 .settings-dialog .modal-footer .button { min-height: 36px; }
 @media (pointer: coarse) {
+  .settings-toggle { min-height: 44px; }
   .settings-dialog select#language-preference,
   .settings-dialog select#theme-preference,
 .settings-dialog select#repository-owner-display,

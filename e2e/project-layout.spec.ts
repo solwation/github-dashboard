@@ -47,9 +47,9 @@ async function connect(page: Page) {
   await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
   await expect(page.locator(".repo-lane")).toHaveCount(3);
 }
-async function expectOrder(page: Page, names: string[]) {
+async function expectOrder(page: Page, names: string[], sidebarNames = names) {
   await expect(page.locator(".repo-lane h2 a")).toHaveText(names);
-  await expect(page.locator(".sidebar-repository .repository-label")).toHaveText(names);
+  await expect(page.locator(".sidebar-repository .repository-label")).toHaveText(sidebarNames);
 }
 
 test("drag and keyboard order stay in sync, survive refresh and reload, and remain local to each account", async ({ page }) => {
@@ -189,7 +189,7 @@ test.describe("mobile repository ordering in Settings", () => {
     const rows = dialog.locator("li");
     await expect(rows.locator(".order-repository-name")).toHaveText(["sample/alpha", "sample/bravo", "sample/charlie"]);
     await expect(dialog.getByRole("button", { name: "Flytta alpha upp", exact: true })).toBeDisabled();
-    await expect(dialog.getByRole("button", { name: "Flytta charlie-with-a-long-unbroken-repository-name ned", exact: true })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Flytta charlie ned", exact: true })).toBeDisabled();
     await dialog.getByRole("button", { name: "Flytta bravo upp", exact: true }).tap();
     await expect(rows.first()).toHaveAttribute("data-repository", "sample/bravo");
     await expect(rows.first().locator(".project-drag-handle")).toBeFocused();
@@ -237,9 +237,9 @@ test.describe("mobile repository ordering in Settings", () => {
     await page.keyboard.press("Escape");
     await settings.getByRole("button", { name: "Done", exact: true }).click();
     await page.reload();
-    await expectOrder(page, ["charlie-with-a-long-unbroken-repository-name", "alpha", "bravo"]);
+    await expectOrder(page, ["charlie-with-a-long-unbroken-repository-name", "alpha", "bravo"], ["charlie", "alpha", "bravo"]);
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(page.locator(".sidebar-projects")).toBeVisible();
-    await expectOrder(page, ["charlie-with-a-long-unbroken-repository-name", "alpha", "bravo"]);
+    await expectOrder(page, ["charlie-with-a-long-unbroken-repository-name", "alpha", "bravo"], ["charlie", "alpha", "bravo"]);
   });
 });
