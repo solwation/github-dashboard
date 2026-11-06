@@ -35,7 +35,7 @@ for (const device of [
   await page.getByRole('button', { name: 'Repositoryegenskaper för child', exact: true }).click();
   await page.getByLabel('Pågående arbete', { exact: true }).fill('shipping');
   await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
-  const card = page.locator('.issue-card').filter({ has: page.getByRole('link', { name: parent.title, exact: true }) });
+  const card = page.locator('.issue-card').filter({ has: page.getByTitle(parent.title, { exact: true }) }); // #431: titles stopped being links in #398; GitHub opens only via the number badge
   await card.locator(".card-open").press("Enter");
   const section = card.getByRole('region', { name: 'Underärenden', exact: true });
   await expect(section.locator('li')).toHaveCount(3);
