@@ -61,8 +61,8 @@ test("one global list mode for every repository and the combined board keeps fil
   for (const width of [768, 800, 950, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await noPageScroll(page)).toBe(true);
-    // Only the view toggle is pushed right; the checkbox and grouping control stay packed on the left (#151, #390).
-    expect(await page.locator(".board-toolbar :is(.coord-toggle, .board-grouping-toggle)").evaluateAll(nodes => nodes.map(node => getComputedStyle(node).marginLeft))).toEqual(["0px", "0px"]);
+    // Only the view toggle is pushed right; the grouping control stays packed on the left (#151, #390, #423).
+    expect(await page.locator(".board-toolbar .board-grouping-toggle").evaluateAll(nodes => nodes.map(node => getComputedStyle(node).marginLeft))).toEqual(["0px"]);
     const edges = await page.locator(".board-toolbar").evaluate(node => {
       const box = node.getBoundingClientRect(), style = getComputedStyle(node);
       const toggle = node.querySelector(".board-mode-toggle")!.getBoundingClientRect();

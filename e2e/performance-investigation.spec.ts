@@ -90,7 +90,7 @@ for (const size of [{ name: "small", repos: 1, issues: 60 }, { name: "large", re
     const nativeAction = (kind: "filter" | "list" | "combined" | "split" | "cards", value = "") => page.evaluate(async ({ kind, value }) => {
       const element = kind === "filter" ? document.querySelector<HTMLInputElement>("#issue-search input")!
         : kind === "list" || kind === "cards" ? document.querySelectorAll<HTMLButtonElement>(".board-toolbar .board-mode-toggle button")[kind === "cards" ? 0 : 1]!
-        : document.querySelectorAll<HTMLInputElement>(".board-toolbar .coord-toggle input")[1]!;
+        : document.querySelectorAll<HTMLButtonElement>(".board-toolbar .board-grouping-toggle button")[kind === "combined" ? 0 : 1]!;
       const nativeStart = performance.now();
       if (kind === "filter") { (element as HTMLInputElement).value = value; element.dispatchEvent(new Event("input", { bubbles: true })); }
       else element.click();
