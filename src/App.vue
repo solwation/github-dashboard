@@ -28,6 +28,7 @@ import {
   Settings2,
   X,
 } from "@lucide/vue";
+import ProjectIcon from "./components/ProjectIcon.vue";
 import LanguageSettings from "./components/LanguageSettings.vue";
 import RepositoryActivity from "./components/RepositoryActivity.vue";
 import { repositoryActivity } from "./lib/repository-activity";
@@ -49,7 +50,8 @@ import { useAppUpdate } from "./composables/useAppUpdate";
 import { PUBLIC_CONTENT_LIFETIME_MS, readPublicContent, writePublicContent, type PublicLaneSnapshot } from "./lib/public-content-cache";
 import { PUBLIC_SETTINGS_ACCOUNT, publicRepositoryRecord, publicWorkspaceRemembered, rememberPublicWorkspace } from "./lib/public-workspace";
 import { normalizeRepositoryOwnerDisplay, sidebarRepositoryDisplayName, type RepositoryOwnerDisplay } from "./lib/repository-display-name";
-import { PROJECT_ICON_LIFETIME, restoreProjectIcon } from "./lib/project-icon";
+import { PROJECT_ICON_LIFETIME, ProjectIconQueue, restoreProjectIcon, type ProjectIconMetadata } from "./lib/project-icon";
+import { CATALOG_PICKER_FRESH_MS, createCatalogRevalidation, mergeRepositoryCatalog } from "./lib/repository-catalog";
 import { provideProjectIcons } from "./composables/useProjectIcon";
 import { provideRepositoryDisplayNames } from "./composables/useRepositoryDisplayName";
 import { provideIssueEstimates } from "./composables/useIssueEstimates";
@@ -589,6 +591,7 @@ const combinedLimits = ref<Record<string, number>>({});
 const pendingSelected = ref<string[]>([]);
 watch(picker, (open) => {
   if (open) pendingSelected.value = [...selected.value];
+  else pickerIcons.clear();
 });
 const visibleLimit = ref<Record<string, number>>({});
 const columnLimit = ref(defaultColumnLimit);
@@ -1239,18 +1242,66 @@ async function loadProjectIcons(retryMissing: readonly string[] = []) {
     const icon = await client.projectIcon(repo, retryMissing.includes(repo.full_name));
     if (pass !== projectIconPass || client !== api || run !== generation) return;
     if (!icon || !selected.value.includes(repo.full_name)) continue;
-    const current = repos.value.find(item => item.full_name === repo.full_name);
-    if (current && JSON.stringify(current.projectIcon) !== JSON.stringify(icon)) {
-      repos.value = repos.value.map(item => item === current ? { ...item, projectIcon: icon } : item);
-      lanes.value = lanes.value.map(lane => lane.repo.full_name === repo.full_name ? { ...lane, repo: { ...lane.repo, projectIcon: icon } } : lane);
-      if (publicMode.value) {
-        publicSnapshots = publicSnapshots.map(entry => entry.lane.repo.full_name === repo.full_name ? { ...entry, lane: { ...entry.lane, repo: { ...entry.lane.repo, projectIcon: icon } } } : entry);
-        void save();
-      }
-      void persistContent();
-    }
+    applyProjectIcon(repo.full_name, icon);
   }
 }
+function applyProjectIcon(name: string, icon: ProjectIconMetadata) {
+  const current = repos.value.find(item => item.full_name === name);
+  if (!current || JSON.stringify(current.projectIcon) === JSON.stringify(icon)) return;
+  repos.value = repos.value.map(item => item === current ? { ...item, projectIcon: icon } : item);
+  lanes.value = lanes.value.map(lane => lane.repo.full_name === name ? { ...lane, repo: { ...lane.repo, projectIcon: icon } } : lane);
+  if (publicMode.value) {
+    publicSnapshots = publicSnapshots.map(entry => entry.lane.repo.full_name === name ? { ...entry, lane: { ...entry.lane, repo: { ...entry.lane.repo, projectIcon: icon } } } : entry);
+    void save();
+  }
+  void persistContent();
+}
+// Picker icons (#421): rows request their artwork as they become visible, three at a time,
+// through the same resolver cache/deduplication as the board; initials remain the fallback.
+const pickerIcons = new ProjectIconQueue(async name => {
+  const client = api, run = generation, repo = repos.value.find(item => item.full_name === name);
+  if (!client || !repo || !picker.value || isDemo.value || authBusy.value || restoring.value) return;
+  const previous = restoreProjectIcon(repo.projectIcon);
+  if (previous && Date.now() - previous.checkedAt < PROJECT_ICON_LIFETIME) return;
+  const icon = await client.projectIcon(repo);
+  if (icon && client === api && run === generation) applyProjectIcon(name, icon);
+}, 3);
+const pickerRowObserver = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(entries => {
+  for (const entry of entries) {
+    const name = (entry.target as HTMLElement).dataset.pickerRepository;
+    if (!name) continue;
+    if (entry.isIntersecting) pickerIcons.add(name); else pickerIcons.remove(name);
+  }
+});
+/** `v-picker-row`: observes a picker row so only shown repositories look up icons. */
+const vPickerRow = {
+  mounted(element: HTMLElement) { if (pickerRowObserver) pickerRowObserver.observe(element); else if (element.dataset.pickerRepository) pickerIcons.add(element.dataset.pickerRepository); },
+  beforeUnmount(element: HTMLElement) { pickerRowObserver?.unobserve(element); if (element.dataset.pickerRepository) pickerIcons.remove(element.dataset.pickerRepository); },
+};
+onUnmounted(() => { pickerRowObserver?.disconnect(); pickerIcons.clear(); });
+// Catalog revalidation (#421): about hourly while the app is used, bound to the signed-in
+// account. The minute clock pauses in hidden tabs, so resuming catches up a single overdue check.
+const catalog = createCatalogRevalidation({
+  scope: () => api?.authenticated && user.value && sessionToken.value && !isDemo.value && !publicMode.value
+    ? [api, generation, user.value.login, sessionToken.value] : null,
+  allowed: () => !!api && !authBusy.value && !restoring.value && !logoutBusy.value &&
+    verificationAllowed({ retryAfterMs: api.retryAfterMs(), remainingQuota: api.rateLimit()?.remaining, online: navigator.onLine }),
+  fetch: () => api!.repos(),
+  apply: applyRepositoryCatalog,
+  retryAfterMs: () => api?.retryAfterMs(),
+});
+function applyRepositoryCatalog(fetched: Repo[]) {
+  const own = repos.value.filter(repo => !externalNames.value.has(repo.full_name));
+  // Manually added public projects keep their group; selections, order and settings are untouched.
+  const next = mergeExternalRepositories(mergeRepositoryCatalog(own, fetched, selected.value), externalRepos.value);
+  if (JSON.stringify(next) === JSON.stringify(repos.value)) return;
+  repos.value = next;
+  void persistContent();
+}
+const catalogClock = useNow(at => untilNext(at, 60000));
+watch(catalogClock, () => { void catalog.check(); });
+// Opening the picker is when new repositories matter most; a slightly stale catalog is rechecked.
+watch(picker, open => { if (open) void catalog.check(CATALOG_PICKER_FRESH_MS); });
 watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.value.join("\n"), authBusy, restoring, publicMode, isDemo, activityClock], () => { void loadProjectIcons(); });
 const eventHistory = ref(emptyEventHistory());
 const eventHistoryOpen = ref(false);
@@ -1573,6 +1624,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
       externalRepos.value = parseExternalRepositories(externalRepos.value, ownRepos);
       const available = mergeExternalRepositories(ownRepos, externalRepos.value);
       repos.value = available;
+      catalog.markFresh();
       await applyImportedPreferences(imported, available);
       reconcileSelection();
       await refresh(false, true);
@@ -1636,6 +1688,7 @@ async function connect(token: string, imported?: HandoffSettings, cached?: Conte
     user.value = identity;
     repos.value = available;
     externalRepos.value = liveExternal;
+    catalog.markFresh();
     const sameCachedIdentity = cached?.user.login === identity.login;
     if (!sameCachedIdentity) {
       lanes.value = [];
@@ -2903,12 +2956,12 @@ onMounted(async () => {
           :aria-label="t('Sök repositories')"
       /></label>
       <div class="repo-options">
-        <label v-for="repo in filteredRepos" :key="repo.id" class="repo-option"
+        <label v-for="repo in filteredRepos" :key="repo.id" v-picker-row class="repo-option" :data-picker-repository="repo.full_name"
           ><input
             type="checkbox"
             :checked="pendingSelected.includes(repo.full_name)"
             @change="toggleRepo(repo.full_name)"
-          /><span
+          /><ProjectIcon :repository="repo.full_name" :size="20" /><span class="repo-option-text"
             ><strong>{{ repo.full_name }}</strong
             ><small>{{
               repo.description || t("Ingen beskrivning")
@@ -2922,13 +2975,13 @@ onMounted(async () => {
         </p>
         <template v-if="filteredExternalRepos.length">
           <h3 class="repo-options-group">{{ t("Andras publika projekt") }}</h3>
-          <div v-for="repo in filteredExternalRepos" :key="repo.id" class="repo-option external-repo-option">
+          <div v-for="repo in filteredExternalRepos" :key="repo.id" v-picker-row class="repo-option external-repo-option" :data-picker-repository="repo.full_name">
             <label class="external-repo-choice"
               ><input
                 type="checkbox"
                 :checked="pendingSelected.includes(repo.full_name)"
                 @change="toggleRepo(repo.full_name)"
-              /><span
+              /><ProjectIcon :repository="repo.full_name" :size="20" /><span class="repo-option-text"
                 ><strong>{{ repo.full_name }}</strong
                 ><small>{{ repo.description || t("Ingen beskrivning") }}</small></span
               ></label>
@@ -3056,7 +3109,7 @@ onMounted(async () => {
 .external-repo-option { cursor: default; padding-block: var(--space-2); }
 .external-repo-choice { display: flex; align-items: center; gap: var(--space-3); flex: 1; min-width: 0; padding-block: var(--space-2); cursor: pointer; }
 .external-repo-choice > input { width: 16px; height: 16px; flex-shrink: 0; }
-.external-repo-choice > span { min-width: 0; flex: 1; }
+.external-repo-choice > .repo-option-text { min-width: 0; flex: 1; }
 @media (pointer: coarse) { .external-repo-option .icon-button { min-width: 44px; min-height: 44px; } }
 .repository-navigation-highlight:not(.repository-selected) {
   outline: 2px solid var(--green);

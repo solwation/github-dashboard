@@ -129,3 +129,32 @@ export class ProjectIconResolver {
     return null;
   }
 }
+/**
+ * Progressive icon lookups for rows as they become visible (#421): at most `limit` run at once,
+ * a row that scrolls away before its turn is dropped, and each name is requested once per queue
+ * lifetime. Deduplication and caching across callers stay in ProjectIconResolver.
+ */
+export class ProjectIconQueue {
+  private readonly waiting = new Set<string>();
+  private readonly seen = new Set<string>();
+  private running = 0;
+  constructor(private readonly worker: (name: string) => Promise<unknown>, private readonly limit = 3) {}
+  /** Row became visible. */
+  add(name: string) {
+    if (this.seen.has(name)) return;
+    this.seen.add(name); this.waiting.add(name); this.drain();
+  }
+  /** Row left the visible area before its lookup started. */
+  remove(name: string) { if (this.waiting.delete(name)) this.seen.delete(name); }
+  /** Stops pending work (picker closed, account changed); running lookups finish into the resolver cache. */
+  clear() { this.waiting.clear(); this.seen.clear(); }
+  get active() { return this.running; }
+  private drain() {
+    while (this.running < this.limit && this.waiting.size) {
+      const name = this.waiting.values().next().value!;
+      this.waiting.delete(name);
+      this.running++;
+      void Promise.resolve().then(() => this.worker(name)).catch(() => undefined).finally(() => { this.running--; this.drain(); });
+    }
+  }
+}
