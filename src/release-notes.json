@@ -2,8 +2,8 @@
   {
     "date": "2026-11-07",
     "summary": {
-      "sv": "Lugnare händelsehistorik när telefonen pausar sidan.",
-      "en": "A calmer event history when your phone pauses the page."
+      "sv": "Lugnare händelsehistorik när telefonen pausar sidan och säkrare sparade inställningar.",
+      "en": "A calmer event history when your phone pauses the page, and settings that save reliably."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           434
+        ]
+      },
+      {
+        "text": {
+          "sv": "Minuter och procent som du skriver i Inställningar återställs inte längre innan de sparas.",
+          "en": "Minutes and percentages you type in Settings are no longer reset before they are saved."
+        },
+        "issues": [
+          433
         ]
       }
     ]
