@@ -1,10 +1,10 @@
 {
-  "baseCommit": "2256156ac323a69d66a7391024770cc5ba4ab49f",
+  "baseCommit": "5ce3e550984bcc8017fb6146cadd57d73b591005",
   "summary": {
-    "sv": "Händelsehistoriken visar inte längre falska fel när mobilen pausar sidan, och flera projekt som synkar igen samlas i en händelse.",
-    "en": "The event history no longer shows false errors when a phone pauses the page, and projects syncing again are combined into one event."
+    "sv": "Minuter och procent som du skriver i Inställningar återställs inte längre innan de sparas.",
+    "en": "Minutes and percentages you type in Settings are no longer reset before they are saved."
   },
   "issues": [
-    434
+    433
   ]
 }
