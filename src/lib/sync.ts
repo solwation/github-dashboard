@@ -196,7 +196,6 @@ export function createIssueSync(options: IssueSyncOptions) {
     clearInterval(timer);
     windowEvents?.removeEventListener("focus", wake);
     windowEvents?.removeEventListener("online", wake);
-    // A page restored from the back/forward cache or unfrozen also resyncs (#434).
     windowEvents?.removeEventListener("pageshow", restored);
     documentEvents?.removeEventListener("visibilitychange", wake);
     documentEvents?.removeEventListener("resume", wake);

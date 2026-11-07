@@ -1,11 +1,10 @@
 {
-  "baseCommit": "bd05aa59ba13ae93db8f85eae55bd1cb9b8d30d5",
+  "baseCommit": "2256156ac323a69d66a7391024770cc5ba4ab49f",
   "summary": {
-    "sv": "Kommentarsknappen syns direkt på varje list- och simbanerad, och Inställningar ryms utan scroll på en laptop.",
-    "en": "The comment button now shows on every list and swimlane row, and Settings fits a laptop screen without scrolling."
+    "sv": "Händelsehistoriken visar inte längre falska fel när mobilen pausar sidan, och flera projekt som synkar igen samlas i en händelse.",
+    "en": "The event history no longer shows false errors when a phone pauses the page, and projects syncing again are combined into one event."
   },
   "issues": [
-    429,
-    432
+    434
   ]
 }
