@@ -168,6 +168,10 @@ export function createIssueSync(options: IssueSyncOptions) {
     }
     void tick();
   }
+  /** An ordinary load also fires `pageshow`; only a back/forward cache restore needs a resync. */
+  function restored(event: Event) {
+    if ((event as PageTransitionEvent).persisted) wake();
+  }
   function start() {
     if (started) return;
     started = true;
@@ -179,7 +183,10 @@ export function createIssueSync(options: IssueSyncOptions) {
     lastReconcile = Number.NEGATIVE_INFINITY;
     windowEvents?.addEventListener("focus", wake);
     windowEvents?.addEventListener("online", wake);
+    // A page restored from the back/forward cache or unfrozen also resyncs (#434).
+    windowEvents?.addEventListener("pageshow", restored);
     documentEvents?.addEventListener("visibilitychange", wake);
+    documentEvents?.addEventListener("resume", wake);
     timer = setInterval(() => { void tick(); }, 1000);
     void tick();
   }
@@ -189,7 +196,10 @@ export function createIssueSync(options: IssueSyncOptions) {
     clearInterval(timer);
     windowEvents?.removeEventListener("focus", wake);
     windowEvents?.removeEventListener("online", wake);
+    // A page restored from the back/forward cache or unfrozen also resyncs (#434).
+    windowEvents?.removeEventListener("pageshow", restored);
     documentEvents?.removeEventListener("visibilitychange", wake);
+    documentEvents?.removeEventListener("resume", wake);
   }
   return { start, stop, wake, tick: () => tick() };
 }

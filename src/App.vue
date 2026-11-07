@@ -92,6 +92,7 @@ import { readSnapshot, writeSnapshot, SYNCED_AT_PERSIST_MS, type ContentSnapshot
 import { sameLaneContent, sameLaneList } from "./lib/lane-changes";
 import { measureRender } from "./lib/startup-timing";
 import { cacheFailureReason } from "./lib/cache-failure";
+import { createPageSuspension, isTransientNetworkError } from "./lib/page-suspension";
 import { consumeHandoff, mergeHandoffPreferences, parseHandoffPreferences, type HandoffPreferences, type HandoffSettings } from "./lib/handoff";
 import BoardModeToggle from "./components/BoardModeToggle.vue";
 import BoardGroupingToggle from "./components/BoardGroupingToggle.vue";
@@ -505,11 +506,20 @@ function persistContent(changedOnly = false): Promise<void> {
   return waiting;
 }
 let publicSnapshots: PublicLaneSnapshot[] = [];
+/** Hidden, frozen, offline or stalled windows; failures across them are not reported (#434). */
+const pageSuspension = createPageSuspension();
+onUnmounted(() => pageSuspension.stop());
+/** A write the browser interrupted keeps the current warning; the next save retries it (#434). */
+function cacheFailed(cause: unknown, started: number) {
+  const reason = cacheFailureReason(cause, pageSuspension.interruptedSince(started));
+  if (reason !== null) cacheWarning.value = reason;
+}
 async function writeContent(changedOnly: boolean) {
+  const started = Date.now();
   if (publicMode.value) {
     const run = generation;
     try { await writePublicContent(publicSnapshots); if (run === generation) cacheWarning.value = ""; }
-    catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
+    catch (cause) { if (run === generation) cacheFailed(cause, started); }
     return;
   }
   if (!user.value || !sessionToken.value || !api || isDemo.value) return;
@@ -524,7 +534,7 @@ async function writeContent(changedOnly: boolean) {
     await writeSnapshot(state.token, { user: state.user, repos: state.repos, lanes: state.lanes,
       syncedAt: refreshed.value, responses: api.exportResponses() });
     if (run === generation) { cacheWarning.value = ""; persisted = state; }
-  } catch (cause) { if (run === generation) cacheWarning.value = cacheFailureReason(cause); }
+  } catch (cause) { if (run === generation) cacheFailed(cause, started); }
 }
 const syncError = ref("");
 const lastSynced = new Map<string, number>();
@@ -1348,6 +1358,11 @@ watch([() => repos.value.map(repo => repo.full_name).join("\n"), () => selected.
 const eventHistory = ref(emptyEventHistory());
 const eventHistoryOpen = ref(false);
 const eventHistoryErrors = ref(false);
+/** Several projects recovering in one pass form one event naming them all (#434). */
+function combineRecoveries(recovered: EventSignal[]): EventSignal {
+  return { source: "recovery", severity: "info", repository: recovered.map(item => item.repository ?? item.source).join(", "),
+    message: t("Synkroniseringen fungerar igen för {count} projekt.", { count: recovered.length }) };
+}
 function dashboardForeground() { return document.visibilityState === "visible" && document.hasFocus(); }
 function eventStatusLabel(status: IssueEventStatus) { return status === "closed" ? t("Stängda") : status === "integration" ? t("Väntar på integration") : status === "progress" ? t("Pågående") : "Backlog"; }
 const eventBadgeSeverity = computed(() => unseenSeverity(eventHistory.value.entries));
@@ -1367,7 +1382,7 @@ function markEventsSeen(ids: number[]) {
 }
 watch(() => ({
   account: user.value?.login, public: publicMode.value, demo: isDemo.value,
-  busy: authBusy.value || restoring.value,
+  busy: authBusy.value || restoring.value, refreshing: busy.value,
   lanes: lanes.value.map(lane => ({ repository: lane.repo.full_name, error: lane.error, loading: lane.loading, warning: lane.timerWarning })),
   error: error.value, sync: syncError.value, cache: cacheWarning.value, notice: notificationNotice.value,
   update: updateError.value, publicRepository: publicRepoError.value,
@@ -1384,6 +1399,8 @@ watch(() => ({
     }
     scope.add(source);
     if (lane.error) signals.push({ source, severity: "error", repository: lane.repository, message: lane.error, recovery: t("Synkroniseringen fungerar igen.") });
+    // Lanes settle one by one; hold recoveries until the sync pass ends so they form one event (#434).
+    else if (state.refreshing) signals.push(...eventHistory.value.active.filter(item => item.source === source && item.recovery));
     if (lane.warning) signals.push({ source: "timer:" + lane.repository, severity: "warning", repository: lane.repository, message: t("Vissa starttider kunde inte hämtas. Tidräknaren visas när historiken är tillgänglig.") });
   }
   if (state.error) signals.push({ source: "app", severity: "error", message: state.error });
@@ -1392,7 +1409,7 @@ watch(() => ({
   if (state.publicRepository) signals.push({ source: "public-repository", severity: "error", message: state.publicRepository });
   if (state.cache) signals.push({ source: "cache", severity: "warning", message: t("Innehållscachen kunde inte sparas. Översikten fungerar, men nästa start kan behöva hämta innehållet igen.") + " " + t(state.cache) });
   if (state.notice) signals.push({ source: "notification", severity: permission.value === "denied" ? "warning" : "info", message: state.notice, repository: notificationNoticeRepo.value ?? undefined });
-  const next = reconcileEventHistory(eventHistory.value, signals, Date.now(), scope, dashboardForeground());
+  const next = reconcileEventHistory(eventHistory.value, signals, Date.now(), scope, dashboardForeground(), combineRecoveries);
   if (JSON.stringify(next) !== JSON.stringify(eventHistory.value)) {
     eventHistory.value = next;
     void save();
@@ -1906,6 +1923,7 @@ async function refresh(incremental = false, replacePending = false, manual = fal
       while (cursor < targets.length && current()) {
         const repo = targets[cursor++]!;
         if ((client.retryAfterMs?.() || 0) > 0) break;
+        const attemptStarted = Date.now();
         markSyncing(repo.full_name, 1);
         try {
           const repoRules = { ...rules.value[repo.full_name] };
@@ -1936,10 +1954,13 @@ async function refresh(incremental = false, replacePending = false, manual = fal
           if (lane !== shown) queueLaneUpdate(repo.full_name, lane);
         } catch (cause) {
           if (!current() || cause instanceof RepositoryRequestCancelled) continue;
+          const old = pendingLanes.get(repo.full_name) || lanes.value.find(lane => lane.repo.full_name === repo.full_name);
+          // A connection dropped while the page was hidden, frozen or offline is no repository failure
+          // (#434): keep the shown lane without backoff; the wake on return or `online` syncs again.
+          if (old && !old.loading && isTransientNetworkError(cause) && pageSuspension.interruptedSince(attemptStarted)) continue;
           if ((client.retryAfterMs?.() || 0) === 0) {
             repoBackoff.recordFailure(repo.full_name);
           }
-          const old = pendingLanes.get(repo.full_name) || lanes.value.find(lane => lane.repo.full_name === repo.full_name);
           if (!old || !selected.value.includes(repo.full_name)) continue;
           const reason = message(cause);
           // A repeated identical failure keeps the shown lane instead of rewriting the cache again.

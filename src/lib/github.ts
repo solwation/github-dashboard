@@ -182,7 +182,7 @@ export class GitHub {
     const cached = cacheable ? this.responses.get(url.href) : undefined;
     const controller = new AbortController();
     const timeout = setTimeout(() => {
-      controller.abort(new Error(t("Förfrågan tog för lång tid.")));
+      controller.abort(Object.assign(new Error(t("Förfrågan tog för lång tid.")), { name: "TimeoutError" }));
     }, 30_000);
     const externalSignal = (init as RequestInit).signal;
     if (externalSignal) {

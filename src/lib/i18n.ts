@@ -50,6 +50,7 @@ export const english: Record<string, string> = {
   "{count} projektfel har inträffat": "{count} project errors occurred",
   "Visa detaljer": "Show details",
   "Synkroniseringen fungerar igen.": "Sync is working again.",
+  "Synkroniseringen fungerar igen för {count} projekt.": "Sync is working again for {count} projects.",
   "Alla valda repositories": "All selected repositories",
   "{count} med arbetsaktivitet": "{count} with work activity",
   "Orkesteraktivitet": "Orchestra activity",

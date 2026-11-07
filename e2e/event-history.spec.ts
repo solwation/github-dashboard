@@ -8,11 +8,13 @@ async function fixture(page: Page) {
   const failures = new Set(["alpha", "beta"]);
   let login = "history-account";
   let status: string | null = null;
+  let dropped = false, droppedRequests = 0;
   let verificationGate: Promise<void> | undefined; let releaseVerification: (() => void) | undefined;
   await page.route("https://api.github.com/**", async route => {
     const url = new URL(route.request().url());
     if (url.pathname === "/user") return route.fulfill({ json: { login, avatar_url: "" } });
     if (url.pathname === "/user/repos") return route.fulfill({ json: repos });
+    if (dropped && url.pathname.startsWith("/repos/")) { droppedRequests++; return route.abort("internetdisconnected"); }
     if (url.pathname === "/repos/sample/alpha/issues/1" && status === "pending-close") {
       await verificationGate;
       const at = new Date().toISOString();
@@ -29,7 +31,8 @@ async function fixture(page: Page) {
     return route.fulfill({ json: [] });
   });
   await page.goto("/");
-  return { failures, holdVerification() { verificationGate = new Promise<void>(resolve => { releaseVerification = resolve; }); return () => releaseVerification?.(); }, status(value: string) { status = value; failures.clear(); }, account(value: string) { login = value; } };
+  return { failures, holdVerification() { verificationGate = new Promise<void>(resolve => { releaseVerification = resolve; }); return () => releaseVerification?.(); }, status(value: string) { status = value; failures.clear(); }, account(value: string) { login = value; },
+    drop(value: boolean) { dropped = value; droppedRequests = 0; }, dropped: () => droppedRequests };
 }
 async function seed(page: Page, events = false) {
   await page.evaluate(async ({ events, repositories }) => {
@@ -194,4 +197,39 @@ test("unseen warnings use an orange badge in both themes and disappear when read
   await page.screenshot({ path: testInfo.outputPath(`orange-warning-${theme}.png`) });
  }
  await historyButton(page).click(); await expect(historyDialog(page).locator(".event-history-item")).toHaveCount(2); await closeHistory(page); await expect(badge).toHaveCount(0);
+});
+
+/** Emulates iOS hiding the page; the sync scheduler wakes on each visibility change. */
+async function setVisibility(page: Page, state: "hidden" | "visible") {
+  await page.evaluate(value => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => value });
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => value === "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, state);
+}
+test("connections dropped while hidden log nothing; foreground failures do and recover as one event (#434)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const api = await fixture(page); api.failures.clear(); await seed(page); await signIn(page);
+  const summary = page.locator(".project-error-summary");
+  await expect(page.locator(".repo-lane").first()).toBeVisible();
+  await expect.poll(() => readSettings(page, "history-account").then(saved => saved?.eventHistory !== undefined)).toBe(true);
+  api.drop(true);
+  await setVisibility(page, "hidden");
+  await expect.poll(api.dropped).toBeGreaterThanOrEqual(2);
+  api.drop(false);
+  await setVisibility(page, "visible");
+  await page.waitForTimeout(500);
+  await expect(summary).toHaveCount(0);
+  await expect.poll(() => readSettings(page, "history-account").then(saved => saved?.eventHistory?.entries.length ?? 0)).toBe(0);
+  api.drop(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(summary).toContainText("2 projektfel"); // A foreground network failure is still reported.
+  api.drop(false);
+  await expect(summary).toHaveCount(0, { timeout: 30_000 }); // Both repositories retry together after their backoff.
+  await historyButton(page).click();
+  const recoveries = historyDialog(page).locator(".event-history-item[data-severity='info']");
+  await expect(recoveries).toHaveCount(1);
+  await expect(recoveries).toContainText("Synkroniseringen fungerar igen för 2 projekt.");
+  await expect(recoveries.locator(".event-history-repository")).toHaveText("sample/alpha, sample/beta");
+  if (evidence) await page.screenshot({ path: `${evidence}/events-combined-recovery.png` });
 });

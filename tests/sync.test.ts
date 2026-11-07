@@ -62,7 +62,15 @@ describe("adaptive issue sync", () => {
     expect(app.options.reconcile).toHaveBeenCalledTimes(2);
     app.windowEvents.dispatchEvent(new Event("online"));
     await vi.advanceTimersByTimeAsync(0);
+    expect(app.options.reconcile).toHaveBeenCalledTimes(3);    app.windowEvents.dispatchEvent(new Event("pageshow")); // An ordinary load needs no extra pass.
+    await vi.advanceTimersByTimeAsync(0);
     expect(app.options.reconcile).toHaveBeenCalledTimes(3);
+    app.windowEvents.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(app.options.reconcile).toHaveBeenCalledTimes(4);
+    app.documentEvents.dispatchEvent(new Event("resume"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(app.options.reconcile).toHaveBeenCalledTimes(5); // Restored or unfrozen pages resync (#434).
   });
   it("serializes requests and preserves wake requests received during a refresh", async () => {
     vi.useFakeTimers();

@@ -51,3 +51,22 @@ it("records foreground info as seen, preserving background info and severity pre
   state = reconcileEventHistory(reconcileEventHistory(emptyEventHistory(), [failure], 5), [], 6, undefined, true);
   expect(state.entries.at(-1)!.seen).toBe(true); // Foreground recovery is information too.
 });
+
+it("combines several projects recovering in one pass into one info event; one project keeps its text (#434)", () => {
+  const failures = ["sample/alpha", "sample/beta", "sample/gamma"].map(repository => ({ ...failure, source: `repository:${repository}`, repository }));
+  const combine = (items: EventSignal[]): EventSignal => ({ source: "recovery", severity: "info", repository: items.map(item => item.repository).join(", "), message: `Sync recovered for ${items.length} projects` });
+  const scope = new Set(failures.map(item => item.source));
+  let state = reconcileEventHistory(emptyEventHistory(), failures, 1, scope, false, combine);
+  state = reconcileEventHistory(state, [], 2, scope, false, combine);
+  const recoveries = state.entries.filter(item => item.severity === "info");
+  expect(recoveries).toEqual([expect.objectContaining({ source: "recovery", message: "Sync recovered for 3 projects", repository: "sample/alpha, sample/beta, sample/gamma", timestamp: 2 })]);
+  expect(state.active).toEqual([]);
+  state = reconcileEventHistory(state, [failures[0]!], 3, scope, false, combine);
+  state = reconcileEventHistory(state, [], 4, scope, false, combine);
+  expect(state.entries.at(-1)).toMatchObject({ source: failures[0]!.source, repository: "sample/alpha", message: "Sync recovered" });
+  // Partial recovery: only the cleared sources are combined, the remaining failure stays active.
+  state = reconcileEventHistory(state, failures, 5, scope, false, combine);
+  state = reconcileEventHistory(state, [failures[2]!], 6, scope, false, combine);
+  expect(state.entries.at(-1)).toMatchObject({ message: "Sync recovered for 2 projects", repository: "sample/alpha, sample/beta" });
+  expect(state.active.map(item => item.source)).toEqual([failures[2]!.source]);
+});

@@ -1,7 +1,8 @@
 /** Limits apply before encryption; AES-GCM adds its fixed 16-byte tag. */
 export const MAX_CONTENT_BYTES = 8 * 1024 * 1024;
 export const MAX_EXPANDED_CONTENT_BYTES = 64 * 1024 * 1024;
-export type ContentCacheErrorCode = "size" | "compression" | "storage";
+/** `interrupted`: the browser aborted the stream (page suspended); the next save retries it (#434). */
+export type ContentCacheErrorCode = "size" | "compression" | "storage" | "interrupted";
 export class ContentCacheError extends Error {
   constructor(public readonly code: ContentCacheErrorCode, options?: ErrorOptions) {
     super(`Content cache ${code} failure`, options);
@@ -43,8 +44,15 @@ export async function encodeContent(plaintext: Uint8Array<ArrayBuffer>): Promise
     payload.set(GZIP_MARKER); payload.set(compressed, GZIP_MARKER.length);
     return payload;
   } catch (cause) {
-    throw cause instanceof ContentCacheError ? cause : new ContentCacheError("compression", { cause });
+    if (cause instanceof ContentCacheError) throw cause;
+    throw new ContentCacheError(aborted(cause) ? "interrupted" : "compression", { cause });
   }
+}
+function aborted(cause: unknown): boolean {
+  for (let depth = 0; depth < 8 && cause instanceof Error; depth++, cause = cause.cause) {
+    if (cause.name === "AbortError") return true;
+  }
+  return false;
 }
 
 export async function decodeContent(payload: Uint8Array<ArrayBuffer>): Promise<unknown> {

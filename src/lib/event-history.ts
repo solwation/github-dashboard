@@ -24,9 +24,12 @@ export function restoreEventHistory(value: unknown): EventHistoryState {
     active: Array.isArray(saved.active) ? saved.active.filter(signal) : [],
   };
 }
+/** Builds one info event for several sources that recovered with the same text in one reconcile (#434). */
+export type RecoveryCombiner = (recovered: EventSignal[]) => EventSignal;
 /** Identical active failures/notices add nothing; clearing a recoverable source adds one info event.
+ * Sources that recover together with the same text form one event when `combine` is given (#434).
  * Removing a repository is not recovery: callers retain only sources still in their scope. */
-export function reconcileEventHistory(state: EventHistoryState, signals: EventSignal[], now: number, scope?: Set<string>, foreground = false): EventHistoryState {
+export function reconcileEventHistory(state: EventHistoryState, signals: EventSignal[], now: number, scope?: Set<string>, foreground = false, combine?: RecoveryCombiner): EventHistoryState {
   const active = signals.map(item => ({ ...item, message: item.message.slice(0, MESSAGE_LIMIT) }));
   const previous = new Map(state.active.map(item => [item.source, item]));
   const current = new Map(active.map(item => [item.source, item]));
@@ -35,10 +38,15 @@ export function reconcileEventHistory(state: EventHistoryState, signals: EventSi
     const old = previous.get(item.source);
     if (!old || old.message !== item.message || old.severity !== item.severity) additions.push(item);
   }
+  const recovered = new Map<string, EventSignal[]>();
   for (const old of state.active) {
     if (old.recovery && !current.has(old.source) && (!scope || scope.has(old.source))) {
-      additions.push({ source: old.source, severity: "info", repository: old.repository, message: old.recovery });
+      recovered.set(old.recovery, [...recovered.get(old.recovery) || [], old]);
     }
+  }
+  for (const [message, group] of recovered) {
+    if (combine && group.length > 1) additions.push({ ...combine(group), severity: "info" });
+    else additions.push(...group.map(old => ({ source: old.source, severity: "info" as const, repository: old.repository, message })));
   }
   return appendEvents({ ...state, active }, additions, now, foreground);
 }

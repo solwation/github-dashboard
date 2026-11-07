@@ -42,3 +42,11 @@ test("unsupported compression is explicit and corrupted or unknown formats canno
   await expect(encodeContent(new Uint8Array(MAX_CONTENT_BYTES + 1))).rejects.toBeInstanceOf(ContentCacheError);
   await expect(encodeContent(new Uint8Array(MAX_CONTENT_BYTES + 1))).rejects.toMatchObject({ code: "compression" });
 });
+
+test("an aborted compression stream is an interruption, other stream failures stay compression errors (#434)", async () => {
+  const failing = (error: Error) => class { readable = new ReadableStream({ start: controller => controller.error(error) }); writable = new WritableStream(); };
+  vi.stubGlobal("CompressionStream", failing(new DOMException("The operation was aborted.", "AbortError")));
+  await expect(encodeContent(new Uint8Array(MAX_CONTENT_BYTES + 1))).rejects.toMatchObject({ code: "interrupted" });
+  vi.stubGlobal("CompressionStream", failing(new TypeError("compression failed")));
+  await expect(encodeContent(new Uint8Array(MAX_CONTENT_BYTES + 1))).rejects.toMatchObject({ code: "compression" });
+});
