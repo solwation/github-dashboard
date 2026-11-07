@@ -3256,20 +3256,48 @@ a.sidebar-repository:focus-visible {
   :root .issue-row .row-number::before { content: ""; position: absolute; inset: 50% -4px auto; height: 44px; transform: translateY(-50%); min-width: 44px; }
 }
 
-/* #426: in List rows the type icon sits inside the repository-coloured id badge. The link keeps
-   its #420 colours, name and target; the badge outline shows its keyboard focus. */
+/* #426, #435: in List rows the id badge is a repository-coloured square spanning both lines, with
+   the type icon above the number. The link keeps its #420 colours, name and target and covers the
+   square; the square's outline shows its keyboard focus. "#" stays in the text for copying and is
+   hidden visually so five-digit numbers fit at the 10px floor. */
 :root .issue-row .row-id {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   justify-self: start;
+  align-self: center;
   gap: var(--space-1);
-  max-width: 100%;
-  padding: 1px 2px;
-  border-radius: 5px;
+  box-sizing: border-box;
+  width: var(--row-badge, 2.125rem);
+  height: var(--row-badge, 2.125rem);
+  padding: 0;
+  border-radius: 6px;
   background: var(--repository-color, var(--badge-bg));
   color: var(--repository-on-color, var(--text));
 }
-:root .issue-row .row-id .row-number { padding: 0 2px; }
+/* Every square has the same size and x, so its number needs no reserved icon slot: without a type it is centred. */
+:root .issue-row .row-id .type-slot { display: none; }
+:root .issue-row .row-id .type-circle { z-index: 1; }
+:root .issue-row .row-id .row-number { position: static; display: block; align-self: stretch; max-width: 100%; padding: 0; border-radius: 0; font-size: 10px; line-height: 1; text-align: center; }
+:root .issue-row .row-id .row-number-long { letter-spacing: -0.04em; }
+:root .issue-row .row-id .row-number::before { content: ""; position: absolute; inset: 0; border-radius: inherit; transform: none; min-width: 0; height: auto; }
 :root .issue-row .row-id .row-number:focus-visible { outline: none; }
 :root .issue-row .row-id:has(.row-number:focus-visible) { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (max-width: 480px) {
+  /* Portrait phones keep the #426 one-line badge with a visible "#" (see IssueRow.vue). */
+  :root .issue-row .row-id { flex-direction: row; width: auto; height: auto; max-width: 100%; padding: 1px 2px; border-radius: 5px; }
+  :root .issue-row .row-id .type-slot { display: block; }
+  :root .issue-row .row-id .row-number { align-self: auto; padding: 0 2px; font-size: 11px; line-height: 1.4; }
+  :root .issue-row .row-id .row-number-long { letter-spacing: normal; }
+  :root .issue-row .row-id .row-number .sr-only { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; }
+}
+@media (pointer: coarse) {
+  /* Touch: the whole badge, enlarged to 44px around its centre, opens GitHub. */
+  :root .issue-row .row-id .type-circle { z-index: auto; }
+  :root .issue-row .row-id .row-number::before { inset: 50% auto auto 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}
 .issue-row .row-points { justify-self: start; }
 .row-meta .row-slot-repository > .row-repository { padding-block: 0; }
 .issue-row:not(.expanded) .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

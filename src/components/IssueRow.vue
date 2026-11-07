@@ -2,7 +2,7 @@
 import ProjectIcon from "./ProjectIcon.vue";
 import { estimateLabel } from "../lib/estimates";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
-import { ArrowDown, ArrowUp, ArrowUpRight, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, GitMerge, HandHelping, Hourglass, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
+import { ArrowDown, ArrowUp, Plus, Bug, ChevronDown, CircleCheck, CircleQuestionMark, Clock3, CornerDownRight, FileText, GitMerge, HandHelping, Hourglass, ListTree, MessageCircle, Minus, ShieldAlert, Star, Wrench, X } from "@lucide/vue";
 import IssueComments from "./IssueComments.vue";
 import IssuePoints from "./IssuePoints.vue";
 import IssueTimeRemaining from "./IssueTimeRemaining.vue";
@@ -303,11 +303,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
       target="_blank"
       rel="noopener noreferrer"
       class="issue-number row-number"
+      :class="{ 'row-number-long': issue.number >= 100000 }"
       :aria-label="t('Öppna #{number} på GitHub', { number: issue.number })"
       :title="t('Öppna #{number} på GitHub', { number: issue.number })"
       @click="emit('read')" @auxclick="emit('read')"
-      >#{{ issue.number }}<ArrowUpRight v-if="issue.number < 100000" :size="11" aria-hidden="true"
-    /></a>
+      ><span class="sr-only">#</span>{{ issue.number }}</a>
     </span>
     <button
       ref="toggle"
@@ -475,15 +475,17 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
     font-size: 10px; font-family: inherit; font-weight: inherit; font-style: normal; line-height: inherit;
   }
 }
-/* #426: one two-line row everywhere above phone width. A fixed left block holds the id badge
-   (type icon inside) with SP directly under it, and the times stacked beside it: start/age or
+/* #426, #435: one two-line row everywhere above phone width. The id badge is a square spanning
+   both lines at the far left (type icon above the number). Beside it the times stack: start/age or
    closed date on line 1, estimate/remaining/actual time on line 2. The title owns the rest of
-   line 1; status, priority, labels and markers share line 2. */
+   line 1; line 2 continues with SP in a fixed slot, then status, priority, labels, markers and the
+   comment total. */
 .issue-row {
-  /* Lead fits a badge up to #99999 with ↗ (longer numbers drop the arrow); times fit "Stängd 30 nov. 22:04". */
-  --row-lead: 5.25rem; --row-times: 5.75rem;
-  grid-template-columns: var(--row-lead) var(--row-times) minmax(0, 1fr) auto;
-  grid-template-areas: "id time title title" "points outcome meta comments";
+  /* The square is exactly the two 18px + 16px lines tall and fits 99999 (123456 tightened) at 10px;
+     times fit "Stängd 30 nov. 22:04"; SP fits "≈ 21 SP". */
+  --row-badge: 2.125rem; --row-times: 5.75rem; --row-points: 3rem;
+  grid-template-columns: var(--row-badge) var(--row-times) var(--row-points) minmax(0, 1fr) auto;
+  grid-template-areas: "id time title title title" "id outcome points meta comments";
   align-items: center; gap: 0 var(--space-2); padding: var(--space-1) var(--space-2);
 }
 .row-id { grid-area: id; }
@@ -495,23 +497,25 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
 .row-comments { grid-area: comments; }
 .row-meta :deep(.row-repository), .row-meta :deep(.label), .row-meta :deep(.priority), .row-meta :deep(.row-status),
 .row-meta :deep(.row-timeout), .row-meta :deep(.row-marker) { padding-block: 0; }
-/* Narrow lists (many swimlanes, rail tablets): the times move to their own third line, still left-aligned. */
+/* Narrow lists (many swimlanes, rail tablets): the square spans lines 1–2, SP opens line 2 and the
+   times move to their own third line, left-aligned with the title. */
 @container issue-list (max-width: 600px) {
-  .issue-row { grid-template-columns: var(--row-lead) minmax(0, 1fr) 3.5rem; grid-template-areas: "id title title" "points meta comments" "times times times"; }
+  .issue-row { grid-template-columns: var(--row-badge) var(--row-points) minmax(0, 1fr) 3.5rem; grid-template-areas: "id title title title" "id points meta comments" ". times times times"; }
   .row-times { grid-area: times; display: flex; align-items: center; gap: var(--space-3); min-width: 0; overflow: hidden; }
   .row-time { flex: 0 1 auto; }
   .row-outcome { flex: 0 1 auto; }
 }
 @media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
   .issue-row {
-    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 4.5rem) auto 2.75rem;
-    grid-template-areas: "heading heading heading heading heading" "points meta time outcome comments";
+    --row-badge: 2.5rem; --row-points: 2.75rem;
+    /* The time track sizes to its text (capped by .row-time's max-width) so short times leave line 2's
+       metadata the room the square takes. */
+    grid-template-columns: var(--row-badge) var(--row-points) minmax(0, 1fr) auto auto 2.75rem;
+    grid-template-areas: "id title title title title title" "id points meta time outcome comments";
     gap: 2px 6px; min-height: 56px; padding: 6px 8px;
   }
-  /* Phones keep number and title on one line; SP opens line 2 directly under the number in a fixed slot. */
-  .row-heading { grid-area: heading; display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .row-heading > .row-id { flex-shrink: 0; }
-  .row-heading > .row-title { flex: 1; }
+  /* #435: phone layouts wider than 480px (landscape phones) also get the square over both lines;
+     the title fills line 1 beside it and SP opens line 2 in a fixed slot under the title's start. */
   .row-times { display: contents; overflow: visible; }
   .row-comments { width: 2.75rem; }
   .row-comments :deep(.comment-count) { padding: 0; gap: 2px; }
@@ -533,6 +537,18 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-mobile-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
   .row-time { grid-area: time; justify-self: end; justify-content: flex-end; flex-wrap: nowrap; max-width: 4.5rem; overflow: hidden; font-size: 10px; }
   .row-time > .timer, .row-time > .integration-wait { flex: 1 1 auto; min-width: 0; }
+}
+/* #435: portrait phones (≤480px) keep the one-line badge before the title. Beside a square, Joined
+   rows with a long closed time and actual time leave line 2 no room for the repository chip
+   (14px of 21px at 390px, none at 320px). */
+@media (max-width: 480px) {
+  .issue-row {
+    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 4.5rem) auto 2.75rem;
+    grid-template-areas: "heading heading heading heading heading" "points meta time outcome comments";
+  }
+  .row-heading { grid-area: heading; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .row-heading > .row-id { flex-shrink: 0; }
+  .row-heading > .row-title { flex: 1; }
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
   /* #429: a 2.75rem SP slot and 4px column gaps keep room for priority and the repository icon

@@ -3,8 +3,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { setBoardGrouping, type BoardGrouping } from "./support/board-grouping";
 
 /**
- * #426: List rows keep a fixed left block (id badge with type icon, SP under it, times beside it),
- * give the title the rest of line 1 and put metadata chips on line 2. Fictional data only.
+ * #426, #435: List rows start with a square id badge (type icon above the number) spanning both
+ * lines, then the stacked times; the title owns the rest of line 1 and line 2 continues with SP in a
+ * fixed slot and the metadata chips. Fictional data only.
  * LIST_ROW_EVIDENCE=<dir> also writes screenshots and measurements there.
  */
 const evidence = process.env.LIST_ROW_EVIDENCE;
@@ -84,7 +85,7 @@ function measure(page: Page) {
     return {
       cls: [...row.classList].filter(c => ["backlog", "progress", "closed", "issue-timeout"].includes(c)).join(" "), title: title.textContent!.slice(0, 24), height: +r.height.toFixed(1), width: +r.width.toFixed(1),
       badge: box(".row-number"), id: box(".row-id"), points: box(".issue-points"), time: box(".row-time"), outcome: box(".row-outcome > *"), titleBox: box(".row-title"), slot: box(".row-comments"), comment: box(".row-comments .comment-count"), metaBox: box(".row-meta, .row-mobile-summary"),
-      titleTruncated: title.scrollWidth > title.clientWidth + 1, line2: firstChip ? { x: +(firstChip.x - r.x).toFixed(1), y: +(firstChip.y - r.y).toFixed(1) } : null,
+      titleTruncated: title.scrollWidth > title.clientWidth + 1, summaryClipped: (() => { const m = row.querySelector(".row-mobile-summary") as HTMLElement | null; return m ? m.scrollWidth > m.clientWidth + 1 : false; })(), numberClipped: (() => { const n = row.querySelector(".row-number") as HTMLElement; return n.scrollWidth > n.clientWidth + 1; })(), line2: firstChip ? { x: +(firstChip.x - r.x).toFixed(1), y: +(firstChip.y - r.y).toFixed(1) } : null,
       overflow: row.scrollWidth - row.clientWidth,
     };
   }));
@@ -106,19 +107,64 @@ function expectCommentSlot(rows: Rows, label: string) {
   }
 }
 
+const spread = (values: number[]) => Math.max(...values) - Math.min(...values);
+/** #435: the id badge is a square at the far left spanning lines 1 and 2, with its number unclipped. */
+function expectSquare(rows: Rows, label: string) {
+  for (const [name, values] of Object.entries({ badge: rows.map(r => r.id!.x), badgeTop: rows.map(r => r.id!.y), size: rows.map(r => r.id!.w), title: rows.map(r => r.titleBox!.x), points: rows.map(r => r.points!.x) }))
+    expect(spread(values), `${label} ${name} spread`).toBeLessThanOrEqual(1);
+  for (const row of rows) {
+    expect(Math.abs(row.id!.w - row.id!.h), `${row.title} badge is square`).toBeLessThanOrEqual(1);
+    expect(row.id!.x, `${row.title} badge at the far left`).toBeLessThanOrEqual(10);
+    expect(row.numberClipped, `${row.title} number clipped`).toBe(false);
+    // Desktop squares are exactly the two lines tall; phone squares (40px, 36px at 320px) are centred on their 44px lines.
+    const linesBottom = Math.max(row.points!.y + row.points!.h, row.metaBox ? row.metaBox.y + row.metaBox.h : 0);
+    expect(row.id!.y, `${row.title} badge starts on line 1`).toBeGreaterThanOrEqual(row.titleBox!.y - 1);
+    expect(row.id!.y + row.id!.h, `${row.title} badge ends on line 2`).toBeLessThanOrEqual(linesBottom + 1);
+    expect(Math.abs(row.id!.y + row.id!.h / 2 - (row.titleBox!.y + linesBottom) / 2), `${row.title} badge centred on lines 1–2`).toBeLessThanOrEqual(1);
+    expect(row.id!.h, `${row.title} badge spans both lines`).toBeGreaterThanOrEqual(row.points!.y + row.points!.h - row.titleBox!.y - 8);
+    expect(row.id!.x + row.id!.w, `${row.title} title right of the badge`).toBeLessThanOrEqual(row.titleBox!.x);
+    expect(row.id!.x + row.id!.w, `${row.title} SP right of the badge`).toBeLessThanOrEqual(row.points!.x);
+    expect(row.points!.y, `${row.title} SP on line 2`).toBeGreaterThanOrEqual(row.titleBox!.y + row.titleBox!.h - 1);
+  }
+}
+
+/** Portrait phones: the one-line badge (with its "#") precedes the title on line 1 and SP opens line 2 under it. */
+function expectPhoneBadge(rows: Rows, label: string) {
+  for (const [name, values] of Object.entries({ badge: rows.map(r => r.id!.x), points: rows.map(r => r.points!.x) }))
+    expect(spread(values), `${label} ${name} spread`).toBeLessThanOrEqual(1);
+  for (const row of rows) {
+    expect(row.numberClipped, `${row.title} number clipped`).toBe(false);
+    expect(row.id!.x + row.id!.w, `${row.title} badge before title`).toBeLessThanOrEqual(row.titleBox!.x);
+    expect(row.points!.y, `${row.title} SP on line 2`).toBeGreaterThanOrEqual(row.id!.y + row.id!.h - 1);
+  }
+}
+
 /** Desktop/tablet rows: badge, SP, times, title and line 2 start at one x (±1px) with or without optional fields. */
 function expectLeftBlock(rows: Rows, label: string) {
-  const spread = (values: number[]) => Math.max(...values) - Math.min(...values);
+  expectSquare(rows, label);
   for (const [name, values] of Object.entries({
-    badge: rows.map(r => r.id!.x), points: rows.map(r => r.points!.x), time: rows.map(r => r.time!.x),
-    title: rows.map(r => r.titleBox!.x), line2: rows.filter(r => r.line2).map(r => r.line2!.x),
+    time: rows.map(r => r.time!.x), line2: rows.filter(r => r.line2).map(r => r.line2!.x),
     outcome: rows.filter(r => r.outcome).map(r => r.outcome!.x), height: rows.map(r => r.height),
   })) expect(spread(values), `${label} ${name} spread`).toBeLessThanOrEqual(1);
   for (const row of rows) {
-    expect(row.points!.y, `${row.title} SP under the badge`).toBeGreaterThanOrEqual(row.id!.y + row.id!.h - 1);
-    expect(row.id!.x + row.id!.w, `${row.title} badge inside its column`).toBeLessThanOrEqual(row.time!.x);
+    expect(row.id!.x + row.id!.w, `${row.title} badge before the times`).toBeLessThanOrEqual(row.time!.x);
     expect(row.time!.x + row.time!.w, `${row.title} times before title`).toBeLessThanOrEqual(row.titleBox!.x);
-    expect(row.height, `${row.title} height`).toBeLessThanOrEqual(46);
+    expect(row.outcome ? row.outcome.x + row.outcome.w : 0, `${row.title} outcome before SP`).toBeLessThanOrEqual(row.points!.x);
+    if (row.line2) expect(row.points!.x + row.points!.w, `${row.title} SP before line-2 chips`).toBeLessThanOrEqual(row.line2.x);
+    expect(row.height, `${row.title} height`).toBeLessThanOrEqual(44.5);
+  }
+}
+
+/** #435: lists narrower than 600px keep three lines: square over lines 1–2, the times on line 3 under the title. */
+function expectNarrowLane(rows: Rows, label: string) {
+  expectSquare(rows, label);
+  // Line 3 keeps its own height per content (about 57–60px before and after #435), so only its x is shared.
+  expect(spread(rows.map(r => r.time!.x)), `${label} time spread`).toBeLessThanOrEqual(1);
+  for (const row of rows) {
+    expect(Math.abs(row.time!.x - row.titleBox!.x), `${row.title} times under the title`).toBeLessThanOrEqual(1);
+    expect(row.time!.y, `${row.title} times on line 3`).toBeGreaterThanOrEqual(row.id!.y + row.id!.h - 1);
+    if (row.outcome) expect(row.outcome.x, `${row.title} outcome after time`).toBeGreaterThanOrEqual(row.time!.x + row.time!.w - 1);
+    expect(row.height, `${row.title} three-line height`).toBeLessThanOrEqual(60);
   }
 }
 
@@ -148,12 +194,20 @@ for (const scenario of matrix) test(`list rows and cards in the ${scenario.name}
           await expect(page.locator(".issue-row .row-comments .comment-count:visible")).toHaveCount(rows.length);
           expectCommentSlot(rows, `${scenario.name} ${grouping} ${scheme}`);
           if (!scenario.mobile) expectLeftBlock(rows, `${scenario.name} ${grouping} ${scheme}`);
-          else for (const row of rows) expect(row.height, `${row.title} phone height`).toBeLessThanOrEqual(60);
+          else {
+            // #435: landscape phones get the square; portrait phones (≤480px) keep the one-line badge.
+            if (scenario.viewport.width > 480) expectSquare(rows, `${scenario.name} ${grouping} ${scheme}`);
+            else expectPhoneBadge(rows, `${scenario.name} ${grouping} ${scheme}`);
+            for (const row of rows) {
+              expect(row.height, `${row.title} phone height`).toBeLessThanOrEqual(58.5);
+              expect(row.summaryClipped, `${row.title} phone metadata clipped`).toBe(false);
+            }
+          }
           if (scheme === "light") out[`${grouping}-${view}`] = rows;
         }
-        if (evidence && grouping === "split") {
+        if (evidence && (grouping === "split" || view === "Lista")) {
           await page.locator(view === "Lista" ? ".issue-row" : ".issue-card").first().scrollIntoViewIfNeeded();
-          await page.screenshot({ path: `${evidence}/${phase}-${view === "Lista" ? "list" : "cards"}-${scenario.name}-${scheme}.png` });
+          await page.screenshot({ path: `${evidence}/${phase}-${view === "Lista" ? "list" : "cards"}-${scenario.name}${grouping === "split" ? "" : "-joined"}-${scheme}.png` });
         }
       }
     }
@@ -177,8 +231,8 @@ test("swimlanes with three repositories at 2560px keep long titles readable", as
     for (const row of rows) expect(row.overflow, `${row.title} overflow`).toBeLessThanOrEqual(1);
     expectLeftBlock(rows, `swimlanes ${scheme}`);
     expectCommentSlot(rows, `swimlanes ${scheme}`);
-    // Before #426 a 1/3 lane gave the title 382px of 747px; the left block now leaves it over 520px.
-    for (const row of rows) expect(row.titleBox!.w / row.width, `${row.title} title share`).toBeGreaterThan(0.7);
+    // Before #426 a 1/3 lane gave the title 382px of 747px; #426 gave it 537px and the #435 square about 587px.
+    for (const row of rows) expect(row.titleBox!.w / row.width, `${row.title} title share`).toBeGreaterThan(0.77);
     out[scheme] = rows;
     if (evidence) {
       await page.locator(".swimlane-board").scrollIntoViewIfNeeded();
@@ -187,6 +241,31 @@ test("swimlanes with three repositories at 2560px keep long titles readable", as
     }
   }
   if (evidence) await writeFile(`${evidence}/${phase}-measure-swimlanes-2560.json`, JSON.stringify(out, null, 1));
+  await context.close();
+});
+
+test("narrow swimlanes under 600px keep the square over lines 1–2 and the times on line 3", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const { context, page } = await open(browser, { width: 1600, height: 1000 }, false);
+  await setBoardGrouping(page, "swimlanes");
+  await mode(page, "Lista");
+  await expect(page.locator(".swimlane-board .issue-row")).toHaveCount(30);
+  const out: Record<string, unknown> = {};
+  for (const scheme of ["light", "dark"] as const) {
+    await theme(page, scheme);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const rows = await measure(page);
+    out[scheme] = rows;
+    if (evidence) await writeFile(`${evidence}/${phase}-measure-swimlanes-1600.json`, JSON.stringify(out, null, 1));
+    expect(Math.max(...rows.map(r => r.width)), "lanes are narrower than 600px").toBeLessThan(600);
+    for (const row of rows) expect(row.overflow, `${row.title} overflow`).toBeLessThanOrEqual(1);
+    expectNarrowLane(rows, `narrow swimlanes ${scheme}`);
+    expectCommentSlot(rows, `narrow swimlanes ${scheme}`);
+    if (evidence) {
+      await page.locator(".swimlane-board").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${evidence}/${phase}-swimlanes-1600-${scheme}.png` });
+    }
+  }
   await context.close();
 });
 

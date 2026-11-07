@@ -89,6 +89,12 @@ test("issue numbers are repository-colored badges in cards and lists, light and 
             if (mode.name === "Lista") {
               const titleX = await link.evaluate(node => node.closest(".issue-row")!.querySelector(".row-title")!.getBoundingClientRect().x);
               expect(box.x + box.width, `${scenario.name} badge overlaps title`).toBeLessThanOrEqual(titleX + 0.5);
+              // #435: above 480px the list badge is a square spanning both row lines; portrait phones keep the one-line badge.
+              const square = await link.evaluate(node => { const r = node.closest(".row-id")!.getBoundingClientRect(); return { w: r.width, h: r.height }; });
+              if (scenario.width > 480) {
+                expect(Math.abs(square.w - square.h), `${scenario.name} list badge is square`).toBeLessThanOrEqual(1);
+                expect(square.h, `${scenario.name} list badge spans two lines`).toBeGreaterThanOrEqual(34);
+              }
             }
             expect(await link.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
           }

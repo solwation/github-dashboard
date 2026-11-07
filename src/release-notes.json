@@ -2,10 +2,19 @@
   {
     "date": "2026-11-07",
     "summary": {
-      "sv": "Lugnare händelsehistorik när telefonen pausar sidan och säkrare sparade inställningar.",
-      "en": "A calmer event history when your phone pauses the page, and settings that save reliably."
+      "sv": "Lugnare händelsehistorik när telefonen pausar sidan, säkrare sparade inställningar och kvadratiska issue-nummer i listan.",
+      "en": "A calmer event history when your phone pauses the page, settings that save reliably and square issue numbers in List."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "I listläget är issue-numret en kvadrat längst till vänster över radens två rader, med typikonen ovanför numret och mer plats för titeln.",
+          "en": "In List view the issue number is a square at the far left spanning both lines, with the type icon above it and more room for the title."
+        },
+        "issues": [
+          435
+        ]
+      },
       {
         "text": {
           "sv": "Avbrott när sidan är dold eller offline loggas inte som fel, och flera projekt som fungerar igen samlas i en händelse.",
