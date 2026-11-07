@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-07",
+    "summary": {
+      "sv": "Lugnare händelsehistorik när telefonen pausar sidan.",
+      "en": "A calmer event history when your phone pauses the page."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Avbrott när sidan är dold eller offline loggas inte som fel, och flera projekt som fungerar igen samlas i en händelse.",
+          "en": "Interruptions while the page is hidden or offline are no longer logged as errors, and several recovered projects share one event."
+        },
+        "issues": [
+          434
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-06",
     "summary": {
       "sv": "Tydligare issue-nummer, synliga statusflyttar, nya projekt i väljaren och stabilare synkronisering.",
