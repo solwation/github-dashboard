@@ -1,10 +1,10 @@
 {
-  "baseCommit": "5ce3e550984bcc8017fb6146cadd57d73b591005",
+  "baseCommit": "d2dde5963b2920b0e5b3b607377f008c7f5106a7",
   "summary": {
-    "sv": "Minuter och procent som du skriver i Inställningar återställs inte längre innan de sparas.",
-    "en": "Minutes and percentages you type in Settings are no longer reset before they are saved."
+    "sv": "I listan visas issue-numret nu som en kvadrat längst till vänster över båda raderna, så titeln får mer plats.",
+    "en": "In the list, the issue number is now a square at the far left spanning both lines, giving the title more room."
   },
   "issues": [
-    433
+    435
   ]
 }
