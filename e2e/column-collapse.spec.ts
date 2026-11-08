@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { closePhoneMenu, openSettings } from "./support/phone-menu";
-import { boardSplit } from "./support/board-grouping";
+import { boardSplit, setBoardGrouping } from "./support/board-grouping";
 
 // Fictional fixture: 15 open backlog issues across two repositories (#380).
 async function fixture(page: Page, theme: string) {
@@ -54,10 +54,6 @@ for (const scenario of scenarios) for (const mode of ["Kort", "Lista"]) {
       await closePhoneMenu(page);
       await page.evaluate(() => scrollTo(0, 0));
       await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: mode, exact: true }).click();
-      // The split board never shows the button, expanded or not.
-      await page.locator("#repo-1 .backlog").getByRole("button", { name: "Visa fler" }).click();
-      await expect(page.locator(".column-collapse-button")).toHaveCount(0);
-      await page.evaluate(() => scrollTo(0, 0));
       await boardSplit(page).uncheck();
       const backlog = page.locator(".combined-board .board-column.backlog");
       const entries = backlog.locator(mode === "Lista" ? ".issue-row" : ".issue-card");
@@ -121,3 +117,58 @@ test("collapse label is translated in English", async ({ page }) => {
   await button.click();
   await expect(button).toHaveCount(0);
 });
+
+// #437: Split, Swimlanes Cards and Swimlanes List collapse one repository's status cell only.
+const perRepo = [
+  { name: "split", grouping: "split" as const },
+  { name: "swimlanes", grouping: "swimlanes" as const },
+];
+const sizes = [...scenarios.map(s => ({ ...s })), { name: "phone-320x568", viewport: { width: 320, height: 568 }, touch: true, theme: "dark" }];
+for (const size of sizes) for (const mode of ["Kort", "Lista"]) for (const group of perRepo) {
+  if (group.name === "split" && size.name !== "desktop-1600x1000" && size.name !== "phone-390x844") continue;
+  test.describe(`per-repository ${group.name} ${mode} ${size.name}`, () => {
+    test.use({ viewport: size.viewport, hasTouch: size.touch, isMobile: size.touch });
+    test("Fäll ihop resets only its own cell", async ({ page }) => {
+      await fixture(page, size.theme);
+      await page.goto("/");
+      await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
+      await page.getByLabel("GitHub personal access token").fill("fictional-collapse-token");
+      await page.getByRole("button", { name: "Anslut konto", exact: true }).click();
+      await expect(page.locator(".repo-lane")).toHaveCount(2);
+      await openSettings(page);
+      await page.locator("#global-column-limit").fill("3");
+      await page.getByRole("button", { name: "Klart", exact: true }).click();
+      await closePhoneMenu(page);
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: mode, exact: true }).click();
+      await setBoardGrouping(page, group.grouping);
+      const cell = (repo: string) => page.locator(`section.board-column.backlog[aria-label$="${repo}"]`);
+      const alpha = cell("sample/alpha"), bravo = cell("sample/bravo");
+      const rows = (c: ReturnType<typeof cell>) => c.locator(mode === "Lista" ? ".issue-row" : ".issue-card");
+      const collapse = alpha.getByRole("button", { name: "Fäll ihop Backlog i sample/alpha till 3 issues" });
+      await expect(rows(alpha)).toHaveCount(3);
+      await expect(page.locator(".column-collapse-button")).toHaveCount(0);
+      await bravo.getByRole("button", { name: "Visa fler" }).click();
+      await alpha.getByRole("button", { name: "Visa fler" }).click();
+      await expect(rows(alpha)).toHaveCount(6);
+      await expect(collapse).toBeVisible();
+      await expect(collapse).toHaveAttribute("title", "Fäll ihop till 3 issues");
+      await expect(page.locator(".column-collapse-button")).toHaveCount(2);
+      const evidence = process.env.EVIDENCE_DIR;
+      if (evidence) { mkdirSync(evidence, { recursive: true }); await collapse.scrollIntoViewIfNeeded(); await collapse.evaluate(el => el.scrollIntoView({ block: "center" })); await page.screenshot({ path: `${evidence}/${group.name}-${mode}-${size.name}-${size.theme}.png` }); }
+      const box = (await collapse.boundingBox())!, cellBox = (await alpha.boundingBox())!;
+      if (size.touch) { expect(box.width).toBeGreaterThanOrEqual(43.9); expect(box.height).toBeGreaterThanOrEqual(43.9); }
+      expect(box.x).toBeGreaterThanOrEqual(cellBox.x - 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(cellBox.x + cellBox.width + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      if (size.touch) await collapse.tap(); else await collapse.click();
+      await expect(rows(alpha)).toHaveCount(3);
+      await expect(collapse).toHaveCount(0);
+      await expect(rows(bravo)).toHaveCount(6);
+      await expect(page.locator(".column-collapse-button")).toHaveCount(1);
+      await bravo.getByRole("button", { name: "Fäll ihop Backlog i sample/bravo till 3 issues" }).click();
+      await expect(rows(bravo)).toHaveCount(3);
+      await expect(page.locator(".column-collapse-button")).toHaveCount(0);
+    });
+  });
+}

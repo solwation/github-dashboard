@@ -592,6 +592,7 @@ export const english: Record<string, string> = {
   "Visa fler": "Show more",
   "Fäll ihop": "Collapse",
   "Fäll ihop {column} till {count} issues": "Collapse {column} to {count} issues",
+  "Fäll ihop {column} i {repository} till {count} issues": "Collapse {column} in {repository} to {count} issues",
   "Fäll ihop till {count} issues": "Collapse to {count} issues",
   "Visa inaktiva repositories": "Show inactive repositories",
   "Dölj inaktiva repositories": "Hide inactive repositories",

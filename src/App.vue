@@ -2832,7 +2832,7 @@ onMounted(async () => {
               :items="items(lane, col.key)"
               :list-mode="listMode"
               :limit="shownLimit(lane.repo.full_name, col.key)"
-              :limit-increment="initialLimit(lane.repo.full_name)"
+              :limit-increment="initialLimit(lane.repo.full_name)" :base-limit="initialLimit(lane.repo.full_name)"
               :estimate-groups="laneEstimateGroups.get(lane.repo.full_name) ?? []"
               :sort="columnSorts[col.key]"
               :filtered="Boolean(query || repositoryQueries[lane.repo.full_name])"
@@ -2840,6 +2840,7 @@ onMounted(async () => {
               :row-props="rowProps"
               @update:sort="setColumnSort(col.key, $event)"
               @show-more="visibleLimit[lane.repo.full_name + col.key] = shownLimit(lane.repo.full_name, col.key) + initialLimit(lane.repo.full_name)"
+              @collapse="delete visibleLimit[lane.repo.full_name + col.key]"
               @read="readIssue"
               @parent-select="revealParentIssue"
               @child-select="revealParentIssue"
@@ -2871,9 +2872,10 @@ onMounted(async () => {
                       <span v-if="items(lane, col.key).length > shownLimit(lane.repo.full_name, col.key)" class="swimlane-cell-count" :aria-label="t('{status}: {count}', { status: col.title, count: items(lane, col.key).length })">{{ items(lane, col.key).length }}</span>
                       <BoardColumn cell list-mode :id="'board-' + lane.repo.id + '-' + col.key"
                         :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
-                        :column="col" :lane="lane" :items="items(lane, col.key)" :limit="shownLimit(lane.repo.full_name, col.key)" :limit-increment="initialLimit(lane.repo.full_name)"
+                        :column="col" :lane="lane" :items="items(lane, col.key)" :limit="shownLimit(lane.repo.full_name, col.key)" :limit-increment="initialLimit(lane.repo.full_name)" :base-limit="initialLimit(lane.repo.full_name)"
                         :estimate-groups="laneEstimateGroups.get(lane.repo.full_name) ?? []" :sort="columnSorts[col.key]" :filtered="Boolean(query)" :card-props="cardProps" :row-props="rowProps"
                         @show-more="visibleLimit[lane.repo.full_name + col.key] = shownLimit(lane.repo.full_name, col.key) + initialLimit(lane.repo.full_name)"
+                        @collapse="delete visibleLimit[lane.repo.full_name + col.key]"
                         @read="readIssue" @parent-select="revealParentIssue" @child-select="revealParentIssue" />
                     </template>
                   </td>
@@ -2935,7 +2937,7 @@ onMounted(async () => {
                   :items="items(lane, col.key)"
                   :list-mode="listMode"
                   :limit="shownLimit(lane.repo.full_name, col.key)"
-                  :limit-increment="initialLimit(lane.repo.full_name)"
+                  :limit-increment="initialLimit(lane.repo.full_name)" :base-limit="initialLimit(lane.repo.full_name)"
                   :estimate-groups="laneEstimateGroups.get(lane.repo.full_name) ?? []"
                   :sort="columnSorts[col.key]"
                   :filtered="Boolean(query)"
@@ -2943,6 +2945,7 @@ onMounted(async () => {
                   :row-props="rowProps"
                   @update:sort="setColumnSort(col.key, $event)"
                   @show-more="visibleLimit[lane.repo.full_name + col.key] = shownLimit(lane.repo.full_name, col.key) + initialLimit(lane.repo.full_name)"
+              @collapse="delete visibleLimit[lane.repo.full_name + col.key]"
                   @read="readIssue"
                   @parent-select="revealParentIssue"
                   @child-select="revealParentIssue"

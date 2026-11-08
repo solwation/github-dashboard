@@ -1,10 +1,10 @@
 {
-  "baseCommit": "a5de07464487642d11b44ec1aeeaa7d7f408aa97",
+  "baseCommit": "27e7daccf1e9a48353e1cc0bb10fd3a7c853f608",
   "summary": {
-    "sv": "Finjusterad text- och kolumnplacering i listläget så att långa nummer och ikoner inte klipper på smala skärmar.",
-    "en": "Refined text and column spacing in List view so long numbers and icons do not clip on narrow screens."
+    "sv": "Fäll ihop finns nu även i delad vy och simbanor (kort och lista) och återställer bara den cell du fällde ut.",
+    "en": "Collapse now also works in Split and Swimlanes (Cards and List), resetting only the cell you expanded."
   },
   "issues": [
-    436
+    437
   ]
 }

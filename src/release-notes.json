@@ -2,8 +2,8 @@
   {
     "date": "2026-11-08",
     "summary": {
-      "sv": "Finjusterad text- och kolumnplacering i listläget så att långa nummer och ikoner inte klipper på smala skärmar.",
-      "en": "Refined text and column spacing in List view so long numbers and icons do not clip on narrow screens."
+      "sv": "Listläget klipper inte längre långa nummer och ikoner, och Fäll ihop finns nu även i delad vy och simbanor.",
+      "en": "List view no longer clips long numbers and icons, and Collapse now also works in Split and Swimlanes."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           436
+        ]
+      },
+      {
+        "text": {
+          "sv": "Fäll ihop finns nu även i delad vy och simbanor, och återställer bara den kolumn du fällde ut.",
+          "en": "Collapse is now also in Split and Swimlanes, resetting only the column you expanded."
+        },
+        "issues": [
+          437
         ]
       }
     ]

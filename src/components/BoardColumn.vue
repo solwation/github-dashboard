@@ -145,6 +145,11 @@ const canCollapse = computed(() => {
   return canCollapseColumn(props.limit, props.baseLimit, props.items?.length ?? 0);
 });
 
+const collapseLabel = computed(() =>
+  props.lane
+    ? t("Fäll ihop {column} i {repository} till {count} issues", { column: props.column.title, repository: props.lane.repo.full_name, count: props.baseLimit ?? 0 })
+    : t("Fäll ihop {column} till {count} issues", { column: props.column.title, count: props.baseLimit ?? 0 }),
+);
 </script>
 
 <template>
@@ -169,10 +174,10 @@ const canCollapse = computed(() => {
       </div>
       <div class="column-header-actions">
         <button
-          v-if="canCollapse"
+          v-if="canCollapse && !cell"
           type="button"
           class="column-collapse-button"
-          :aria-label="t('Fäll ihop {column} till {count} issues', { column: column.title, count: baseLimit ?? 0 })"
+          :aria-label="collapseLabel"
           :title="t('Fäll ihop till {count} issues', { count: baseLimit ?? 0 })"
           @click="emit('collapse')"
         >
@@ -238,8 +243,29 @@ const canCollapse = computed(() => {
               : t("Backloggen är tom")
         }}</span>
       </div>
+      <div v-if="cell && limit !== undefined && (items.length > limit || canCollapse)" class="column-more-row">
+        <button
+          v-if="items.length > limit"
+          type="button"
+          class="show-more"
+          @click="emit('showMore', limitIncrement)"
+        >
+          {{ t("Visa fler") }} <ChevronDown :size="14" />
+        </button>
+        <button
+          v-if="canCollapse"
+          type="button"
+          class="column-collapse-button"
+          :aria-label="collapseLabel"
+          :title="t('Fäll ihop till {count} issues', { count: baseLimit ?? 0 })"
+          @click="emit('collapse')"
+        >
+          <ChevronUp :size="12" aria-hidden="true" />
+          <span>{{ t("Fäll ihop") }}</span>
+        </button>
+      </div>
       <button
-        v-if="limit !== undefined && items.length > limit"
+        v-else-if="limit !== undefined && items.length > limit"
         type="button"
         class="show-more"
         @click="emit('showMore', limitIncrement)"

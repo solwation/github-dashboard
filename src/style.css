@@ -760,6 +760,8 @@ h1 {
 .column-collapse-button { display: inline-flex; align-items: center; gap: 3px; margin-top: 0; padding: var(--space-1) var(--space-2); border: 1px solid var(--line); border-radius: var(--space-1); background: var(--surface); font: inherit; font-size: 10px; font-weight: 550; color: var(--muted); cursor: pointer; white-space: nowrap; line-height: 1.4; transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease; }
 .column-collapse-button:hover, .column-collapse-button:focus-visible { color: var(--text); background: var(--hover); border-color: var(--muted); }
 .column-collapse-button svg { flex: 0 0 auto; }
+/* Swimlane cells hide the column header, so the collapse control sits beside "Visa fler" at the cell foot. */
+.column-more-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
 .column-sort-menu { position: absolute; z-index: 30; top: 100%; right: 0; display: flex; flex-direction: column; min-width: 190px; max-width: min(260px, calc(100vw - 24px)); padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px #20394b26; }
 .column-sort-menu button { display: block; min-height: 32px; padding: 6px 10px 6px 26px; border: 0; border-radius: 5px; background: transparent; color: var(--text, inherit); font: inherit; font-size: 12px; text-align: left; position: relative; cursor: pointer; }
 .column-sort-menu button:hover, .column-sort-menu button:focus-visible { background: color-mix(in srgb, var(--green) 12%, transparent); }
