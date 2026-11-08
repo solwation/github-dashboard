@@ -3305,3 +3305,14 @@ a.sidebar-repository:focus-visible {
 .issue-row:not(.expanded) .row-title-text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The Joined repository chip fits line 2's 16px chip height: its 1px border wraps a 14px icon. */
 .row-meta .row-slot-repository .project-icon { flex-basis: 14px; width: 14px; min-width: 14px; height: 14px; }
+
+/* #439: an empty column's placeholder matches the height of a real issue in its view. */
+.column-empty.matched,
+.swimlane.list-mode .column-empty.matched,
+.swimlane-cell .column-empty.matched,
+.swimlane-table-cell .column-empty.matched {
+  min-height: 0;
+  height: var(--matched-height);
+  padding-block: 0;
+  overflow: hidden;
+}

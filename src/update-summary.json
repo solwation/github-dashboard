@@ -1,10 +1,10 @@
 {
-  "baseCommit": "27e7daccf1e9a48353e1cc0bb10fd3a7c853f608",
+  "baseCommit": "834dac7fcec880723c13ccb88b5f21e239397785",
   "summary": {
-    "sv": "Fäll ihop finns nu även i delad vy och simbanor (kort och lista) och återställer bara den cell du fällde ut.",
-    "en": "Collapse now also works in Split and Swimlanes (Cards and List), resetting only the cell you expanded."
+    "sv": "Tomma kolumner, som Inget pågående arbete, är nu lika höga som ett issue i samma vy, både i kort och lista.",
+    "en": "Empty columns such as No work in progress are now as tall as an issue in the same view, in both Cards and List."
   },
   "issues": [
-    437
+    439
   ]
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ChevronDown, ChevronUp, CircleCheck, Clock3, Layers3 } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import { boardEntryKey, type BoardEntry } from "../lib/combined-board";
@@ -141,6 +141,65 @@ const shouldShowEmpty = computed(() => {
   return (!props.items || props.items.length === 0) && !props.loading;
 });
 
+// #439: an empty column's placeholder takes the height of a real issue in the same view
+// (the first card in Cards, the first row in List), nearest lane first, so it matches
+// across breakpoints and content instead of a fixed guess. Without any issue to match,
+// the stylesheet's default size applies.
+const emptyBox = ref<HTMLElement>();
+const matchedHeight = ref<number>();
+let measuredItem: Element | null = null;
+let itemObserver: ResizeObserver | undefined;
+let scopeObserver: MutationObserver | undefined;
+let measureFrame = 0;
+// Coalesce bursts (Vue re-renders, ticking timers) into one layout read per frame.
+function scheduleMeasure() {
+  if (measureFrame) return;
+  measureFrame = requestAnimationFrame(() => { measureFrame = 0; measureEmpty(); });
+}
+
+function representativeItem(el: HTMLElement): Element | null {
+  const selector = props.listMode ? ".issue-row" : ".issue-card";
+  const visible = (item: Element | null | undefined) => item && item.getBoundingClientRect().height > 0 ? item : null;
+  const scope = el.closest(".swimlane, .swimlane-table, .combined-board");
+  return visible(scope?.querySelector(selector)) ?? visible(document.querySelector(`.board-column ${selector}`));
+}
+
+function measureEmpty() {
+  const el = emptyBox.value;
+  if (!el) return;
+  const item = representativeItem(el);
+  if (item !== measuredItem) {
+    itemObserver?.disconnect();
+    if (item) itemObserver?.observe(item);
+    measuredItem = item;
+  }
+  const height = item?.getBoundingClientRect().height;
+  matchedHeight.value = height ? Math.round(height * 100) / 100 : undefined;
+}
+
+function stopMeasuring() {
+  itemObserver?.disconnect();
+  scopeObserver?.disconnect();
+  if (measureFrame) cancelAnimationFrame(measureFrame);
+  measureFrame = 0;
+  itemObserver = scopeObserver = undefined;
+  measuredItem = null;
+  matchedHeight.value = undefined;
+}
+
+watch(emptyBox, (el) => {
+  stopMeasuring();
+  if (!el || typeof ResizeObserver === "undefined") return;
+  itemObserver = new ResizeObserver(scheduleMeasure);
+  // Cards and rows appear, move or switch mode elsewhere in the lane/board.
+  const scope = el.closest(".swimlane, .swimlane-table, .combined-board, main") ?? document.body;
+  scopeObserver = new MutationObserver(scheduleMeasure);
+  scopeObserver.observe(scope, { childList: true, subtree: true });
+  measureEmpty();
+});
+watch(() => props.listMode, () => measureEmpty(), { flush: "post" });
+onBeforeUnmount(stopMeasuring);
+
 const canCollapse = computed(() => {
   return canCollapseColumn(props.limit, props.baseLimit, props.items?.length ?? 0);
 });
@@ -229,7 +288,13 @@ const collapseLabel = computed(() =>
           @child-select="(repo, num) => emit('childSelect', repo, num)"
         />
       </template>
-      <div v-if="shouldShowEmpty" class="column-empty">
+      <div
+        v-if="shouldShowEmpty"
+        ref="emptyBox"
+        class="column-empty"
+        :class="{ matched: matchedHeight }"
+        :style="matchedHeight ? { '--matched-height': matchedHeight + 'px' } : undefined"
+      >
         <CircleCheck v-if="column.key === 'closed'" :size="20" /><Clock3
           v-else-if="column.key === 'progress'"
           :size="20"

@@ -2,8 +2,8 @@
   {
     "date": "2026-11-08",
     "summary": {
-      "sv": "Listläget klipper inte längre långa nummer och ikoner, och Fäll ihop finns nu även i delad vy och simbanor.",
-      "en": "List view no longer clips long numbers and icons, and Collapse now also works in Split and Swimlanes."
+      "sv": "Listläget klipper inte längre långa nummer och ikoner, Fäll ihop finns i delad vy och simbanor, och tomma kolumner är lika stora som ett issue.",
+      "en": "List view no longer clips long numbers and icons, Collapse works in Split and Swimlanes, and empty columns match an issue's size."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           437
+        ]
+      },
+      {
+        "text": {
+          "sv": "Platshållaren i en tom kolumn, som Inget pågående arbete, är nu lika hög som ett issue i samma vy, i kort och lista.",
+          "en": "An empty column's placeholder, such as No work in progress, is now as tall as an issue in the same view, in Cards and List."
+        },
+        "issues": [
+          439
         ]
       }
     ]
