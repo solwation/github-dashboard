@@ -100,6 +100,15 @@ busy port fails instead of testing another checkout. Fast checks run in parallel
 expensive browser suites are a queued shared resource taken in turns, so their cost
 does not set the worker count. Report active workers, capacity and why a slot is unused.
 
+Worktree root and cleanup (core [clean up checkouts](shared/ORCHESTRA.md#clean-up-checkouts)):
+under WSL, session worktrees live in `~/gd-wt/` (ext4), plus any runtime-managed ones
+that `git worktree list` shows. The integration owner removes an issue's worktree and
+work branch as the last follow-up step once its change is verified on `origin/main`
+and the issue is closed. The session review and conductor startup prune the root with
+`.orchestra/shared/scripts/prune-worktrees.sh` (dry run first, then `--apply`
+`--archive ~/gd-wt/.archive` so unproven work is preserved as bundle and patch).
+Never remove a checkout whose issue is open or that another session visibly owns.
+
 Aim for a useful delivery within 30 minutes. Reassess progress around that time and
 inspect stalled processes at 45–60 minutes without concrete progress. Split genuinely
 independent useful outcomes when needed, not merely because a timer or file count was
@@ -176,7 +185,7 @@ Listed order is execution order.
 | Integrate main | `delivery`: every completed change | Fetch, rebase own commits (`--rebase-merges` for subtree imports), push `main` without force; only finished, verified work | Delivered commit on `origin/main` |
 | Prepare publication | `delivery`: app changes, after integration | Keep `needs-deploy` as technical metadata on the completed, closed story without active/owner/blocked labels; update `src/update-summary.json` against the public baseline ([release](#questions-and-release)) | Traceable prepared delta and separate publication status; never bypass the Actions gate |
 | Check Action | `delivery`: every push to `main` that includes an app change (skip for technical changes) | Inspect the Build and deploy Pages run; distinguish a publication from a legitimately skipped deploy | Actual run outcome linked |
-| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up) with outcome, revision, local checks, evidence and limits; UI changes include the reviewed screenshots (embedded or linked) or state why capture/upload was unavailable; close immediately. Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
+| Complete issue | `delivery`/`follow-up`: every tracked change, after verified integration and before closure | Post [completion evidence](shared/ORCHESTRA.md#follow-up) with outcome, revision, local checks, evidence and limits; UI changes include the reviewed screenshots (embedded or linked) or state why capture/upload was unavailable; close immediately, then remove the worktree ([cleanup](#capacity-ownership-and-progress)). Follow publication separately and append Pages evidence/remove `needs-deploy` after publication | Story is Closed without work/owner labels; unfinished acceptance stays open. Publication wait never moves a completed story to Backlog |
 
 ## Queue intake hooks
 
@@ -216,8 +225,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.9.0**,
-commit **070ebf43e25c2bc7885e387712edd18a2e97da1c** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.10.0**,
+commit **358c01f2d3a187c17e1b1c180bff7ecb06cb51a8** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
