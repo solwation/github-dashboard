@@ -52,7 +52,7 @@ const viewports = [
 
 for (const viewport of viewports) {
   test(`empty placeholder matches an issue at ${viewport.name}`, async ({ browser }, info) => {
-    const context = await browser.newContext({ viewport, isMobile: viewport.mobile, hasTouch: viewport.mobile });
+    const context = await browser.newContext({ locale: "sv-SE", viewport, isMobile: viewport.mobile, hasTouch: viewport.mobile });
     const page = await context.newPage();
     await fixture(page);
     const shot = (name: string) => page.screenshot({ path: info.outputPath(`${viewport.name}-${name}.png`), fullPage: true });
