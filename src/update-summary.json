@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d2dde5963b2920b0e5b3b607377f008c7f5106a7",
+  "baseCommit": "a5de07464487642d11b44ec1aeeaa7d7f408aa97",
   "summary": {
-    "sv": "I listan visas issue-numret nu som en kvadrat längst till vänster över båda raderna, så titeln får mer plats.",
-    "en": "In the list, the issue number is now a square at the far left spanning both lines, giving the title more room."
+    "sv": "Finjusterad text- och kolumnplacering i listläget så att långa nummer och ikoner inte klipper på smala skärmar.",
+    "en": "Refined text and column spacing in List view so long numbers and icons do not clip on narrow screens."
   },
   "issues": [
-    435
+    436
   ]
 }

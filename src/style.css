@@ -3281,7 +3281,7 @@ a.sidebar-repository:focus-visible {
 :root .issue-row .row-id .type-slot { display: none; }
 :root .issue-row .row-id .type-circle { z-index: 1; }
 :root .issue-row .row-id .row-number { position: static; display: block; align-self: stretch; max-width: 100%; padding: 0; border-radius: 0; font-size: 10px; line-height: 1; text-align: center; }
-:root .issue-row .row-id .row-number-long { letter-spacing: -0.04em; }
+:root .issue-row .row-id .row-number-long { letter-spacing: -0.07em; }
 :root .issue-row .row-id .row-number::before { content: ""; position: absolute; inset: 0; border-radius: inherit; transform: none; min-width: 0; height: auto; }
 :root .issue-row .row-id .row-number:focus-visible { outline: none; }
 :root .issue-row .row-id:has(.row-number:focus-visible) { outline: 2px solid var(--text); outline-offset: 2px; }

@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-08",
+    "summary": {
+      "sv": "Finjusterad text- och kolumnplacering i listläget så att långa nummer och ikoner inte klipper på smala skärmar.",
+      "en": "Refined text and column spacing in List view so long numbers and icons do not clip on narrow screens."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Långa issue-nummer i kvadratiska märken och projektikoner på smala telefoner håller sig inom sina kolumner utan överlappning.",
+          "en": "Long issue numbers in square badges and project icons on narrow phones stay within their columns without overlapping."
+        },
+        "issues": [
+          436
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-07",
     "summary": {
       "sv": "Lugnare händelsehistorik när telefonen pausar sidan, säkrare sparade inställningar och kvadratiska issue-nummer i listan.",

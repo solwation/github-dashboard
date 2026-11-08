@@ -551,11 +551,11 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
   .row-heading > .row-title { flex: 1; }
 }
 @media (max-width: 360px), (pointer: coarse) and (max-width: 360px) {
-  /* #429: a 2.75rem SP slot and 4px column gaps keep room for priority and the repository icon
+  /* #429, #436: a 2.25rem SP slot and 4px column gaps keep room for priority and the repository icon
      beside the comment slot. */
-  .issue-row { grid-template-columns: 2.75rem minmax(0, 1fr) minmax(0, 2.75rem) auto 2.75rem; column-gap: var(--space-1); }
+  .issue-row { grid-template-columns: 2.25rem minmax(0, 1fr) minmax(0, 2.75rem) auto 2.75rem; column-gap: var(--space-1); }
   .row-mobile-summary { gap: 1px; }
-  .row-mobile-summary > .row-mobile-repository-slot { flex: 0 0 auto; }
+  .row-mobile-summary > .row-mobile-repository-slot { flex: 0 0 auto; min-width: 0; }
   .row-mobile-repository-slot > .row-repository { padding: 1px; }
   .row-mobile-summary .row-repository-name { display: none; }
   .row-points :deep(.issue-points) { padding: 1px; }
