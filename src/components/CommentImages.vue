@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, onBeforeUnmount, ref } from "vue";
-import { ChevronLeft, ChevronRight, X } from "@lucide/vue";
+import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { ChevronLeft, ChevronRight, Image as ImageIcon, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
-import { imageDocument, imageGalleryKey } from "../lib/comment-images";
+import {
+  extractCommentImages,
+  fileLoaderKey,
+  imageDocument,
+  imageGalleryKey,
+  type DetectedImage,
+} from "../lib/comment-images";
 
-const props = defineProps<{ html: string; contentClass?: string; gallerySource?: string }>();
+const props = defineProps<{
+  html: string;
+  repository?: string;
+  contentClass?: string;
+  gallerySource?: string;
+}>();
+
 const { t } = useLanguage();
 const viewer = ref<HTMLDialogElement>();
 const viewport = ref<HTMLElement>();
@@ -15,6 +27,7 @@ const fitted = ref(true);
 const size = ref({ width: 1, height: 1 });
 let opener: HTMLElement | undefined;
 let observer: ResizeObserver | undefined;
+
 const fit = computed(() => Math.min(size.value.width / (natural.value.width || 1), size.value.height / (natural.value.height || 1)));
 const scale = computed(() => fitted.value ? fit.value : zoom.value);
 const minimumScale = computed(() => Math.min(.1, fit.value));
@@ -22,20 +35,90 @@ const imageSize = computed(() => natural.value.width && natural.value.height ? {
   width: `${natural.value.width * scale.value}px`,
   height: `${natural.value.height * scale.value}px`,
 } : undefined);
+
 function measureViewport() {
   if (viewport.value) size.value = { width: viewport.value.clientWidth, height: viewport.value.clientHeight };
 }
+
 async function fitImage() {
   measureViewport();
   fitted.value = true;
   await nextTick();
   viewport.value?.scrollTo(0, 0);
 }
+
 function originalSize() { fitted.value = false; zoom.value = 1; }
+
 const galleryContext = inject(imageGalleryKey, undefined);
-const html = computed(() => imageDocument(props.html, t).body.innerHTML);
+const fileLoader = inject(fileLoaderKey, undefined);
+
+const cleanHtml = ref("");
+const detected = ref<DetectedImage[]>([]);
+const loadedUrls = ref<Record<string, string>>({});
+const loadingPaths = ref<Record<string, boolean>>({});
+const failedPaths = ref<Record<string, boolean>>({});
+
+function updateImages() {
+  const result = extractCommentImages(props.html, t);
+  cleanHtml.value = result.cleanHtml;
+  detected.value = result.images;
+
+  for (const item of result.images) {
+    if (item.path && !loadedUrls.value[item.path] && !loadingPaths.value[item.path] && !failedPaths.value[item.path]) {
+      if (props.repository && fileLoader) {
+        loadingPaths.value = { ...loadingPaths.value, [item.path]: true };
+        fileLoader(props.repository, item.path).then(dataUrl => {
+          const nextLoading = { ...loadingPaths.value };
+          delete nextLoading[item.path!];
+          loadingPaths.value = nextLoading;
+          if (dataUrl) {
+            loadedUrls.value = { ...loadedUrls.value, [item.path!]: dataUrl };
+          } else {
+            failedPaths.value = { ...failedPaths.value, [item.path!]: true };
+          }
+        }).catch(() => {
+          const nextLoading = { ...loadingPaths.value };
+          delete nextLoading[item.path!];
+          loadingPaths.value = nextLoading;
+          failedPaths.value = { ...failedPaths.value, [item.path!]: true };
+        });
+      }
+    }
+  }
+}
+
+watch([() => props.html, () => props.repository], updateImages, { immediate: true });
+
+export interface CarouselItem {
+  key: string;
+  name: string;
+  alt: string;
+  src?: string;
+  loading: boolean;
+  failed: boolean;
+}
+
+const carouselImages = computed<CarouselItem[]>(() => {
+  return detected.value
+    .filter(item => !item.isInline)
+    .map(item => {
+      const src = item.src || (item.path ? loadedUrls.value[item.path] : undefined);
+      const loading = Boolean(item.path && loadingPaths.value[item.path]);
+      const failed = Boolean(item.path && failedPaths.value[item.path]);
+      return {
+        key: item.key,
+        name: item.name,
+        alt: item.alt,
+        src,
+        loading,
+        failed,
+      };
+    }).filter(item => item.src || item.loading);
+});
+
 const gallery = ref<{ src: string; alt: string }[]>([]);
 const index = ref(0);
+
 async function navigate(delta: number) {
   const next = index.value + delta;
   if (next < 0 || next >= gallery.value.length) return;
@@ -46,12 +129,12 @@ async function navigate(delta: number) {
   pointers.clear();
   swipe = undefined;
   await fitImage();
-  // Disabling a boundary button can move native focus out of the dialog.
   const focused = document.activeElement;
   if (viewer.value?.open && (!viewer.value.contains(focused) || (focused instanceof HTMLButtonElement && focused.disabled))) {
     viewport.value?.focus({ preventScroll: true });
   }
 }
+
 function keydown(event: KeyboardEvent) {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -59,6 +142,29 @@ function keydown(event: KeyboardEvent) {
   event.stopPropagation();
   void navigate(event.key === "ArrowLeft" ? -1 : 1);
 }
+
+function openCarousel(idx: number, event: MouseEvent | KeyboardEvent) {
+  const readyItems = carouselImages.value.filter(i => Boolean(i.src)).map(i => ({ src: i.src!, alt: i.alt || i.name }));
+  const clickedItem = carouselImages.value[idx];
+  const targetIndex = clickedItem?.src ? readyItems.findIndex(i => i.src === clickedItem.src) : idx;
+  const button = (event.currentTarget as HTMLElement) || undefined;
+  if (!readyItems.length) return;
+  opener = button;
+  gallery.value = readyItems;
+  index.value = Math.max(0, targetIndex);
+  selected.value = readyItems[index.value];
+  natural.value = { width: 0, height: 0 };
+  fitted.value = true;
+  zoom.value = 1;
+  void nextTick(() => {
+    viewer.value?.showModal();
+    observer?.disconnect();
+    measureViewport();
+    observer = new ResizeObserver(measureViewport);
+    if (viewport.value) observer.observe(viewport.value);
+  });
+}
+
 async function activate(event: MouseEvent | KeyboardEvent) {
   if (!(event.target instanceof Element)) return;
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -97,6 +203,7 @@ async function activate(event: MouseEvent | KeyboardEvent) {
   observer = new ResizeObserver(measureViewport);
   if (viewport.value) observer.observe(viewport.value);
 }
+
 function clear() {
   observer?.disconnect();
   pointers.clear();
@@ -105,15 +212,17 @@ function clear() {
   selected.value = undefined;
   opener?.focus();
 }
+
 function close() { viewer.value?.close(); clear(); }
 function dialogClosed() {
-  // A queued close event can arrive after the user has already reopened the viewer.
   if (!viewer.value?.open) clear();
 }
+
 function changeZoom(value: number) {
   zoom.value = Math.max(minimumScale.value, Math.min(Math.max(8, fit.value), value));
   fitted.value = false;
 }
+
 let swipe: { id: number; x: number; y: number } | undefined;
 const pointers = new Map<number, { x: number; y: number }>();
 function pointerDown(event: PointerEvent) {
@@ -123,6 +232,7 @@ function pointerDown(event: PointerEvent) {
   viewport.value?.setPointerCapture(event.pointerId);
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 }
+
 function pointerMove(event: PointerEvent) {
   const previous = pointers.get(event.pointerId);
   if (!previous || !viewport.value) return;
@@ -136,6 +246,7 @@ function pointerMove(event: PointerEvent) {
   }
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 }
+
 function pointerUp(event: PointerEvent) {
   const gesture = swipe;
   pointers.delete(event.pointerId);
@@ -144,10 +255,46 @@ function pointerUp(event: PointerEvent) {
   const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
   if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.5) void navigate(dx < 0 ? 1 : -1);
 }
+
 onBeforeUnmount(() => observer?.disconnect());
 </script>
+
 <template>
-  <div data-image-content :class="contentClass" @click="activate" @keydown="activate" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="html" />
+  <div data-image-content :class="contentClass" @click="activate" @keydown="activate" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="cleanHtml" />
+  <!-- Carousel for collected and mentioned images (#442) -->
+  <div v-if="carouselImages.length" class="comment-image-carousel" role="region" :aria-label="t('Omnämnda bilder')">
+    <div class="carousel-header">
+      <ImageIcon :size="14" aria-hidden="true" />
+      <span>{{ t('Bilder ({count})', { count: carouselImages.length }) }}</span>
+    </div>
+    <div class="carousel-track" tabindex="0" :aria-label="t('Bildlista, bläddra horisontellt')">
+      <button
+        v-for="(item, idx) in carouselImages"
+        :key="item.key"
+        type="button"
+        class="carousel-thumb-button"
+        :aria-label="t('Öppna bild: {name}', { name: item.name })"
+        :disabled="!item.src"
+        @click="openCarousel(idx, $event)"
+      >
+        <span class="carousel-thumb-preview">
+          <img
+            v-if="item.src"
+            :src="item.src"
+            :alt="item.alt"
+            class="carousel-thumb-img comment-thumbnail"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+          />
+          <span v-else-if="item.loading" class="carousel-thumb-loading" role="status">
+            <span class="thumb-spinner" aria-hidden="true">…</span>
+            <span class="sr-only">{{ t('Hämtar bild…') }}</span>
+          </span>
+        </span>
+        <span class="carousel-thumb-caption" :title="item.name">{{ item.name }}</span>
+      </button>
+    </div>
+  </div>
   <dialog ref="viewer" class="comment-image-viewer" :aria-label="t('Bildvisare')" @close="dialogClosed" @keydown.esc.stop.prevent="close" @keydown="keydown">
     <template v-if="selected">
       <div class="image-toolbar">
@@ -166,7 +313,6 @@ onBeforeUnmount(() => observer?.disconnect());
             @load="natural = { width: ($event.target as HTMLImageElement).naturalWidth, height: ($event.target as HTMLImageElement).naturalHeight }" />
         </div>
       </div>
-      <!-- Below the image (#309): the toolbar stays directly above the viewport. -->
       <nav v-if="gallery.length > 1" class="image-navigation" :aria-label="t('Bildnavigering')">
         <button type="button" :aria-label="t('Föregående bild')" :title="t('Föregående bild')" :disabled="index === 0" @click="navigate(-1)"><ChevronLeft :size="20" aria-hidden="true" /></button>
         <output aria-live="polite" aria-atomic="true">{{ t('Bild {current} av {total}', { current: index + 1, total: gallery.length }) }}</output>
@@ -175,10 +321,11 @@ onBeforeUnmount(() => observer?.disconnect());
     </template>
   </dialog>
 </template>
+
 <style scoped>
 :deep(.comment-thumbnail) { display: inline-block; width: auto; height: auto; box-sizing: border-box; max-width: min(240px, calc(100% - 1rem)); max-height: 160px; object-fit: contain; vertical-align: middle; margin: .4rem; border: 1px solid var(--line); border-radius: .4rem; cursor: zoom-in; }
 :deep(.direct-image-preview) { display: block; margin: .4rem 0; }
-:deep(.comment-thumbnail:focus-visible), button:focus-visible, .image-viewport:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+:deep(.comment-thumbnail:focus-visible), button:focus-visible, .image-viewport:focus-visible, .carousel-track:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 :deep(.preview-failed) { display: none; }
 .comment-image-viewer { box-sizing: border-box; width: calc(100vw - 1rem); height: calc(100dvh - 1rem); max-width: none; max-height: none; padding: .5rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface); color: var(--text); overflow: hidden; }
 .comment-image-viewer[open] { display: flex; flex-direction: column; gap: .5rem; }
@@ -188,9 +335,8 @@ onBeforeUnmount(() => observer?.disconnect());
 .image-toolbar output, .image-navigation output { min-width: 3rem; text-align: center; font-variant-numeric: tabular-nums; }
 .close-image { display: inline-grid; place-items: center; margin-left: auto; padding: 0; }
 .label-short { display: none; }
-/* Phones keep every control on one row; the visible 1:1 keeps the full accessible name (#274). */
+
 @media (max-width: 480px) {
-  /* Full screen on phones; safe-area padding keeps the toolbar clear of notches (viewport-fit=cover). */
   .comment-image-viewer { width: 100vw; height: 100dvh; border: 0; border-radius: 0;
     padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left)); }
   .image-toolbar { gap: .15rem; }
@@ -207,4 +353,103 @@ onBeforeUnmount(() => observer?.disconnect());
 .image-viewport:active { cursor: grabbing; }
 .image-canvas { display: flex; align-items: center; justify-content: center; width: max-content; min-width: 100%; min-height: 100%; }
 .image-canvas img { display: block; max-width: none; flex-shrink: 0; user-select: none; }
+
+/* Comment image carousel (#442) */
+.comment-image-carousel {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+.carousel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.carousel-track {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: 2px 2px var(--space-1);
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.carousel-thumb-button {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  max-width: 140px;
+  text-align: center;
+  transition: border-color 0.15s ease;
+}
+.carousel-thumb-button:hover:not(:disabled) {
+  border-color: var(--green);
+}
+.carousel-thumb-button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+.carousel-thumb-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.carousel-thumb-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+:root[data-theme="dark"] .carousel-thumb-preview {
+  background: rgba(255, 255, 255, 0.05);
+}
+.carousel-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  margin: 0 !important;
+}
+.carousel-thumb-caption {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--muted);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.carousel-thumb-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--muted);
+  animation: pulse 1.2s infinite ease-in-out;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .carousel-thumb-loading {
+    animation: none;
+  }
+}
 </style>

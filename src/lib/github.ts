@@ -161,6 +161,42 @@ export class GitHub {
   closingCommit(repoFullName: string, issue: Issue) {
     return this.token ? this.commits.get(repoFullName, issue) : Promise.resolve(null);
   }
+  private readonly repoFiles = new Map<string, Promise<string | null>>();
+  async repoFile(repoFullName: string, path: string): Promise<string | null> {
+    const cleanPath = path.replace(/^\.?\/+/, "").replace(/[#?].*$/, "").trim();
+    if (!cleanPath || cleanPath.includes("..")) return null;
+    const cacheKey = `${repoFullName}:${cleanPath}`;
+    const cached = this.repoFiles.get(cacheKey);
+    if (cached) return cached;
+    const promise = (async () => {
+      try {
+        const encoded = cleanPath.split("/").map(encodeURIComponent).join("/");
+        const response = await this.request<{ content?: string; encoding?: string; sha?: string; type?: string; size?: number }>(
+          `/repos/${repoFullName}/contents/${encoded}`,
+          { store: false },
+        );
+        const data = response.data;
+        if (!data) return null;
+        let base64 = data.encoding === "base64" && typeof data.content === "string" ? data.content.replace(/\s/g, "") : null;
+        if (!base64 && data.sha) {
+          const blob = await this.request<{ content?: string; encoding?: string }>(
+            `/repos/${repoFullName}/git/blobs/${data.sha}`,
+            { store: false },
+          );
+          if (blob.data?.encoding === "base64" && typeof blob.data.content === "string") {
+            base64 = blob.data.content.replace(/\s/g, "");
+          }
+        }
+        if (!base64) return null;
+        const mime = imageMimeType(cleanPath);
+        return `data:${mime};base64,${base64}`;
+      } catch {
+        return null;
+      }
+    })();
+    this.repoFiles.set(cacheKey, promise);
+    return promise;
+  }
   async request<T>(
     path: string,
     options: { method?: "GET" | "POST"; body?: string; store?: boolean } = {},
@@ -549,5 +585,21 @@ export class GitHub {
       labels,
       timerWarning: issues.some(issue => column(issue, rules) === "progress" && issue.timerError),
     };
+  }
+}
+
+export function imageMimeType(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "png": return "image/png";
+    case "gif": return "image/gif";
+    case "jpg":
+    case "jpeg": return "image/jpeg";
+    case "webp": return "image/webp";
+    case "svg": return "image/svg+xml";
+    case "ico": return "image/x-icon";
+    case "bmp": return "image/bmp";
+    case "avif": return "image/avif";
+    default: return "image/png";
   }
 }

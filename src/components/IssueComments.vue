@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, provide, ref, useId, watch } from "vue";
 import { MessageCircle, X } from "@lucide/vue";
-import { imageGalleryKey, type ImageSource } from "../lib/comment-images";
+import { imageGalleryKey, issueRepository, type ImageSource } from "../lib/comment-images";
 import CommentImages from "./CommentImages.vue";
 import { useLanguage } from "../lib/i18n";
 import { useMarkdown } from "../lib/lazy-markdown";
@@ -180,7 +180,7 @@ onBeforeUnmount(clear);
                   :title="dateLabel(comment.created_at)" :aria-label="dateLabel(comment.created_at)" aria-live="off">{{ commentTimeLabel(comment.created_at, now, locale) }}</time>
                 <a v-if="safeUrl(comment.html_url)" :href="safeUrl(comment.html_url)" target="_blank" rel="noopener noreferrer">{{ t('Visa på GitHub') }}</a>
               </div>
-              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown"><CommentImages :gallery-source="String(comment.id)" :html="comment.markdown" /></div>
+              <div v-if="comment.body?.trim() && comment.markdown !== undefined" class="comment-markdown"><CommentImages :gallery-source="String(comment.id)" :html="comment.markdown" :repository="issueRepository(issue)" /></div>
               <p v-else-if="comment.body?.trim()" class="comment-markdown plain-comment">{{ comment.body }}</p>
               <p v-else class="comments-status">{{ t('Kommentaren saknar text.') }}</p>
             </article>

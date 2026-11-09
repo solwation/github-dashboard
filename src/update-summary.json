@@ -1,10 +1,10 @@
 {
-  "baseCommit": "f670862fc36c3afa2ed95b6dce7f0b566c6a65f5",
+  "baseCommit": "d359edebee317f5024577871b39dad0295fad779",
   "summary": {
-    "sv": "I simbanor med lista visas antalet per repository i statusraden så att alla rader börjar jämnt.",
-    "en": "In Swimlanes List view, per-repository counts sit in the status row so all rows start level."
+    "sv": "Omnämnda bildfiler och relativa repobilder i kommentarer och beskrivningar visas i en bildkarusell längst ner och kan öppnas i bildvisaren.",
+    "en": "Mentioned image files and relative repo images in comments and descriptions display in a bottom image carousel and open in the image viewer."
   },
   "issues": [
-    441
+    442
   ]
 }

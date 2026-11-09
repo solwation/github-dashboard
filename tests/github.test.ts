@@ -284,4 +284,37 @@ describe("GitHub transport", () => {
     await vi.advanceTimersByTimeAsync(30_000);
     await assertion;
   });
+  it("fetches repo files as data URLs and handles blobs (#442)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
+      if (url.pathname === "/repos/owner/test/contents/assets/dancer.png") {
+        return new Response(JSON.stringify({
+          type: "file",
+          encoding: "base64",
+          content: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        }));
+      }
+      if (url.pathname === "/repos/owner/test/contents/large.gif") {
+        return new Response(JSON.stringify({
+          type: "file",
+          sha: "blob123",
+        }));
+      }
+      if (url.pathname === "/repos/owner/test/git/blobs/blob123") {
+        return new Response(JSON.stringify({
+          encoding: "base64",
+          content: "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        }));
+      }
+      return new Response(JSON.stringify({ message: "Not Found" }), { status: 404 });
+    }));
+    const client = new GitHub("test-token");
+    const png = await client.repoFile("owner/test", "assets/dancer.png");
+    expect(png).toContain("data:image/png;base64,iVBOR");
+
+    const gif = await client.repoFile("owner/test", "large.gif");
+    expect(gif).toContain("data:image/gif;base64,R0lGOD");
+
+    const missing = await client.repoFile("owner/test", "missing.jpg");
+    expect(missing).toBeNull();
+  });
 });

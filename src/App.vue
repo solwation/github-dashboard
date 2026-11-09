@@ -5,7 +5,7 @@ import { browserTimeZone } from "./lib/browser-time";
 const accountTimeZone = browserTimeZone();
 const { t, locale, preference, setLanguage } = useLanguage();
 import { installTouchZoomGuard } from "./lib/touchZoomGuard";
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, provide, ref, shallowRef, watch } from "vue";
 import {
   Activity,
   Bell,
@@ -100,6 +100,7 @@ import { boardGroupingFrom, defaultBoardGrouping, type BoardGrouping } from "./l
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { provideSubIssues } from "./composables/useSubIssues";
+import { fileLoaderKey } from "./lib/comment-images";
 import { GitHub, GitHubApiError } from "./lib/github";
 import { PendingClosures, mergeVerified, verificationAllowed, withPendingClosures, type PendingClosure } from "./lib/pending-closures";
 import { callback, login, oauthReady } from "./lib/auth";
@@ -1228,6 +1229,12 @@ provideSubIssues({
   rules: repository => rules.value[repository] ?? Object.entries(rules.value).find(([name]) => name.toLowerCase() === repository.toLowerCase())?.[1] ?? {},
   known: (repository, id) => subIssueBoardIndex.value.get(repository.toLowerCase())?.get(id),
   revision: repository => relationsRevisions.value[repository] ?? 0,
+});
+provide(fileLoaderKey, async (repository: string, path: string) => {
+  const client = api, run = generation;
+  if (!client || isDemo.value) return null;
+  const result = await client.repoFile(repository, path);
+  return client === api && run === generation ? result : null;
 });
 const activityClock = useNow(at => untilNext(at, 60000), { board: true });
 function observedRepositoryActivity(lane: Lane) {

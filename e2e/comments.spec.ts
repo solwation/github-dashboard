@@ -514,8 +514,7 @@ test("comment dialogs open centered from cards and list rows and stay centered o
     await connect(page, async route => { await route.fulfill({ json: [comment(1, "Centered comment")] }); });
     for (const mode of ["Kort", "Lista"]) {
       await page.getByRole("group", { name: "Visningsläge för boarden", exact: true }).getByRole("button", { name: mode, exact: true }).click();
-      // Phone list rows show their comments control only once expanded.
-      if (scenario.name === "phone" && mode === "Lista") await page.locator(".issue-row .row-title").first().click();
+      // Phone list rows show their comments control directly on line 2 (#429).
       await page.locator(".comment-count:visible").first().click();
       const dialog = page.getByRole("dialog", { name: "Kommentarer för #1" });
       await expect(dialog.getByText("Centered comment"), `${scenario.name} ${mode}`).toBeVisible();
@@ -531,4 +530,69 @@ test("comment dialogs open centered from cards and list rows and stay centered o
     }
     await context.close();
   }
+});
+
+test("comment image carousel displays mentioned repo images in comments and opens lightbox (#442)", async ({ page }) => {
+  const svgCutout = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="380"><rect width="300" height="380" fill="#287f83"/><text x="20" y="200" fill="#ffffff">Dancer</text></svg>';
+  const base64Content = Buffer.from(svgCutout).toString("base64");
+
+  const commentMarkdown = [
+    "Slutfört arbete med karaktärer:",
+    "- Cutouts i `assets/wardogs-dancer.png` och referens.",
+    "- Uppdaterade GIF:ar:",
+    "  - `docs/dancers/olaf.gif`",
+    "Alla tester i `scripts/test.js` passerar.",
+  ].join("\n");
+
+  await connect(page, async route => {
+    await route.fulfill({ json: [comment(1, commentMarkdown)] });
+  });
+
+  await page.route("https://api.github.com/repos/sample/comment-project/contents/**", async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/assets/wardogs-dancer.png") || url.pathname.endsWith("/docs/dancers/olaf.gif")) {
+      await route.fulfill({
+        json: {
+          type: "file",
+          encoding: "base64",
+          size: svgCutout.length,
+          name: url.pathname.split("/").pop(),
+          path: url.pathname.replace("/repos/sample/comment-project/contents/", ""),
+          content: base64Content,
+        },
+      });
+      return;
+    }
+    await route.fulfill({ status: 404, json: { message: "Not found" } });
+  });
+
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+
+  await expect(dialog.getByText("Slutfört arbete med karaktärer:")).toBeVisible();
+  await expect(dialog.locator("code", { hasText: "assets/wardogs-dancer.png" })).toBeVisible();
+  await expect(dialog.locator("code", { hasText: "docs/dancers/olaf.gif" })).toBeVisible();
+
+  const carousel = dialog.getByRole("region", { name: "Omnämnda bilder", exact: true });
+  await expect(carousel).toBeVisible();
+  await expect(carousel.getByText("Bilder (2)")).toBeVisible();
+
+  const warDogBtn = carousel.getByRole("button", { name: "Öppna bild: wardogs-dancer.png", exact: true });
+  const olafBtn = carousel.getByRole("button", { name: "Öppna bild: olaf.gif", exact: true });
+  await expect(warDogBtn).toBeVisible();
+  await expect(olafBtn).toBeVisible();
+  await expect(carousel.getByText("test.js")).toHaveCount(0);
+
+  await warDogBtn.click();
+  const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.locator("img")).toHaveAttribute("src", /^data:image\/png;base64,/);
+
+  await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 1 av 2");
+  await viewer.getByRole("button", { name: "Nästa bild", exact: true }).click();
+  await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 2 av 2");
+  await expect(viewer.locator("img")).toHaveAttribute("src", /^data:image\/gif;base64,/);
+
+  await page.keyboard.press("Escape");
+  await expect(viewer).not.toBeVisible();
 });
