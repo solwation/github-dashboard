@@ -102,7 +102,9 @@ does not set the worker count. Report active workers, capacity and why a slot is
 
 Worktree root and cleanup (core [clean up checkouts](shared/ORCHESTRA.md#clean-up-checkouts)):
 under WSL, session worktrees live in `~/gd-wt/` (ext4), plus any runtime-managed ones
-that `git worktree list` shows. The integration owner removes an issue's worktree and
+that `git worktree list` shows. Whoever creates a writing worktree first writes the core's
+`orchestra-claim` marker (`issue=solwation/github-dashboard#N`, `session=<owner ID>`) in its
+git directory. The integration owner removes an issue's worktree and
 work branch as the last follow-up step once its change is verified on `origin/main`
 and the issue is closed. The session review and conductor startup prune the root with
 `.orchestra/shared/scripts/prune-worktrees.sh` (dry run first, then `--apply`
@@ -225,8 +227,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.10.0**,
-commit **358c01f2d3a187c17e1b1c180bff7ecb06cb51a8** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.11.1**,
+commit **e1842f5b41cc92272eb870bca1070e46f511505c** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
