@@ -73,7 +73,7 @@ test("List cell counters appear only while the display limit hides issues", asyn
   const alpha = table.locator('tbody[data-status="backlog"] td[data-repository="sample/alpha"]');
   await alpha.getByRole("button", { name: "Visa fler", exact: true }).press("Enter");
   await expect(alpha.locator(".issue-row")).toHaveCount(2);
-  await expect(alpha.locator(".swimlane-cell-count")).toHaveCount(0);
+  await expect(table.locator('tbody[data-status="backlog"] .swimlane-cell-count[data-repository="sample/alpha"]')).toHaveCount(0);
   await expect(counters).toHaveCount(2);
   const search = page.getByRole("textbox", { name: "Sök issues", exact: true });
   await search.fill("second backlog task");
@@ -83,4 +83,47 @@ test("List cell counters appear only while the display limit hides issues", asyn
   await setLimit("2");
   await expect(counters).toHaveCount(0);
   await expect(table.locator('tbody[data-status="backlog"] .swimlane-table-status .column-count')).toHaveText("6");
+});
+
+test("List cell counters sit in the status row above their column without pushing rows down (#441)", async ({ browser }) => {
+  test.setTimeout(120000);
+  if (evidence) await mkdir(evidence, { recursive: true });
+  for (const viewport of sizes) {
+    const mobile = viewport.width <= 650 || viewport.height <= 500;
+    const context = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, locale: "sv-SE", reducedMotion: "reduce" });
+    const page = await context.newPage(); const repos = await groupingFixture(page, 3); await connectGrouping(page, repos);
+    await setBoardGrouping(page, "swimlanes"); await page.getByRole("button", { name: "Lista", exact: true }).click();
+    await openSettings(page); await page.locator("#global-column-limit").fill("1"); await page.getByRole("button", { name: "Klart", exact: true }).click();
+    const band = page.locator('.swimlane-table tbody[data-status="backlog"]');
+    await expect(band.locator(".swimlane-table-status .swimlane-cell-count")).toHaveCount(3);
+    await expect(band.locator(".swimlane-table-status-cells .swimlane-cell-count")).toHaveCount(0);
+    await expect(band.locator(".swimlane-cell-count-label")).toHaveText(["Backlog: 2", "Backlog: 2", "Backlog: 2"]);
+    for (const step of ["start", "end"]) {
+      if (step === "end") await page.locator(".swimlane-table thead th").last().scrollIntoViewIfNeeded();
+      const layout = await band.evaluate(band => {
+        const r = (e: Element) => e.getBoundingClientRect().toJSON() as DOMRect;
+        const viewport = band.closest(".swimlane-table-viewport")!.getBoundingClientRect();
+        return {
+          viewport: { left: viewport.left, right: viewport.right },
+          status: r(band.querySelector(".swimlane-table-status th")!),
+          counts: [...band.querySelectorAll(".swimlane-table-status .swimlane-cell-count")].map(e => ({ repo: e.getAttribute("data-repository")!, ...r(e) })),
+          cells: [...band.querySelectorAll(".swimlane-table-cell")].map(e => ({ repo: e.getAttribute("data-repository")!, ...r(e) })),
+          rows: [...band.querySelectorAll(".swimlane-table-cell .issue-row")].map(e => r(e).top),
+          heading: r(band.querySelector(".swimlane-table-status .column-heading")!),
+          sort: r(band.querySelector(".swimlane-table-status .column-sort-button")!),
+        };
+      });
+      expect(Math.max(...layout.rows) - Math.min(...layout.rows)).toBeLessThanOrEqual(1);
+      for (const count of layout.counts) {
+        const cell = layout.cells.find(cell => cell.repo === count.repo)!;
+        expect(count.top).toBeGreaterThanOrEqual(layout.status.top); expect(count.bottom).toBeLessThanOrEqual(layout.status.bottom);
+        expect(Math.abs((count.left + count.right) / 2 - (cell.left + cell.right) / 2)).toBeLessThanOrEqual(1);
+        // Only counts visible in the scroll viewport must clear the sticky status label and sort control.
+        if (count.right <= layout.viewport.left || count.left >= layout.viewport.right) continue;
+        for (const other of [layout.heading, layout.sort]) expect(count.right <= other.left || count.left >= other.right, `${viewport.width}x${viewport.height} ${step} ${count.repo}`).toBe(true);
+      }
+      if (evidence) await page.screenshot({ path: `${evidence}/counts-${viewport.width}x${viewport.height}-${step}.png` });
+    }
+    await context.close();
+  }
 });

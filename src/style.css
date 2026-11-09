@@ -3186,7 +3186,11 @@ a.sidebar-repository:focus-visible {
 .swimlane-table-cell .column-header { display: none; }
 .swimlane-table-cell .cards { padding: var(--space-2); gap: var(--space-1); }
 .swimlane-table-cell .column-empty { min-height: 0; }
-.swimlane-cell-count { display: block; padding: var(--space-1) var(--space-2) 0; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.swimlane-table-status th { position: relative; }
+/* #441: one slot per repository column, centred between the sticky status label and the sort control. */
+.swimlane-status-counts { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--project-count), minmax(0, 1fr)); align-items: center; pointer-events: none; }
+.swimlane-status-count-slot { display: flex; justify-content: center; min-width: 0; }
+.swimlane-cell-count { color: var(--muted); font-size: 10px; line-height: 1; font-variant-numeric: tabular-nums; }
 .swimlane-table-cell .row-slot-status { display: none; }
 @media (max-width: 950px) {
   .swimlane-band-header .lane-title > div { flex-direction: column; align-items: flex-start; gap: var(--space-1); }

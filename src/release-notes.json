@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-09",
+    "summary": {
+      "sv": "I simbanor med lista visas antalet per repository i statusraden så att alla rader börjar jämnt.",
+      "en": "In Swimlanes List view, per-repository counts sit in the status row so all rows start level."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "I simbanor med lista visas antalet per repository i statusraden ovanför sin kolumn, så att raderna börjar på samma höjd.",
+          "en": "In Swimlanes List view, per-repository counts sit in the status row above their column, keeping row start heights level."
+        },
+        "issues": [
+          441
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-08",
     "summary": {
       "sv": "Listläget klipper inte längre långa nummer och ikoner, Fäll ihop finns i delad vy och simbanor, och tomma kolumner är lika stora som ett issue.",

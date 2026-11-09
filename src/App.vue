@@ -1143,6 +1143,12 @@ const laneColumns = computed(() => new Map(boardLanes.value.map((lane) => {
 })));
 function laneIssues(lane: Lane) { return laneColumns.value.get(lane.repo.full_name)?.issues ?? []; }
 function items(lane: Lane, key: string) { return laneColumns.value.get(lane.repo.full_name)?.[key] ?? []; }
+/** List swimlanes (#441): a cell's total, shown in its status row only while the display limit hides issues. */
+function hiddenCellCount(lane: Lane, laneIndex: number, key: string) {
+  if (lane.loading || laneIndex >= renderedLanes.value || (lane.error && !lane.issues.length)) return null;
+  const count = items(lane, key).length;
+  return count > shownLimit(lane.repo.full_name, key) ? count : null;
+}
 const combinedColumns = computed(() => Object.fromEntries(columns.value.map(col => [col.key, combinedItems(contentLanes.value, col.key, rules.value, { query: query.value, hideCoordination: hideCoordination.value }, columnSorts.value[col.key])])));
 // Column estimates (#140) read the filtered issues shown; stable arrays keep the header clocks quiet.
 const laneEstimateGroups = computed(() => new Map(lanes.value.map((lane) => [lane.repo.full_name,
@@ -2864,12 +2870,18 @@ onMounted(async () => {
                   <BoardColumn header-only floating-sort :column="col" :items="combinedColumns[col.key]!" :estimate-groups="combinedEstimateGroups"
                     :sort="columnSorts[col.key]" :loading="contentLanes.some(lane => lane.loading || lane.error)" :card-props="cardProps" :row-props="rowProps"
                     @update:sort="setColumnSort(col.key, $event)" />
+                  <!-- #441: per-repository counts sit in the status row above their own column, so every cell's rows start level. -->
+                  <div class="swimlane-status-counts" aria-hidden="true">
+                    <span v-for="(lane, laneIndex) in contentLanes" :key="lane.repo.id" class="swimlane-status-count-slot">
+                      <span v-if="hiddenCellCount(lane, laneIndex, col.key) !== null" class="swimlane-cell-count" :data-repository="lane.repo.full_name">{{ hiddenCellCount(lane, laneIndex, col.key) }}</span>
+                    </span>
+                  </div>
                 </th></tr>
                 <tr class="swimlane-table-status-cells">
                   <td v-for="(lane, laneIndex) in contentLanes" :key="lane.repo.id" :headers="'repo-' + lane.repo.id + ' swimlane-status-' + col.key" :data-repository="lane.repo.full_name" class="swimlane-table-cell">
                     <div v-if="lane.loading" class="repository-loading" role="status">{{ t('Hämtar issues för {name}…', { name: lane.repo.full_name }) }}</div>
                     <template v-else-if="laneIndex < renderedLanes && (!lane.error || lane.issues.length)">
-                      <span v-if="items(lane, col.key).length > shownLimit(lane.repo.full_name, col.key)" class="swimlane-cell-count" :aria-label="t('{status}: {count}', { status: col.title, count: items(lane, col.key).length })">{{ items(lane, col.key).length }}</span>
+                      <span v-if="hiddenCellCount(lane, laneIndex, col.key) !== null" class="swimlane-cell-count-label sr-only">{{ t('{status}: {count}', { status: col.title, count: items(lane, col.key).length }) }}</span>
                       <BoardColumn cell list-mode :id="'board-' + lane.repo.id + '-' + col.key"
                         :aria-label="t('{status} i {repository}', { status: mobileStatusLabel(col.key), repository: lane.repo.full_name })"
                         :column="col" :lane="lane" :items="items(lane, col.key)" :limit="shownLimit(lane.repo.full_name, col.key)" :limit-increment="initialLimit(lane.repo.full_name)" :base-limit="initialLimit(lane.repo.full_name)"

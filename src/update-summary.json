@@ -1,10 +1,10 @@
 {
-  "baseCommit": "834dac7fcec880723c13ccb88b5f21e239397785",
+  "baseCommit": "f670862fc36c3afa2ed95b6dce7f0b566c6a65f5",
   "summary": {
-    "sv": "Tomma kolumner, som Inget pågående arbete, är nu lika höga som ett issue i samma vy, både i kort och lista.",
-    "en": "Empty columns such as No work in progress are now as tall as an issue in the same view, in both Cards and List."
+    "sv": "I simbanor med lista visas antalet per repository i statusraden så att alla rader börjar jämnt.",
+    "en": "In Swimlanes List view, per-repository counts sit in the status row so all rows start level."
   },
   "issues": [
-    439
+    441
   ]
 }
