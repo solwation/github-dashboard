@@ -596,3 +596,64 @@ test("comment image carousel displays mentioned repo images in comments and open
   await page.keyboard.press("Escape");
   await expect(viewer).not.toBeVisible();
 });
+
+test("comment image carousel displays relative markdown images and relative links in comments (#443)", async ({ page }) => {
+  const base64Png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const svgCutout = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="380"><rect width="300" height="380" fill="#287f83"/><text x="20" y="200" fill="#ffffff">Relative</text></svg>';
+  const base64Svg = Buffer.from(svgCutout).toString("base64");
+
+  const commentMarkdown = [
+    "Här är illustrationer med relativa sökvägar:",
+    "![Cutout illustration](./assets/relative-dancer.png)",
+    "Se även länk till [arkitektur](../docs/arch.svg) och textreferens /docs/flow.png.",
+  ].join("\n\n");
+
+  await connect(page, async route => {
+    await route.fulfill({ json: [comment(1, commentMarkdown)] });
+  });
+
+  await page.route("https://api.github.com/repos/sample/comment-project/contents/**", async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/assets/relative-dancer.png") || url.pathname.endsWith("/docs/arch.svg") || url.pathname.endsWith("/docs/flow.png")) {
+      const isPng = url.pathname.endsWith(".png");
+      await route.fulfill({
+        json: {
+          type: "file",
+          encoding: "base64",
+          size: 100,
+          name: url.pathname.split("/").pop(),
+          path: url.pathname.replace("/repos/sample/comment-project/contents/", ""),
+          content: isPng ? base64Png : base64Svg,
+        },
+      });
+      return;
+    }
+    await route.fulfill({ status: 404, json: { message: "Not found" } });
+  });
+
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+
+  const carousel = dialog.getByRole("region", { name: "Omnämnda bilder", exact: true });
+  await expect(carousel).toBeVisible();
+  await expect(carousel.getByText("Bilder (3)")).toBeVisible();
+
+  const relBtn = carousel.getByRole("button", { name: "Öppna bild: relative-dancer.png", exact: true });
+  const archBtn = carousel.getByRole("button", { name: "Öppna bild: arch.svg", exact: true });
+  const flowBtn = carousel.getByRole("button", { name: "Öppna bild: flow.png", exact: true });
+  await expect(relBtn).toBeVisible();
+  await expect(archBtn).toBeVisible();
+  await expect(flowBtn).toBeVisible();
+
+  // The inline markdown image also renders the loaded base64 data URL
+  const inlineImg = dialog.locator('img[data-repo-path="assets/relative-dancer.png"]');
+  await expect(inlineImg).toBeVisible();
+  await expect(inlineImg).toHaveAttribute("src", /^data:image\/png;base64,/);
+
+  await relBtn.click();
+  const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.locator("img")).toHaveAttribute("src", /^data:image\/png;base64,/);
+  await page.keyboard.press("Escape");
+  await expect(viewer).not.toBeVisible();
+});

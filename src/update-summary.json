@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d359edebee317f5024577871b39dad0295fad779",
+  "baseCommit": "d5ae6cb59fe7bf1a4d99f0bf45bfacd71d64f623",
   "summary": {
-    "sv": "Omnämnda bildfiler och relativa repobilder i kommentarer och beskrivningar visas i en bildkarusell längst ner och kan öppnas i bildvisaren.",
-    "en": "Mentioned image files and relative repo images in comments and descriptions display in a bottom image carousel and open in the image viewer."
+    "sv": "Bildkarusellen och kommentarer stödjer relativa Markdown-bilder, sökvägar med punkter och inledande snedstreck.",
+    "en": "Comment image carousels support relative Markdown images, dotted paths, and leading slashes."
   },
   "issues": [
-    442
+    443
   ]
 }

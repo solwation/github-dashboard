@@ -7,6 +7,7 @@ import {
   fileLoaderKey,
   imageDocument,
   imageGalleryKey,
+  normalizeRepoPath,
   type DetectedImage,
 } from "../lib/comment-images";
 
@@ -53,6 +54,33 @@ const galleryContext = inject(imageGalleryKey, undefined);
 const fileLoader = inject(fileLoaderKey, undefined);
 
 const cleanHtml = ref("");
+const renderedHtml = computed(() => {
+  const html = cleanHtml.value;
+  const loaded = loadedUrls.value;
+  const failed = failedPaths.value;
+  return html.replace(/<img\b([^>]*)>/gi, (match, attrs) => {
+    const pathMatch = attrs.match(/data-repo-path=["']([^"']+)["']/i);
+    if (pathMatch) {
+      const cleanPath = pathMatch[1]!;
+      if (loaded[cleanPath]) {
+        return match.replace(/<img\b/i, `<img src="${loaded[cleanPath]}" `);
+      }
+      if (failed[cleanPath]) {
+        return match.replace(/class=["']([^"']*)["']/i, 'class="$1 preview-failed"');
+      }
+      return match;
+    }
+    const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+    if (!srcMatch) return match;
+    const src = srcMatch[1]!;
+    if (src.startsWith("data:") || src.includes("://")) return match;
+    const cleanPath = normalizeRepoPath(src);
+    if (cleanPath && loaded[cleanPath]) {
+      return match.replace(srcMatch[0], `src="${loaded[cleanPath]}" data-repo-path="${cleanPath}"`);
+    }
+    return match;
+  });
+});
 const detected = ref<DetectedImage[]>([]);
 const loadedUrls = ref<Record<string, string>>({});
 const loadingPaths = ref<Record<string, boolean>>({});
@@ -183,7 +211,12 @@ async function activate(event: MouseEvent | KeyboardEvent) {
   // Snapshot only this issue's already available content, keeping duplicate images distinct.
   const groups = sources.map(source => ({
     key: source.key,
-    images: [...imageDocument(source.html, t).querySelectorAll("img")].map(img => ({ src: img.src, alt: img.alt || t("Bild") })),
+    images: [...imageDocument(source.html, t).querySelectorAll("img")].map(img => {
+      const rawSrc = img.getAttribute("src") || "";
+      const cleanPath = normalizeRepoPath(rawSrc);
+      const resolvedSrc = (cleanPath && loadedUrls.value[cleanPath]) ? loadedUrls.value[cleanPath] : img.src;
+      return { src: resolvedSrc, alt: img.alt || t("Bild") };
+    }),
   }));
   gallery.value = groups.flatMap(group => group.images);
   let offset = 0;
@@ -260,7 +293,7 @@ onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <template>
-  <div data-image-content :class="contentClass" @click="activate" @keydown="activate" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="cleanHtml" />
+  <div data-image-content :class="contentClass" @click="activate" @keydown="activate" @load.capture="($event.target as HTMLElement).classList.remove('preview-failed')" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="renderedHtml" />
   <!-- Carousel for collected and mentioned images (#442) -->
   <div v-if="carouselImages.length" class="comment-image-carousel" role="region" :aria-label="t('Omnämnda bilder')">
     <div class="carousel-header">

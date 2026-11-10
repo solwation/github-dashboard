@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractCommentImages, issueRepository } from "../src/lib/comment-images";
+import { extractCommentImages, issueRepository, normalizeRepoPath } from "../src/lib/comment-images";
 import { t } from "../src/lib/i18n";
 import { renderMarkdown } from "../src/lib/markdown";
 
@@ -94,5 +94,53 @@ describe("comment image detection and carousel extraction (#442)", () => {
 
     expect(images).toHaveLength(1);
     expect(images[0]!.path).toBe("assets/icon.png");
+  });
+
+  it("normalizes relative repository image paths (#443)", () => {
+    expect(normalizeRepoPath("assets/dancer.png")).toBe("assets/dancer.png");
+    expect(normalizeRepoPath("./assets/dancer.png")).toBe("assets/dancer.png");
+    expect(normalizeRepoPath("../assets/dancer.png")).toBe("assets/dancer.png");
+    expect(normalizeRepoPath("../../assets/dancer.png")).toBe("assets/dancer.png");
+    expect(normalizeRepoPath("/assets/dancer.png")).toBe("assets/dancer.png");
+    expect(normalizeRepoPath("docs/sub/../dancer.png")).toBe("docs/dancer.png");
+    expect(normalizeRepoPath("docs/./dancer.png")).toBe("docs/dancer.png");
+    expect(normalizeRepoPath("dancer.png")).toBe("dancer.png");
+    expect(normalizeRepoPath("./dancer.png")).toBe("dancer.png");
+    expect(normalizeRepoPath("assets/dancer.png?raw=true#heading")).toBe("assets/dancer.png");
+    expect(normalizeRepoPath("https://example.com/foo.png")).toBeNull();
+    expect(normalizeRepoPath("data:image/png;base64,...")).toBeNull();
+    expect(normalizeRepoPath("assets/dancer.js")).toBeNull();
+    expect(normalizeRepoPath("")).toBeNull();
+    expect(normalizeRepoPath(null)).toBeNull();
+  });
+
+  it("recognizes Markdown image syntax with relative paths and includes them in carousel (#443)", () => {
+    const rawMarkdown = [
+      "![Wardogs dancer](assets/wardogs-dancer.png)",
+      "![Relative cutout](./assets/bf6-dancer.png)",
+      "![Parent reference](../docs/dancers/olaf.gif)",
+      "![Root reference](/docs/dancers/wardogs.gif)",
+      "[Link to dancer](./assets/dancer-link.png)",
+      "Text mentions ./assets/text-image.png and ../docs/text-image2.png as well.",
+    ].join("\n\n");
+
+    const html = renderMarkdown(rawMarkdown);
+    const { images } = extractCommentImages(html, t);
+
+    const paths = images.map(i => i.path);
+    expect(paths).toContain("assets/wardogs-dancer.png");
+    expect(paths).toContain("assets/bf6-dancer.png");
+    expect(paths).toContain("docs/dancers/olaf.gif");
+    expect(paths).toContain("docs/dancers/wardogs.gif");
+    expect(paths).toContain("assets/dancer-link.png");
+    expect(paths).toContain("assets/text-image.png");
+    expect(paths).toContain("docs/text-image2.png");
+
+    // Markdown relative images must not be flagged as inline (so they appear in the carousel)
+    const wardogImg = images.find(i => i.path === "assets/wardogs-dancer.png");
+    expect(wardogImg).toBeDefined();
+    expect(wardogImg?.isInline).toBeFalsy();
+    expect(wardogImg?.alt).toBe("Wardogs dancer");
+    expect(wardogImg?.name).toBe("wardogs-dancer.png");
   });
 });

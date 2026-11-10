@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-10",
+    "summary": {
+      "sv": "Bildkarusellen och kommentarer stödjer relativa Markdown-bilder, sökvägar med punkter och inledande snedstreck.",
+      "en": "Comment image carousels support relative Markdown images, dotted paths, and leading slashes."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Relativa bildsökvägar i Markdown-bilder, länkar och text normaliseras och visas i bildkarusellen och bildvisaren.",
+          "en": "Relative image paths in Markdown images, links, and text normalize and display in the image carousel and viewer."
+        },
+        "issues": [
+          443
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-09",
     "summary": {
       "sv": "Omnämnda repobilder i kommentarer visas i en bildkarusell, och simbanor med lista visar antalet per repository i statusraden.",

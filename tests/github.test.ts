@@ -311,6 +311,14 @@ describe("GitHub transport", () => {
     const png = await client.repoFile("owner/test", "assets/dancer.png");
     expect(png).toContain("data:image/png;base64,iVBOR");
 
+    // Relative paths with ./, ../ and subdirectories normalize to the repo asset (#443)
+    const relDot = await client.repoFile("owner/test", "./assets/dancer.png");
+    expect(relDot).toContain("data:image/png;base64,iVBOR");
+    const relParent = await client.repoFile("owner/test", "../assets/dancer.png");
+    expect(relParent).toContain("data:image/png;base64,iVBOR");
+    const relNorm = await client.repoFile("owner/test", "docs/../assets/dancer.png");
+    expect(relNorm).toContain("data:image/png;base64,iVBOR");
+
     const gif = await client.repoFile("owner/test", "large.gif");
     expect(gif).toContain("data:image/gif;base64,R0lGOD");
 

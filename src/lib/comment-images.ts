@@ -23,8 +23,26 @@ export interface DetectedImage {
 }
 
 export const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/i;
-const RELATIVE_IMAGE_PATH = /^(?:(?:\.?\/)?[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/i;
-const TEXT_IMAGE_PATH = /(?:^|[\s(`"'])((?:[a-zA-Z0-9_.-]+\/)+[a-zA-Z0-9_.-]+\.(?:png|jpe?g|gif|webp|avif|svg|bmp|ico))(?=[\s)`"',:;]|$)/gi;
+const TEXT_IMAGE_PATH = /(?:^|[\s(`"'])((?:\.{0,2}\/|[a-zA-Z0-9_.-]+\/)[a-zA-Z0-9_./-]*\.(?:png|jpe?g|gif|webp|avif|svg|bmp|ico))(?=[\s)`"'\]:;.]|$)/gi;
+
+export function normalizeRepoPath(rawPath: string | null | undefined): string | null {
+  if (!rawPath) return null;
+  const clean = rawPath.replace(/[?#].*$/, "").trim();
+  if (!clean || clean.includes("://") || clean.startsWith("data:")) return null;
+  const parts = clean.split("/").filter(Boolean);
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === ".") continue;
+    if (part === "..") {
+      if (resolved.length > 0) resolved.pop();
+      continue;
+    }
+    resolved.push(part);
+  }
+  if (!resolved.length) return null;
+  const normalized = resolved.join("/");
+  return IMAGE_EXTENSIONS.test(normalized) ? normalized : null;
+}
 
 function basename(pathOrUrl: string): string {
   const clean = pathOrUrl.replace(/[?#].*$/, "");
@@ -52,6 +70,8 @@ export function imageDocument(html: string, t: Translate): Document {
   const document = new DOMParser().parseFromString(html, "text/html");
   for (const link of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
     if (link.querySelector("img")) continue;
+    const rawHref = link.getAttribute("href") || "";
+    if (!rawHref.includes("://")) continue;
     try {
       const url = new URL(link.href);
       const attachment = url.hostname === "github.com" && url.pathname.startsWith("/user-attachments/assets/");
@@ -74,6 +94,12 @@ export function imageDocument(html: string, t: Translate): Document {
     img.setAttribute("aria-label", t("Öppna bild: {name}", { name: img.alt || t("Bild") }));
     img.loading = "lazy";
     img.referrerPolicy = "no-referrer";
+    const clean = normalizeRepoPath(img.getAttribute("src"));
+    if (clean) {
+      img.dataset.repoPath = clean;
+      img.dataset.rawSrc = img.getAttribute("src") || "";
+      img.removeAttribute("src");
+    }
   }
   return document;
 }
@@ -92,8 +118,8 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
   // 1. Code tags mentioning relative image paths (e.g. `docs/dancers/olaf.gif`)
   for (const match of html.matchAll(/<code\b[^>]*>(.*?)<\/code>/gi)) {
     const text = match[1]!.replace(/<[^>]+>/g, "").trim();
-    if (RELATIVE_IMAGE_PATH.test(text) && !text.includes("://")) {
-      const cleanPath = text.replace(/^\.?\/+/, "").replace(/[?#].*$/, "");
+    const cleanPath = normalizeRepoPath(text);
+    if (cleanPath) {
       addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: basename(cleanPath), path: cleanPath });
     }
   }
@@ -102,8 +128,8 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
   for (const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi)) {
     const href = match[1]!;
     const text = match[2]!.replace(/<[^>]+>/g, "").trim();
-    if (RELATIVE_IMAGE_PATH.test(href) && !href.includes("://")) {
-      const cleanPath = href.replace(/^\.?\/+/, "").replace(/[?#].*$/, "");
+    const cleanPath = normalizeRepoPath(href);
+    if (cleanPath) {
       addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: text || basename(cleanPath), path: cleanPath });
     } else if (isDirectImageLink(href)) {
       addImage({ key: `src:${href}`, name: basename(href), alt: text || basename(href), src: href, isInline: true });
@@ -114,9 +140,11 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
   const stripped = html.replace(/<code\b[^>]*>.*?<\/code>/gi, "").replace(/<a\b[^>]*>.*?<\/a>/gi, "").replace(/<[^>]+>/g, " ");
   for (const match of stripped.matchAll(TEXT_IMAGE_PATH)) {
     const found = match[1];
-    if (found && !found.includes("://")) {
-      const cleanPath = found.replace(/^\.?\/+/, "").replace(/[?#].*$/, "");
-      addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: basename(cleanPath), path: cleanPath });
+    if (found) {
+      const cleanPath = normalizeRepoPath(found);
+      if (cleanPath) {
+        addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: basename(cleanPath), path: cleanPath });
+      }
     }
   }
 
@@ -128,7 +156,12 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
     const src = srcMatch ? srcMatch[1]! : "";
     if (src && !src.startsWith("data:")) {
       const alt = altMatch ? altMatch[1]! : basename(src);
-      addImage({ key: `src:${src}`, name: basename(src), alt: alt || basename(src), src, isInline: true });
+      const cleanPath = normalizeRepoPath(src);
+      if (cleanPath) {
+        addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: alt || basename(cleanPath), path: cleanPath });
+      } else {
+        addImage({ key: `src:${src}`, name: basename(src), alt: alt || basename(src), src, isInline: true });
+      }
     }
   }
 
@@ -140,6 +173,11 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
       let updated = match;
       if (!/class=["'][^"']*comment-thumbnail/i.test(attrs)) {
         updated = updated.replace(/<img\b/i, '<img class="comment-thumbnail" role="button" tabindex="0" aria-haspopup="dialog" loading="lazy" referrerpolicy="no-referrer"');
+      }
+      const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+      const clean = srcMatch ? normalizeRepoPath(srcMatch[1]!) : null;
+      if (clean) {
+        updated = updated.replace(srcMatch![0], `data-repo-path="${clean}" data-raw-src="${srcMatch![1]!}"`);
       }
       return updated;
     });

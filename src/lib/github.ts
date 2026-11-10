@@ -1,3 +1,4 @@
+import { normalizeRepoPath } from "./comment-images";
 import { ProjectIconResolver } from "./project-icon";
 import { SubIssuesCache, parseSubIssues } from "./sub-issues";
 import { publicRepositoryName, publicRepositoryRecord } from "./public-workspace";
@@ -163,8 +164,8 @@ export class GitHub {
   }
   private readonly repoFiles = new Map<string, Promise<string | null>>();
   async repoFile(repoFullName: string, path: string): Promise<string | null> {
-    const cleanPath = path.replace(/^\.?\/+/, "").replace(/[#?].*$/, "").trim();
-    if (!cleanPath || cleanPath.includes("..")) return null;
+    const cleanPath = normalizeRepoPath(path);
+    if (!cleanPath) return null;
     const cacheKey = `${repoFullName}:${cleanPath}`;
     const cached = this.repoFiles.get(cacheKey);
     if (cached) return cached;
