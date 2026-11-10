@@ -1,10 +1,10 @@
 {
-  "baseCommit": "857fa3207a79a355669fbcafea45bc26ef99d9c8",
+  "baseCommit": "1b66d6577bf39f3c94580be671db7f323427f420",
   "summary": {
-    "sv": "I simbanor med lista är kommentarsikonen centrerad vertikalt över radens höjd och placerad mot radens högerkant.",
-    "en": "In Swimlanes List view, the comment icon is vertically centred across the row height and aligned against the right edge."
+    "sv": "När 'Dela upp per repository' är avmarkerad i statistikvyn visas endast den samlade vyn utan enskilda projektrubriker.",
+    "en": "When 'Split by repository' is unchecked in Statistics, only the combined view shows without individual project headers."
   },
   "issues": [
-    444
+    445
   ]
 }

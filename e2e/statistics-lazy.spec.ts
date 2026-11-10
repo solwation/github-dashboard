@@ -144,29 +144,28 @@ for (const scenario of [
     await page.goto('/'); await signIn(); await stats();
     const split = page.getByRole('checkbox', { name: 'Dela upp per repository', exact: true });
     await expect(page.locator('#statistics-repo-3 .statistics-repository-toggle')).toBeVisible();
-    await split.uncheck();
-    const combined = page.locator('.statistics-combined-chart');
-    await expect(combined.locator('[data-metric="closed"] strong')).toHaveText('2');
-    await expect(page.getByRole('button', { name: 'Uppdatera statistik', exact: true })).toBeEnabled();
-    await expect(page.locator('#statistics-repo-3')).toHaveCount(0);
-    await expect(page.locator('.statistics-repository')).toHaveCount(3);
-    await expect(page.locator('.statistics-chart')).toHaveCount(1);
     const contributor = page.locator('#statistics-repo-1').getByRole('combobox', { name: 'Bidragsgivare', exact: true });
     await contributor.selectOption('sample');
     await expect(contributor).toHaveValue('sample');
+    await split.uncheck();
+    const combined = page.locator('.statistics-combined-chart');
     await expect(combined.locator('[data-metric="closed"] strong')).toHaveText('1');
-    const edges = await page.locator('.statistics-repo-filters').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().left));
-    expect(Math.max(...edges) - Math.min(...edges)).toBeLessThanOrEqual(1);
+    await expect(page.getByRole('button', { name: 'Uppdatera statistik', exact: true })).toBeEnabled();
+    // #445: When split by repository is unchecked, no individual repository headers/sections are shown under the chart.
+    await expect(page.locator('.statistics-repository')).toHaveCount(1);
+    await expect(page.locator('.statistics-repository:not(.statistics-combined-chart)')).toHaveCount(0);
+    await expect(page.locator('.statistics-chart')).toHaveCount(1);
     for (const theme of ['light', 'dark']) {
       await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator('.statistics-repositories').screenshot({ path: info.outputPath(`empty-project-${scenario.name}-${theme}.png`) });
     }
     await split.check();
+    await expect(page.locator('.statistics-repository:not(.statistics-combined-chart)')).toHaveCount(3);
     await expect(page.locator('#statistics-repo-3 .statistics-repository-toggle')).toHaveAttribute('aria-expanded', 'false');
     await expect(contributor).toHaveValue('sample');
     await split.uncheck();
-    await expect(page.locator('#statistics-repo-3')).toHaveCount(0);
+    await expect(page.locator('.statistics-repository:not(.statistics-combined-chart)')).toHaveCount(0);
     await expect(page.locator('.statistics-chart')).toHaveCount(1);
   } finally { await context.close(); }
 });

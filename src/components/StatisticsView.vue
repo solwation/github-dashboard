@@ -521,9 +521,11 @@ onUnmounted(() => { previewBatch.clear(); loadStatuses.value = {}; rolloverReloa
         :data="combinedData[0] || null" :datasets="combinedData" :repository-filters="combinedFilters" :all-rules="combinedRules"
         :loading="busy" :load-failed="repositories.some(repo => failures[repo.full_name])" :period="period" :time-span="timeSpan"
         :preference="combinedPreference" @update:preference="combinedPreference = $event" />
-      <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
-        :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-status="loadStatuses[repository.full_name]" :load-failed="!!failures[repository.full_name]"
-        :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :rules="repositoryRules(repository.full_name)" :collapsed="splitByRepository && collapsedRepositories.has(repository.id)" :filters-only="!splitByRepository" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
+      <template v-if="splitByRepository">
+        <StatisticsRepository v-for="repository in renderedRepositories" :key="repository.full_name" :repository="repository"
+          :data="snapshots[repository.full_name] || null" :loading="!!loading[repository.full_name]" :load-status="loadStatuses[repository.full_name]" :load-failed="!!failures[repository.full_name]"
+          :period="period" :time-span="timeSpan" :preference="preferencesState[repository.full_name]" :rules="repositoryRules(repository.full_name)" :collapsed="collapsedRepositories.has(repository.id)" @update:collapsed="setCollapsed(repository.id, $event)" @update:preference="updatePreference(repository.full_name, $event)" />
+      </template>
     </div>
     <div v-if="!repositories.length" class="statistics-empty"><BarChart3 :size="32" /><h2>{{ t("Ingen statistik att visa") }}</h2><p>{{ t("Välj repositories i översikten för att se deras statistik.") }}</p></div>
     <footer v-if="repositories.length && !initialLoading" class="statistics-footnotes">

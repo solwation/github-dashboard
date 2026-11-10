@@ -26,14 +26,10 @@ for (const scenario of [
     await expect(combined.locator("#statistics-repository--1")).toHaveText("Alla valda repositories");
     await expect(combined.locator('[data-metric="closed"] strong')).toHaveText("6");
     await expect(combined.locator('[data-metric="timePerPoint"]')).toHaveCount(0);
-    await second.getByRole("combobox", { name: "Bidragsgivare", exact: true }).selectOption("demo-alex");
-    await expect(combined.locator('[data-metric="closed"] strong')).toHaveText("5");
-    const filterEdges = await page.locator(".statistics-combined .statistics-repo-filters").evaluateAll(elements => elements.map(el => ({ left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right })));
-    expect(filterEdges).toHaveLength(3);
-    expect(Math.max(...filterEdges.map(box => box.left)) - Math.min(...filterEdges.map(box => box.left))).toBeLessThanOrEqual(1);
-    expect(Math.max(...filterEdges.map(box => box.right)) - Math.min(...filterEdges.map(box => box.right))).toBeLessThanOrEqual(1);
+    // #445: When split by repository is unchecked, no individual repository headers/sections are shown under the chart.
+    await expect(page.locator(".statistics-repository:not(.statistics-combined-chart)")).toHaveCount(0);
     const values = await combined.locator(".statistics-chart circle title").allTextContents();
-    expect(values.reduce((sum, text) => sum + Number(text.split(": ").at(-1)!.replace(/[^\d-]/g, "") || 0), 0)).toBe(5);
+    expect(values.reduce((sum, text) => sum + Number(text.split(": ").at(-1)!.replace(/[^\d-]/g, "") || 0), 0)).toBe(6);
     for (const language of ["sv", "en"]) {
       if (language === "en") {
         await openSettings(page);
@@ -46,18 +42,18 @@ for (const scenario of [
         await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         await combined.screenshot({ path: info.outputPath(`${scenario.name}-${language}-${theme}-chart.png`) });
-        await page.locator(".statistics-repositories").screenshot({ path: info.outputPath(`${scenario.name}-${language}-${theme}-filters.png`) });
       }
     }
     const englishSplit = page.getByRole("checkbox", { name: "Split by repository", exact: true });
     await englishSplit.check();
+    await expect(page.locator(".statistics-repository:not(.statistics-combined-chart)")).toHaveCount(3);
     await expect(first.getByRole("combobox", { name: "Current label", exact: true })).toHaveValue("bug");
-    await expect(second.getByRole("combobox", { name: "Contributors", exact: true })).toHaveValue("demo-alex");
     await expect(second.locator(".statistics-repository-toggle")).toHaveAttribute("aria-expanded", "false");
     await expect(first.locator('[data-metric="closed"] strong')).toHaveText("2");
     await expect(page.getByRole("combobox", { name: "Time range", exact: true })).toHaveValue("30d");
     await englishSplit.uncheck();
-    await expect(combined.locator('[data-metric="closed"] strong')).toHaveText("5");
+    await expect(page.locator(".statistics-repository:not(.statistics-combined-chart)")).toHaveCount(0);
+    await expect(combined.locator('[data-metric="closed"] strong')).toHaveText("6");
     await expect(page.locator(".statistics-chart")).toHaveCount(1);
   } finally { await context.close(); }
 });

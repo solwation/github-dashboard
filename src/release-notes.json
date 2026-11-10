@@ -2,8 +2,8 @@
   {
     "date": "2026-11-10",
     "summary": {
-      "sv": "Bildkarusellen stödjer relativa bildsökvägar, och i simbanor med lista är kommentarsikonen centrerad vertikalt mot högerkanten.",
-      "en": "Comment image carousels support relative paths, and Swimlanes List view centres the comment icon vertically against the right edge."
+      "sv": "Statistikvyn visar endast den samlade sektionen när uppdelning är av, och simbanor centrerar kommentarsikonen mot höger.",
+      "en": "Statistics view shows only the combined section when split is off, and Swimlanes centres the comment icon against the right edge."
     },
     "sections": [
       {
@@ -22,6 +22,15 @@
         },
         "issues": [
           444
+        ]
+      },
+      {
+        "text": {
+          "sv": "När 'Dela upp per repository' är avmarkerad i statistikvyn visas endast den samlade vyn utan enskilda projektrubriker.",
+          "en": "When 'Split by repository' is unchecked in Statistics, only the combined view shows without individual project headers."
+        },
+        "issues": [
+          445
         ]
       }
     ]
