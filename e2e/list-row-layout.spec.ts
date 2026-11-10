@@ -107,6 +107,24 @@ function expectCommentSlot(rows: Rows, label: string) {
   }
 }
 
+/** #444: in list swimlanes the comment control is vertically centred across the entire row and right-aligned against the right edge. */
+function expectSwimlaneCommentSlot(rows: Rows, label: string) {
+  const xs = rows.map(r => r.slot!.x + r.slot!.w);
+  expect(Math.max(...xs) - Math.min(...xs), `${label} comment slot right edge spread`).toBeLessThanOrEqual(1);
+  const rightEdges = rows.map(r => r.comment!.x + r.comment!.w);
+  expect(Math.max(...rightEdges) - Math.min(...rightEdges), `${label} comment right edge spread`).toBeLessThanOrEqual(1);
+  for (const row of rows) {
+    expect(row.comment, `${row.title} comment control`).not.toBeNull();
+    expect(row.comment!.x + row.comment!.w, `${row.title} comment inside row`).toBeLessThanOrEqual(row.width + 0.5);
+    // Pushed to the right edge (within 10px of the right border given padding)
+    expect(row.width - (row.comment!.x + row.comment!.w), `${row.title} comment near right edge`).toBeLessThanOrEqual(10);
+    // Vertically centred across the entire row height
+    const commentCentre = row.comment!.y + row.comment!.h / 2;
+    const rowCentre = row.height / 2;
+    expect(Math.abs(commentCentre - rowCentre), `${row.title} comment vertically centred`).toBeLessThanOrEqual(2);
+  }
+}
+
 const spread = (values: number[]) => Math.max(...values) - Math.min(...values);
 /** #435: the id badge is a square at the far left spanning lines 1 and 2, with its number unclipped. */
 function expectSquare(rows: Rows, label: string) {
@@ -230,9 +248,9 @@ test("swimlanes with three repositories at 2560px keep long titles readable", as
     const rows = await measure(page);
     for (const row of rows) expect(row.overflow, `${row.title} overflow`).toBeLessThanOrEqual(1);
     expectLeftBlock(rows, `swimlanes ${scheme}`);
-    expectCommentSlot(rows, `swimlanes ${scheme}`);
-    // Before #426 a 1/3 lane gave the title 382px of 747px; #426 gave it 537px and the #435 square about 587px.
-    for (const row of rows) expect(row.titleBox!.w / row.width, `${row.title} title share`).toBeGreaterThan(0.77);
+    expectSwimlaneCommentSlot(rows, `swimlanes ${scheme}`);
+    // Before #426 a 1/3 lane gave the title 382px of 747px; #426 gave it 537px; #444 reserves the right edge across lines 1–2 for the comment bubble (>70% title share).
+    for (const row of rows) expect(row.titleBox!.w / row.width, `${row.title} title share`).toBeGreaterThan(0.70);
     out[scheme] = rows;
     if (evidence) {
       await page.locator(".swimlane-board").scrollIntoViewIfNeeded();
@@ -260,7 +278,7 @@ test("narrow swimlanes under 600px keep the square over lines 1–2 and the time
     expect(Math.max(...rows.map(r => r.width)), "lanes are narrower than 600px").toBeLessThan(600);
     for (const row of rows) expect(row.overflow, `${row.title} overflow`).toBeLessThanOrEqual(1);
     expectNarrowLane(rows, `narrow swimlanes ${scheme}`);
-    expectCommentSlot(rows, `narrow swimlanes ${scheme}`);
+    expectSwimlaneCommentSlot(rows, `narrow swimlanes ${scheme}`);
     if (evidence) {
       await page.locator(".swimlane-board").scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${evidence}/${phase}-swimlanes-1600-${scheme}.png` });

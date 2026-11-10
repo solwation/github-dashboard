@@ -2,8 +2,8 @@
   {
     "date": "2026-11-10",
     "summary": {
-      "sv": "Bildkarusellen och kommentarer stödjer relativa Markdown-bilder, sökvägar med punkter och inledande snedstreck.",
-      "en": "Comment image carousels support relative Markdown images, dotted paths, and leading slashes."
+      "sv": "Bildkarusellen stödjer relativa bildsökvägar, och i simbanor med lista är kommentarsikonen centrerad vertikalt mot högerkanten.",
+      "en": "Comment image carousels support relative paths, and Swimlanes List view centres the comment icon vertically against the right edge."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           443
+        ]
+      },
+      {
+        "text": {
+          "sv": "I simbanor med lista är kommentarsikonen centrerad vertikalt över radens höjd och placerad mot radens högerkant.",
+          "en": "In Swimlanes List view, the comment icon is vertically centred across the row height and aligned against the right edge."
+        },
+        "issues": [
+          444
         ]
       }
     ]

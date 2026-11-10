@@ -3192,6 +3192,56 @@ a.sidebar-repository:focus-visible {
 .swimlane-status-count-slot { display: flex; justify-content: center; min-width: 0; }
 .swimlane-cell-count { color: var(--muted); font-size: 10px; line-height: 1; font-variant-numeric: tabular-nums; }
 .swimlane-table-cell .row-slot-status { display: none; }
+/* #444: In dashboard list swimlanes, centre the comment bubble vertically across the entire row and push it to the right edge. */
+:is(.swimlane-board.list-mode, .swimlane-table-cell) .issue-row {
+  grid-template-columns: var(--row-badge) var(--row-times) var(--row-points) minmax(0, 1fr) auto;
+  grid-template-areas:
+    "id time title title comments"
+    "id outcome points meta comments";
+}
+@container issue-list (max-width: 600px) {
+  :is(.swimlane-board.list-mode, .swimlane-table-cell) .issue-row {
+    grid-template-columns: var(--row-badge) var(--row-points) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "id title title comments"
+      "id points meta comments"
+      ". times times comments";
+  }
+}
+@media (max-width: 650px), (pointer: coarse) and (max-width: 950px) and (max-height: 500px) {
+  :is(.swimlane-board.list-mode, .swimlane-table-cell) .issue-row {
+    grid-template-columns: var(--row-badge) var(--row-points) minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "id title title title title comments"
+      "id points meta time outcome comments";
+  }
+}
+@media (max-width: 480px) {
+  :is(.swimlane-board.list-mode, .swimlane-table-cell) .issue-row {
+    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 4.5rem) auto auto;
+    grid-template-areas:
+      "heading heading heading heading comments"
+      "points meta time outcome comments";
+  }
+}
+:is(.swimlane-board.list-mode, .swimlane-table-cell) .row-comments {
+  grid-area: comments;
+  align-self: center;
+  justify-self: end;
+  width: auto;
+  min-width: 0;
+}
+:is(.swimlane-board.list-mode, .swimlane-table-cell) .row-comments .comment-count {
+  justify-content: flex-end;
+  padding-inline-end: 0;
+}
+@media (pointer: coarse) {
+  :is(.swimlane-board.list-mode, .swimlane-table-cell) .row-comments .comment-count::after {
+    left: auto;
+    right: 0;
+    transform: translateY(-50%);
+  }
+}
 @media (max-width: 950px) {
   .swimlane-band-header .lane-title > div { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 }

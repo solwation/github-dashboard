@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d5ae6cb59fe7bf1a4d99f0bf45bfacd71d64f623",
+  "baseCommit": "857fa3207a79a355669fbcafea45bc26ef99d9c8",
   "summary": {
-    "sv": "Bildkarusellen och kommentarer stödjer relativa Markdown-bilder, sökvägar med punkter och inledande snedstreck.",
-    "en": "Comment image carousels support relative Markdown images, dotted paths, and leading slashes."
+    "sv": "I simbanor med lista är kommentarsikonen centrerad vertikalt över radens höjd och placerad mot radens högerkant.",
+    "en": "In Swimlanes List view, the comment icon is vertically centred across the row height and aligned against the right edge."
   },
   "issues": [
-    443
+    444
   ]
 }
