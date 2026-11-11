@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-11",
+    "summary": {
+      "sv": "Lokal Story Point-heuristik kalibrerad mot historik: skiljer enkla rutinärenden (1 SP) från standard (2 SP) och komplexa (3 SP).",
+      "en": "Local Story Point heuristic calibrated against history: separates simple chores (1 SP) from standard (2 SP) and complex (3 SP)."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Lokal Story Point-beräkning väger in prioritetsnivå och rutinärenden för att ge en balanserad fördelning över 1, 2 och 3 SP.",
+          "en": "Local Story Point sizing incorporates priority and chore signals to provide a balanced distribution across 1, 2, and 3 SP."
+        },
+        "issues": [
+          446
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-10",
     "summary": {
       "sv": "Statistikvyn visar endast den samlade sektionen när uppdelning är av, och simbanor centrerar kommentarsikonen mot höger.",

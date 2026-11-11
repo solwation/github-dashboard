@@ -1,10 +1,10 @@
 {
-  "baseCommit": "1b66d6577bf39f3c94580be671db7f323427f420",
+  "baseCommit": "3e37b8ad017437621ac00ca64dd85c5244d676e5",
   "summary": {
-    "sv": "När 'Dela upp per repository' är avmarkerad i statistikvyn visas endast den samlade vyn utan enskilda projektrubriker.",
-    "en": "When 'Split by repository' is unchecked in Statistics, only the combined view shows without individual project headers."
+    "sv": "Lokal Story Point-beräkning väger in prioritetsnivå och rutinärenden för att ge en balanserad fördelning över 1, 2 och 3 SP.",
+    "en": "Local Story Point sizing incorporates priority and chore signals to provide a balanced distribution across 1, 2, and 3 SP."
   },
   "issues": [
-    445
+    446
   ]
 }

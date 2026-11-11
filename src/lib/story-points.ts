@@ -74,7 +74,20 @@ function localPoints(issue: SizedIssue): number {
   ].filter(pattern => pattern.test(prose)).length;
   // Scale index = vocabulary thresholds (30/80/160 distinct words) + scope thresholds
   // (2/5/10 distinct list items) + at most two risk categories, conservatively capped at 3.
-  const size = [30, 80, 160].filter(limit => vocabulary >= limit).length
-    + [2, 5, 10].filter(limit => scopes.size >= limit).length + Math.min(2, risks);
-  return SCALE[Math.min(SCALE.length - 1, size)]!;
+  const vocabScore = [30, 80, 160].filter(limit => vocabulary >= limit).length;
+  const scopeScore = [2, 5, 10].filter(limit => scopes.size >= limit).length;
+  const riskScore = Math.min(2, risks);
+  const rawSize = vocabScore + scopeScore + riskScore;
+
+  const isChore = /^(?:uppdatera|uppgradera|bump|chore|docs)\b/i.test((issue.title || "").trim());
+  const labelNames = (issue.labels || []).map(l => l.name.toLowerCase().trim().replace(/[\s_:-]+/g, " "));
+  const isLow = labelNames.some(n => /^(priority )?low( priority)?$/.test(n) || ["p3", "p4", "priority p3", "priority p4", "reviewer filed"].includes(n));
+  const isHigh = labelNames.some(n => /^(priority )?(critical|urgent|high)( priority)?$/.test(n) || /^(p0|p1|priority p0|priority p1)$/.test(n));
+
+  if (rawSize === 0) return 1;
+  if (isChore && rawSize <= 3) return 1;
+  if (isLow && rawSize <= 3) return 1;
+  if (isHigh && rawSize >= 1) return 3;
+  if (vocabScore >= 3 || scopeScore >= 3 || riskScore >= 2 || rawSize >= 4) return 3;
+  return 2;
 }

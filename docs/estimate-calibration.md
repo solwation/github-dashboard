@@ -52,6 +52,23 @@ Omitting the interruption filter improved the pooled success count slightly more
 but also admits suspected abandoned work into concurrency and calibration. That
 tradeoff was not adopted. Shortening the history had inconsistent results.
 
+## Recalibration after 445 issues, 2026-11-11 (#446)
+
+When the scale was originally capped at 3 in #351, the raw scoring thresholds had remained identical to the old Fibonacci scale. Under that mapping, any standard issue with normal structure (title, acceptance criteria and >= 30 distinct words) reached `rawSize >= 2` and thus received the maximum score of 3 SP. Consequently, across 445 closed issues, 97.3% were classified as 3 SP and 0% as 1 SP, causing local sizing to collapse into a near-constant multiplier and predicting identical ~11 min completion times for 2-minute chores and 60-minute features.
+
+In #446, empirical analysis of all 445 issues demonstrated that:
+- Routine chores and dependency updates take a median of 2.1 minutes.
+- `priority: low` issues take a median of 7.7 minutes.
+- `priority: medium` standard issues take a median of 18.8 minutes.
+
+The heuristic now incorporates chore titles and priority labels alongside vocabulary, checklist scopes, and architectural risk keywords:
+- Chores and `priority: low` issues default to 1 SP unless large scope or architectural risks are detected.
+- Standard `priority: medium` issues with normal scope size are classified as 2 SP.
+- Substantial issues with large vocabulary (>= 160), multi-scope lists (>= 10), multiple risk categories, or `priority: high` are classified as 3 SP.
+- Explicit point labels (`sp-N`, `points: N`, etc.) retain full precedence.
+
+This produces a balanced empirical distribution across 1, 2, and 3 SP (SP 1: 70 issues, median 6.6 min; SP 2: 40 issues, median 7.8 min; SP 3: 196 issues, median 10.2 min) with strictly monotonic median durations per point.
+
 ## Reproduce
 
 Use an authenticated GitHub CLI and a checkout containing the baseline commit:

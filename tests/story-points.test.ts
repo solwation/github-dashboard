@@ -72,4 +72,13 @@ describe("rough local story points", () => {
     issue.labels[0]!.name = "points: 3";
     expect(approximatePoints(issue)).toBe(3);
   });
+  it("sizes chores and low-priority tasks at 1 point, and differentiates standard medium from complex high", () => {
+    const templateBody = "## Problem\nDet saknas uppdatering för bibliotek.\n## Acceptanskriterier\n- Uppdatera beroenden\n- Verifiera tester\n## Prioritet\npriority: low";
+    expect(score("Uppdatera delad orkester till v0.11.1", templateBody)).toBe(1);
+    expect(score("Bump vite from 5.0 to 5.1", templateBody)).toBe(1);
+    expect(score("Centrera ikon i simbanor", templateBody, ["priority: low"])).toBe(1);
+    expect(score("Centrera ikon i simbanor", templateBody, ["priority: medium"])).toBe(2);
+    expect(score("Centrera ikon i simbanor", templateBody, ["priority: high"])).toBe(3);
+    expect(score("Centrera ikon i simbanor", templateBody, ["priority: low", "sp-3"])).toBe(3);
+  });
 });
