@@ -657,3 +657,61 @@ test("comment image carousel displays relative markdown images and relative link
   await page.keyboard.press("Escape");
   await expect(viewer).not.toBeVisible();
 });
+
+test("loads and renders private release asset images in comments (#448)", async ({ page }) => {
+  const binaryPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await connect(page, async route => {
+    await route.fulfill({
+      json: [
+        comment(1, [
+          "Before, 1280:",
+          "![before](https://github.com/sample/comment-project/releases/download/untagged-xyz/issue-3488-before-1280.png)",
+          "Missing asset:",
+          "![missing](https://github.com/sample/comment-project/releases/download/untagged-xyz/non-existent.png)",
+        ].join("\n")),
+      ],
+    });
+  });
+
+  await page.route("https://api.github.com/repos/sample/comment-project/releases*", async route => {
+    await route.fulfill({
+      json: [
+        {
+          id: 99,
+          tag_name: "issue-screenshots",
+          draft: true,
+          assets: [
+            {
+              id: 1234,
+              name: "issue-3488-before-1280.png",
+              url: "https://api.github.com/repos/sample/comment-project/releases/assets/1234",
+              browser_download_url: "https://github.com/sample/comment-project/releases/download/untagged-xyz/issue-3488-before-1280.png",
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  await page.route("https://api.github.com/repos/sample/comment-project/releases/assets/1234", async route => {
+    await route.fulfill({
+      contentType: "application/octet-stream",
+      body: binaryPng,
+    });
+  });
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).filter({ visible: true }).first().click();
+  const commentsDialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+
+  // 1. Release asset is resolved via API and loaded
+  const thumbnail = commentsDialog.getByRole("button", { name: "Öppna bild: before", exact: true });
+  await expect(thumbnail).toBeVisible();
+  await expect(thumbnail).toHaveAttribute("src", /blob:|data:/);
+
+  // 2. Missing asset shows visible placeholder with alt text and "Visa på GitHub" link, never an empty gap
+  const placeholder = commentsDialog.locator(".image-placeholder");
+  await expect(placeholder).toBeVisible();
+  await expect(placeholder).toContainText("missing");
+  const ghLink = placeholder.getByRole("link", { name: /Visa på GitHub|View on GitHub/ });
+  await expect(ghLink).toBeVisible();
+  await expect(ghLink).toHaveAttribute("href", "https://github.com/sample/comment-project/releases/download/untagged-xyz/non-existent.png");
+});

@@ -19,7 +19,44 @@ export interface DetectedImage {
   alt: string;
   src?: string;
   path?: string;
+  assetUrl?: string;
+  repository?: string;
   isInline?: boolean;
+}
+
+export interface ReleaseAssetRef {
+  owner: string;
+  repo: string;
+  repository: string;
+  tag: string;
+  assetName: string;
+  url: string;
+}
+
+export function parseReleaseAssetUrl(urlStr: string | null | undefined): ReleaseAssetRef | null {
+  if (!urlStr) return null;
+  const clean = urlStr.trim();
+  try {
+    const url = new URL(clean);
+    if (url.hostname !== "github.com") return null;
+    const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/releases\/download\/(.+)\/([^/]+)$/);
+    if (!match) return null;
+    const owner = match[1]!;
+    const repo = match[2]!;
+    const tag = decodeURIComponent(match[3]!);
+    const assetName = decodeURIComponent(match[4]!);
+    if (!IMAGE_EXTENSIONS.test(assetName)) return null;
+    return {
+      owner,
+      repo,
+      repository: `${owner}/${repo}`,
+      tag,
+      assetName,
+      url: `${url.origin}${url.pathname}`,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/i;
@@ -44,7 +81,7 @@ export function normalizeRepoPath(rawPath: string | null | undefined): string | 
   return IMAGE_EXTENSIONS.test(normalized) ? normalized : null;
 }
 
-function basename(pathOrUrl: string): string {
+export function basename(pathOrUrl: string): string {
   const clean = pathOrUrl.replace(/[?#].*$/, "");
   const part = clean.split("/").filter(Boolean).pop() || "image";
   try { return decodeURIComponent(part); } catch { return part; }
@@ -95,8 +132,13 @@ export function imageDocument(html: string, t: Translate): Document {
     img.loading = "lazy";
     img.referrerPolicy = "no-referrer";
     const clean = normalizeRepoPath(img.getAttribute("src"));
+    const assetRef = parseReleaseAssetUrl(img.getAttribute("src"));
     if (clean) {
       img.dataset.repoPath = clean;
+      img.dataset.rawSrc = img.getAttribute("src") || "";
+      img.removeAttribute("src");
+    } else if (assetRef) {
+      img.dataset.releaseAssetUrl = assetRef.url;
       img.dataset.rawSrc = img.getAttribute("src") || "";
       img.removeAttribute("src");
     }
@@ -109,7 +151,7 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
   const seen = new Set<string>();
 
   function addImage(item: DetectedImage) {
-    const id = item.path ? `path:${item.path}` : `src:${item.src}`;
+    const id = item.path ? `path:${item.path}` : item.assetUrl ? `asset:${item.assetUrl}` : `src:${item.src}`;
     if (seen.has(id)) return;
     seen.add(id);
     images.push(item);
@@ -124,19 +166,22 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
     }
   }
 
-  // 2. Relative image links (e.g. [cutout](assets/dancer.png)) and direct image links
+  // 2. Relative image links (e.g. [cutout](assets/dancer.png)), release assets, and direct image links
   for (const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi)) {
     const href = match[1]!;
     const text = match[2]!.replace(/<[^>]+>/g, "").trim();
     const cleanPath = normalizeRepoPath(href);
+    const assetRef = parseReleaseAssetUrl(href);
     if (cleanPath) {
       addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: text || basename(cleanPath), path: cleanPath });
+    } else if (assetRef) {
+      addImage({ key: `asset:${assetRef.url}`, name: assetRef.assetName, alt: text || assetRef.assetName, assetUrl: assetRef.url, repository: assetRef.repository, isInline: true });
     } else if (isDirectImageLink(href)) {
       addImage({ key: `src:${href}`, name: basename(href), alt: text || basename(href), src: href, isInline: true });
     }
   }
 
-  // 3. Plain text mentions of relative image paths (outside of code/links)
+  // 3. Plain text mentions of relative image paths and release asset URLs (outside of code/links)
   const stripped = html.replace(/<code\b[^>]*>.*?<\/code>/gi, "").replace(/<a\b[^>]*>.*?<\/a>/gi, "").replace(/<[^>]+>/g, " ");
   for (const match of stripped.matchAll(TEXT_IMAGE_PATH)) {
     const found = match[1];
@@ -145,6 +190,14 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
       if (cleanPath) {
         addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: basename(cleanPath), path: cleanPath });
       }
+    }
+  }
+  const RELEASE_ASSET_PATH = /https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/releases\/download\/[^\s)"']+\.(?:png|jpe?g|gif|webp|avif|svg|bmp|ico)/gi;
+  for (const match of stripped.matchAll(RELEASE_ASSET_PATH)) {
+    const found = match[0];
+    const assetRef = parseReleaseAssetUrl(found);
+    if (assetRef) {
+      addImage({ key: `asset:${assetRef.url}`, name: assetRef.assetName, alt: assetRef.assetName, assetUrl: assetRef.url, repository: assetRef.repository });
     }
   }
 
@@ -157,8 +210,11 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
     if (src && !src.startsWith("data:")) {
       const alt = altMatch ? altMatch[1]! : basename(src);
       const cleanPath = normalizeRepoPath(src);
+      const assetRef = parseReleaseAssetUrl(src);
       if (cleanPath) {
         addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: alt || basename(cleanPath), path: cleanPath });
+      } else if (assetRef) {
+        addImage({ key: `asset:${assetRef.url}`, name: assetRef.assetName, alt: alt || assetRef.assetName, assetUrl: assetRef.url, repository: assetRef.repository });
       } else {
         addImage({ key: `src:${src}`, name: basename(src), alt: alt || basename(src), src, isInline: true });
       }
@@ -176,8 +232,11 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
       }
       const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
       const clean = srcMatch ? normalizeRepoPath(srcMatch[1]!) : null;
+      const assetRef = srcMatch ? parseReleaseAssetUrl(srcMatch[1]!) : null;
       if (clean) {
         updated = updated.replace(srcMatch![0], `data-repo-path="${clean}" data-raw-src="${srcMatch![1]!}"`);
+      } else if (assetRef) {
+        updated = updated.replace(srcMatch![0], `data-release-asset-url="${assetRef.url}" data-raw-src="${srcMatch![1]!}"`);
       }
       return updated;
     });

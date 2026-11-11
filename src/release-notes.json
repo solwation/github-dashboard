@@ -2,10 +2,19 @@
   {
     "date": "2026-11-11",
     "summary": {
-      "sv": "Tids- och SP-beräkningar förbättrade med kalibrerad SP-heuristik, adaptivt historikfönster upp till 90 dagar och anomalifiltrering.",
-      "en": "Time and SP estimations improved with calibrated sizing, adaptive history window up to 90 days, and anomaly filtering."
+      "sv": "Stöd för privata release-bilder i kommentarer, samt förbättrade SP- och tidsberäkningar med adaptiv historik.",
+      "en": "Support for private release images in comments, plus improved SP and time estimations with adaptive history."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Bilder från privata release-assets visas i kommentarer och bildvisare via GitHub-API:et, med tydlig platshållare vid fel.",
+          "en": "Private release asset images render in comments and image viewer via the GitHub API, with clear placeholders on failure."
+        },
+        "issues": [
+          448
+        ]
+      },
       {
         "text": {
           "sv": "SP => tid-kalibrering anpassar historikfönstret upp till 90 dagar vid få avslut och filtrerar bort korta anomalier under 60 sekunder.",

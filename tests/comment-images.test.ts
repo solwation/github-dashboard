@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractCommentImages, issueRepository, normalizeRepoPath } from "../src/lib/comment-images";
+import { extractCommentImages, issueRepository, normalizeRepoPath, parseReleaseAssetUrl } from "../src/lib/comment-images";
 import { t } from "../src/lib/i18n";
 import { renderMarkdown } from "../src/lib/markdown";
 
@@ -142,5 +142,66 @@ describe("comment image detection and carousel extraction (#442)", () => {
     expect(wardogImg?.isInline).toBeFalsy();
     expect(wardogImg?.alt).toBe("Wardogs dancer");
     expect(wardogImg?.name).toBe("wardogs-dancer.png");
+  });
+
+  it("parses release asset download URLs correctly (#448)", () => {
+    const parsed = parseReleaseAssetUrl("https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png");
+    expect(parsed).toEqual({
+      owner: "solwation",
+      repo: "untappdbolaget",
+      repository: "solwation/untappdbolaget",
+      tag: "untagged-88cbdda083a58460c44e",
+      assetName: "issue-3488-before-1280-2026-11-11.png",
+      url: "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png",
+    });
+
+    const parsedWithQuery = parseReleaseAssetUrl("https://github.com/owner/repo/releases/download/v1.0.0/screenshot.jpg?raw=true#fragment");
+    expect(parsedWithQuery).toEqual({
+      owner: "owner",
+      repo: "repo",
+      repository: "owner/repo",
+      tag: "v1.0.0",
+      assetName: "screenshot.jpg",
+      url: "https://github.com/owner/repo/releases/download/v1.0.0/screenshot.jpg",
+    });
+
+    expect(parseReleaseAssetUrl("https://github.com/owner/repo/releases/download/v1.0.0/archive.zip")).toBeNull();
+    expect(parseReleaseAssetUrl("https://other.com/owner/repo/releases/download/v1/pic.png")).toBeNull();
+    expect(parseReleaseAssetUrl("https://github.com/owner/repo/issues/123")).toBeNull();
+    expect(parseReleaseAssetUrl("")).toBeNull();
+    expect(parseReleaseAssetUrl(null)).toBeNull();
+  });
+
+  it("extracts release asset images from markdown comments into detected items (#448)", () => {
+    const rawMarkdown = [
+      "Before, 1280:",
+      "![before](https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png)",
+      "After, 1280:",
+      "![after](https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png)",
+    ].join("\n");
+
+    const html = renderMarkdown(rawMarkdown);
+    const { cleanHtml, images } = extractCommentImages(html, t);
+
+    expect(images).toHaveLength(2);
+    expect(images[0]).toMatchObject({
+      name: "issue-3488-before-1280-2026-11-11.png",
+      alt: "before",
+      assetUrl: "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png",
+      repository: "solwation/untappdbolaget",
+      key: "asset:https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png",
+    });
+    expect(images[1]).toMatchObject({
+      name: "issue-3488-after-1280-2026-11-11.png",
+      alt: "after",
+      assetUrl: "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png",
+      repository: "solwation/untappdbolaget",
+      key: "asset:https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png",
+    });
+
+    // cleanHtml has data-release-asset-url and data-raw-src without raw src attribute
+    expect(cleanHtml).toContain('data-release-asset-url="https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png"');
+    expect(cleanHtml).toContain('data-raw-src="https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png"');
+    expect(cleanHtml).not.toMatch(/\ssrc=["']/);
   });
 });

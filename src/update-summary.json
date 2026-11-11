@@ -1,10 +1,10 @@
 {
-  "baseCommit": "34f22a4fe94b41c1e71c70e006ddbbab2afeb0ff",
+  "baseCommit": "d2ccda41f156f182895c70a8aae33682cceea550",
   "summary": {
-    "sv": "SP => tid-kalibrering anpassar historikfönstret upp till 90 dagar vid få avslut och filtrerar bort korta anomalier under 60 sekunder.",
-    "en": "SP-to-time calibration adaptively widens history up to 90 days when closures are sparse and filters short anomalies under 60 seconds."
+    "sv": "Kommentarsbilder från privata release-assets visas nu via GitHub API i dialogen och galleriet, med tydlig platshållare om en bild saknas.",
+    "en": "Comment images from private release assets now display via GitHub API in dialogs and lightbox gallery, with clear placeholder if image is missing."
   },
   "issues": [
-    447
+    448
   ]
 }

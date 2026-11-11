@@ -100,7 +100,7 @@ import { boardGroupingFrom, defaultBoardGrouping, type BoardGrouping } from "./l
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { provideSubIssues } from "./composables/useSubIssues";
-import { fileLoaderKey } from "./lib/comment-images";
+import { fileLoaderKey, parseReleaseAssetUrl } from "./lib/comment-images";
 import { GitHub, GitHubApiError } from "./lib/github";
 import { PendingClosures, mergeVerified, verificationAllowed, withPendingClosures, type PendingClosure } from "./lib/pending-closures";
 import { callback, login, oauthReady } from "./lib/auth";
@@ -1233,6 +1233,11 @@ provideSubIssues({
 provide(fileLoaderKey, async (repository: string, path: string) => {
   const client = api, run = generation;
   if (!client || isDemo.value) return null;
+  const assetRef = parseReleaseAssetUrl(path);
+  if (assetRef) {
+    const result = await client.releaseAsset(assetRef.repository, assetRef.assetName, path);
+    return client === api && run === generation ? result : null;
+  }
   const result = await client.repoFile(repository, path);
   return client === api && run === generation ? result : null;
 });

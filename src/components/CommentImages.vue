@@ -3,11 +3,13 @@ import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { ChevronLeft, ChevronRight, Image as ImageIcon, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import {
+  basename,
   extractCommentImages,
   fileLoaderKey,
   imageDocument,
   imageGalleryKey,
   normalizeRepoPath,
+  parseReleaseAssetUrl,
   type DetectedImage,
 } from "../lib/comment-images";
 
@@ -53,6 +55,29 @@ function originalSize() { fitted.value = false; zoom.value = 1; }
 const galleryContext = inject(imageGalleryKey, undefined);
 const fileLoader = inject(fileLoaderKey, undefined);
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderPlaceholder(attrs: string, fallbackUrl?: string): string {
+  const altMatch = attrs.match(/alt=["']([^"']*)["']/i);
+  const rawSrcMatch = attrs.match(/data-raw-src=["']([^"']+)["']/i);
+  const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+  const rawSrc = rawSrcMatch?.[1] || srcMatch?.[1] || fallbackUrl || "";
+  const alt = altMatch?.[1] || (rawSrc ? basename(rawSrc) : t("Bild"));
+
+  let targetUrl = rawSrc;
+  if (rawSrc && !rawSrc.includes("://") && props.repository) {
+    targetUrl = `https://github.com/${props.repository}/blob/main/${rawSrc.replace(/^\/+/, "")}`;
+  }
+
+  const linkHtml = targetUrl
+    ? `<a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener noreferrer" class="image-placeholder-link"><span>${escapeHtml(t("Visa på GitHub"))}</span><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="external-link-icon" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>`
+    : "";
+
+  return `<span class="image-placeholder preview-failed" role="group" aria-label="${escapeHtml(t("Bild: {name}", { name: alt }))}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="image-placeholder-icon" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="image-placeholder-info"><span class="image-placeholder-alt">${escapeHtml(alt)}</span>${linkHtml}</span></span>`;
+}
+
 const cleanHtml = ref("");
 const renderedHtml = computed(() => {
   const html = cleanHtml.value;
@@ -66,17 +91,38 @@ const renderedHtml = computed(() => {
         return match.replace(/<img\b/i, `<img src="${loaded[cleanPath]}" `);
       }
       if (failed[cleanPath]) {
-        return match.replace(/class=["']([^"']*)["']/i, 'class="$1 preview-failed"');
+        return renderPlaceholder(attrs, cleanPath);
       }
       return match;
     }
+
+    const assetMatch = attrs.match(/data-release-asset-url=["']([^"']+)["']/i);
+    if (assetMatch) {
+      const assetUrl = assetMatch[1]!;
+      if (loaded[assetUrl]) {
+        return match.replace(/<img\b/i, `<img src="${loaded[assetUrl]}" `);
+      }
+      if (failed[assetUrl]) {
+        return renderPlaceholder(attrs, assetUrl);
+      }
+      return match;
+    }
+
     const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
     if (!srcMatch) return match;
     const src = srcMatch[1]!;
+    if (failed[src]) {
+      return renderPlaceholder(attrs, src);
+    }
     if (src.startsWith("data:") || src.includes("://")) return match;
     const cleanPath = normalizeRepoPath(src);
-    if (cleanPath && loaded[cleanPath]) {
-      return match.replace(srcMatch[0], `src="${loaded[cleanPath]}" data-repo-path="${cleanPath}"`);
+    if (cleanPath) {
+      if (loaded[cleanPath]) {
+        return match.replace(srcMatch[0], `src="${loaded[cleanPath]}" data-repo-path="${cleanPath}"`);
+      }
+      if (failed[cleanPath]) {
+        return renderPlaceholder(attrs, cleanPath);
+      }
     }
     return match;
   });
@@ -112,6 +158,27 @@ function updateImages() {
         });
       }
     }
+    if (item.assetUrl && !loadedUrls.value[item.assetUrl] && !loadingPaths.value[item.assetUrl] && !failedPaths.value[item.assetUrl]) {
+      const targetRepo = item.repository || props.repository;
+      if (targetRepo && fileLoader) {
+        loadingPaths.value = { ...loadingPaths.value, [item.assetUrl]: true };
+        fileLoader(targetRepo, item.assetUrl).then(blobUrl => {
+          const nextLoading = { ...loadingPaths.value };
+          delete nextLoading[item.assetUrl!];
+          loadingPaths.value = nextLoading;
+          if (blobUrl) {
+            loadedUrls.value = { ...loadedUrls.value, [item.assetUrl!]: blobUrl };
+          } else {
+            failedPaths.value = { ...failedPaths.value, [item.assetUrl!]: true };
+          }
+        }).catch(() => {
+          const nextLoading = { ...loadingPaths.value };
+          delete nextLoading[item.assetUrl!];
+          loadingPaths.value = nextLoading;
+          failedPaths.value = { ...failedPaths.value, [item.assetUrl!]: true };
+        });
+      }
+    }
   }
 }
 
@@ -130,9 +197,10 @@ const carouselImages = computed<CarouselItem[]>(() => {
   return detected.value
     .filter(item => !item.isInline)
     .map(item => {
-      const src = item.src || (item.path ? loadedUrls.value[item.path] : undefined);
-      const loading = Boolean(item.path && loadingPaths.value[item.path]);
-      const failed = Boolean(item.path && failedPaths.value[item.path]);
+      const srcKey = item.path || item.assetUrl;
+      const src = item.src || (srcKey ? loadedUrls.value[srcKey] : undefined);
+      const loading = Boolean(srcKey && loadingPaths.value[srcKey]);
+      const failed = Boolean(srcKey && failedPaths.value[srcKey]);
       return {
         key: item.key,
         name: item.name,
@@ -197,6 +265,7 @@ async function activate(event: MouseEvent | KeyboardEvent) {
   if (!(event.target instanceof Element)) return;
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   if (event instanceof KeyboardEvent && !["Enter", " "].includes(event.key)) return;
+  if (event.target.closest("a.image-placeholder-link")) return;
   const image = event.target instanceof HTMLImageElement && event.target.classList.contains("comment-thumbnail") ? event.target : undefined;
   const link = event.target.closest<HTMLAnchorElement>("a[data-image-src]");
   if (!image && !link) return;
@@ -212,9 +281,17 @@ async function activate(event: MouseEvent | KeyboardEvent) {
   const groups = sources.map(source => ({
     key: source.key,
     images: [...imageDocument(source.html, t).querySelectorAll("img")].map(img => {
-      const rawSrc = img.getAttribute("src") || "";
+      const rawSrc = img.dataset.rawSrc || img.getAttribute("src") || "";
       const cleanPath = normalizeRepoPath(rawSrc);
-      const resolvedSrc = (cleanPath && loadedUrls.value[cleanPath]) ? loadedUrls.value[cleanPath] : img.src;
+      const assetRef = parseReleaseAssetUrl(rawSrc);
+      let resolvedSrc = img.src;
+      if (cleanPath && loadedUrls.value[cleanPath]) {
+        resolvedSrc = loadedUrls.value[cleanPath];
+      } else if (assetRef && loadedUrls.value[assetRef.url]) {
+        resolvedSrc = loadedUrls.value[assetRef.url];
+      } else if (loadedUrls.value[rawSrc]) {
+        resolvedSrc = loadedUrls.value[rawSrc];
+      }
       return { src: resolvedSrc, alt: img.alt || t("Bild") };
     }),
   }));
@@ -289,11 +366,22 @@ function pointerUp(event: PointerEvent) {
   if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.5) void navigate(dx < 0 ? 1 : -1);
 }
 
+function handleImageError(event: Event) {
+  const target = event.target;
+  if (target instanceof HTMLImageElement) {
+    target.classList.add("preview-failed");
+    const rawSrc = target.dataset.rawSrc || target.getAttribute("src") || "";
+    if (rawSrc) {
+      failedPaths.value = { ...failedPaths.value, [rawSrc]: true };
+    }
+  }
+}
+
 onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <template>
-  <div data-image-content :class="contentClass" @click="activate" @keydown="activate" @load.capture="($event.target as HTMLElement).classList.remove('preview-failed')" @error.capture="($event.target as HTMLElement).classList.add('preview-failed')" v-html="renderedHtml" />
+  <div data-image-content :class="contentClass" @click="activate" @keydown="activate" @load.capture="($event.target as HTMLElement).classList.remove('preview-failed')" @error.capture="handleImageError" v-html="renderedHtml" />
   <!-- Carousel for collected and mentioned images (#442) -->
   <div v-if="carouselImages.length" class="comment-image-carousel" role="region" :aria-label="t('Omnämnda bilder')">
     <div class="carousel-header">
@@ -359,7 +447,54 @@ onBeforeUnmount(() => observer?.disconnect());
 :deep(.comment-thumbnail) { display: inline-block; width: auto; height: auto; box-sizing: border-box; max-width: min(240px, calc(100% - 1rem)); max-height: 160px; object-fit: contain; vertical-align: middle; margin: .4rem; border: 1px solid var(--line); border-radius: .4rem; cursor: zoom-in; }
 :deep(.direct-image-preview) { display: block; margin: .4rem 0; }
 :deep(.comment-thumbnail:focus-visible), button:focus-visible, .image-viewport:focus-visible, .carousel-track:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
-:deep(.preview-failed) { display: none; }
+:deep(img.preview-failed) { display: none; }
+:deep(.image-placeholder) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  max-width: min(440px, calc(100% - 1rem));
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+:deep(.image-placeholder-icon) {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+:deep(.image-placeholder-info) {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+:deep(.image-placeholder-alt) {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:deep(.image-placeholder-link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+  text-decoration: none;
+  font-size: 11px;
+}
+:deep(.image-placeholder-link:hover) {
+  text-decoration: underline;
+}
+:deep(.external-link-icon) {
+  flex-shrink: 0;
+}
 .comment-image-viewer { box-sizing: border-box; width: calc(100vw - 1rem); height: calc(100dvh - 1rem); max-width: none; max-height: none; padding: .5rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface); color: var(--text); overflow: hidden; }
 .comment-image-viewer[open] { display: flex; flex-direction: column; gap: .5rem; }
 .comment-image-viewer::backdrop { background: #000b; }
