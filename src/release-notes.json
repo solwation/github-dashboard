@@ -2,10 +2,19 @@
   {
     "date": "2026-11-11",
     "summary": {
-      "sv": "Lokal Story Point-heuristik kalibrerad mot historik: skiljer enkla rutinärenden (1 SP) från standard (2 SP) och komplexa (3 SP).",
-      "en": "Local Story Point heuristic calibrated against history: separates simple chores (1 SP) from standard (2 SP) and complex (3 SP)."
+      "sv": "Tids- och SP-beräkningar förbättrade med kalibrerad SP-heuristik, adaptivt historikfönster upp till 90 dagar och anomalifiltrering.",
+      "en": "Time and SP estimations improved with calibrated sizing, adaptive history window up to 90 days, and anomaly filtering."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "SP => tid-kalibrering anpassar historikfönstret upp till 90 dagar vid få avslut och filtrerar bort korta anomalier under 60 sekunder.",
+          "en": "SP-to-time calibration adaptively widens history up to 90 days when closures are sparse and filters short anomalies under 60 seconds."
+        },
+        "issues": [
+          447
+        ]
+      },
       {
         "text": {
           "sv": "Lokal Story Point-beräkning väger in prioritetsnivå och rutinärenden för att ge en balanserad fördelning över 1, 2 och 3 SP.",

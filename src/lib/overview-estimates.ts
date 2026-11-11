@@ -38,7 +38,7 @@ export function overviewPointSummary(groups: OverviewEstimateGroup[], key: Overv
   const external = otherRepositoryMembers(groups);
   const contributors = groups.flatMap((group, index) => {
     const issues = selected(group, key);
-    if (!children?.size || repositoryEstimate(group.issues, now, { rules: group.rules }).basis.msPerPoint === null)
+    if (!children?.size || repositoryEstimate(group.issues, now, { rules: group.rules, adaptiveWindow: false }).basis.msPerPoint === null)
       return issues;
     const grouped = estimateGroups(group.issues, now, { rules: group.rules, children, external: external[index] });
     const members = new Set(group.issues.filter(issue => { const state = column(issue, group.rules); return !issue.pull_request && (state === "progress" || state === "backlog"); }).map(issue => issue.id));
@@ -65,7 +65,7 @@ export function overviewTimeEstimate(groups: OverviewEstimateGroup[], key: Overv
   for (const [index, group] of groups.entries()) {
     if (!selected(group, key).length) continue;
     repositories++;
-    const estimate = repositoryEstimate(group.issues, now, { rules: group.rules, children, external: external[index] });
+    const estimate = repositoryEstimate(group.issues, now, { rules: group.rules, children, external: external[index], adaptiveWindow: false });
     if (estimate.basis.msPerPoint === null) continue;
     knownRepositories++;
     remainingMs = Math.max(remainingMs, estimate.progress?.remainingMs ?? 0, key === "open" ? estimate.backlog?.remainingMs ?? 0 : 0);

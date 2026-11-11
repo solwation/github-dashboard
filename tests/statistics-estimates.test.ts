@@ -83,6 +83,20 @@ describe("historical time per story point (#280)", () => {
     expect(closings.find(closing => closing.issue.id === 3)!.reopenedMs).toBe(now - HOUR);
   });
 
+  it("drops extreme short duration anomalies when computing msPerPoint (#447)", () => {
+    const subjects = [1, 2, 3, 4].map(id => issue(id));
+    // 3 standard issues taking 2 hours, and 1 anomalous 10-second closure
+    const events = [
+      ...work(subjects[0]!, now - 40 * HOUR, 2),
+      ...work(subjects[1]!, now - 30 * HOUR, 2),
+      ...work(subjects[2]!, now - 20 * HOUR, 2),
+      ...work(subjects[3]!, now - 2 * HOUR, 10 / 3600), // 10 seconds
+    ];
+    const points = statisticsIssuePoints(subjects[0])!;
+    // The 10-second closure is filtered out (< 60s and < 0.1 * median), leaving the 3 clean 2-hour issues
+    expect(msPerPointAt(statisticsClosings(snapshot(events)), now)).toBe(2 * HOUR / points);
+  });
+
   it("follows the progress label rules and hides silently without a basis or without events", () => {
     const subjects = [1, 2, 3].map(id => issue(id));
     const events = subjects.flatMap((subject, index) => work(subject, now - (index + 1) * HOUR, 1, "alice", "Doing it"));

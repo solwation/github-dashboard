@@ -182,10 +182,44 @@ describe("recent point-calibrated forecasts", () => {
       issue("closed", { workStartedAt: "invalid", startedAt: iso(now - hour), closed_at: iso(now) })];
     expect(historySamples(items, now)).toHaveLength(3);
     expect(nextHistoryExpiry(items, now)).toBe(now + 1);
-    expect(repositoryEstimate([...items, issue("backlog")], now).backlog).not.toBeNull();
-    expect(repositoryEstimate([...items, issue("backlog")], now + 1).backlog).toBeNull();
+    expect(repositoryEstimate([...items, issue("backlog")], now, { adaptiveWindow: false }).backlog).not.toBeNull();
+    expect(repositoryEstimate([...items, issue("backlog")], now + 1, { adaptiveWindow: false }).backlog).toBeNull();
     expect(nextHistoryExpiry(items, now + 1)).toBe(now + min + 1);
     expect(nextHistoryExpiry([], now)).toBeNull();
+  });
+  it("adaptively widens historical window up to 90 days when recent 30-day closures are fewer than MIN_SAMPLES (#447)", () => {
+    // 2 closures in 30 days, 1 closure 45 days ago
+    const sparse = [done(hour, 10 * day), done(hour, 20 * day), done(hour, 45 * day)];
+    const strict = repositoryEstimate([...sparse, issue("backlog")], now, { adaptiveWindow: false });
+    expect(strict.basis.msPerPoint).toBeNull();
+    expect(strict.backlog).toBeNull();
+
+    const adaptive = repositoryEstimate([...sparse, issue("backlog")], now);
+    expect(adaptive.basis.samples).toBe(3);
+    expect(adaptive.basis.windowDays).toBe(90);
+    expect(adaptive.basis.msPerPoint).toBe(hour);
+    expect(adaptive.backlog).not.toBeNull();
+
+    // Past 90 days, even adaptive window expires
+    const ancient = [done(hour, 95 * day), done(hour, 100 * day), done(hour, 110 * day)];
+    expect(repositoryEstimate([...ancient, issue("backlog")], now).basis.msPerPoint).toBeNull();
+  });
+  it("filters extreme short durations and lower anomalies in calibrationSamples (#447)", () => {
+    const sized = (points: number) => ({ name: `points: ${points}`, color: "000000" });
+    const samples = [
+      { ...done(20 * min, 5 * day), labels: [sized(1)] },
+      { ...done(25 * min, 4 * day), labels: [sized(1)] },
+      { ...done(30 * min, 3 * day), labels: [sized(1)] },
+      // 10-second misclosure: < 60s and < 0.1 * median (25 min * 0.1 = 2.5 min = 150s)
+      { ...done(10 * 1000, 2 * day), labels: [sized(1)] },
+      // 200-hour interrupted run: > 4 * median
+      { ...done(200 * hour, day), labels: [sized(1)] },
+    ];
+    const raw = historySamples(samples, now);
+    expect(raw).toHaveLength(5);
+    const retained = calibrationSamples(raw);
+    expect(retained).toHaveLength(3);
+    expect(retained.map(s => s.durationMs)).toEqual([30 * min, 25 * min, 20 * min]);
   });
   it("learns a robust time per point, then sizes each issue before subtracting elapsed work", () => {
     const history = [

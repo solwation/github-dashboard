@@ -1,10 +1,10 @@
 {
-  "baseCommit": "3e37b8ad017437621ac00ca64dd85c5244d676e5",
+  "baseCommit": "34f22a4fe94b41c1e71c70e006ddbbab2afeb0ff",
   "summary": {
-    "sv": "Lokal Story Point-beräkning väger in prioritetsnivå och rutinärenden för att ge en balanserad fördelning över 1, 2 och 3 SP.",
-    "en": "Local Story Point sizing incorporates priority and chore signals to provide a balanced distribution across 1, 2, and 3 SP."
+    "sv": "SP => tid-kalibrering anpassar historikfönstret upp till 90 dagar vid få avslut och filtrerar bort korta anomalier under 60 sekunder.",
+    "en": "SP-to-time calibration adaptively widens history up to 90 days when closures are sparse and filters short anomalies under 60 seconds."
   },
   "issues": [
-    446
+    447
   ]
 }

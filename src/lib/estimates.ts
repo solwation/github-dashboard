@@ -46,9 +46,12 @@ import { activeWorkMs, activeWorkStart, awaitsIntegration, closedWorkMs, column,
  *   skipped.
  */
 export const ESTIMATE_WINDOW_DAYS = 30;
+export const MAX_ESTIMATE_WINDOW_DAYS = 90;
 export const MIN_SAMPLES = 3;
 export const MAX_HISTORY_SAMPLES = 30;
 export const EXTREME_DURATION_MULTIPLIER = 4;
+export const MIN_CALIBRATION_DURATION_MS = 60000;
+export const MIN_CALIBRATION_RATE_MULTIPLIER = 0.1;
 const DAY_MS = 86400000;
 
 export interface HistorySample {
@@ -124,6 +127,8 @@ export interface EstimateOptions {
   external?: ReadonlySet<number>;
   windowDays?: number;
   sampleLimit?: number;
+  /** Whether to adaptively fall back to a wider historical window (up to MAX_ESTIMATE_WINDOW_DAYS) when recent closures are sparse (#447). */
+  adaptiveWindow?: boolean;
 }
 
 const time = (value: string | null | undefined) => (value ? Date.parse(value) : NaN);
@@ -151,9 +156,18 @@ export function historySamples(
 
 /** First millisecond after a currently included closure leaves the inclusive rolling window. */
 export function nextHistoryExpiry(issues: Issue[], now: number, options: EstimateOptions = {}): number | null {
+  const windowDays = options.windowDays ?? ESTIMATE_WINDOW_DAYS;
   const samples = historySamples(issues, now, options);
-  if (!samples.length) return null;
-  return Math.min(...samples.map(sample => sample.closedMs + (options.windowDays ?? ESTIMATE_WINDOW_DAYS) * DAY_MS + 1));
+  if (samples.length) {
+    return Math.min(...samples.map(sample => sample.closedMs + windowDays * DAY_MS + 1));
+  }
+  if (options.windowDays === undefined && options.adaptiveWindow !== false) {
+    const wider = historySamples(issues, now, { ...options, windowDays: MAX_ESTIMATE_WINDOW_DAYS });
+    if (wider.length) {
+      return Math.min(...wider.map(sample => sample.closedMs + MAX_ESTIMATE_WINDOW_DAYS * DAY_MS + 1));
+    }
+  }
+  return null;
 }
 
 export function median(values: number[]): number | null {
@@ -163,7 +177,8 @@ export function median(values: number[]): number | null {
 }
 
 /**
- * Suspected interrupted runs must not teach future forecasts or historical concurrency.
+ * Suspected interrupted runs and trivial instant-closure anomalies must not distort future forecasts
+ * or historical concurrency (#447).
  * Normalize by size before comparing: a large issue taking proportionately longer is valid.
  * Use one robust median of the raw window; do not iteratively trim legitimate slow work.
  */
@@ -171,7 +186,12 @@ export function calibrationSamples(samples: HistorySample[]): HistorySample[] {
   if (samples.length < MIN_SAMPLES) return samples;
   const rates = samples.map(sample => sample.durationMs / approximatePoints(sample.issue));
   const center = median(rates)!;
-  return samples.filter((_, index) => rates[index]! <= center * EXTREME_DURATION_MULTIPLIER);
+  return samples.filter((sample, index) => {
+    const rate = rates[index]!;
+    const tooShort = sample.durationMs < MIN_CALIBRATION_DURATION_MS && rate < center * MIN_CALIBRATION_RATE_MULTIPLIER;
+    const tooLong = rate > center * EXTREME_DURATION_MULTIPLIER;
+    return !tooShort && !tooLong;
+  });
 }
 
 /** Median sample duration, or null with fewer than `MIN_SAMPLES` samples. */
@@ -219,7 +239,17 @@ export function repositoryEstimate(
 ): RepositoryEstimate {
   const { rules = {}, windowDays = ESTIMATE_WINDOW_DAYS } = options;
   const list = issuesOf(issues);
-  const samples = calibrationSamples(historySamples(list, now, options));
+  let effectiveWindowDays = windowDays;
+  let rawSamples = historySamples(list, now, options);
+  let samples = calibrationSamples(rawSamples);
+  if (samples.length < MIN_SAMPLES && options.windowDays === undefined && options.adaptiveWindow !== false) {
+    const wider = historySamples(list, now, { ...options, windowDays: MAX_ESTIMATE_WINDOW_DAYS });
+    const widerSamples = calibrationSamples(wider);
+    if (widerSamples.length >= MIN_SAMPLES) {
+      samples = widerSamples;
+      effectiveWindowDays = MAX_ESTIMATE_WINDOW_DAYS;
+    }
+  }
   const typicalMs = typicalDuration(samples);
   const msPerPoint = samples.length < MIN_SAMPLES ? null : median(samples.map(sample => sample.durationMs / approximatePoints(sample.issue)));
   const active = list.filter((issue) => column(issue, rules) === "progress");
@@ -228,8 +258,8 @@ export function repositoryEstimate(
     samples: samples.length,
     typicalMs,
     msPerPoint,
-    windowDays,
-    parallelism: parallelism(samples, active, now, windowDays, rules),
+    windowDays: effectiveWindowDays,
+    parallelism: parallelism(samples, active, now, effectiveWindowDays, rules),
   };
   if (msPerPoint === null) return { basis, progress: null, backlog: null };
   const groups = subIssueGroups([...active, ...waiting], now, rules, windowDays, options.children, options.external);
