@@ -1,10 +1,10 @@
 {
-  "baseCommit": "d2ccda41f156f182895c70a8aae33682cceea550",
+  "baseCommit": "985dce0bad66e7b77563c3df23c3e875d6603bd1",
   "summary": {
-    "sv": "Kommentarsbilder från privata release-assets visas nu via GitHub API i dialogen och galleriet, med tydlig platshållare om en bild saknas.",
-    "en": "Comment images from private release assets now display via GitHub API in dialogs and lightbox gallery, with clear placeholder if image is missing."
+    "sv": "Kommentarsbilder från raw.githubusercontent.com och HTML-img visas nu med ref-fallback till standardgrenen och säker sanering.",
+    "en": "Comment images from raw.githubusercontent.com and HTML img now render with ref fallback to the default branch and safe sanitization."
   },
   "issues": [
-    448
+    450
   ]
 }

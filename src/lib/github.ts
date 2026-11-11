@@ -171,28 +171,39 @@ export class GitHub {
     assets?: Array<{ id: number; name: string; url: string; browser_download_url: string }>;
   }> | null>>();
 
-  async repoFile(repoFullName: string, path: string): Promise<string | null> {
+  async repoFile(repoFullName: string, path: string, ref?: string): Promise<string | null> {
     const cleanPath = normalizeRepoPath(path);
     if (!cleanPath) return null;
-    const cacheKey = `${repoFullName}:${cleanPath}`;
+    const cleanRef = ref?.trim() || "";
+    const cacheKey = `${repoFullName.toLowerCase()}:${cleanRef || "default"}:${cleanPath.toLowerCase()}`;
     const cached = this.repoFiles.get(cacheKey);
     if (cached) return cached;
     const promise = (async () => {
       try {
         const encoded = cleanPath.split("/").map(encodeURIComponent).join("/");
-        const response = await this.request<{ content?: string; encoding?: string; sha?: string; type?: string; size?: number }>(
-          `/repos/${repoFullName}/contents/${encoded}`,
+        const query = cleanRef ? `?ref=${encodeURIComponent(cleanRef)}` : "";
+        let response = await this.request<{ content?: string; encoding?: string; sha?: string; type?: string; size?: number }>(
+          `/repos/${repoFullName}/contents/${encoded}${query}`,
           { store: false },
-        );
-        const data = response.data;
+        ).catch(() => null);
+
+        // If specific ref (e.g. stale/ephemeral branch commit SHA) failed with 404, fallback to default branch without ref
+        if (!response?.data && cleanRef) {
+          response = await this.request<{ content?: string; encoding?: string; sha?: string; type?: string; size?: number }>(
+            `/repos/${repoFullName}/contents/${encoded}`,
+            { store: false },
+          ).catch(() => null);
+        }
+
+        const data = response?.data;
         if (!data) return null;
         let base64 = data.encoding === "base64" && typeof data.content === "string" ? data.content.replace(/\s/g, "") : null;
         if (!base64 && data.sha) {
           const blob = await this.request<{ content?: string; encoding?: string }>(
             `/repos/${repoFullName}/git/blobs/${data.sha}`,
             { store: false },
-          );
-          if (blob.data?.encoding === "base64" && typeof blob.data.content === "string") {
+          ).catch(() => null);
+          if (blob?.data?.encoding === "base64" && typeof blob.data.content === "string") {
             base64 = blob.data.content.replace(/\s/g, "");
           }
         }

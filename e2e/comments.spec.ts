@@ -715,3 +715,63 @@ test("loads and renders private release asset images in comments (#448)", async 
   await expect(ghLink).toBeVisible();
   await expect(ghLink).toHaveAttribute("href", "https://github.com/sample/comment-project/releases/download/untagged-xyz/non-existent.png");
 });
+
+test("loads and renders raw.githubusercontent images with ref fallback and HTML img tags (#450)", async ({ page }) => {
+  const base64Png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+  // Intercept raw.githubusercontent.com requests
+  await page.route("https://raw.githubusercontent.com/**", async route => {
+    const url = route.request().url();
+    if (url.includes("stale-commit-sha")) {
+      await route.fulfill({ status: 404, body: "Not found" });
+    } else {
+      await route.fulfill({ contentType: "image/png", body: Buffer.from(base64Png, "base64") });
+    }
+  });
+
+  await connect(page, async route => {
+    await route.fulfill({
+      json: [
+        comment(1, [
+          "Verification screenshot with stale commit SHA:",
+          "![Vehicle verification](https://raw.githubusercontent.com/sample/comment-project/stale-commit-sha/docs/verification/car.png)",
+          "HTML img tag with direct link:",
+          '<img src="https://raw.githubusercontent.com/sample/comment-project/valid-sha/docs/verification/cat.png" width="600" alt="Cat verification">',
+        ].join("\n\n")),
+      ],
+    });
+  });
+
+  // Intercept repo contents API
+  await page.route("https://api.github.com/repos/sample/comment-project/contents/docs/verification/car.png*", async route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("ref") === "stale-commit-sha") {
+      // Branch commit SHA 404s
+      await route.fulfill({ status: 404, json: { message: "No commit found for ref stale-commit-sha" } });
+    } else {
+      // Default branch fallback succeeds
+      await route.fulfill({
+        json: {
+          type: "file",
+          encoding: "base64",
+          content: base64Png,
+        },
+      });
+    }
+  });
+
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).filter({ visible: true }).first().click();
+  const commentsDialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+
+  // 1. Vehicle image with stale SHA is recovered via repoFile fallback and rendered
+  const vehicleThumb = commentsDialog.getByRole("button", { name: "Öppna bild: Vehicle verification", exact: true });
+  await expect(vehicleThumb).toBeVisible();
+  await expect(vehicleThumb).toHaveAttribute("src", /^data:image\/png;base64,/);
+
+  // 2. HTML img tag is cleanly rendered as thumbnail, without escaped &lt;img raw text
+  await expect(commentsDialog.locator(".comment-markdown")).not.toContainText("<img");
+  await expect(commentsDialog.locator(".comment-markdown")).not.toContainText("&lt;img");
+  const catThumb = commentsDialog.getByRole("button", { name: "Öppna bild: Cat verification", exact: true });
+  await expect(catThumb).toBeVisible();
+  await expect(catThumb).toHaveAttribute("src", /raw\.githubusercontent\.com/);
+});

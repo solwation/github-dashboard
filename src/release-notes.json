@@ -2,10 +2,19 @@
   {
     "date": "2026-11-11",
     "summary": {
-      "sv": "Stöd för privata release-bilder i kommentarer, samt förbättrade SP- och tidsberäkningar med adaptiv historik.",
-      "en": "Support for private release images in comments, plus improved SP and time estimations with adaptive history."
+      "sv": "Stöd för GitHub-raw-bilder och HTML-img i kommentarer med ref-fallback, samt privata release-bilder och adaptiv SP-kalibrering.",
+      "en": "Support for GitHub raw and HTML img images in comments with ref fallback, plus private release images and adaptive SP calibration."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Kommentarsbilder från raw.githubusercontent.com och HTML-img visas med ref-fallback och säker sanering vid brutna länkar.",
+          "en": "Comment images from raw.githubusercontent.com and HTML img render with ref fallback and safe sanitization on broken links."
+        },
+        "issues": [
+          450
+        ]
+      },
       {
         "text": {
           "sv": "Bilder från privata release-assets visas i kommentarer och bildvisare via GitHub-API:et, med tydlig platshållare vid fel.",

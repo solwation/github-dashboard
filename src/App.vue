@@ -100,7 +100,7 @@ import { boardGroupingFrom, defaultBoardGrouping, type BoardGrouping } from "./l
 import Github from "./components/GithubIcon.vue";
 import InstallApp from "./components/InstallApp.vue";
 import { provideSubIssues } from "./composables/useSubIssues";
-import { fileLoaderKey, parseReleaseAssetUrl } from "./lib/comment-images";
+import { fileLoaderKey, parseGitHubRepoFileUrl, parseReleaseAssetUrl } from "./lib/comment-images";
 import { GitHub, GitHubApiError } from "./lib/github";
 import { PendingClosures, mergeVerified, verificationAllowed, withPendingClosures, type PendingClosure } from "./lib/pending-closures";
 import { callback, login, oauthReady } from "./lib/auth";
@@ -1230,7 +1230,7 @@ provideSubIssues({
   known: (repository, id) => subIssueBoardIndex.value.get(repository.toLowerCase())?.get(id),
   revision: repository => relationsRevisions.value[repository] ?? 0,
 });
-provide(fileLoaderKey, async (repository: string, path: string) => {
+provide(fileLoaderKey, async (repository: string, path: string, ref?: string) => {
   const client = api, run = generation;
   if (!client || isDemo.value) return null;
   const assetRef = parseReleaseAssetUrl(path);
@@ -1238,7 +1238,12 @@ provide(fileLoaderKey, async (repository: string, path: string) => {
     const result = await client.releaseAsset(assetRef.repository, assetRef.assetName, path);
     return client === api && run === generation ? result : null;
   }
-  const result = await client.repoFile(repository, path);
+  const repoFileRef = parseGitHubRepoFileUrl(path);
+  if (repoFileRef) {
+    const result = await client.repoFile(repoFileRef.repository, repoFileRef.path, repoFileRef.ref || ref);
+    return client === api && run === generation ? result : null;
+  }
+  const result = await client.repoFile(repository, path, ref);
   return client === api && run === generation ? result : null;
 });
 const activityClock = useNow(at => untilNext(at, 60000), { board: true });

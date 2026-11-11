@@ -287,6 +287,16 @@ describe("GitHub transport", () => {
   it("fetches repo files as data URLs and handles blobs (#442)", async () => {
     vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
       if (url.pathname === "/repos/owner/test/contents/assets/dancer.png") {
+        if (url.searchParams.get("ref") === "stale-branch-sha") {
+          return new Response(JSON.stringify({ message: "Not Found" }), { status: 404 });
+        }
+        return new Response(JSON.stringify({
+          type: "file",
+          encoding: "base64",
+          content: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        }));
+      }
+      if (url.pathname === "/repos/owner/test/contents/branch-only.png" && url.searchParams.get("ref") === "feat-branch") {
         return new Response(JSON.stringify({
           type: "file",
           encoding: "base64",
@@ -321,6 +331,13 @@ describe("GitHub transport", () => {
 
     const gif = await client.repoFile("owner/test", "large.gif");
     expect(gif).toContain("data:image/gif;base64,R0lGOD");
+
+    // Specific ref support and fallback on stale commit SHA (#450)
+    const branchImg = await client.repoFile("owner/test", "branch-only.png", "feat-branch");
+    expect(branchImg).toContain("data:image/png;base64,iVBOR");
+
+    const fallbackImg = await client.repoFile("owner/test", "assets/dancer.png", "stale-branch-sha");
+    expect(fallbackImg).toContain("data:image/png;base64,iVBOR");
 
     const missing = await client.repoFile("owner/test", "missing.jpg");
     expect(missing).toBeNull();

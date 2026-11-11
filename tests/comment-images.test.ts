@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { extractCommentImages, issueRepository, normalizeRepoPath, parseReleaseAssetUrl } from "../src/lib/comment-images";
+import {
+  extractCommentImages,
+  issueRepository,
+  normalizeRepoPath,
+  parseGitHubRepoFileUrl,
+  parseReleaseAssetUrl,
+  sanitizeEscapedHtmlImages,
+} from "../src/lib/comment-images";
 import { t } from "../src/lib/i18n";
 import { renderMarkdown } from "../src/lib/markdown";
 
@@ -203,5 +210,85 @@ describe("comment image detection and carousel extraction (#442)", () => {
     expect(cleanHtml).toContain('data-release-asset-url="https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png"');
     expect(cleanHtml).toContain('data-raw-src="https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png"');
     expect(cleanHtml).not.toMatch(/\ssrc=["']/);
+  });
+
+  it("parses GitHub repo file and raw URLs correctly (#450)", () => {
+    const rawUrl = parseGitHubRepoFileUrl("https://raw.githubusercontent.com/solwation/lunden-3d-apartment/c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9/docs/verification/1898/car-glb-production.png");
+    expect(rawUrl).toEqual({
+      owner: "solwation",
+      repo: "lunden-3d-apartment",
+      repository: "solwation/lunden-3d-apartment",
+      ref: "c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9",
+      path: "docs/verification/1898/car-glb-production.png",
+      url: "https://raw.githubusercontent.com/solwation/lunden-3d-apartment/c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9/docs/verification/1898/car-glb-production.png",
+    });
+
+    const blobUrl = parseGitHubRepoFileUrl("https://github.com/solwation/lunden-3d-apartment/blob/main/docs/verification/1898/car-glb-production.png?raw=true#fragment");
+    expect(blobUrl).toEqual({
+      owner: "solwation",
+      repo: "lunden-3d-apartment",
+      repository: "solwation/lunden-3d-apartment",
+      ref: "main",
+      path: "docs/verification/1898/car-glb-production.png",
+      url: "https://github.com/solwation/lunden-3d-apartment/blob/main/docs/verification/1898/car-glb-production.png",
+    });
+
+    const rawGithubUrl = parseGitHubRepoFileUrl("https://github.com/owner/repo/raw/feature-branch/assets/image.webp");
+    expect(rawGithubUrl).toEqual({
+      owner: "owner",
+      repo: "repo",
+      repository: "owner/repo",
+      ref: "feature-branch",
+      path: "assets/image.webp",
+      url: "https://github.com/owner/repo/raw/feature-branch/assets/image.webp",
+    });
+
+    expect(parseGitHubRepoFileUrl("https://raw.githubusercontent.com/owner/repo/main/archive.zip")).toBeNull();
+    expect(parseGitHubRepoFileUrl("https://example.com/owner/repo/raw/main/pic.png")).toBeNull();
+    expect(parseGitHubRepoFileUrl("")).toBeNull();
+    expect(parseGitHubRepoFileUrl(null)).toBeNull();
+  });
+
+  it("sanitizes and renders escaped HTML img tags into safe comment thumbnails (#450)", () => {
+    const rawMarkdown = '<img src="https://raw.githubusercontent.com/solwation/lunden-3d-apartment/68a1403fcf373abd150faf212e90585d8fa78a15/docs/verification/1900/cat-binder-images.png" width="600" alt="Kattbilder i kattpärmen">';
+    const html = renderMarkdown(rawMarkdown);
+    const { cleanHtml, images } = extractCommentImages(html, t);
+
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatchObject({
+      name: "cat-binder-images.png",
+      alt: "Kattbilder i kattpärmen",
+      path: "docs/verification/1900/cat-binder-images.png",
+      repository: "solwation/lunden-3d-apartment",
+    });
+
+    // The ugly &lt;img code is transformed into a clean thumbnail
+    expect(cleanHtml).not.toContain("&lt;img");
+    expect(cleanHtml).toContain('class="comment-thumbnail"');
+    expect(cleanHtml).toContain('alt="Kattbilder i kattpärmen"');
+
+    // Malicious HTML with script or non-image is not transformed
+    const attack = sanitizeEscapedHtmlImages('&lt;img src=x onerror=&quot;alert(1)&quot;&gt;');
+    expect(attack).toBe('&lt;img src=x onerror=&quot;alert(1)&quot;&gt;');
+  });
+
+  it("extracts images with raw.githubusercontent URLs and populates fallback metadata (#450)", () => {
+    const rawMarkdown = "![Optimerade fordonsmodeller](https://raw.githubusercontent.com/solwation/lunden-3d-apartment/c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9/docs/verification/1898/car-glb-production.png)";
+    const html = renderMarkdown(rawMarkdown);
+    const { cleanHtml, images } = extractCommentImages(html, t);
+
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatchObject({
+      name: "car-glb-production.png",
+      alt: "Optimerade fordonsmodeller",
+      path: "docs/verification/1898/car-glb-production.png",
+      repository: "solwation/lunden-3d-apartment",
+      ref: "c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9",
+    });
+
+    expect(cleanHtml).toContain('data-repo-path="docs/verification/1898/car-glb-production.png"');
+    expect(cleanHtml).toContain('data-repository="solwation/lunden-3d-apartment"');
+    expect(cleanHtml).toContain('data-ref="c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9"');
+    expect(cleanHtml).toContain('src="https://raw.githubusercontent.com/solwation/lunden-3d-apartment/c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9/docs/verification/1898/car-glb-production.png"');
   });
 });
