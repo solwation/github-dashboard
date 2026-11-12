@@ -83,6 +83,32 @@ in its own guide.
 | Inspect UI | `review`: UI/UX or graphics changes, before approving delivery | Inspect captured images against acceptance and any reference images | Conductor | Required when triggered: review outcome recorded; defects corrected and affected images refreshed |
 | Share UI result | `follow-up`: UI/UX or graphics changes, before issue closure | Follow the project's upload guide; attach or embed reviewed images with fully-qualified URLs in the completion comment | Conductor | Required when triggered: directly visible image evidence for the delivered revision, or report the capture limitation |
 
+### Expert panel review hook
+
+A project may configure a recommended, optional review hook triggered when "work is complete" (for example, upon queue drain in an unattended session, or when a scoped epic is delivered). Instead of a single superficial pass or uncoordinated ad-hoc edits, the conductor convenes a structured multi-perspective review panel:
+
+| Hook | Phase and trigger/timing | Project procedure | Owner | Requirement and completion evidence |
+| --- | --- | --- | --- | --- |
+| Expert review | `review`: when work completes (queue drained or scoped epic delivered) | Multi-perspective expert panel (see procedure below) | Conductor | Optional: independent analyses, synthesized discussion, and triaged improvement issues |
+
+#### Procedure for multi-perspective review
+
+1. **Identify expert roles:**
+   Based on the changes delivered, the conductor identifies 2–3 distinct review lenses relevant to actual risks, for example:
+   - *Security & robustness:* Permissions, untrusted inputs, boundary leaks, failure modes.
+   - *Architecture & maintainability:* Cohesion, coupling, complexity, alignment with project idioms.
+   - *UX, API ergonomics & accessibility:* Ease of use, naming, clear contracts, documentation completeness.
+   - *Performance & resource efficiency:* Bottlenecks, caching, query load, memory footprint.
+
+2. **Independent analysis (prevent groupthink):**
+   The conductor assigns read-only review briefs to workers (or performs distinct focused passes within capacity). Each expert examines the combined diff independently against its assigned lens, noting concrete gaps, risks, and potential improvements before comparing notes with other perspectives.
+
+3. **Discussion and synthesis:**
+   The perspectives are weighed together (either through agent discussion where supported, or synthesized by the conductor). The conductor filters false positives, resolves trade-offs between competing concerns (such as strict security versus ergonomics), and consolidates findings.
+
+4. **Actionable issues instead of immediate edits:**
+   In accordance with the orchestra's review principles, review workers never make direct uncoordinated code edits during the review. Valid findings are converted into separately scoped, prioritized issues in the project tracker with clear acceptance criteria for future queue cycles.
+
 ### Image hosting and embedding patterns
 
 Visual evidence in completion comments and issues should be directly visible via Markdown image syntax (`![description](url)`), but should avoid bloating the main branch git history or consumers importing the project via `git subtree`. Recommended patterns for project upload guides:
