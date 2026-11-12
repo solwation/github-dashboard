@@ -273,6 +273,7 @@ export const english: Record<string, string> = {
 
   "Issues, etiketter, kommentarer, underärenden och tid i pågående arbete. Statistik över issueflödet.": "Issues, labels, comments, sub-issues and time in progress. Issue activity statistics.",
   "Commitdetaljer och tillagd eller borttagen kod. Statistik över commits och kodändringar.": "Commit details and added or deleted code. Commit and code change statistics.",
+  "Bilder i kommentarer från privata projekt. Commitdetaljer och tillagd eller borttagen kod. Statistik över commits och kodändringar.": "Images in comments from private projects. Commit details and added or deleted code. Commit and code change statistics.",
   "Information om sammanslagna pull requests och deras koppling till stängda issues. Statistik över pull requests.": "Merged pull request information and links to closed issues. Pull request statistics.",
   "Statistik": "Statistics",
   "Meny": "Menu",
@@ -448,6 +449,12 @@ export const english: Record<string, string> = {
   "Stängd {time}": "Closed {time}",
   "För commit-information i privata projekt behövs även läsrättighet till Contents och Pull requests.":
     "For commit information in private projects, also grant read access to Contents and Pull requests.",
+  "För commit-information och bilder i privata projekt behövs även Contents: Read-only samt Pull requests.":
+    "For commit information and images in private projects, Contents: Read-only and Pull requests are also needed.",
+  "tokenen saknar läsrätt till Contents i {repo}":
+    "token lacks read access to Contents in {repo}",
+  "Tokenen saknar läsrätt till Contents i {repo}":
+    "Token lacks read access to Contents in {repo}",
   "Läs mer": "Read more",
   "Beskrivning för #{number}: {title}": "Description for #{number}: {title}",
   "Visa mindre": "Show less",

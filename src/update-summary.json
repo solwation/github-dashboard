@@ -1,10 +1,10 @@
 {
-  "baseCommit": "a5959cf8a34283b392ead84e4438d739762f249d",
+  "baseCommit": "6c309cb5c30b3a2a52e2eab8d1cc80dd0a4f212b",
   "summary": {
-    "sv": "Kommentarsbilder från raw.githubusercontent.com och HTML-img visas nu med ref-fallback till standardgrenen och säker sanering.",
-    "en": "Comment images from raw.githubusercontent.com and HTML img now render with ref fallback to the default branch and safe sanitization."
+    "sv": "Tydlig orsak visas när bilder från privata repon inte laddas på grund av saknad Contents-läsrättighet, och token-hjälpen förtydligas.",
+    "en": "Clear explanation when private repo images fail to load due to missing Contents read permission, and clarified token help."
   },
   "issues": [
-    450
+    452
   ]
 }

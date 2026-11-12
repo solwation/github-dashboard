@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-12",
+    "summary": {
+      "sv": "Tydlig orsak visas när bilder från privata repon inte laddas på grund av saknad Contents-läsrättighet, och token-hjälpen förtydligas.",
+      "en": "Clear explanation when private repo images fail to load due to missing Contents read permission, and clarified token help."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Platshållare och karusellminiatyrer förklarar när bilder i privata projekt inte kan laddas på grund av saknad Contents-läsrättighet i tokenen.",
+          "en": "Placeholders and carousel thumbnails explain when images in private projects cannot be loaded due to missing token Contents read access."
+        },
+        "issues": [
+          452
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-11",
     "summary": {
       "sv": "Stöd för GitHub-raw-bilder och HTML-img i kommentarer med ref-fallback, samt privata release-bilder och adaptiv SP-kalibrering.",

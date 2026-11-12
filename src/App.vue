@@ -1239,12 +1239,24 @@ provide(fileLoaderKey, async (repository: string, path: string, ref?: string) =>
     return client === api && run === generation ? result : null;
   }
   const repoFileRef = parseGitHubRepoFileUrl(path);
-  if (repoFileRef) {
-    const result = await client.repoFile(repoFileRef.repository, repoFileRef.path, repoFileRef.ref || ref);
-    return client === api && run === generation ? result : null;
-  }
-  const result = await client.repoFile(repository, path, ref);
-  return client === api && run === generation ? result : null;
+  const targetRepo = repoFileRef?.repository || repository;
+  const targetPath = repoFileRef?.path || path;
+  const targetRef = repoFileRef?.ref || ref;
+  const result = await client.repoFile(targetRepo, targetPath, targetRef);
+  if (client !== api || run !== generation) return null;
+  if (result) return result;
+  const error = client.getRepoFileError(targetRepo, targetPath, targetRef);
+  const lane = lanes.value.find(l => l.repo.full_name.toLowerCase() === targetRepo.toLowerCase());
+  const isPrivate = lane ? Boolean(lane.repo.private) : true;
+  return {
+    url: null,
+    error: {
+      status: error?.status,
+      permissionDenied: error?.permissionDenied,
+      repo: targetRepo,
+      isPrivate,
+    },
+  };
 });
 const activityClock = useNow(at => untilNext(at, 60000), { board: true });
 function observedRepositoryActivity(lane: Lane) {
@@ -2640,7 +2652,7 @@ onMounted(async () => {
             <p>
               {{
                 t(
-                  "För commit-information i privata projekt behövs även läsrättighet till Contents och Pull requests.",
+                  "För commit-information och bilder i privata projekt behövs även Contents: Read-only samt Pull requests.",
                 )
               }}
             </p>

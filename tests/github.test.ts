@@ -315,6 +315,11 @@ describe("GitHub transport", () => {
           content: "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
         }));
       }
+      if (url.pathname === "/repos/owner/test/contents/secret.png") {
+        return new Response(JSON.stringify({
+          message: "Resource not accessible by personal access token",
+        }), { status: 403 });
+      }
       return new Response(JSON.stringify({ message: "Not Found" }), { status: 404 });
     }));
     const client = new GitHub("test-token");
@@ -341,5 +346,14 @@ describe("GitHub transport", () => {
 
     const missing = await client.repoFile("owner/test", "missing.jpg");
     expect(missing).toBeNull();
+    const missingError = client.getRepoFileError("owner/test", "missing.jpg");
+    expect(missingError?.status).toBe(404);
+
+    // 403 permission denied is recorded on error (#452)
+    const forbidden = await client.repoFile("owner/test", "secret.png");
+    expect(forbidden).toBeNull();
+    const forbiddenError = client.getRepoFileError("owner/test", "secret.png");
+    expect(forbiddenError?.status).toBe(403);
+    expect(forbiddenError?.permissionDenied).toBe(true);
   });
 });

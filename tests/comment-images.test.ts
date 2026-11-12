@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  contentsPermissionErrorReason,
   extractCommentImages,
   issueRepository,
   normalizeRepoPath,
@@ -7,7 +8,7 @@ import {
   parseReleaseAssetUrl,
   sanitizeEscapedHtmlImages,
 } from "../src/lib/comment-images";
-import { t } from "../src/lib/i18n";
+import { setLanguage, t } from "../src/lib/i18n";
 import { renderMarkdown } from "../src/lib/markdown";
 
 describe("comment image detection and carousel extraction (#442)", () => {
@@ -290,5 +291,45 @@ describe("comment image detection and carousel extraction (#442)", () => {
     expect(cleanHtml).toContain('data-repository="solwation/lunden-3d-apartment"');
     expect(cleanHtml).toContain('data-ref="c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9"');
     expect(cleanHtml).toContain('src="https://raw.githubusercontent.com/solwation/lunden-3d-apartment/c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9/docs/verification/1898/car-glb-production.png"');
+  });
+
+  it("formats explanation when private repo image fails due to missing Contents permission (#452)", () => {
+    // 403 on Contents API always explains missing Contents permission
+    setLanguage("sv");
+    const reason403Sv = contentsPermissionErrorReason({
+      status: 403,
+      repo: "solwation/private-repo",
+      isPrivate: true,
+    }, t);
+    expect(reason403Sv).toBe("tokenen saknar läsrätt till Contents i solwation/private-repo");
+
+    setLanguage("en");
+    const reason403En = contentsPermissionErrorReason({
+      status: 403,
+      repo: "solwation/private-repo",
+      isPrivate: true,
+    }, t);
+    expect(reason403En).toBe("token lacks read access to Contents in solwation/private-repo");
+
+    // 404 on private repo also indicates missing Contents access
+    setLanguage("sv");
+    const reason404Private = contentsPermissionErrorReason({
+      status: 404,
+      repo: "solwation/private-repo",
+      isPrivate: true,
+    }, t);
+    expect(reason404Private).toBe("tokenen saknar läsrätt till Contents i solwation/private-repo");
+
+    // 404 on public repo is just an ordinary missing file; no token permission reason
+    const reason404Public = contentsPermissionErrorReason({
+      status: 404,
+      repo: "solwation/public-repo",
+      isPrivate: false,
+    }, t);
+    expect(reason404Public).toBeUndefined();
+
+    // No error or missing repo produces undefined
+    expect(contentsPermissionErrorReason(null, t)).toBeUndefined();
+    expect(contentsPermissionErrorReason({ status: 500, repo: "solwation/repo" }, t)).toBeUndefined();
   });
 });

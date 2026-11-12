@@ -775,3 +775,68 @@ test("loads and renders raw.githubusercontent images with ref fallback and HTML 
   await expect(catThumb).toBeVisible();
   await expect(catThumb).toHaveAttribute("src", /raw\.githubusercontent\.com/);
 });
+
+test("shows clear explanation when private repo image fails due to missing Contents permission (403 and 404) (#452)", async ({ page }) => {
+  // Token help mentions Contents: Read-only for private repo images
+  await page.goto("/");
+  await page.getByRole("button", { name: "Anslut GitHub", exact: true }).click();
+  await expect(page.locator(".token-form")).toContainText("Contents: Read-only");
+
+  // Intercept raw.githubusercontent.com requests to 404 (simulating private repo without raw web access)
+  await page.route("https://raw.githubusercontent.com/**", async route => {
+    await route.fulfill({ status: 404, body: "Not found" });
+  });
+
+  await connect(page, async route => {
+    await route.fulfill({
+      json: [
+        comment(1, [
+          "Private repository image failing with 403:",
+          "![Secret diagram](https://raw.githubusercontent.com/sample/comment-project/main/docs/private-secret.png)",
+          "Private repository image failing with 404:",
+          "![Missing chart](docs/private-missing.png)",
+        ].join("\n\n")),
+      ],
+    });
+  });
+
+  // Intercept repo contents API after connect so it takes precedence over generic api route
+  // 1. private-secret.png returns 403 Forbidden (missing Contents permission)
+  // 2. private-missing.png returns 404 Not Found (in private repo)
+  await page.route("https://api.github.com/repos/sample/comment-project/contents/**", async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.includes("private-secret.png")) {
+      await route.fulfill({
+        status: 403,
+        json: { message: "Resource not accessible by personal access token" },
+      });
+    } else {
+      await route.fulfill({
+        status: 404,
+        json: { message: "Not Found" },
+      });
+    }
+  });
+
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).filter({ visible: true }).first().click();
+  const commentsDialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+
+  // 1. Placeholders in comment body show the clear cause: tokenen saknar läsrätt till Contents i sample/comment-project
+  const placeholders = commentsDialog.locator("[data-image-content] .image-placeholder.preview-failed");
+  await expect(placeholders).toHaveCount(2);
+
+  await expect(placeholders.first()).toContainText("Secret diagram");
+  await expect(placeholders.first()).toContainText("tokenen saknar läsrätt till Contents i sample/comment-project");
+  await expect(placeholders.first().locator("a.image-placeholder-link")).toContainText("Visa på GitHub");
+
+  await expect(placeholders.nth(1)).toContainText("Missing chart");
+  await expect(placeholders.nth(1)).toContainText("tokenen saknar läsrätt till Contents i sample/comment-project");
+
+  // 2. Carousel thumbnails show the same placeholder with reason instead of broken images
+  const carousel = commentsDialog.locator(".comment-image-carousel");
+  await expect(carousel).toBeVisible();
+  const carouselPlaceholders = carousel.locator(".carousel-thumb-placeholder.preview-failed");
+  await expect(carouselPlaceholders).toHaveCount(2);
+  await expect(carouselPlaceholders.first()).toContainText("tokenen saknar läsrätt till Contents i sample/comment-project");
+  await expect(carousel.locator("img.comment-thumbnail")).toHaveCount(0);
+});

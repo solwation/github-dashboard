@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon, X } from "@lucide/vue";
 import { useLanguage } from "../lib/i18n";
 import {
   basename,
+  contentsPermissionErrorReason,
   extractCommentImages,
   fileLoaderKey,
   imageDocument,
@@ -60,12 +61,42 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+const failedPaths = ref<Record<string, boolean>>({});
+const failedReasons = ref<Record<string, string>>({});
+
+function markFailed(keys: (string | undefined)[], reason?: string) {
+  const nextFailed = { ...failedPaths.value };
+  const nextReasons = { ...failedReasons.value };
+  for (const k of keys) {
+    if (!k) continue;
+    nextFailed[k] = true;
+    if (reason) nextReasons[k] = reason;
+  }
+  failedPaths.value = nextFailed;
+  failedReasons.value = nextReasons;
+}
+
+function getFailedReason(keys: (string | undefined)[]): string | undefined {
+  for (const k of keys) {
+    if (k && failedReasons.value[k]) return failedReasons.value[k];
+  }
+  return undefined;
+}
+
 function renderPlaceholder(attrs: string, fallbackUrl?: string): string {
   const altMatch = attrs.match(/alt=["']([^"']*)["']/i);
   const rawSrcMatch = attrs.match(/data-raw-src=["']([^"']+)["']/i);
   const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+  const pathMatch = attrs.match(/data-repo-path=["']([^"']+)["']/i);
   const rawSrc = rawSrcMatch?.[1] || srcMatch?.[1] || fallbackUrl || "";
   const alt = altMatch?.[1] || (rawSrc ? basename(rawSrc) : t("Bild"));
+
+  const reason = getFailedReason([
+    rawSrcMatch?.[1],
+    srcMatch?.[1],
+    pathMatch?.[1],
+    fallbackUrl,
+  ]);
 
   let targetUrl = rawSrc;
   if (rawSrc && !rawSrc.includes("://") && props.repository) {
@@ -77,11 +108,15 @@ function renderPlaceholder(attrs: string, fallbackUrl?: string): string {
     }
   }
 
+  const reasonHtml = reason
+    ? `<span class="image-placeholder-reason">${escapeHtml(reason)}</span>`
+    : "";
+
   const linkHtml = targetUrl
     ? `<a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener noreferrer" class="image-placeholder-link"><span>${escapeHtml(t("Visa på GitHub"))}</span><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="external-link-icon" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>`
     : "";
 
-  return `<span class="image-placeholder preview-failed" role="group" aria-label="${escapeHtml(t("Bild: {name}", { name: alt }))}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="image-placeholder-icon" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="image-placeholder-info"><span class="image-placeholder-alt">${escapeHtml(alt)}</span>${linkHtml}</span></span>`;
+  return `<span class="image-placeholder preview-failed" role="group" aria-label="${escapeHtml(t("Bild: {name}", { name: alt }))}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="image-placeholder-icon" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="image-placeholder-info"><span class="image-placeholder-alt">${escapeHtml(alt)}</span>${reasonHtml}${linkHtml}</span></span>`;
 }
 
 const cleanHtml = ref("");
@@ -146,7 +181,6 @@ const renderedHtml = computed(() => {
 const detected = ref<DetectedImage[]>([]);
 const loadedUrls = ref<Record<string, string>>({});
 const loadingPaths = ref<Record<string, boolean>>({});
-const failedPaths = ref<Record<string, boolean>>({});
 
 function updateImages() {
   const result = extractCommentImages(props.html, t);
@@ -157,20 +191,23 @@ function updateImages() {
     if (item.path && !item.src && !loadedUrls.value[item.path] && !loadingPaths.value[item.path] && !failedPaths.value[item.path]) {
       if (props.repository && fileLoader) {
         loadingPaths.value = { ...loadingPaths.value, [item.path]: true };
-        fileLoader(props.repository, item.path).then(dataUrl => {
+        fileLoader(props.repository, item.path).then(res => {
           const nextLoading = { ...loadingPaths.value };
           delete nextLoading[item.path!];
           loadingPaths.value = nextLoading;
+          const dataUrl = typeof res === "string" ? res : res?.url;
+          const error = typeof res === "object" && res ? res.error : undefined;
           if (dataUrl) {
             loadedUrls.value = { ...loadedUrls.value, [item.path!]: dataUrl };
           } else {
-            failedPaths.value = { ...failedPaths.value, [item.path!]: true };
+            const reason = contentsPermissionErrorReason(error, t);
+            markFailed([item.path], reason);
           }
         }).catch(() => {
           const nextLoading = { ...loadingPaths.value };
           delete nextLoading[item.path!];
           loadingPaths.value = nextLoading;
-          failedPaths.value = { ...failedPaths.value, [item.path!]: true };
+          markFailed([item.path]);
         });
       }
     }
@@ -178,20 +215,21 @@ function updateImages() {
       const targetRepo = item.repository || props.repository;
       if (targetRepo && fileLoader) {
         loadingPaths.value = { ...loadingPaths.value, [item.assetUrl]: true };
-        fileLoader(targetRepo, item.assetUrl).then(blobUrl => {
+        fileLoader(targetRepo, item.assetUrl).then(res => {
           const nextLoading = { ...loadingPaths.value };
           delete nextLoading[item.assetUrl!];
           loadingPaths.value = nextLoading;
+          const blobUrl = typeof res === "string" ? res : res?.url;
           if (blobUrl) {
             loadedUrls.value = { ...loadedUrls.value, [item.assetUrl!]: blobUrl };
           } else {
-            failedPaths.value = { ...failedPaths.value, [item.assetUrl!]: true };
+            markFailed([item.assetUrl]);
           }
         }).catch(() => {
           const nextLoading = { ...loadingPaths.value };
           delete nextLoading[item.assetUrl!];
           loadingPaths.value = nextLoading;
-          failedPaths.value = { ...failedPaths.value, [item.assetUrl!]: true };
+          markFailed([item.assetUrl]);
         });
       }
     }
@@ -207,6 +245,7 @@ export interface CarouselItem {
   src?: string;
   loading: boolean;
   failed: boolean;
+  reason?: string;
 }
 
 const carouselImages = computed<CarouselItem[]>(() => {
@@ -220,6 +259,7 @@ const carouselImages = computed<CarouselItem[]>(() => {
       const loading = Boolean(srcKey && loadingPaths.value[srcKey]);
       const failed = Boolean(srcKey && failedPaths.value[srcKey])
         || Boolean(item.src && failedPaths.value[item.src]);
+      const reason = getFailedReason([item.src, srcKey, item.path, item.assetUrl]);
       return {
         key: item.key,
         name: item.name,
@@ -227,8 +267,9 @@ const carouselImages = computed<CarouselItem[]>(() => {
         src,
         loading,
         failed,
+        reason,
       };
-    }).filter(item => item.src || item.loading);
+    }).filter(item => item.src || item.loading || item.failed);
 });
 
 const gallery = ref<{ src: string; alt: string }[]>([]);
@@ -402,20 +443,23 @@ function handleImageError(event: Event) {
       const targetRef = target.dataset.ref || repoRef?.ref;
       if (repoPath && targetRepo && fileLoader && !attemptedFallbacks.value[rawSrc]) {
         attemptedFallbacks.value = { ...attemptedFallbacks.value, [rawSrc]: true };
-        fileLoader(targetRepo, repoPath, targetRef).then(dataUrl => {
+        fileLoader(targetRepo, repoPath, targetRef).then(res => {
+          const dataUrl = typeof res === "string" ? res : res?.url;
+          const error = typeof res === "object" && res ? res.error : undefined;
           if (dataUrl) {
             loadedUrls.value = { ...loadedUrls.value, [rawSrc]: dataUrl, [repoPath]: dataUrl };
             target.src = dataUrl;
             target.classList.remove("preview-failed");
           } else {
-            failedPaths.value = { ...failedPaths.value, [rawSrc]: true };
+            const reason = contentsPermissionErrorReason(error, t);
+            markFailed([rawSrc, repoPath], reason);
           }
         }).catch(() => {
-          failedPaths.value = { ...failedPaths.value, [rawSrc]: true };
+          markFailed([rawSrc, repoPath]);
         });
         return;
       }
-      failedPaths.value = { ...failedPaths.value, [rawSrc]: true };
+      markFailed([rawSrc, repoPath]);
     }
   }
 }
@@ -438,18 +482,24 @@ onBeforeUnmount(() => observer?.disconnect());
         type="button"
         class="carousel-thumb-button"
         :aria-label="t('Öppna bild: {name}', { name: item.name })"
-        :disabled="!item.src"
+        :disabled="!item.src || item.failed"
         @click="openCarousel(idx, $event)"
       >
         <span class="carousel-thumb-preview">
           <img
-            v-if="item.src"
+            v-if="item.src && !item.failed"
             :src="item.src"
             :alt="item.alt"
+            :data-raw-src="item.src"
             class="carousel-thumb-img comment-thumbnail"
             loading="lazy"
             referrerpolicy="no-referrer"
+            @error="handleImageError"
           />
+          <span v-else-if="item.failed" class="carousel-thumb-placeholder preview-failed" role="img" :aria-label="t('Bild: {name}', { name: item.name })">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="image-placeholder-icon" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            <span v-if="item.reason" class="carousel-thumb-reason">{{ item.reason }}</span>
+          </span>
           <span v-else-if="item.loading" class="carousel-thumb-loading" role="status">
             <span class="thumb-spinner" aria-hidden="true">…</span>
             <span class="sr-only">{{ t('Hämtar bild…') }}</span>
@@ -523,6 +573,13 @@ onBeforeUnmount(() => observer?.disconnect());
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+:deep(.image-placeholder-reason) {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 :deep(.image-placeholder-link) {
   display: inline-flex;
@@ -629,6 +686,31 @@ onBeforeUnmount(() => observer?.disconnect());
 }
 :root[data-theme="dark"] .carousel-thumb-preview {
   background: rgba(255, 255, 255, 0.05);
+}
+.carousel-thumb-preview .carousel-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: var(--space-1);
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+}
+.carousel-thumb-reason {
+  font-size: 9px;
+  line-height: 1.1;
+  color: var(--muted);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .carousel-thumb-img {
   width: 100%;

@@ -4,8 +4,28 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 export type ImageSource = { key: string; html: string };
 export const imageGalleryKey: InjectionKey<{ description: ComputedRef<string>; comments: Ref<ImageSource[]> }> = Symbol("issue image gallery");
 
-export type FileLoader = (repository: string, path: string, ref?: string) => Promise<string | null>;
+export interface FileLoaderError {
+  status?: number;
+  permissionDenied?: boolean;
+  repo?: string;
+  isPrivate?: boolean;
+}
+
+export type FileLoaderResult = string | {
+  url?: string | null;
+  error?: FileLoaderError | null;
+} | null;
+
+export type FileLoader = (repository: string, path: string, ref?: string) => Promise<FileLoaderResult>;
 export const fileLoaderKey: InjectionKey<FileLoader> = Symbol("repo file loader");
+
+export function contentsPermissionErrorReason(error: FileLoaderError | undefined | null, t: Translate): string | undefined {
+  if (!error?.repo) return undefined;
+  if (error.status === 403 || (error.status === 404 && error.isPrivate)) {
+    return t("tokenen saknar läsrätt till Contents i {repo}", { repo: error.repo });
+  }
+  return undefined;
+}
 
 export function issueRepository(issue?: { html_url?: string } | null): string | undefined {
   if (!issue?.html_url) return undefined;

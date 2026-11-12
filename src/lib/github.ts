@@ -163,6 +163,7 @@ export class GitHub {
     return this.token ? this.commits.get(repoFullName, issue) : Promise.resolve(null);
   }
   private readonly repoFiles = new Map<string, Promise<string | null>>();
+  private readonly repoFileErrors = new Map<string, GitHubApiError>();
   private readonly releaseAssets = new Map<string, Promise<string | null>>();
   private readonly repoReleasesCache = new Map<string, Promise<Array<{
     id: number;
@@ -170,6 +171,14 @@ export class GitHub {
     draft: boolean;
     assets?: Array<{ id: number; name: string; url: string; browser_download_url: string }>;
   }> | null>>();
+
+  getRepoFileError(repoFullName: string, path: string, ref?: string): GitHubApiError | undefined {
+    const cleanPath = normalizeRepoPath(path);
+    if (!cleanPath) return undefined;
+    const cleanRef = ref?.trim() || "";
+    const key = `${repoFullName.toLowerCase()}:${cleanRef || "default"}:${cleanPath.toLowerCase()}`;
+    return this.repoFileErrors.get(key) || this.repoFileErrors.get(`${repoFullName.toLowerCase()}:default:${cleanPath.toLowerCase()}`);
+  }
 
   async repoFile(repoFullName: string, path: string, ref?: string): Promise<string | null> {
     const cleanPath = normalizeRepoPath(path);
@@ -182,21 +191,31 @@ export class GitHub {
       try {
         const encoded = cleanPath.split("/").map(encodeURIComponent).join("/");
         const query = cleanRef ? `?ref=${encodeURIComponent(cleanRef)}` : "";
+        let lastError: GitHubApiError | null = null;
         let response = await this.request<{ content?: string; encoding?: string; sha?: string; type?: string; size?: number }>(
           `/repos/${repoFullName}/contents/${encoded}${query}`,
           { store: false },
-        ).catch(() => null);
+        ).catch((err) => {
+          if (err instanceof GitHubApiError) lastError = err;
+          return null;
+        });
 
         // If specific ref (e.g. stale/ephemeral branch commit SHA) failed with 404, fallback to default branch without ref
         if (!response?.data && cleanRef) {
           response = await this.request<{ content?: string; encoding?: string; sha?: string; type?: string; size?: number }>(
             `/repos/${repoFullName}/contents/${encoded}`,
             { store: false },
-          ).catch(() => null);
+          ).catch((err) => {
+            if (err instanceof GitHubApiError) lastError = err;
+            return null;
+          });
         }
 
         const data = response?.data;
-        if (!data) return null;
+        if (!data) {
+          if (lastError) this.repoFileErrors.set(cacheKey, lastError);
+          return null;
+        }
         let base64 = data.encoding === "base64" && typeof data.content === "string" ? data.content.replace(/\s/g, "") : null;
         if (!base64 && data.sha) {
           const blob = await this.request<{ content?: string; encoding?: string }>(
@@ -207,10 +226,15 @@ export class GitHub {
             base64 = blob.data.content.replace(/\s/g, "");
           }
         }
-        if (!base64) return null;
+        if (!base64) {
+          if (lastError) this.repoFileErrors.set(cacheKey, lastError);
+          return null;
+        }
+        this.repoFileErrors.delete(cacheKey);
         const mime = imageMimeType(cleanPath);
         return `data:${mime};base64,${base64}`;
-      } catch {
+      } catch (err) {
+        if (err instanceof GitHubApiError) this.repoFileErrors.set(cacheKey, err);
         return null;
       }
     })();
