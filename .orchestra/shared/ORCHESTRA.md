@@ -289,7 +289,9 @@ the host's publication/closure steps finish the issue.
 The conductor reads the combined diff and results (and required images) for missed
 acceptance, integration errors and scope creep. No routine reruns of green checks and
 no second review agent; request one bounded correction per concrete defect, not for
-wording preferences.
+wording preferences. When the overall scope or queue completes, a deeper multi-perspective
+review across expert roles can be configured via host hooks (see
+[PROJECT.example.md](PROJECT.example.md#expert-panel-review-hook)).
 
 If a material review finding exposes a cause that could recur in similar assignments,
 update the brief, applicable topic instructions or required checks before starting
