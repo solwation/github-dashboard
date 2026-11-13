@@ -21,8 +21,8 @@ function attributeNames(html: string, tag: string): string[][] {
 
 describe("comment image detection and carousel extraction (#442)", () => {
   it("extracts issue repository from issue html_url", () => {
-    expect(issueRepository({ html_url: "https://github.com/solwation/solwation-on-twitch/issues/156" }))
-      .toBe("solwation/solwation-on-twitch");
+    expect(issueRepository({ html_url: "https://github.com/example-org/sample-project/issues/7" }))
+      .toBe("example-org/sample-project");
     expect(issueRepository({ html_url: "https://github.com/owner/my-repo/issues/1" }))
       .toBe("owner/my-repo");
     expect(issueRepository(null)).toBeUndefined();
