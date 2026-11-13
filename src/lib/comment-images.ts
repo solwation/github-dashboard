@@ -276,6 +276,160 @@ export function sanitizeEscapedHtmlImages(html: string): string {
   return output.join("");
 }
 
+/** An attribute as written in serialized HTML; `value` is the source text, entities not decoded. */
+export interface HtmlAttribute { name: string; value: string }
+
+const TAG_SPACE = /[\t\n\f\r ]/;
+
+/**
+ * Reads a start tag's attributes from `html` at `start` (just after the tag name) the way the HTML
+ * tokenizer does: names end at whitespace, `/`, `>` or `=`, values are double-quoted, single-quoted or
+ * unquoted, and a quoted value is read as a whole whatever `<`/`>` it contains. Returns the attributes
+ * (names lower-cased) and the index just after the closing `>`, or `null` if the tag never closes.
+ */
+function readTagAttributes(html: string, start: number): { attributes: HtmlAttribute[]; end: number } | null {
+  const attributes: HtmlAttribute[] = [];
+  let i = start;
+  while (i < html.length) {
+    const char = html[i]!;
+    if (TAG_SPACE.test(char) || char === "/") { i++; continue; }
+    if (char === ">") return { attributes, end: i + 1 };
+    const nameStart = i;
+    i++; // A leading `=` belongs to the name.
+    while (i < html.length && !TAG_SPACE.test(html[i]!) && !"/>=".includes(html[i]!)) i++;
+    const name = html.slice(nameStart, i).toLowerCase();
+    while (i < html.length && TAG_SPACE.test(html[i]!)) i++;
+    let value = "";
+    if (html[i] === "=") {
+      i++;
+      while (i < html.length && TAG_SPACE.test(html[i]!)) i++;
+      const quote = html[i];
+      if (quote === "\"" || quote === "'") {
+        const close = html.indexOf(quote, i + 1);
+        if (close < 0) return null;
+        value = html.slice(i + 1, close);
+        i = close + 1;
+      } else {
+        const valueStart = i;
+        while (i < html.length && !TAG_SPACE.test(html[i]!) && html[i] !== ">") i++;
+        value = html.slice(valueStart, i);
+      }
+    }
+    attributes.push({ name, value });
+  }
+  return null;
+}
+
+/**
+ * Calls `replace` for every real `<img>` start tag in serialized HTML and substitutes its result.
+ * All markup is walked tag by tag with HTML tokenizer rules, so `<img` text inside any attribute value
+ * (older browsers serialize raw `<`/`>` there) or inside a comment is never taken for a tag.
+ */
+export function replaceImageTags(html: string, replace: (attributes: HtmlAttribute[], tag: string) => string): string {
+  let output = "";
+  let last = 0;
+  let i = html.indexOf("<");
+  while (i >= 0 && i < html.length) {
+    let end = i + 1;
+    if (html.startsWith("<!--", i)) {
+      const close = html.indexOf("-->", i + 4);
+      end = close < 0 ? html.length : close + 3;
+    } else if (/^<\/?[a-z]/i.test(html.slice(i, i + 3))) {
+      const nameStart = html[i + 1] === "/" ? i + 2 : i + 1;
+      let nameEnd = nameStart;
+      while (nameEnd < html.length && !TAG_SPACE.test(html[nameEnd]!) && !"/>".includes(html[nameEnd]!)) nameEnd++;
+      const tag = readTagAttributes(html, nameEnd);
+      if (!tag) break;
+      end = tag.end;
+      if (nameStart === i + 1 && html.slice(nameStart, nameEnd).toLowerCase() === "img") {
+        output += html.slice(last, i) + replace(tag.attributes, html.slice(i, end));
+        last = end;
+      }
+    } else if (/^<[!?]/.test(html.slice(i, i + 2)) || html.startsWith("</", i)) {
+      const close = html.indexOf(">", i);
+      end = close < 0 ? html.length : close + 1;
+    }
+    i = html.indexOf("<", end);
+  }
+  return output + html.slice(last);
+}
+
+/** Attribute values by lower-cased name; the first occurrence wins, as in the browser. */
+export function htmlAttributeMap(attributes: HtmlAttribute[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const { name, value } of attributes) if (!(name in map)) map[name] = value;
+  return map;
+}
+
+/** Escapes plain text for a double-quoted attribute value. */
+export function escapeHtmlAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Rebuilds an `<img>` tag from parsed attributes with `changes` applied: a string is serialized
+ * attribute text (as read from the source), a new attribute goes right after `src` (or first), `null` removes it.
+ * Every value is written double-quoted, so no value can end early or turn into further attributes.
+ */
+export function serializeImageTag(attributes: HtmlAttribute[], changes: Record<string, string | null> = {}): string {
+  const seen = new Set<string>();
+  const added = Object.entries(changes)
+    .filter(([name, value]) => value !== null && !attributes.some(attr => attr.name === name))
+    .map(([name, value]) => ({ name, value: value! }));
+  const srcIndex = attributes.findIndex(attr => attr.name === "src") + 1;
+  const ordered = [...attributes.slice(0, srcIndex), ...added, ...attributes.slice(srcIndex)];
+  const parts: string[] = [];
+  for (const attr of ordered) {
+    if (seen.has(attr.name)) continue;
+    seen.add(attr.name);
+    const value = attr.name in changes ? changes[attr.name] : attr.value;
+    if (value === null || value === undefined) continue;
+    parts.push(` ${attr.name}="${value.replace(/"/g, "&quot;")}"`);
+  }
+  return `<img${parts.join("")}>`;
+}
+
+export type ImagePlaceholder = (attributes: Record<string, string>, fallbackUrl?: string) => string;
+
+/**
+ * Applies loaded data URLs and failed loads to the comment's serialized HTML: loaded images get their
+ * `src`, failed ones become `placeholder(...)`. Keys into `loaded`/`failed` are attribute source text.
+ */
+export function renderLoadedImages(html: string, loaded: Record<string, string>, failed: Record<string, boolean>, placeholder: ImagePlaceholder): string {
+  return replaceImageTags(html, (attributes, tag) => {
+    const attrs = htmlAttributeMap(attributes);
+    const rawSrcKey = attrs["data-raw-src"] || undefined;
+    const src = attrs.src || undefined;
+
+    const cleanPath = attrs["data-repo-path"];
+    if (cleanPath) {
+      const key = (rawSrcKey && loaded[rawSrcKey]) ? rawSrcKey : cleanPath;
+      if (loaded[key]) return serializeImageTag(attributes, { src: escapeHtmlAttribute(loaded[key]!) });
+      if (failed[cleanPath] || (rawSrcKey && failed[rawSrcKey])) return placeholder(attrs, cleanPath);
+      return tag;
+    }
+
+    if (!src) return tag;
+    const isDirectPreview = (attrs.class || "").includes("direct-image-preview");
+    if (loaded[src] || (rawSrcKey && loaded[rawSrcKey])) {
+      const url = loaded[src] || loaded[rawSrcKey!]!;
+      return serializeImageTag(attributes, { src: escapeHtmlAttribute(url), "data-raw-src": rawSrcKey || src });
+    }
+    if (!isDirectPreview && (failed[src] || (rawSrcKey && failed[rawSrcKey]))) {
+      return placeholder(attrs, rawSrcKey || src);
+    }
+    if (src.startsWith("data:") || src.includes("://")) return tag;
+    const relativePath = normalizeRepoPath(src);
+    if (relativePath) {
+      if (loaded[relativePath]) {
+        return serializeImageTag(attributes, { src: escapeHtmlAttribute(loaded[relativePath]!), "data-repo-path": relativePath });
+      }
+      if (failed[relativePath]) return placeholder(attrs, relativePath);
+    }
+    return tag;
+  });
+}
+
 export function imageDocument(html: string, t: Translate): Document {
   const prepared = sanitizeEscapedHtmlImages(html);
   if (typeof DOMParser === "undefined") {

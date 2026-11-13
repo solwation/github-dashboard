@@ -6,6 +6,8 @@ import {
   normalizeRepoPath,
   parseGitHubRepoFileUrl,
   parseReleaseAssetUrl,
+  renderLoadedImages,
+  replaceImageTags,
   sanitizeEscapedHtmlImages,
 } from "../src/lib/comment-images";
 import { setLanguage, t } from "../src/lib/i18n";
@@ -396,5 +398,92 @@ describe("comment image detection and carousel extraction (#442)", () => {
     // No error or missing repo produces undefined
     expect(contentsPermissionErrorReason(null, t)).toBeUndefined();
     expect(contentsPermissionErrorReason({ status: 500, repo: "solwation/repo" }, t)).toBeUndefined();
+  });
+
+  describe("loaded/failed image rendering with legacy serialization (#460)", () => {
+    // Browsers before the 2025 serialization change leave `<` and `>` raw in attribute values.
+    const fake = "> <img data-repo-path='docs/existing.png' style='position:fixed' onclick='x'>";
+    const legacyImage = (alt: string) => `<img alt="${alt}" class="comment-thumbnail" role="button" tabindex="0" `
+      + `aria-haspopup="dialog" aria-label="Öppna bild: ${alt}" loading="lazy" referrerpolicy="no-referrer" `
+      + `data-repo-path="docs/real.png" data-raw-src="docs/real.png">`;
+    const placeholder = (attrs: Record<string, string>, fallbackUrl?: string) =>
+      `<span class="image-placeholder" data-for="${fallbackUrl}" data-alt-length="${attrs.alt?.length}"></span>`;
+    const ownNames = ["alt", "class", "role", "tabindex", "aria-haspopup", "aria-label", "loading", "referrerpolicy", "data-repo-path", "data-raw-src"];
+
+    function imageTags(html: string) {
+      const tags: { names: string[]; attrs: Record<string, string> }[] = [];
+      replaceImageTags(html, (attributes, tag) => {
+        tags.push({ names: attributes.map(attr => attr.name), attrs: Object.fromEntries(attributes.map(attr => [attr.name, attr.value])) });
+        return tag;
+      });
+      return tags;
+    }
+
+    it.each([
+      ["plain fake tag", `Diagram ${fake}`],
+      ["fake src and data-raw-src", `Diagram ${fake.replace("<img ", "<img src='https://evil.example/x.png' data-raw-src='docs/existing.png' ")}`],
+    ])("loads the real image only, keeping the %s inside alt", (_, alt) => {
+      const html = `<p>${legacyImage(alt)}</p>`;
+      const loaded = { "docs/real.png": "data:image/png;base64,UkVBTA==", "docs/existing.png": "data:image/png;base64,RkFLRQ==" };
+      const output = renderLoadedImages(html, loaded, {}, placeholder);
+
+      expect(output).toBe(`<p><img src="data:image/png;base64,UkVBTA==" ${legacyImage(alt).slice("<img ".length)}</p>`);
+      const tags = imageTags(output);
+      expect(tags).toHaveLength(1);
+      expect(tags[0]!.names).toEqual(["src", ...ownNames]);
+      expect(tags[0]!.attrs.alt).toBe(alt);
+      expect(tags[0]!.attrs["aria-label"]).toBe(`Öppna bild: ${alt}`);
+      expect(output).not.toContain("RkFLRQ==");
+    });
+
+    it.each([
+      ["plain fake tag", `Diagram ${fake}`],
+      ["fake src and data-raw-src", `Diagram ${fake.replace("<img ", "<img src='docs/existing.png' data-raw-src='docs/existing.png' ")}`],
+    ])("turns only the real failed image into a placeholder, with the %s in alt", (_, alt) => {
+      const html = `<p>${legacyImage(alt)}</p>`;
+      const output = renderLoadedImages(html, {}, { "docs/real.png": true, "docs/existing.png": true }, placeholder);
+
+      expect(output).toBe(`<p><span class="image-placeholder" data-for="docs/real.png" data-alt-length="${alt.length}"></span></p>`);
+      expect(imageTags(output)).toHaveLength(0);
+    });
+
+    it("leaves a real image untouched when only the fake path in its alt is loaded or failed", () => {
+      const html = `<p>${legacyImage(`Diagram ${fake}`)}</p>`;
+      expect(renderLoadedImages(html, { "docs/existing.png": "data:image/png;base64,RkFLRQ==" }, {}, placeholder)).toBe(html);
+      expect(renderLoadedImages(html, {}, { "docs/existing.png": true }, placeholder)).toBe(html);
+    });
+
+    it("never reads fake attributes inside an attribute value as the real attribute", () => {
+      const html = `<img alt="x data-raw-src='docs/fake.png' src='docs/fake.png' data-repo-path='docs/fake.png' class='direct-image-preview'" `
+        + `src="https://example.com/real.png" class="comment-thumbnail">`;
+      const [tag] = imageTags(html);
+      expect(tag!.names).toEqual(["alt", "src", "class"]);
+      expect(tag!.attrs.src).toBe("https://example.com/real.png");
+      expect(tag!.attrs.class).toBe("comment-thumbnail");
+      expect(tag!.attrs["data-raw-src"]).toBeUndefined();
+      expect(tag!.attrs["data-repo-path"]).toBeUndefined();
+
+      expect(renderLoadedImages(html, { "docs/fake.png": "data:fake" }, { "docs/fake.png": true }, placeholder)).toBe(html);
+      // The real src still drives the decision; direct previews are kept as images when failed.
+      expect(renderLoadedImages(html, { "https://example.com/real.png": "data:real&\"x" }, {}, placeholder))
+        .toBe(`<img alt="x data-raw-src='docs/fake.png' src='docs/fake.png' data-repo-path='docs/fake.png' class='direct-image-preview'" `
+          + `src="data:real&amp;&quot;x" data-raw-src="https://example.com/real.png" class="comment-thumbnail">`);
+      expect(renderLoadedImages(html, {}, { "https://example.com/real.png": true }, placeholder))
+        .toBe(`<span class="image-placeholder" data-for="https://example.com/real.png" data-alt-length="${tag!.attrs.alt!.length}"></span>`);
+    });
+
+    it("keeps today's decisions for current serialization (relative, direct preview, data URLs)", () => {
+      const relative = `<img src="docs/a.png" alt="a">`;
+      expect(renderLoadedImages(relative, { "docs/a.png": "data:a" }, {}, placeholder))
+        .toBe(`<img src="data:a" data-raw-src="docs/a.png" alt="a">`);
+      const direct = `<a href="https://example.com/b.png">b</a><img src="https://example.com/b.png" class="direct-image-preview comment-thumbnail" alt="b">`;
+      expect(renderLoadedImages(direct, {}, { "https://example.com/b.png": true }, placeholder)).toBe(direct);
+      const dataUrl = `<img src="data:image/png;base64,AAAA" alt="c">`;
+      expect(renderLoadedImages(dataUrl, {}, {}, placeholder)).toBe(dataUrl);
+      const unloaded = `<p><img alt="d &gt; <img src='x'>" data-repo-path="docs/d.png"></p><!-- <img src="docs/d.png"> -->`;
+      expect(renderLoadedImages(unloaded, {}, {}, placeholder)).toBe(unloaded);
+      expect(renderLoadedImages(unloaded, { "docs/d.png": "data:d" }, {}, placeholder))
+        .toBe(`<p><img src="data:d" alt="d &gt; <img src='x'>" data-repo-path="docs/d.png"></p><!-- <img src="docs/d.png"> -->`);
+    });
   });
 });

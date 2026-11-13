@@ -11,6 +11,7 @@ import {
   imageGalleryKey,
   normalizeRepoPath,
   parseGitHubRepoFileUrl,
+  renderLoadedImages,
   type DetectedImage,
 } from "../lib/comment-images";
 
@@ -82,18 +83,17 @@ function getFailedReason(keys: (string | undefined)[]): string | undefined {
   return undefined;
 }
 
-function renderPlaceholder(attrs: string, fallbackUrl?: string): string {
-  const altMatch = attrs.match(/alt=["']([^"']*)["']/i);
-  const rawSrcMatch = attrs.match(/data-raw-src=["']([^"']+)["']/i);
-  const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
-  const pathMatch = attrs.match(/data-repo-path=["']([^"']+)["']/i);
-  const rawSrc = rawSrcMatch?.[1] || srcMatch?.[1] || fallbackUrl || "";
-  const alt = altMatch?.[1] || (rawSrc ? basename(rawSrc) : t("Bild"));
+function renderPlaceholder(attrs: Record<string, string>, fallbackUrl?: string): string {
+  const rawSrcValue = attrs["data-raw-src"] || undefined;
+  const srcValue = attrs.src || undefined;
+  const pathValue = attrs["data-repo-path"] || undefined;
+  const rawSrc = rawSrcValue || srcValue || fallbackUrl || "";
+  const alt = attrs.alt || (rawSrc ? basename(rawSrc) : t("Bild"));
 
   const reason = getFailedReason([
-    rawSrcMatch?.[1],
-    srcMatch?.[1],
-    pathMatch?.[1],
+    rawSrcValue,
+    srcValue,
+    pathValue,
     fallbackUrl,
   ]);
 
@@ -119,51 +119,7 @@ function renderPlaceholder(attrs: string, fallbackUrl?: string): string {
 }
 
 const cleanHtml = ref("");
-const renderedHtml = computed(() => {
-  const html = cleanHtml.value;
-  const loaded = loadedUrls.value;
-  const failed = failedPaths.value;
-  return html.replace(/<img\b([^>]*)>/gi, (match, attrs) => {
-    const rawSrcMatch = attrs.match(/data-raw-src=["']([^"']+)["']/i);
-    const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
-    const rawSrcKey = rawSrcMatch?.[1];
-
-    const pathMatch = attrs.match(/data-repo-path=["']([^"']+)["']/i);
-    if (pathMatch) {
-      const cleanPath = pathMatch[1]!;
-      const key = (rawSrcKey && loaded[rawSrcKey]) ? rawSrcKey : cleanPath;
-      if (loaded[key]) {
-        return match.replace(/<img\b/i, `<img src="${loaded[key]}" `);
-      }
-      if (failed[cleanPath] || (rawSrcKey && failed[rawSrcKey])) {
-        return renderPlaceholder(attrs, cleanPath);
-      }
-      return match;
-    }
-
-    if (!srcMatch) return match;
-    const src = srcMatch[1]!;
-    const isDirectPreview = /class=["'][^"']*direct-image-preview/i.test(attrs);
-    if (loaded[src] || (rawSrcKey && loaded[rawSrcKey])) {
-      const url = loaded[src] || loaded[rawSrcKey!];
-      return match.replace(srcMatch[0], `src="${url}" data-raw-src="${rawSrcKey || src}"`);
-    }
-    if (!isDirectPreview && (failed[src] || (rawSrcKey && failed[rawSrcKey]))) {
-      return renderPlaceholder(attrs, rawSrcKey || src);
-    }
-    if (src.startsWith("data:") || src.includes("://")) return match;
-    const cleanPath = normalizeRepoPath(src);
-    if (cleanPath) {
-      if (loaded[cleanPath]) {
-        return match.replace(srcMatch[0], `src="${loaded[cleanPath]}" data-repo-path="${cleanPath}"`);
-      }
-      if (failed[cleanPath]) {
-        return renderPlaceholder(attrs, cleanPath);
-      }
-    }
-    return match;
-  });
-});
+const renderedHtml = computed(() => renderLoadedImages(cleanHtml.value, loadedUrls.value, failedPaths.value, renderPlaceholder));
 const detected = ref<DetectedImage[]>([]);
 const loadedUrls = ref<Record<string, string>>({});
 const loadingPaths = ref<Record<string, boolean>>({});
