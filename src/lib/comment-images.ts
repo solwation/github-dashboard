@@ -165,28 +165,116 @@ export function isDirectImageLink(urlStr: string): boolean {
   }
 }
 
+type HtmlToken = { tag: boolean; value: string };
+
+// markdown-it escapes `&`, `<`, `>` and `"` in text and attribute values, so a tag is exactly `<` up to
+// the first `>` and text never contains a raw `<`.
+function tokenizeHtml(html: string): HtmlToken[] {
+  const tokens: HtmlToken[] = [];
+  let last = 0;
+  for (const match of html.matchAll(/<[^>]*>/g)) {
+    if (match.index! > last) tokens.push({ tag: false, value: html.slice(last, match.index) });
+    tokens.push({ tag: true, value: match[0] });
+    last = match.index! + match[0].length;
+  }
+  if (last < html.length) tokens.push({ tag: false, value: html.slice(last) });
+  return tokens;
+}
+
+const ESCAPED_IMG_START = /&lt;img\b/i;
+const ESCAPED_IMG_START_LENGTH = "&lt;img".length;
+
+// Reads the escaped tag body from just after `&lt;img` up to its `&gt;`. Only text and the `<a>…</a>`
+// that linkify wraps around a URL may occur in between; anything else leaves the text untouched.
+function readEscapedImage(tokens: HtmlToken[], index: number, offset: number): { attrs: string; endIndex: number; endOffset: number } | null {
+  let attrs = "";
+  let inLink = false;
+  for (let i = index; i < tokens.length; i++, offset = 0) {
+    const token = tokens[i]!;
+    if (token.tag) {
+      if (!inLink && /^<a\s/i.test(token.value)) inLink = true;
+      else if (inLink && /^<\/a\s*>$/i.test(token.value)) inLink = false;
+      else return null;
+      attrs += token.value;
+      continue;
+    }
+    const end = token.value.indexOf("&gt;", offset);
+    if (end < 0) {
+      attrs += token.value.slice(offset);
+      continue;
+    }
+    if (inLink) return null;
+    return { attrs: attrs + token.value.slice(offset, end), endIndex: i, endOffset: end + "&gt;".length };
+  }
+  return null;
+}
+
+function attributeText(value: string): string {
+  return value.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function escapedImageReplacement(attrs: string): string | null {
+  let src = "";
+  const linkMatch = attrs.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
+  if (linkMatch) {
+    src = linkMatch[1]!;
+  } else {
+    const srcAttr = attrs.match(/(?:src|data-src)=(?:&quot;|["'])(.*?)(?:&quot;|["'])/i);
+    if (srcAttr) src = srcAttr[1]!;
+  }
+  src = src.trim();
+  if (!src || !isDirectImageLink(src)) return null;
+
+  let alt = "";
+  const altAttr = attrs.match(/alt=(?:&quot;|["'])(.*?)(?:&quot;|["'])/i);
+  if (altAttr) alt = altAttr[1]!;
+
+  return `<img src="${attributeText(src)}" alt="${attributeText(alt)}">`;
+}
+
+/**
+ * Turns escaped `<img>` source HTML in ordinary comment text into a real image. Only text outside
+ * `code`/`pre` is considered and tags are never looked into, so attribute values (image alt, link
+ * title) and code stay verbatim, and applying it again to its own output changes nothing.
+ */
 export function sanitizeEscapedHtmlImages(html: string): string {
-  if (!html || !html.includes("&lt;img")) return html;
-  return html.replace(/&lt;img\b((?:(?!&gt;)[\s\S])*?)&gt;/gi, (fullMatch, attrs) => {
-    let src = "";
-    const linkMatch = attrs.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
-    if (linkMatch) {
-      src = linkMatch[1]!;
+  if (!html || !ESCAPED_IMG_START.test(html)) return html;
+  const tokens = tokenizeHtml(html);
+  const output: string[] = [];
+  let codeDepth = 0;
+  let index = 0;
+  let offset = 0;
+  while (index < tokens.length) {
+    const token = tokens[index]!;
+    if (token.tag) {
+      const codeTag = token.value.match(/^<(\/?)(?:code|pre)\b/i);
+      if (codeTag) codeDepth = codeTag[1] ? Math.max(0, codeDepth - 1) : codeDepth + 1;
+      output.push(token.value);
+      index++;
+      continue;
+    }
+    const rest = token.value.slice(offset);
+    const start = codeDepth > 0 ? null : ESCAPED_IMG_START.exec(rest);
+    if (!start) {
+      output.push(rest);
+      index++;
+      offset = 0;
+      continue;
+    }
+    output.push(rest.slice(0, start.index));
+    const startOffset = offset + start.index;
+    const candidate = readEscapedImage(tokens, index, startOffset + ESCAPED_IMG_START_LENGTH);
+    const replacement = candidate && escapedImageReplacement(candidate.attrs);
+    if (candidate && replacement) {
+      output.push(replacement);
+      index = candidate.endIndex;
+      offset = candidate.endOffset;
     } else {
-      const srcAttr = attrs.match(/(?:src|data-src)=(?:&quot;|["'])(.*?)(?:&quot;|["'])/i);
-      if (srcAttr) src = srcAttr[1]!;
+      output.push(token.value.slice(startOffset, startOffset + ESCAPED_IMG_START_LENGTH));
+      offset = startOffset + ESCAPED_IMG_START_LENGTH;
     }
-    src = src.trim();
-    if (!src || !isDirectImageLink(src)) {
-      return fullMatch;
-    }
-
-    let alt = "";
-    const altAttr = attrs.match(/alt=(?:&quot;|["'])(.*?)(?:&quot;|["'])/i);
-    if (altAttr) alt = altAttr[1]!;
-
-    return `<img src="${src}" alt="${alt}">`;
-  });
+  }
+  return output.join("");
 }
 
 export function imageDocument(html: string, t: Translate): Document {

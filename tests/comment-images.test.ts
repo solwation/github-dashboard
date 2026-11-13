@@ -11,6 +11,12 @@ import {
 import { setLanguage, t } from "../src/lib/i18n";
 import { renderMarkdown } from "../src/lib/markdown";
 
+// Attribute names per element, reading quoted values as markdown-it serializes them.
+function attributeNames(html: string, tag: string): string[][] {
+  return [...html.matchAll(new RegExp(`<${tag}((?:\\s+[\\w-]+="[^"]*")*)\\s*\\/?>`, "g"))]
+    .map(match => [...match[1]!.matchAll(/([\w-]+)="/g)].map(attr => attr[1]!));
+}
+
 describe("comment image detection and carousel extraction (#442)", () => {
   it("extracts issue repository from issue html_url", () => {
     expect(issueRepository({ html_url: "https://github.com/solwation/solwation-on-twitch/issues/156" }))
@@ -291,6 +297,64 @@ describe("comment image detection and carousel extraction (#442)", () => {
     expect(cleanHtml).toContain('data-repository="solwation/lunden-3d-apartment"');
     expect(cleanHtml).toContain('data-ref="c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9"');
     expect(cleanHtml).toContain('src="https://raw.githubusercontent.com/solwation/lunden-3d-apartment/c6b23ea02a7b8e57929ce6bf3f090bb7090aa0b9/docs/verification/1898/car-glb-production.png"');
+  });
+
+  it("never turns escaped img text inside attribute values or code into images (#457)", () => {
+    const altAttack = "![<img src='https://e.example/x style=position:fixed;inset:0 onerror=alert(1) y=/a.png' alt='x'>](https://e.example/b.png)";
+    const titleAttack = "[click](https://e.example/ \"<img src='https://e.example/x style=position:fixed;inset:0 onclick=alert(1) y=/a.png'>\")";
+    const inlineCode = "`<img src=\"https://e.example/a.png\" width=\"200\">`";
+    const fencedCode = ["```html", '<img src="docs/shot.png" alt="Shot">', "```"].join("\n");
+
+    for (const source of [altAttack, titleAttack, inlineCode, fencedCode]) {
+      const html = renderMarkdown(source);
+      expect(sanitizeEscapedHtmlImages(html)).toBe(html);
+    }
+
+    const title = sanitizeEscapedHtmlImages(renderMarkdown(titleAttack));
+    expect(title).toContain('target="_blank" rel="noopener noreferrer"');
+    expect(attributeNames(title, "a")).toEqual([["href", "title", "target", "rel"]]);
+    const alt = extractCommentImages(renderMarkdown(altAttack), t);
+    expect(alt.images.map(image => image.src)).toEqual(["https://e.example/b.png"]);
+    expect(attributeNames(sanitizeEscapedHtmlImages(renderMarkdown(altAttack)), "img")).toEqual([["src", "alt"]]);
+
+    const code = extractCommentImages(renderMarkdown([inlineCode, fencedCode].join("\n\n")), t);
+    expect(code.cleanHtml).not.toContain("<img");
+    expect(code.cleanHtml).toContain("<code>&lt;img src=&quot;https://e.example/a.png&quot; width=&quot;200&quot;&gt;</code>");
+    expect(code.cleanHtml).toContain("&lt;img src=&quot;docs/shot.png&quot; alt=&quot;Shot&quot;&gt;");
+  });
+
+  it("converts escaped img text once and leaves a second application unchanged (#457)", () => {
+    const sources = [
+      'Plain <img src="https://e.example/plain.png" alt="Plain">',
+      '<img src="https://raw.githubusercontent.com/o/r/sha/docs/linked.png" width="600" alt="Linked">',
+      '<img src="docs/relative.png" alt="Relative">',
+      '<img src="https://github.com/o/r/releases/download/v1/asset.png" alt="Asset">',
+      "Raw https://e.example/raw.png and <img src='https://e.example/quoted.png' alt='Quoted'>",
+      // A converted alt carries escaped img text that a second pass must not convert again.
+      '<img src="https://e.example/a.png" alt="x<img src=" y> https://e.example/c.png >',
+    ];
+    for (const source of sources) {
+      const once = sanitizeEscapedHtmlImages(renderMarkdown(source));
+      expect(once).toMatch(/<img src="[^"]+" alt="[^"]*">/);
+      expect(sanitizeEscapedHtmlImages(once)).toBe(once);
+    }
+
+    const { images } = extractCommentImages(renderMarkdown(sources.slice(0, 5).join("\n\n")), t);
+    expect(images.map(image => image.path ?? image.assetUrl ?? image.src).sort()).toEqual([
+      "docs/linked.png",
+      "docs/relative.png",
+      "https://e.example/plain.png",
+      "https://e.example/quoted.png",
+      "https://e.example/raw.png",
+      "https://github.com/o/r/releases/download/v1/asset.png",
+    ]);
+  });
+
+  it("leaves escaped img text alone when other markup interrupts it (#457)", () => {
+    const html = renderMarkdown('<img src="https://e.example/a.png" `code` alt="x">');
+    expect(sanitizeEscapedHtmlImages(html)).toBe(html);
+    expect(sanitizeEscapedHtmlImages("<p>&lt;img src=&quot;https://e.example/a.png&quot;</p><p>&gt;</p>"))
+      .toBe("<p>&lt;img src=&quot;https://e.example/a.png&quot;</p><p>&gt;</p>");
   });
 
   it("formats explanation when private repo image fails due to missing Contents permission (#452)", () => {

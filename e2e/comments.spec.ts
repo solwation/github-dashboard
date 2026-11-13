@@ -840,3 +840,38 @@ test("shows clear explanation when private repo image fails due to missing Conte
   await expect(carouselPlaceholders.first()).toContainText("tokenen saknar läsrätt till Contents i sample/comment-project");
   await expect(carousel.locator("img.comment-thumbnail")).toHaveCount(0);
 });
+
+test("escaped img text in image alt, link title and code never becomes markup (#457)", async ({ page }) => {
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await page.route("https://e.example/**", route => route.fulfill({ contentType: "image/png", body: png }));
+  await connect(page, async route => {
+    await route.fulfill({
+      json: [comment(1, [
+        "![<img src='https://e.example/x style=position:fixed;inset:0 onerror=alert(1) y=/a.png' alt='x'>](https://e.example/b.png)",
+        "[click](https://e.example/ \"<img src='https://e.example/x style=position:fixed;inset:0 onclick=alert(1) y=/a.png'>\")",
+        "`<img src=\"https://e.example/a.png\" width=\"200\">`",
+        "```html\n<img src=\"docs/shot.png\" alt=\"Shot\">\n```",
+      ].join("\n\n"))],
+    });
+  });
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).filter({ visible: true }).first().click();
+  const markdown = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true }).locator(".comment-markdown").first();
+  await expect(markdown.getByRole("link", { name: "click" })).toBeVisible();
+
+  const elements = await markdown.evaluate(root => [...root.querySelectorAll("a, img")].map(element => ({
+    tag: element.localName,
+    attributes: element.getAttributeNames().filter(name => !name.startsWith("data-")).sort(),
+    html: element.outerHTML.slice(0, 200),
+  })));
+  const allowed: Record<string, string[]> = {
+    a: ["aria-haspopup", "href", "rel", "target", "title"],
+    img: ["alt", "aria-haspopup", "aria-label", "class", "loading", "referrerpolicy", "role", "src", "tabindex"],
+  };
+  expect(elements.length).toBeGreaterThan(0);
+  for (const element of elements) expect(allowed[element.tag], element.html).toEqual(expect.arrayContaining(element.attributes));
+  await expect(markdown.locator("img")).toHaveCount(1);
+  await expect(markdown.locator("img")).toHaveAttribute("src", "https://e.example/b.png");
+  await expect(markdown.getByRole("link", { name: "click" })).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(markdown.locator("code").first()).toHaveText('<img src="https://e.example/a.png" width="200">');
+  await expect(markdown.locator("pre code")).toHaveText('<img src="docs/shot.png" alt="Shot">');
+});
