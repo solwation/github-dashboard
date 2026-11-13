@@ -1,10 +1,10 @@
 {
-  "baseCommit": "90ec953cbaef0767fea50cbdbd679dc5f47d466f",
+  "baseCommit": "2de2a3468643c31b08c0f4db2c5b451f553ce766",
   "summary": {
-    "sv": "Bilder från publika release-assets visas igen i kommentarer och bildvisare. Bilder som inte kan laddas visar en platshållare med länk till GitHub.",
-    "en": "Images from public release assets show again in comments and the viewer. Images that cannot load show a placeholder with a link to GitHub."
+    "sv": "Bildvisningen i kommentarer är mer robust: text i bildbeskrivningar kan inte tolkas som bildtaggar, inte heller i äldre webbläsare.",
+    "en": "Comment image rendering is more robust: text in image descriptions can no longer be read as image tags, including in older browsers."
   },
   "issues": [
-    458
+    460
   ]
 }
