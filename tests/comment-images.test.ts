@@ -161,14 +161,14 @@ describe("comment image detection and carousel extraction (#442)", () => {
   });
 
   it("parses release asset download URLs correctly (#448)", () => {
-    const parsed = parseReleaseAssetUrl("https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png");
+    const parsed = parseReleaseAssetUrl("https://github.com/example-org/private-app/releases/download/untagged-0123456789abcdef0123/issue-42-before-1280-2026-11-11.png");
     expect(parsed).toEqual({
-      owner: "solwation",
-      repo: "untappdbolaget",
-      repository: "solwation/untappdbolaget",
-      tag: "untagged-88cbdda083a58460c44e",
-      assetName: "issue-3488-before-1280-2026-11-11.png",
-      url: "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png",
+      owner: "example-org",
+      repo: "private-app",
+      repository: "example-org/private-app",
+      tag: "untagged-0123456789abcdef0123",
+      assetName: "issue-42-before-1280-2026-11-11.png",
+      url: "https://github.com/example-org/private-app/releases/download/untagged-0123456789abcdef0123/issue-42-before-1280-2026-11-11.png",
     });
 
     const parsedWithQuery = parseReleaseAssetUrl("https://github.com/owner/repo/releases/download/v1.0.0/screenshot.jpg?raw=true#fragment");
@@ -189,8 +189,8 @@ describe("comment image detection and carousel extraction (#442)", () => {
   });
 
   it("keeps the direct download URL for release asset images so the browser loads them (#448, #458)", () => {
-    const before = "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png";
-    const after = "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png";
+    const before = "https://github.com/example-org/private-app/releases/download/untagged-0123456789abcdef0123/issue-42-before-1280-2026-11-11.png";
+    const after = "https://github.com/example-org/private-app/releases/download/untagged-0123456789abcdef0123/issue-42-after-1280-2026-11-11.png";
     const link = "https://github.com/owner/repo/releases/download/v1/linked.png";
     const rawMarkdown = [
       "Before, 1280:",
@@ -205,7 +205,7 @@ describe("comment image detection and carousel extraction (#442)", () => {
 
     // Markdown images stay in the carousel, with their real download URL as source; links stay inline.
     expect(images).toHaveLength(3);
-    expect(images.find(i => i.alt === "before")).toMatchObject({ key: `src:${before}`, name: "issue-3488-before-1280-2026-11-11.png", src: before });
+    expect(images.find(i => i.alt === "before")).toMatchObject({ key: `src:${before}`, name: "issue-42-before-1280-2026-11-11.png", src: before });
     expect(images.find(i => i.alt === "before")?.isInline).toBeFalsy();
     expect(images.find(i => i.alt === "after")).toMatchObject({ key: `src:${after}`, src: after });
     expect(images.find(i => i.src === link)).toMatchObject({ key: `src:${link}`, alt: "shot", isInline: true });

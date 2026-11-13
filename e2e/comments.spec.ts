@@ -678,7 +678,7 @@ test("release asset images load directly from their download URL and fall back t
       json: [
         comment(1, [
           "Before, 1280:",
-          `![before](${base}/issue-3488-before-1280.png)`,
+          `![before](${base}/issue-42-before-1280.png)`,
           "Missing asset:",
           `![missing](${base}/non-existent.png)`,
           `Linked: [linked shot](${base}/linked.png)`,
@@ -693,7 +693,7 @@ test("release asset images load directly from their download URL and fall back t
   // 1. The comment image keeps its real download URL and the browser loads it.
   const thumbnail = commentsDialog.getByRole("button", { name: "Öppna bild: before", exact: true });
   await expect(thumbnail).toBeVisible();
-  await expect(thumbnail).toHaveAttribute("src", `${base}/issue-3488-before-1280.png`);
+  await expect(thumbnail).toHaveAttribute("src", `${base}/issue-42-before-1280.png`);
   await expect.poll(() => thumbnail.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBe(96);
 
   // 2. A linked release asset gets a direct preview after the link.
@@ -703,9 +703,9 @@ test("release asset images load directly from their download URL and fall back t
 
   // 3. The carousel lists the loaded asset with its direct URL and marks the missing one as failed.
   const carousel = commentsDialog.getByRole("region", { name: "Omnämnda bilder", exact: true });
-  const carouselBefore = carousel.getByRole("button", { name: "Öppna bild: issue-3488-before-1280.png", exact: true });
+  const carouselBefore = carousel.getByRole("button", { name: "Öppna bild: issue-42-before-1280.png", exact: true });
   await expect(carouselBefore).toBeEnabled();
-  await expect(carouselBefore.locator("img")).toHaveAttribute("src", `${base}/issue-3488-before-1280.png`);
+  await expect(carouselBefore.locator("img")).toHaveAttribute("src", `${base}/issue-42-before-1280.png`);
   await expect(carousel.getByRole("button", { name: "Öppna bild: non-existent.png", exact: true })).toBeDisabled();
 
   // 4. A missing asset shows the placeholder with alt text and "Visa på GitHub", never an empty gap.
@@ -721,12 +721,12 @@ test("release asset images load directly from their download URL and fall back t
   const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
   await thumbnail.click();
   await expect(viewer).toBeVisible();
-  await expect(viewer.locator("img")).toHaveAttribute("src", `${base}/issue-3488-before-1280.png`);
+  await expect(viewer.locator("img")).toHaveAttribute("src", `${base}/issue-42-before-1280.png`);
   await page.keyboard.press("Escape");
   await expect(viewer).not.toBeVisible();
   await carouselBefore.click();
   await expect(viewer).toBeVisible();
-  await expect(viewer.locator("img")).toHaveAttribute("src", `${base}/issue-3488-before-1280.png`);
+  await expect(viewer.locator("img")).toHaveAttribute("src", `${base}/issue-42-before-1280.png`);
   await page.keyboard.press("Escape");
 
   // 6. No release API lookups and no token on any asset request.

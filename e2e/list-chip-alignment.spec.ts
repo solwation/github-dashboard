@@ -4,7 +4,7 @@ import { boardSplit } from "./support/board-grouping";
 
 const repos = [
   { id: 911, name: "booster-ai", full_name: "sample/booster-ai", description: "Short name", private: false, html_url: "https://github.com/sample/booster-ai", owner: { login: "sample" } },
-  { id: 912, name: "untappdbolaget", full_name: "sample/untappdbolaget", description: "Medium name", private: false, html_url: "https://github.com/sample/untappdbolaget", owner: { login: "sample" } },
+  { id: 912, name: "medium-project", full_name: "sample/medium-project", description: "Medium name", private: false, html_url: "https://github.com/sample/medium-project", owner: { login: "sample" } },
   { id: 913, name: "github-dashboard", full_name: "sample/github-dashboard", description: "Standard name", private: false, html_url: "https://github.com/sample/github-dashboard", owner: { login: "sample" } },
   { id: 914, name: "lunden-3d-apartment-with-a-very-long-repository-name", full_name: "sample/lunden-3d-apartment-with-a-very-long-repository-name", description: "Long name", private: false, html_url: "https://github.com/sample/lunden-3d-apartment-with-a-very-long-repository-name", owner: { login: "sample" } },
 ];
@@ -16,7 +16,7 @@ const closed = new Date(now - 1_800_000).toISOString();
 
 const issues = [
   { id: 1, number: 101, title: "Booster backlog task", state: "open", repo: repos[0]!, labels: ["sp-4", "a-very-long-label-that-must-share-space-with-the-more-control", "another-long-workflow-label", "third-workflow-label", "fourth-workflow-label"].map(name => ({ name, color: "a2eeef" })) },
-  { id: 2, number: 201, title: "Untappd active progress task", state: "open", repo: repos[1]!, labels: [{ name: "in progress", color: "fbca04" }], startedAt: new Date(now - 1_800_000).toISOString() },
+  { id: 2, number: 201, title: "Medium active progress task", state: "open", repo: repos[1]!, labels: [{ name: "in progress", color: "fbca04" }], startedAt: new Date(now - 1_800_000).toISOString() },
   { id: 3, number: 301, title: "Dashboard timeout overrun task", state: "open", repo: repos[2]!, labels: [{ name: "in progress", color: "fbca04" }], startedAt: new Date(now - 7_200_000).toISOString() },
   { id: 4, number: 401, title: "Lunden finished work task", state: "closed", repo: repos[3]!, labels: [{ name: "bug", color: "d73a4a" }], closed_at: closed, startedAt: new Date(now - 3_600_000).toISOString() },
   { id: 5, number: 302, title: "Dashboard second backlog task", state: "open", repo: repos[2]!, labels: [{ name: "priority: high", color: "b60205" }] },
@@ -174,14 +174,14 @@ for (const scenario of scenarios) {
           // Acceptance Criterion 2:
           // Status, priority, SP, comments, and time line up ±1px between rows with different repository name lengths
           // and with/without Timeout.
-          const untappdRow = rows.filter({ hasText: "Untappd active progress task" }).first();
+          const mediumRow = rows.filter({ hasText: "Medium active progress task" }).first();
           const timeoutRow = rows.filter({ hasText: "Dashboard timeout overrun task" }).first();
           const dashboardRow = rows.filter({ hasText: "Dashboard second backlog task" }).first();
 
-          // Status alignment (Untappd, Timeout row, Dashboard row, Booster row)
+          // Status alignment (Medium, Timeout row, Dashboard row, Booster row)
           const statusXs = await Promise.all([
             boosterRow.locator(".row-status").boundingBox().then(b => Math.round(b!.x)),
-            untappdRow.locator(".row-status").boundingBox().then(b => Math.round(b!.x)),
+            mediumRow.locator(".row-status").boundingBox().then(b => Math.round(b!.x)),
             timeoutRow.locator(".row-status").boundingBox().then(b => Math.round(b!.x)),
             dashboardRow.locator(".row-status").boundingBox().then(b => Math.round(b!.x)),
           ]);
@@ -191,7 +191,7 @@ for (const scenario of scenarios) {
           // Priority alignment (across open rows)
           const priorityXs = await Promise.all([
             boosterRow.locator(".row-slot-priority").boundingBox().then(b => Math.round(b!.x)),
-            untappdRow.locator(".row-slot-priority").boundingBox().then(b => Math.round(b!.x)),
+            mediumRow.locator(".row-slot-priority").boundingBox().then(b => Math.round(b!.x)),
             timeoutRow.locator(".row-slot-priority").boundingBox().then(b => Math.round(b!.x)),
             dashboardRow.locator(".row-slot-priority").boundingBox().then(b => Math.round(b!.x)),
           ]);
@@ -201,7 +201,7 @@ for (const scenario of scenarios) {
           // Story points alignment
           const spXs = await Promise.all([
             boosterRow.locator(".issue-points").boundingBox().then(b => Math.round(b!.x)),
-            untappdRow.locator(".issue-points").boundingBox().then(b => Math.round(b!.x)),
+            mediumRow.locator(".issue-points").boundingBox().then(b => Math.round(b!.x)),
             timeoutRow.locator(".issue-points").boundingBox().then(b => Math.round(b!.x)),
             dashboardRow.locator(".issue-points").boundingBox().then(b => Math.round(b!.x)),
           ]);
@@ -212,7 +212,7 @@ for (const scenario of scenarios) {
           if (await boosterRow.locator(".row-comments").isVisible()) {
             const commentXs = await Promise.all([
               boosterRow.locator(".row-comments .comment-count svg").boundingBox().then(b => Math.round(b!.x)),
-              untappdRow.locator(".row-comments .comment-count svg").boundingBox().then(b => Math.round(b!.x)),
+              mediumRow.locator(".row-comments .comment-count svg").boundingBox().then(b => Math.round(b!.x)),
               timeoutRow.locator(".row-comments .comment-count svg").boundingBox().then(b => Math.round(b!.x)),
               dashboardRow.locator(".row-comments .comment-count svg").boundingBox().then(b => Math.round(b!.x)),
             ]);
@@ -223,7 +223,7 @@ for (const scenario of scenarios) {
           // Time alignment
           const timeXs = await Promise.all([
             boosterRow.locator(".row-time").boundingBox().then(b => Math.round(b!.x)),
-            untappdRow.locator(".row-time").boundingBox().then(b => Math.round(b!.x)),
+            mediumRow.locator(".row-time").boundingBox().then(b => Math.round(b!.x)),
             timeoutRow.locator(".row-time").boundingBox().then(b => Math.round(b!.x)),
             dashboardRow.locator(".row-time").boundingBox().then(b => Math.round(b!.x)),
           ]);
@@ -234,7 +234,7 @@ for (const scenario of scenarios) {
           // Row height does not increase
           const heights = await Promise.all([
             boosterRow.boundingBox().then(b => b!.height),
-            untappdRow.boundingBox().then(b => b!.height),
+            mediumRow.boundingBox().then(b => b!.height),
             timeoutRow.boundingBox().then(b => b!.height),
             dashboardRow.boundingBox().then(b => b!.height),
             lundenRow.boundingBox().then(b => b!.height),

@@ -61,7 +61,7 @@ OAuth is implemented but requires your OAuth App registration and Worker deploym
 
 ## Project research
 
-Read-only inspection of the local CLAUDE.md files and live GitHub label definitions identified Lunden's `priority: high/medium/low` convention and Untappdbolaget's `high priority`, `reviewer-filed`, `in-progress`, coordination, waiting and deployment labels. Only those conventions inform the generic detection rules; no private issue titles, descriptions or account tokens are bundled into the frontend.
+Read-only inspection of the local CLAUDE.md files and live GitHub label definitions identified Lunden's `priority: high/medium/low` convention and another private project's `high priority`, `reviewer-filed`, `in-progress`, coordination, waiting and deployment labels. Only those conventions inform the generic detection rules; no private issue titles, descriptions or account tokens are bundled into the frontend.
 
 ## Install as an app
 
