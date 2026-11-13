@@ -1,10 +1,10 @@
 {
-  "baseCommit": "c2f5fb7b90f1cae6ad4975ee8494d75a633e35b5",
+  "baseCommit": "935d3a1d814faf3a874133304c5c79b3809fac30",
   "summary": {
-    "sv": "Orsakstexten i bildkarusellens miniatyrer är nu lättare att läsa.",
-    "en": "The reason text on image carousel thumbnails is now easier to read."
+    "sv": "Säkrare visning av ärendetext och kommentarer: text som liknar HTML-bildtaggar i bildbeskrivningar, länktitlar och kod förblir vanlig text.",
+    "en": "Safer rendering of issue text and comments: text resembling HTML image tags in image descriptions, link titles and code stays plain text."
   },
   "issues": [
-    455
+    457
   ]
 }

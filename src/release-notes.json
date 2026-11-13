@@ -2,10 +2,19 @@
   {
     "date": "2026-11-13",
     "summary": {
-      "sv": "Orsakstexten i bildkarusellens miniatyrer är nu lättare att läsa.",
-      "en": "The reason text on image carousel thumbnails is now easier to read."
+      "sv": "Säkrare visning av kommentarer och lättare läst orsakstext i bildkarusellen.",
+      "en": "Safer comment rendering and easier-to-read reason text in the image carousel."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Text som liknar en HTML-bildtagg i bildbeskrivningar, länktitlar och kod förblir nu vanlig text och kan inte längre påverka hur sidan visas.",
+          "en": "Text resembling an HTML image tag in image descriptions, link titles and code now stays plain text and can no longer alter how the page is displayed."
+        },
+        "issues": [
+          457
+        ]
+      },
       {
         "text": {
           "sv": "Orsakstexten på karusellminiatyrer för bilder som inte kan laddas följer nu designens minsta textstorlek på 10px.",
