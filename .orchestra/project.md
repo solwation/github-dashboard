@@ -106,14 +106,19 @@ expensive browser suites are a queued shared resource taken in turns, so their c
 does not set the worker count. Report active workers, capacity and why a slot is unused.
 
 Worktree root and cleanup (core [clean up checkouts](shared/ORCHESTRA.md#clean-up-checkouts)):
-under WSL, session worktrees live in `~/gd-wt/` (ext4), plus any runtime-managed ones
-that `git worktree list` shows. Whoever creates a writing worktree first writes the core's
+session worktrees live in the core default `workingtree/<issue-N>` inside this checkout
+(ignored via `/workingtree/` in `.gitignore`; `vitest.config.ts` excludes it so targeted
+runs never collect another checkout's tests). Under WSL with the checkout on a Windows
+drive (`/mnt/*`), use `~/gd-wt/` on ext4 instead. Runtime-managed ones that
+`git worktree list` shows stay where the platform puts them. Never run `git clean -x`
+in the integration checkout: it deletes `workingtree/` and every checkout in it. Whoever creates a writing worktree first writes the core's
 `orchestra-claim` marker (`issue=solwation/github-dashboard#N`, `session=<owner ID>`) in its
 git directory. The integration owner removes an issue's worktree and
 work branch as the last follow-up step once its change is verified on `origin/main`
 and the issue is closed. The session review and conductor startup prune the root with
 `.orchestra/shared/scripts/prune-worktrees.sh` (dry run first, then `--apply`
-`--archive ~/gd-wt/.archive` so unproven work is preserved as bundle and patch).
+`--archive ~/gd-wt/.archive`, outside any checkout, so unproven work is preserved as
+bundle and patch).
 Never remove a checkout whose issue is open or that another session visibly owns.
 
 Aim for a useful delivery within 30 minutes. Reassess progress around that time and
@@ -202,6 +207,13 @@ paginated open-issue fetch described [above](#issueflow-and-queue).
 
 ## Final review and watch
 
+A queue session that finds nothing startable at its start first runs the core
+[project review on an empty queue](shared/COORDINATION.md#review-the-project-on-an-empty-queue)
+with its defaults (once per run, read-only, at most 5 concrete findings filed as
+priority-assessed issues that the same run then delivers). Focus on recent changes,
+the AI.md rules on optional-data visibility, encrypted storage, accessibility and
+mobile layouts, and DESIGN.md drift only where it is a concrete defect.
+
 This is the project's configuration of the core
 [session review](shared/COORDINATION.md#review-the-session); it replaces rather than
 adds to it. Run it when the actionable queue is empty and the latest app batch is
@@ -232,8 +244,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.13.1**,
-commit **78fb119b8b37e645a303f40b86551815fd5e095b** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.14.0**,
+commit **edb110b8fe5e761fea1d3bdb10b5457e5acacb95** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
