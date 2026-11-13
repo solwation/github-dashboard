@@ -9,7 +9,9 @@ and overrides; explicit user instructions and platform limits take precedence.
 
 `/orkester`, `$orkester` or a plain-language request to run orchestration invokes this
 workflow. Ordinary chat change requests follow the core’s [chat intake](shared/ORCHESTRA.md#turn-chat-requests-into-work):
-create/reuse issues and start or resume scoped work, even after a watch ends. Respect
+create/reuse issues and start or resume scoped work, even after a watch ends. Work
+issues an agent creates or adds use the same intake mode (a scoped task); registering
+the issue alone is not completion. Respect
 explicit deferral and reuse an active conductor. A scoped request adds no whole-backlog
 run or timer; reading or installing instructions alone starts no work. Requested
 instruction changes are scoped work too.
@@ -72,7 +74,10 @@ worker count. Compute `free_cores = nproc - max(0, load1 - own load)` and
 `min(floor(free_cores / 1.5), floor(free_mem / 1.5 GiB))`, allowing at least one active
 issue while startable work exists. A browser-suite worker costs 2 cores and 2 GiB.
 Available tool slots and independent work may lower capacity; reserve resources for
-the conductor and browsers rather than filling all slots automatically.
+the conductor and browsers rather than filling all slots automatically. This measured
+value is the ceiling for the core's [dynamic capacity](shared/ORCHESTRA.md#choose-the-smallest-useful-team):
+throttle below it on rate limits, resource pressure or waiting `integration-ready`
+handoffs, and integrate those handoffs before dispatching new workers.
 
 Count this session's active issues across workers and the conductor's implementation,
 review, integration and verification. Issues waiting as `integration-ready` do not count
@@ -227,8 +232,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.12.0**,
-commit **9e7c6e388df0ebdd25c0ba76d3debc73de3c41fa** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.13.1**,
+commit **78fb119b8b37e645a303f40b86551815fd5e095b** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
