@@ -2,8 +2,8 @@
   {
     "date": "2026-11-13",
     "summary": {
-      "sv": "Säkrare visning av kommentarer och lättare läst orsakstext i bildkarusellen.",
-      "en": "Safer comment rendering and easier-to-read reason text in the image carousel."
+      "sv": "Säkrare visning av kommentarer, bilder från publika release-assets visas igen och orsakstexten i bildkarusellen är lättare att läsa.",
+      "en": "Safer comment rendering, images from public release assets show again, and the image carousel's reason text is easier to read."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           457
+        ]
+      },
+      {
+        "text": {
+          "sv": "Bilder från publika release-assets visas igen i kommentarer, bildkarusell och bildvisare; bilder som inte kan laddas, till exempel från privata repon, får en platshållare med länk till GitHub.",
+          "en": "Images from public release assets show again in comments, the image carousel and the viewer; images that cannot load, such as those in private repositories, get a placeholder linking to GitHub."
+        },
+        "issues": [
+          458
         ]
       },
       {
@@ -62,8 +71,8 @@
       },
       {
         "text": {
-          "sv": "Bilder från privata release-assets visas i kommentarer och bildvisare via GitHub-API:et, med tydlig platshållare vid fel.",
-          "en": "Private release asset images render in comments and image viewer via the GitHub API, with clear placeholders on failure."
+          "sv": "Bilder från release-assets visas i kommentarer och bildvisare, med tydlig platshållare när de inte kan laddas.",
+          "en": "Release asset images render in comments and the image viewer, with a clear placeholder when they cannot load."
         },
         "issues": [
           448

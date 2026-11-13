@@ -1,10 +1,10 @@
 {
-  "baseCommit": "935d3a1d814faf3a874133304c5c79b3809fac30",
+  "baseCommit": "90ec953cbaef0767fea50cbdbd679dc5f47d466f",
   "summary": {
-    "sv": "Säkrare visning av ärendetext och kommentarer: text som liknar HTML-bildtaggar i bildbeskrivningar, länktitlar och kod förblir vanlig text.",
-    "en": "Safer rendering of issue text and comments: text resembling HTML image tags in image descriptions, link titles and code stays plain text."
+    "sv": "Bilder från publika release-assets visas igen i kommentarer och bildvisare. Bilder som inte kan laddas visar en platshållare med länk till GitHub.",
+    "en": "Images from public release assets show again in comments and the viewer. Images that cannot load show a placeholder with a link to GitHub."
   },
   "issues": [
-    457
+    458
   ]
 }
