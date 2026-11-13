@@ -21,7 +21,8 @@ test.describe("Content Security Policy", () => {
     const content = await cspMeta.getAttribute("content");
     expect(content).toContain("default-src 'self'");
     expect(content).toContain("script-src 'self' 'sha256-Br8YhJpQhIbpnMBUqFn9lgCUnmH2NcVRwo6QgXFzhQQ='");
-    expect(content).toContain("connect-src 'self' https://api.github.com");
+    // Only origins the app actually fetches; release-asset images load as <img> under img-src (#458).
+    expect(content).toContain("connect-src 'self' https://api.github.com;");
     expect(content).toContain("img-src 'self' https: data: blob:");
     expect(content).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
     expect(content).toContain("font-src 'self' https://fonts.gstatic.com data:");

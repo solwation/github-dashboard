@@ -40,7 +40,6 @@ export interface DetectedImage {
   src?: string;
   path?: string;
   ref?: string;
-  assetUrl?: string;
   repository?: string;
   isInline?: boolean;
 }
@@ -314,14 +313,9 @@ export function imageDocument(html: string, t: Translate): Document {
     img.referrerPolicy = "no-referrer";
     const srcVal = img.getAttribute("src");
     const clean = normalizeRepoPath(srcVal);
-    const assetRef = parseReleaseAssetUrl(srcVal);
     const repoFileRef = parseGitHubRepoFileUrl(srcVal);
     if (clean) {
       img.dataset.repoPath = clean;
-      img.dataset.rawSrc = srcVal || "";
-      img.removeAttribute("src");
-    } else if (assetRef) {
-      img.dataset.releaseAssetUrl = assetRef.url;
       img.dataset.rawSrc = srcVal || "";
       img.removeAttribute("src");
     } else if (repoFileRef) {
@@ -340,7 +334,7 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
   const seen = new Set<string>();
 
   function addImage(item: DetectedImage) {
-    const id = item.path ? `path:${item.path}` : item.assetUrl ? `asset:${item.assetUrl}` : `src:${item.src}`;
+    const id = item.path ? `path:${item.path}` : `src:${item.src}`;
     if (seen.has(id)) return;
     seen.add(id);
     images.push(item);
@@ -355,17 +349,14 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
     }
   }
 
-  // 2. Relative image links (e.g. [cutout](assets/dancer.png)), release assets, and direct image links
+  // 2. Relative image links (e.g. [cutout](assets/dancer.png)) and direct image links, including release assets
   for (const match of preparedHtml.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi)) {
     const href = match[1]!;
     const text = match[2]!.replace(/<[^>]+>/g, "").trim();
     const cleanPath = normalizeRepoPath(href);
-    const assetRef = parseReleaseAssetUrl(href);
     const repoFileRef = parseGitHubRepoFileUrl(href);
     if (cleanPath) {
       addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: text || basename(cleanPath), path: cleanPath });
-    } else if (assetRef) {
-      addImage({ key: `asset:${assetRef.url}`, name: assetRef.assetName, alt: text || assetRef.assetName, assetUrl: assetRef.url, repository: assetRef.repository, isInline: true });
     } else if (repoFileRef) {
       addImage({ key: `repo:${repoFileRef.url}`, name: basename(repoFileRef.path), alt: text || basename(repoFileRef.path), src: href, path: repoFileRef.path, repository: repoFileRef.repository, ref: repoFileRef.ref, isInline: true });
     } else if (isDirectImageLink(href)) {
@@ -373,7 +364,8 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
     }
   }
 
-  // 3. Plain text mentions of relative image paths and release asset URLs (outside of code/links)
+  // 3. Plain text mentions of relative image paths and release asset URLs (outside of code/links).
+  // Release assets load directly in the browser from their download URL (#458).
   const stripped = preparedHtml.replace(/<code\b[^>]*>.*?<\/code>/gi, "").replace(/<a\b[^>]*>.*?<\/a>/gi, "").replace(/<[^>]+>/g, " ");
   for (const match of stripped.matchAll(TEXT_IMAGE_PATH)) {
     const found = match[1];
@@ -389,7 +381,7 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
     const found = match[0];
     const assetRef = parseReleaseAssetUrl(found);
     if (assetRef) {
-      addImage({ key: `asset:${assetRef.url}`, name: assetRef.assetName, alt: assetRef.assetName, assetUrl: assetRef.url, repository: assetRef.repository });
+      addImage({ key: `src:${assetRef.url}`, name: assetRef.assetName, alt: assetRef.assetName, src: assetRef.url });
     }
   }
 
@@ -407,7 +399,8 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
       if (cleanPath) {
         addImage({ key: `path:${cleanPath}`, name: basename(cleanPath), alt: alt || basename(cleanPath), path: cleanPath });
       } else if (assetRef) {
-        addImage({ key: `asset:${assetRef.url}`, name: assetRef.assetName, alt: alt || assetRef.assetName, assetUrl: assetRef.url, repository: assetRef.repository });
+        // Shown in the carousel too; the browser loads it directly, without API or token (#458).
+        addImage({ key: `src:${src}`, name: assetRef.assetName, alt: alt || assetRef.assetName, src });
       } else if (repoFileRef) {
         addImage({ key: `repo:${repoFileRef.url}`, name: basename(repoFileRef.path), alt: alt || basename(repoFileRef.path), src, path: repoFileRef.path, repository: repoFileRef.repository, ref: repoFileRef.ref });
       } else {
@@ -427,12 +420,9 @@ export function extractCommentImages(html: string, t: Translate): { cleanHtml: s
       }
       const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
       const clean = srcMatch ? normalizeRepoPath(srcMatch[1]!) : null;
-      const assetRef = srcMatch ? parseReleaseAssetUrl(srcMatch[1]!) : null;
       const repoFileRef = srcMatch ? parseGitHubRepoFileUrl(srcMatch[1]!) : null;
       if (clean) {
         updated = updated.replace(srcMatch![0], `data-repo-path="${clean}" data-raw-src="${srcMatch![1]!}"`);
-      } else if (assetRef) {
-        updated = updated.replace(srcMatch![0], `data-release-asset-url="${assetRef.url}" data-raw-src="${srcMatch![1]!}"`);
       } else if (repoFileRef) {
         updated = updated.replace(srcMatch![0], `data-repo-path="${repoFileRef.path}" data-repository="${repoFileRef.repository}" data-ref="${repoFileRef.ref}" data-raw-src="${srcMatch![1]!}" src="${srcMatch![1]!}"`);
       }

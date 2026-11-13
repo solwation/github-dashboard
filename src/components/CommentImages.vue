@@ -11,7 +11,6 @@ import {
   imageGalleryKey,
   normalizeRepoPath,
   parseGitHubRepoFileUrl,
-  parseReleaseAssetUrl,
   type DetectedImage,
 } from "../lib/comment-images";
 
@@ -142,19 +141,6 @@ const renderedHtml = computed(() => {
       return match;
     }
 
-    const assetMatch = attrs.match(/data-release-asset-url=["']([^"']+)["']/i);
-    if (assetMatch) {
-      const assetUrl = assetMatch[1]!;
-      const key = (rawSrcKey && loaded[rawSrcKey]) ? rawSrcKey : assetUrl;
-      if (loaded[key]) {
-        return match.replace(/<img\b/i, `<img src="${loaded[key]}" `);
-      }
-      if (failed[assetUrl] || (rawSrcKey && failed[rawSrcKey])) {
-        return renderPlaceholder(attrs, assetUrl);
-      }
-      return match;
-    }
-
     if (!srcMatch) return match;
     const src = srcMatch[1]!;
     const isDirectPreview = /class=["'][^"']*direct-image-preview/i.test(attrs);
@@ -211,28 +197,6 @@ function updateImages() {
         });
       }
     }
-    if (item.assetUrl && !loadedUrls.value[item.assetUrl] && !loadingPaths.value[item.assetUrl] && !failedPaths.value[item.assetUrl]) {
-      const targetRepo = item.repository || props.repository;
-      if (targetRepo && fileLoader) {
-        loadingPaths.value = { ...loadingPaths.value, [item.assetUrl]: true };
-        fileLoader(targetRepo, item.assetUrl).then(res => {
-          const nextLoading = { ...loadingPaths.value };
-          delete nextLoading[item.assetUrl!];
-          loadingPaths.value = nextLoading;
-          const blobUrl = typeof res === "string" ? res : res?.url;
-          if (blobUrl) {
-            loadedUrls.value = { ...loadedUrls.value, [item.assetUrl!]: blobUrl };
-          } else {
-            markFailed([item.assetUrl]);
-          }
-        }).catch(() => {
-          const nextLoading = { ...loadingPaths.value };
-          delete nextLoading[item.assetUrl!];
-          loadingPaths.value = nextLoading;
-          markFailed([item.assetUrl]);
-        });
-      }
-    }
   }
 }
 
@@ -252,14 +216,14 @@ const carouselImages = computed<CarouselItem[]>(() => {
   return detected.value
     .filter(item => !item.isInline)
     .map(item => {
-      const srcKey = item.path || item.assetUrl;
+      const srcKey = item.path;
       const src = (item.src && loadedUrls.value[item.src])
         || (srcKey ? loadedUrls.value[srcKey] : undefined)
         || item.src;
       const loading = Boolean(srcKey && loadingPaths.value[srcKey]);
       const failed = Boolean(srcKey && failedPaths.value[srcKey])
         || Boolean(item.src && failedPaths.value[item.src]);
-      const reason = getFailedReason([item.src, srcKey, item.path, item.assetUrl]);
+      const reason = getFailedReason([item.src, item.path]);
       return {
         key: item.key,
         name: item.name,
@@ -343,13 +307,10 @@ async function activate(event: MouseEvent | KeyboardEvent) {
     images: [...imageDocument(source.html, t).querySelectorAll("img")].map(img => {
       const rawSrc = img.dataset.rawSrc || img.getAttribute("src") || "";
       const cleanPath = normalizeRepoPath(rawSrc);
-      const assetRef = parseReleaseAssetUrl(rawSrc);
       const repoRef = parseGitHubRepoFileUrl(rawSrc);
       let resolvedSrc = img.src;
       if (cleanPath && loadedUrls.value[cleanPath]) {
         resolvedSrc = loadedUrls.value[cleanPath];
-      } else if (assetRef && loadedUrls.value[assetRef.url]) {
-        resolvedSrc = loadedUrls.value[assetRef.url];
       } else if (repoRef && loadedUrls.value[repoRef.path]) {
         resolvedSrc = loadedUrls.value[repoRef.path];
       } else if (loadedUrls.value[rawSrc]) {

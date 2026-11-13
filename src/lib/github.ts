@@ -164,14 +164,6 @@ export class GitHub {
   }
   private readonly repoFiles = new Map<string, Promise<string | null>>();
   private readonly repoFileErrors = new Map<string, GitHubApiError>();
-  private readonly releaseAssets = new Map<string, Promise<string | null>>();
-  private readonly repoReleasesCache = new Map<string, Promise<Array<{
-    id: number;
-    tag_name: string;
-    draft: boolean;
-    assets?: Array<{ id: number; name: string; url: string; browser_download_url: string }>;
-  }> | null>>();
-
   getRepoFileError(repoFullName: string, path: string, ref?: string): GitHubApiError | undefined {
     const cleanPath = normalizeRepoPath(path);
     if (!cleanPath) return undefined;
@@ -242,104 +234,6 @@ export class GitHub {
     return promise;
   }
 
-  async releaseAsset(repoFullName: string, assetName: string, downloadUrl?: string): Promise<string | null> {
-    const cleanName = assetName.trim();
-    if (!cleanName || !repoFullName) return null;
-    const cacheKey = `${repoFullName.toLowerCase()}:${cleanName.toLowerCase()}`;
-    const cached = this.releaseAssets.get(cacheKey);
-    if (cached) return cached;
-    const promise = (async () => {
-      try {
-        const repoKey = repoFullName.toLowerCase();
-        let releasesPromise = this.repoReleasesCache.get(repoKey);
-        if (!releasesPromise) {
-          releasesPromise = (async () => {
-            try {
-              const res = await this.request<Array<{
-                id: number;
-                tag_name: string;
-                draft: boolean;
-                assets?: Array<{ id: number; name: string; url: string; browser_download_url: string }>;
-              }>>(`/repos/${repoFullName}/releases?per_page=100`, { store: false });
-              return res.data || [];
-            } catch {
-              return null;
-            }
-          })();
-          this.repoReleasesCache.set(repoKey, releasesPromise);
-        }
-        const releases = await releasesPromise;
-        if (!releases || !releases.length) return null;
-
-        let foundAsset: { id: number; name: string; url: string; browser_download_url: string } | undefined;
-        if (downloadUrl) {
-          for (const release of releases) {
-            if (release.assets) {
-              const match = release.assets.find(a => a.browser_download_url === downloadUrl);
-              if (match) {
-                foundAsset = match;
-                break;
-              }
-            }
-          }
-        }
-        if (!foundAsset) {
-          for (const release of releases) {
-            if (release.assets) {
-              const match = release.assets.find(a => a.name.toLowerCase() === cleanName.toLowerCase());
-              if (match) {
-                foundAsset = match;
-                break;
-              }
-            }
-          }
-        }
-        if (!foundAsset) return null;
-
-        const headers: Record<string, string> = {
-          Accept: "application/octet-stream",
-          "X-GitHub-Api-Version": "2022-11-28",
-        };
-        if (this.token) {
-          headers.Authorization = `Bearer ${this.token}`;
-        }
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30_000);
-        const response = await fetch(foundAsset.url, {
-          headers,
-          signal: controller.signal,
-          cache: "no-store",
-        });
-        clearTimeout(timeout);
-        if (!response.ok) return null;
-
-        const blob = await response.blob();
-        const mime = imageMimeType(cleanName) || blob.type || "image/png";
-        const typedBlob = blob.type && blob.type !== "application/octet-stream"
-          ? blob
-          : new Blob([blob], { type: mime });
-
-        if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
-          return URL.createObjectURL(typedBlob);
-        }
-
-        if (typeof FileReader !== "undefined") {
-          return new Promise<string | null>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(typedBlob);
-          });
-        }
-        const buffer = await typedBlob.arrayBuffer();
-        return `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
-      } catch {
-        return null;
-      }
-    })();
-    this.releaseAssets.set(cacheKey, promise);
-    return promise;
-  }
   async request<T>(
     path: string,
     options: { method?: "GET" | "POST"; body?: string; store?: boolean } = {},

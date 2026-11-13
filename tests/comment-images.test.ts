@@ -186,37 +186,38 @@ describe("comment image detection and carousel extraction (#442)", () => {
     expect(parseReleaseAssetUrl(null)).toBeNull();
   });
 
-  it("extracts release asset images from markdown comments into detected items (#448)", () => {
+  it("keeps the direct download URL for release asset images so the browser loads them (#448, #458)", () => {
+    const before = "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png";
+    const after = "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png";
+    const link = "https://github.com/owner/repo/releases/download/v1/linked.png";
     const rawMarkdown = [
       "Before, 1280:",
-      "![before](https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png)",
+      `![before](${before})`,
       "After, 1280:",
-      "![after](https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png)",
+      `![after](${after})`,
+      `Linked: [shot](${link})`,
     ].join("\n");
 
     const html = renderMarkdown(rawMarkdown);
     const { cleanHtml, images } = extractCommentImages(html, t);
 
-    expect(images).toHaveLength(2);
-    expect(images[0]).toMatchObject({
-      name: "issue-3488-before-1280-2026-11-11.png",
-      alt: "before",
-      assetUrl: "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png",
-      repository: "solwation/untappdbolaget",
-      key: "asset:https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png",
-    });
-    expect(images[1]).toMatchObject({
-      name: "issue-3488-after-1280-2026-11-11.png",
-      alt: "after",
-      assetUrl: "https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png",
-      repository: "solwation/untappdbolaget",
-      key: "asset:https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-after-1280-2026-11-11.png",
-    });
+    // Markdown images stay in the carousel, with their real download URL as source; links stay inline.
+    expect(images).toHaveLength(3);
+    expect(images.find(i => i.alt === "before")).toMatchObject({ key: `src:${before}`, name: "issue-3488-before-1280-2026-11-11.png", src: before });
+    expect(images.find(i => i.alt === "before")?.isInline).toBeFalsy();
+    expect(images.find(i => i.alt === "after")).toMatchObject({ key: `src:${after}`, src: after });
+    expect(images.find(i => i.src === link)).toMatchObject({ key: `src:${link}`, alt: "shot", isInline: true });
 
-    // cleanHtml has data-release-asset-url and data-raw-src without raw src attribute
-    expect(cleanHtml).toContain('data-release-asset-url="https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png"');
-    expect(cleanHtml).toContain('data-raw-src="https://github.com/solwation/untappdbolaget/releases/download/untagged-88cbdda083a58460c44e/issue-3488-before-1280-2026-11-11.png"');
-    expect(cleanHtml).not.toMatch(/\ssrc=["']/);
+    // The rendered HTML keeps the src (no API loading path), so a public asset loads like any https image.
+    expect(cleanHtml).toContain(`src="${before}"`);
+    expect(cleanHtml).toContain(`src="${after}"`);
+    expect(cleanHtml).not.toContain("data-release-asset-url");
+  });
+
+  it("detects plain-text release asset mentions as carousel images with their download URL (#458)", () => {
+    const url = "https://github.com/owner/repo/releases/download/v1/plain.png";
+    const { images } = extractCommentImages(`<p>See ${url} for details</p>`, t);
+    expect(images).toEqual([{ key: `src:${url}`, name: "plain.png", alt: "plain.png", src: url }]);
   });
 
   it("parses GitHub repo file and raw URLs correctly (#450)", () => {
@@ -340,7 +341,7 @@ describe("comment image detection and carousel extraction (#442)", () => {
     }
 
     const { images } = extractCommentImages(renderMarkdown(sources.slice(0, 5).join("\n\n")), t);
-    expect(images.map(image => image.path ?? image.assetUrl ?? image.src).sort()).toEqual([
+    expect(images.map(image => image.path ?? image.src).sort()).toEqual([
       "docs/linked.png",
       "docs/relative.png",
       "https://e.example/plain.png",
