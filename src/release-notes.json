@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-13",
+    "summary": {
+      "sv": "Orsakstexten i bildkarusellens miniatyrer är nu lättare att läsa.",
+      "en": "The reason text on image carousel thumbnails is now easier to read."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Orsakstexten på karusellminiatyrer för bilder som inte kan laddas följer nu designens minsta textstorlek på 10px.",
+          "en": "The reason text on carousel thumbnails for images that cannot load now meets the design's 10px minimum text size."
+        },
+        "issues": [
+          455
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-12",
     "summary": {
       "sv": "Tydlig orsak visas när bilder från privata repon inte laddas på grund av saknad Contents-läsrättighet, och token-hjälpen förtydligas.",

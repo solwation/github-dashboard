@@ -1,10 +1,10 @@
 {
-  "baseCommit": "6c309cb5c30b3a2a52e2eab8d1cc80dd0a4f212b",
+  "baseCommit": "c2f5fb7b90f1cae6ad4975ee8494d75a633e35b5",
   "summary": {
-    "sv": "Tydlig orsak visas när bilder från privata repon inte laddas på grund av saknad Contents-läsrättighet, och token-hjälpen förtydligas.",
-    "en": "Clear explanation when private repo images fail to load due to missing Contents read permission, and clarified token help."
+    "sv": "Orsakstexten i bildkarusellens miniatyrer är nu lättare att läsa.",
+    "en": "The reason text on image carousel thumbnails is now easier to read."
   },
   "issues": [
-    452
+    455
   ]
 }

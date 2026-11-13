@@ -702,7 +702,7 @@ onBeforeUnmount(() => observer?.disconnect());
   gap: 2px;
 }
 .carousel-thumb-reason {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.1;
   color: var(--muted);
   max-width: 110px;
