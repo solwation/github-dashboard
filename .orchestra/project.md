@@ -244,8 +244,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.14.0**,
-commit **edb110b8fe5e761fea1d3bdb10b5457e5acacb95** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.14.1**,
+commit **412b663a134cd0198f6ca992f677b34de136cf1b** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
