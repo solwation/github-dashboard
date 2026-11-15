@@ -1,10 +1,11 @@
 export interface SubIssueProgress { total: number; completed: number }
-export interface ParentIssue { number: number; title: string; url: string; repository: string }
+import { issueType, type IssueType } from "./issue-type";
+export interface ParentIssue { number: number; title: string; url: string; repository: string; type: IssueType | null }
 export interface IssueRelations { parent: ParentIssue | null; progress: SubIssueProgress | null }
 export const issueRelationsQuery = `query IssueRelations($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issue(number: $number) {
-      parent { number title url }
+      parent { number title url labels(first: 30) { nodes { name } } }
       subIssuesSummary { total completed }
     }
   }
@@ -23,14 +24,16 @@ export function parseIssueRelations(value: unknown): IssueRelations | null {
   const failed = (field: string) => response?.errors?.some(error => !error.path || error.path.length <= 2 || error.path.includes(field));
   let parent: ParentIssue | null = null;
   if (!failed("parent") && issue.parent && typeof issue.parent === "object") {
-    const candidate = issue.parent as ParentIssue;
+    const candidate = issue.parent as Omit<ParentIssue, "repository" | "type"> & { labels?: { nodes?: unknown } };
     try {
       const url = new URL(candidate.url);
       const path = url.pathname.match(/^\/([\w.-]+\/[\w.-]+)\/issues\/(\d+)\/?$/);
       if (url.origin === "https://github.com" && !url.username && !url.password && path &&
         Number.isSafeInteger(candidate.number) && candidate.number > 0 && Number(path[2]) === candidate.number &&
         typeof candidate.title === "string" && candidate.title.trim()) {
-        parent = { number: candidate.number, title: candidate.title, url: url.href, repository: path[1]! };
+        const nodes = Array.isArray(candidate.labels?.nodes) ? candidate.labels.nodes : [];
+        const labels = nodes.filter((node): node is { name: string } => typeof (node as { name?: unknown } | null)?.name === "string");
+        parent = { number: candidate.number, title: candidate.title, url: url.href, repository: path[1]!, type: issueType(labels) };
       }
     } catch { /* Invalid or inaccessible parent links stay hidden. */ }
   }

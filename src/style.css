@@ -3022,6 +3022,15 @@ a.sidebar-repository:focus-visible {
 .closed .type-circle { opacity: .72; }
 .closed .type-circle .type-closed { opacity: 1; }
 :root[data-theme="dark"] .closed .type-circle .type-closed { color: var(--accent-green); }
+/* #465: the parent's type glyph inside a sub-issue badge, coloured like the type circle. */
+.parent-type { flex: 0 0 12px; }
+.parent-type-bug { color: var(--type-bug-fg); }
+.parent-type-security { color: var(--type-security-fg); }
+.parent-type-feature { color: var(--type-feature-fg); }
+.parent-type-docs { color: var(--type-docs-fg); }
+.parent-type-question { color: var(--type-question-fg); }
+.parent-type-help { color: var(--type-help-fg); }
+.parent-type-chore { color: var(--type-chore-fg); }
 .type-circle.type-bug { background: var(--type-bug-bg); color: var(--type-bug-fg); }
 .type-circle.type-security { background: var(--type-security-bg); color: var(--type-security-fg); }
 .type-circle.type-feature { background: var(--type-feature-bg); color: var(--type-feature-fg); }

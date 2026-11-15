@@ -206,6 +206,18 @@ const typeTitle = computed(() => {
   }[type.value];
   return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
 });
+// #465: a sub-issue's badge also shows the parent's type; nothing extra when the type is unknown.
+const parentTitle = computed(() => {
+  const p = parent.value;
+  if (!p) return undefined;
+  const base = t("Underärende till {parent} · {title}", { parent: (p.repository.toLowerCase() === (props.repository || "").toLowerCase() ? "" : p.repository) + "#" + p.number, title: p.title });
+  if (!p.type) return base;
+  const name = {
+    bug: t("Bugg"), security: t("Säkerhet"), feature: t("Funktion"), docs: t("Dokumentation"),
+    question: t("Fråga"), help: t("Hjälp sökes"), chore: t("Underhåll"),
+  }[p.type];
+  return base + " · " + t("Typ: {type}", { type: name });
+});
 const rank = computed(() => priority(props.issue, props.rules));
 const allLabels = computed(() =>
   props.issue.labels.filter((l) => !/^priority\s*:/i.test(l.name) && l !== typeLabel.value && !hidesWorkLabel(col.value, l.name, props.rules)),
@@ -281,9 +293,9 @@ const hiddenLabelsAria = computed(() => t("{count} fler labels: {names}", { coun
       </div>
       <div class="card-top-meta">
         <span v-if="isSubtask && parent" class="subtask-badge"
-          :title="t('Underärende till {parent} · {title}', { parent: (parent.repository.toLowerCase() === (repository || '').toLowerCase() ? '' : parent.repository) + '#' + parent.number, title: parent.title })"
+          :title="parentTitle"
         >
-          <CornerDownRight :size="12" aria-hidden="true" />{{ t("Subtask") }}
+          <CornerDownRight :size="12" aria-hidden="true" /><component :is="typeIcons[parent.type]" v-if="parent.type" class="parent-type" :class="'parent-type-' + parent.type" :size="12" aria-hidden="true" />{{ t("Subtask") }}
         </span>
         <span v-if="progress" class="parent-task-badge"
           :title="t('{completed} av {total} underärenden stängda', { completed: progress.completed, total: progress.total })"

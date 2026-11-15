@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-15",
+    "summary": {
+      "sv": "Underärenden visar nu också förälderns typikon, så du ser direkt om föräldern är en bugg, funktion eller något annat.",
+      "en": "Sub-issues now also show their parent's type icon, so you see at a glance whether the parent is a bug, feature or something else."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Badgen på underärenden i kort och lista visar förälderns typikon, till exempel buggikonen när föräldern är en bugg.",
+          "en": "The sub-issue badge in cards and list shows the parent's type icon, for example the bug icon when the parent is a bug."
+        },
+        "issues": [
+          465
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-13",
     "summary": {
       "sv": "Säkrare visning av kommentarer, bilder från publika release-assets visas igen och orsakstexten i bildkarusellen är lättare att läsa.",

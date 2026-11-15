@@ -10,10 +10,18 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe("native issue relations", () => {
   it("keeps a cross-repository parent and genuine zero completed progress", () => {
     expect(parseIssueRelations(response({ parent, subIssuesSummary: { total: 5, completed: 0 } }))).toEqual({
-      parent: { ...parent, repository: "other/plans" }, progress: { total: 5, completed: 0 },
+      parent: { ...parent, repository: "other/plans", type: null }, progress: { total: 5, completed: 0 },
     });
     expect(subIssueProgress({ total: 5, completed: 5 })).toEqual({ total: 5, completed: 5 });
     for (const value of [null, {}, { total: 0, completed: 0 }, { total: -1, completed: 0 }, { total: 5, completed: 6 }, { total: 5, completed: -1 }, { total: 1.5, completed: 1 }]) expect(subIssueProgress(value)).toBeNull();
+  });
+  it("derives the parent's type from its labels and tolerates missing or malformed ones (#465)", () => {
+    const withLabels = (labels: unknown) => parseIssueRelations(response({ parent: { ...parent, labels }, subIssuesSummary: null }))?.parent?.type;
+    expect(withLabels({ nodes: [{ name: "enhancement" }, { name: "Bug" }] })).toBe("bug");
+    expect(withLabels({ nodes: [{ name: "documentation" }] })).toBe("docs");
+    expect(withLabels({ nodes: [{ name: "priority: low" }] })).toBeNull();
+    expect(withLabels(undefined)).toBeNull();
+    expect(withLabels({ nodes: [null, { name: 3 }] })).toBeNull();
   });
   it("hides absent or unsafe parent links while preserving independent progress", () => {
     for (const url of ["javascript:alert(1)", "https://example.com/other/plans/issues/42", "https://user@github.com/other/plans/issues/42", "https://github.com/other/plans/issues/99", "https://github.com/other/plans/pull/42"]) {
@@ -62,7 +70,7 @@ describe("native issue relations", () => {
   });
   it("does not cache failed or rate-limit-skipped relation fetches so subsequent calls retry (#319)", async () => {
     let mode: "fail" | "rate-limit" | "empty" = "fail";
-    const relations: IssueRelations = { parent: { ...parent, repository: "owner/plans" }, progress: { total: 5, completed: 2 } };
+    const relations: IssueRelations = { parent: { ...parent, repository: "owner/plans", type: null }, progress: { total: 5, completed: 2 } };
     const fetch = vi.fn(async () => {
       if (mode === "fail") throw new Error("502 Bad Gateway");
       if (mode === "rate-limit") return null;
@@ -160,7 +168,7 @@ describe("native issue relations", () => {
     });
     const isVisible = ref(true);
     const mockLoader = vi.fn(async () => ({
-      parent: { id: "p1", number: 5, title: "Epic roadmap", state: "OPEN" as const, url: "https://github.com/owner/repo/issues/5", repository: "owner/repo" },
+      parent: { id: "p1", number: 5, title: "Epic roadmap", state: "OPEN" as const, url: "https://github.com/owner/repo/issues/5", repository: "owner/repo", type: null },
       progress: { total: 4, completed: 2 },
     }));
 

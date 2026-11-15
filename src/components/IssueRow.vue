@@ -178,6 +178,18 @@ const typeTitle = computed(() => {
   }[type.value];
   return t("Typ: {type}", { type: name }) + (col.value === "closed" ? " · " + t("Stängd") : "");
 });
+// #465: a sub-issue's badge also shows the parent's type; nothing extra when the type is unknown.
+const parentTitle = computed(() => {
+  const p = parentIssue.value;
+  if (!p) return undefined;
+  const base = t("Underärende till {parent} · {title}", { parent: (p.repository.toLowerCase() === props.repository.toLowerCase() ? "" : p.repository) + "#" + p.number, title: p.title });
+  if (!p.type) return base;
+  const name = {
+    bug: t("Bugg"), security: t("Säkerhet"), feature: t("Funktion"), docs: t("Dokumentation"),
+    question: t("Fråga"), help: t("Hjälp sökes"), chore: t("Underhåll"),
+  }[p.type];
+  return base + " · " + t("Typ: {type}", { type: name });
+});
 let labelCanvas: HTMLCanvasElement | null = null;
 function measureLabelWidth(text: string): number {
   if (typeof document === "undefined") return Math.min(224, text.length * 6 + 25);
@@ -340,9 +352,9 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         <ListTree :size="12" aria-hidden="true" /><span>{{ progress.completed }}/{{ progress.total }}</span>
       </span>
       <span v-else-if="isSubtask && parentIssue" class="row-mobile-relation row-subtask-badge"
-        :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
-        :aria-label="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })" role="img">
-        <CornerDownRight :size="12" aria-hidden="true" /><span aria-hidden="true">#{{ parentIssue.number }}</span>
+        :title="parentTitle"
+        :aria-label="parentTitle" role="img">
+        <CornerDownRight :size="12" aria-hidden="true" /><component :is="typeIcons[parentIssue.type]" v-if="parentIssue.type" class="parent-type" :class="'parent-type-' + parentIssue.type" :size="12" aria-hidden="true" /><span aria-hidden="true">#{{ parentIssue.number }}</span>
       </span>
     </span>
     <span v-else class="row-meta">
@@ -354,9 +366,10 @@ const { progress, isSubtask, parent: parentIssue } = useIssueRelations(
         :title="t('Pågående i {duration}, över estimatet {estimate} plus {percent} %.', { duration: work.label.value, estimate: estimateLabel(timeoutEstimateMs ?? 0), percent: timeoutOverrunPercent ?? 25 })"
         >{{ t("Timeout") }}</span></span></span>
       <span v-if="isSubtask && parentIssue" class="row-marker row-subtask-badge"
-        :title="t('Underärende till {parent} · {title}', { parent: (parentIssue.repository.toLowerCase() === repository.toLowerCase() ? '' : parentIssue.repository) + '#' + parentIssue.number, title: parentIssue.title })"
+        :title="parentTitle"
       >
         <CornerDownRight :size="12" aria-hidden="true" />
+        <component :is="typeIcons[parentIssue.type]" v-if="parentIssue.type" class="parent-type" :class="'parent-type-' + parentIssue.type" :size="12" aria-hidden="true" />
         <span class="row-subtask-text">{{ t("Subtask") }}</span>
       </span>
       <span v-if="progress" class="row-marker row-parent-badge"
