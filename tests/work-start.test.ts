@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHub } from "../src/lib/github";
 import { historySamples } from "../src/lib/estimates";
 import { carriedWorkStart, closedWorkStart, column, deriveWorkStarts, type Event, type Issue, type Lane, type Repo, type RepositoryIssueEvent } from "../src/lib/model";
@@ -71,6 +71,10 @@ describe("closing work start", () => {
 });
 
 describe("sync keeps the start when an issue closes", () => {
+  // syncLane keeps closed issues for 30 days from Date.now(); pin the clock just after the fixture
+  // closing so the outcome does not depend on the run date (#464). Only `Date` is faked.
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-17T00:00:00Z") }));
+  afterEach(() => vi.useRealTimers());
   function stub(lists: { open?: Issue[]; closed?: Issue[]; changed?: Issue[] }) {
     const calls: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url: URL) => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { load, save } = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
 vi.mock("../src/lib/vault", async importOriginal => ({
   ...await importOriginal<typeof import("../src/lib/vault")>(), loadContent: load, saveEncodedContent: save,
@@ -8,7 +8,13 @@ import { CONTENT_LIFETIME_MS, readSnapshot, writeSnapshot, type ContentSnapshot 
 import type { Issue, Lane } from "../src/lib/model";
 const now = 1_800_000_000_000;
 const valid = { version: 1, savedAt: now, syncedAt: now, user: { login: "fixture" }, repos: [], lanes: [], responses: [] };
-beforeEach(() => { load.mockReset(); save.mockReset().mockResolvedValue(undefined); });
+// Pin the clock to the fixture time, so snapshots read without an explicit `now` stay within
+// CONTENT_LIFETIME_MS whatever the run date (#464). Only `Date` is faked; timers stay real.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now });
+  load.mockReset(); save.mockReset().mockResolvedValue(undefined);
+});
+afterEach(() => vi.useRealTimers());
 const snapshot = (): Omit<ContentSnapshot, "version" | "savedAt"> => ({
   syncedAt: now, user: { login: "fixture", avatar_url: "" }, repos: [], lanes: [], responses: [],
 });
