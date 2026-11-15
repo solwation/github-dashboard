@@ -108,15 +108,17 @@ does not set the worker count. Report active workers, capacity and why a slot is
 Worktree root and cleanup (core [clean up checkouts](shared/ORCHESTRA.md#clean-up-checkouts)):
 session worktrees live in the core default `workingtree/<issue-N>` inside this checkout
 (ignored via `/workingtree/` in `.gitignore`; `vitest.config.ts` excludes it so targeted
-runs never collect another checkout's tests). Under WSL with the checkout on a Windows
+runs never collect another checkout's tests). Claude Code's Agent-tool
+`isolation: "worktree"` checkouts live in `.claude/worktrees/`, ignored and excluded
+the same way. Under WSL with the checkout on a Windows
 drive (`/mnt/*`), use `~/gd-wt/` on ext4 instead. Runtime-managed ones that
 `git worktree list` shows stay where the platform puts them. Never run `git clean -x`
 in the integration checkout: it deletes `workingtree/` and every checkout in it. Whoever creates a writing worktree first writes the core's
 `orchestra-claim` marker (`issue=solwation/github-dashboard#N`, `session=<owner ID>`) in its
 git directory. The integration owner removes an issue's worktree and
 work branch as the last follow-up step once its change is verified on `origin/main`
-and the issue is closed. The session review and conductor startup prune the root with
-`.orchestra/shared/scripts/prune-worktrees.sh` (dry run first, then `--apply`
+and the issue is closed. The session review and conductor startup prune both roots with
+`.orchestra/shared/scripts/prune-worktrees.sh workingtree .claude/worktrees` (dry run first, then `--apply`
 `--archive ~/gd-wt/.archive`, outside any checkout, so unproven work is preserved as
 bundle and patch).
 Never remove a checkout whose issue is open or that another session visibly owns.
@@ -244,8 +246,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.14.2**,
-commit **c7929aea49ea76d4edf943e43807989788c67128** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.14.3**,
+commit **524cfb22db1cea96bf11028c0207348567fb61da** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
