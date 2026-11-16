@@ -1,11 +1,10 @@
 {
-  "baseCommit": "8ae4950dcb7163f9506c0c79609be540607fd03e",
+  "baseCommit": "64c9405620b5f50a9dfe93ba066702a6e48f11c9",
   "summary": {
-    "sv": "Nytt helskärmsläge för boarden, förlåtande bildlänkar i kommentarer, inaktiva repositories döljs igen när du klickar vidare och hela kolumnen blinkar.",
-    "en": "New full-screen board mode, forgiving image links in comments, inactive repositories hide again when you click on, and the whole column pulses."
+    "sv": "Nytt helskärmsläge för boarden, förlåtande bildlänkar och miniatyrer från privata repon i kommentarer, och hela projektkolumnen blinkar vid klick.",
+    "en": "New full-screen board mode, forgiving image links and private-repo thumbnails in comments, and the whole project column pulses on click."
   },
   "issues": [
-    467,
     468,
     469,
     470,
