@@ -17,8 +17,11 @@ import {
   EyeOff,
   Layers3,
   PanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   LayoutDashboard,
   LogOut,
+  Maximize2,
   Menu,
   QrCode,
   Plus,
@@ -314,7 +317,8 @@ watch(mobileSidebarOpen, async (open) => {
   } else if (sidebarElement.value?.contains(document.activeElement)) {
     // Return focus to the top-bar opener when the drawer closes with focus inside it (#424).
     await nextTick();
-    document.querySelector<HTMLElement>(".mobile-drawer-opener")?.focus();
+    // In board full screen (#468) the top bar is hidden and the edge handle is the opener.
+    document.querySelector<HTMLElement>(boardFullscreen.value ? ".board-fullscreen-handle" : ".mobile-drawer-opener")?.focus();
   }
 });
 const mobileBoardNavigatorOpen = ref(false);
@@ -2272,6 +2276,47 @@ const removeTouchZoomGuard = shallowRef<() => void>();
 onMounted(() => { removeTouchZoomGuard.value = installTouchZoomGuard(); });
 onUnmounted(() => removeTouchZoomGuard.value?.());
 onUnmounted(() => document.removeEventListener("keydown", trapFocus));
+// Board full screen (#468): an in-page layout mode (not the browser Fullscreen API) for this
+// visit only. It hides the top bar, overview summary and sidebar; the sidebar stays reachable
+// as an overlay through an edge handle. The html class lets the sibling sidebar/backdrop react.
+const boardFullscreen = ref(false);
+const fullscreenButton = ref<HTMLButtonElement | null>(null);
+async function setBoardFullscreen(on: boolean) {
+  if (boardFullscreen.value === on) return;
+  const before = fullscreenButton.value?.getBoundingClientRect().top;
+  closeMobileSidebar();
+  boardFullscreen.value = on;
+  await nextTick();
+  const after = fullscreenButton.value?.getBoundingClientRect().top;
+  // Keep the toolbar at the same place on screen so the board does not jump; on exit keep it
+  // below the sticky top bar that reappears.
+  const clear = on ? 0 : (topbar.value?.offsetHeight ?? 0) + 8;
+  if (before !== undefined && after !== undefined) {
+    const shift = after - Math.max(before, clear);
+    if (shift) window.scrollBy({ top: shift, behavior: "instant" });
+  }
+}
+async function toggleFullscreenSidebar() {
+  if (mobileSidebarOpen.value) { closeMobileSidebar(); return; }
+  openMobileSidebar();
+  await nextTick();
+  // Desktop overlays have no drawer close button; move focus to the first visible sidebar control.
+  if (!sidebarElement.value?.contains(document.activeElement))
+    Array.from(sidebarElement.value?.querySelectorAll<HTMLElement>("a[href], button") ?? []).find(node => node.getClientRects().length)?.focus();
+}
+function exitFullscreenOnEscape(event: KeyboardEvent) {
+  if (event.key !== "Escape" || event.defaultPrevented || !boardFullscreen.value || modalOpen.value) return;
+  if (document.querySelector("dialog[open], [aria-modal='true']")) return;
+  event.preventDefault();
+  void setBoardFullscreen(false);
+}
+watch(() => workspaceOpen.value && currentView.value === "overview", (available) => { if (!available) void setBoardFullscreen(false); });
+watch(boardFullscreen, (on) => document.documentElement.classList.toggle("board-fullscreen", on));
+onMounted(() => document.addEventListener("keydown", exitFullscreenOnEscape));
+onUnmounted(() => {
+  document.removeEventListener("keydown", exitFullscreenOnEscape);
+  document.documentElement.classList.remove("board-fullscreen");
+});
 function laneHasActiveIssues(lane: Lane) {
   return lane.issues.some(
     (issue) =>
@@ -2517,7 +2562,7 @@ onMounted(async () => {
     aria-hidden="true"
   ></div>
   <div class="workspace">
-    <header ref="topbar" class="topbar">
+    <header v-show="!boardFullscreen" ref="topbar" class="topbar">
       <button type="button" class="mobile-drawer-opener" :aria-label="t('Öppna vänstermeny')" :title="t('Öppna vänstermeny')"
         aria-controls="app-sidebar" :aria-expanded="mobileSidebarOpen" @click="openMobileSidebar"><PanelLeft :size="20" aria-hidden="true" /></button>
       <div class="breadcrumb">
@@ -2736,13 +2781,13 @@ onMounted(async () => {
       <template v-else>
         <StatisticsView :navigation="statisticsNavigation" v-if="currentView === 'statistics'" :client="api" :credential="sessionToken" :repositories="statisticsRepositories" v-model:preferences="statisticsPreferences" :demo="isDemo" :session="generation" :rules="rules" />
         <div v-show="currentView === 'overview'">
-        <section class="page-heading">
+        <section v-show="!boardFullscreen" class="page-heading">
           <h1>
             {{ t("Projektöversikt") }}<span class="heading-dot">.</span>
           </h1>
         </section>
-        <p v-if="publicMode" class="notice">{{ t("Publik vy · Uppdateras manuellt") }}</p>
-        <div v-if="isDemo" class="notice demo-notice">
+        <p v-if="publicMode" v-show="!boardFullscreen" class="notice">{{ t("Publik vy · Uppdateras manuellt") }}</p>
+        <div v-if="isDemo" v-show="!boardFullscreen" class="notice demo-notice">
           <span>{{
             t(
               "Du utforskar en demo med fiktiva projekt. Anslut GitHub för att se dina egna.",
@@ -2752,11 +2797,15 @@ onMounted(async () => {
             {{ t("Anslut konto") }} <ArrowRight :size="14" />
           </button>
         </div>
-        <OverviewSummary :repositories="sidebarRepos" :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="contentLanes" :repository-lanes="lanes" :rules="rules" :hide-coordination="hideCoordination" :inactive-grace-ms="inactiveGraceMs" :inactivity-now="inactivityNow"
+        <OverviewSummary v-show="!boardFullscreen" :repositories="sidebarRepos" :query="query" :repository-queries="activeRepositoryQueries" :counts="stats" :lanes="contentLanes" :repository-lanes="lanes" :rules="rules" :hide-coordination="hideCoordination" :inactive-grace-ms="inactiveGraceMs" :inactivity-now="inactivityNow"
           :live="!showingCache && !restoring && !lanes.some(lane => lane.loading)" :session="generation" :logged-in="loggedIn || publicMode"
           @choose-repositories="picker = true" />
         <!-- data-busy (#151): non-visual "sync finished" signal for tests; per-repository and combined headers show status. -->
         <div class="board-toolbar" :data-busy="busy ? 'true' : 'false'">
+          <button v-if="boardFullscreen" type="button" class="board-fullscreen-handle"
+            :aria-label="mobileSidebarOpen ? t('Dölj vänstermeny') : t('Öppna vänstermeny')" :title="mobileSidebarOpen ? t('Dölj vänstermeny') : t('Öppna vänstermeny')"
+            aria-controls="app-sidebar" :aria-expanded="mobileSidebarOpen" @click="toggleFullscreenSidebar"
+            ><PanelLeftClose v-if="mobileSidebarOpen" :size="16" aria-hidden="true" /><PanelLeftOpen v-else :size="16" aria-hidden="true" /></button>
           <label id="issue-search" class="search"
             ><Search :size="17" /><input ref="issueSearch"
               v-model="query"
@@ -2781,7 +2830,10 @@ onMounted(async () => {
             /><time v-else :datetime="new Date(refreshed!).toISOString()">{{ statusTime(refreshed!) }}</time></button>
           </template>
           <BoardModeToggle v-model:list="listMode" :label="t('Visningsläge för boarden')"
-        /></div>
+          /><button ref="fullscreenButton" type="button" class="board-fullscreen-toggle"
+            :aria-label="boardFullscreen ? t('Stäng helskärm') : t('Helskärm')" :title="boardFullscreen ? t('Stäng helskärm') : t('Helskärm')"
+            @click="setBoardFullscreen(!boardFullscreen)"><X v-if="boardFullscreen" :size="16" aria-hidden="true" /><Maximize2 v-else :size="16" aria-hidden="true" /></button
+        ></div>
         <div v-if="projectErrors.length" role="status">
         <button type="button" class="notice error project-error-summary" aria-haspopup="dialog" @click="openEventHistory(true)">
           <CircleAlert :size="20" aria-hidden="true" /><span>{{ t(projectErrors.length === 1 ? 'Ett projektfel har inträffat' : '{count} projektfel har inträffat', { count: projectErrors.length }) }}</span><span>{{ t("Visa detaljer") }}</span>

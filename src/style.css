@@ -3382,3 +3382,95 @@ a.sidebar-repository:focus-visible {
   padding-block: 0;
   overflow: hidden;
 }
+
+/* Board full screen (#468): an in-page mode that leaves only the board and its toolbar. The
+   toolbar's last button enters it and becomes the exit X; the sidebar slides in as an overlay
+   from a handle on the left edge (in the toolbar row on phones). */
+:root { --sidebar-overlay-shadow: 4px 0 24px rgb(0 0 0 / 25%); }
+:root[data-theme="dark"] { --sidebar-overlay-shadow: 4px 0 24px rgb(0 0 0 / 55%); }
+.board-fullscreen-toggle,
+.board-fullscreen-handle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.board-fullscreen-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+}
+.board-fullscreen-toggle:hover,
+.board-fullscreen-handle:hover { background: var(--hover); color: var(--text); }
+.board-fullscreen-handle[aria-expanded="true"] { color: var(--green); }
+@media (min-width: 651px) and (min-height: 501px) {
+  html.board-fullscreen { --board-sidebar-width: 226px; }
+  html.board-fullscreen .workspace { margin-left: 0; }
+  html.board-fullscreen .sidebar {
+    z-index: 100;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.25s;
+  }
+  html.board-fullscreen .sidebar.sidebar-mobile-open {
+    transform: none;
+    visibility: visible;
+    transition-delay: 0s;
+    box-shadow: var(--sidebar-overlay-shadow);
+  }
+  html.board-fullscreen .sidebar-backdrop { display: block !important; }
+  /* A slim tab inside main's side padding; it follows the overlay's right edge when open. */
+  .board-fullscreen-handle {
+    position: fixed;
+    z-index: 101;
+    top: 50%;
+    left: env(safe-area-inset-left, 0px);
+    width: 20px;
+    height: 48px;
+    border-left: 0;
+    border-radius: 0 6px 6px 0;
+    transform: translateY(-50%);
+    transition: background-color 0.15s, color 0.15s, left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .board-fullscreen-handle[aria-expanded="true"] {
+    left: calc(env(safe-area-inset-left, 0px) + var(--board-sidebar-width));
+  }
+}
+@media (min-width: 651px) and (min-height: 501px) and (max-width: 1250px) {
+  html.board-fullscreen { --board-sidebar-width: 195px; }
+}
+@media (min-width: 651px) and (min-height: 501px) and (max-width: 950px) {
+  html.board-fullscreen { --board-sidebar-width: 70px; }
+}
+/* Touch tablets: a 44px tab, with main's padding widened so it never covers the board. */
+@media (min-width: 651px) and (min-height: 501px) and (pointer: coarse) {
+  .board-fullscreen-handle { width: 44px; }
+  html.board-fullscreen main { padding-left: calc(44px + var(--space-2)); }
+}
+@media (pointer: coarse) {
+  .board-fullscreen-toggle { width: 44px; height: 44px; }
+}
+/* Phones: the full-screen button (and exit X) takes the top-right corner beside the search, and
+   in full screen the handle joins that row on the left; the remaining controls wrap below. */
+@media (max-width: 650px), (max-width: 950px) and (max-height: 500px) {
+  .board-fullscreen-toggle,
+  .board-fullscreen-handle { width: 44px; height: 44px; border-radius: 6px; }
+  .board-toolbar > * { order: 2; }
+  .board-toolbar > .board-fullscreen-handle,
+  .board-toolbar > .search { order: 0; }
+  .board-toolbar > .board-fullscreen-toggle { order: 1; }
+  /* The search fills the row beside the button(s), so the other controls wrap below. */
+  .board-toolbar > .search { flex: 1 1 calc(100% - 44px - 12px); width: auto; }
+  html.board-fullscreen .board-toolbar > .search { flex-basis: calc(100% - 2 * (44px + 12px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-fullscreen-toggle,
+  .board-fullscreen-handle,
+  html.board-fullscreen .sidebar { transition: none !important; }
+}

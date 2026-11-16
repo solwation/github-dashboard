@@ -57,7 +57,7 @@ test("one global list mode for every repository and the combined board keeps fil
     expect(await noPageScroll(page)).toBe(true);
     await expect(toggle.getByRole("button", { name: "Lista", exact: true })).toBeInViewport();
   }
-  // #151: on desktop the toggle takes the toolbar's far-right slot, without horizontal scroll.
+  // #151: on desktop the toggle takes the toolbar's far-right slot, followed only by the full-screen button (#468), without horizontal scroll.
   for (const width of [768, 800, 950, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await noPageScroll(page)).toBe(true);
@@ -65,8 +65,9 @@ test("one global list mode for every repository and the combined board keeps fil
     expect(await page.locator(".board-toolbar .board-grouping-toggle").evaluateAll(nodes => nodes.map(node => getComputedStyle(node).marginLeft))).toEqual(["0px"]);
     const edges = await page.locator(".board-toolbar").evaluate(node => {
       const box = node.getBoundingClientRect(), style = getComputedStyle(node);
-      const toggle = node.querySelector(".board-mode-toggle")!.getBoundingClientRect();
-      return { gap: box.right - parseFloat(style.paddingRight) - toggle.right, last: node.lastElementChild!.classList.contains("board-mode-toggle") };
+      const last = node.lastElementChild!;
+      return { gap: box.right - parseFloat(style.paddingRight) - last.getBoundingClientRect().right,
+        last: last.classList.contains("board-fullscreen-toggle") && last.previousElementSibling!.classList.contains("board-mode-toggle") };
     });
     expect(edges.last).toBe(true);
     expect(Math.abs(edges.gap)).toBeLessThanOrEqual(1);

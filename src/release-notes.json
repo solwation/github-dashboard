@@ -2,10 +2,19 @@
   {
     "date": "2026-11-16",
     "summary": {
-      "sv": "Inaktiva repositories som du öppnar från vänstermenyn döljs igen när du klickar vidare, och hela projektkolumnen blinkar vid klick.",
-      "en": "Inactive repositories opened from the left menu hide again when you click on, and the whole project column pulses on click."
+      "sv": "Nytt helskärmsläge för boarden, och inaktiva repositories som du öppnar från vänstermenyn döljs igen när du klickar vidare.",
+      "en": "A new full-screen mode for the board, and inactive repositories opened from the left menu hide again when you click on."
     },
     "sections": [
+      {
+        "text": {
+          "sv": "Knappen Helskärm bredvid Kort | Lista döljer sidhuvud, sammanfattning och vänstermeny; menyn nås via ett handtag och krysset eller Escape stänger läget.",
+          "en": "The Full screen button beside Cards | List hides the header, summary and left menu; a handle shows the menu, and the X or Escape exits."
+        },
+        "issues": [
+          468
+        ]
+      },
       {
         "text": {
           "sv": "Ett automatiskt dolt repository som visas med ett klick i vänstermenyn döljs igen vid nästa klick, på samma eller ett annat repository.",
