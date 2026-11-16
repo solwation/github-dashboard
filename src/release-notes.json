@@ -2,8 +2,8 @@
   {
     "date": "2026-11-16",
     "summary": {
-      "sv": "Nytt helskärmsläge för boarden, och inaktiva repositories som du öppnar från vänstermenyn döljs igen när du klickar vidare.",
-      "en": "A new full-screen mode for the board, and inactive repositories opened from the left menu hide again when you click on."
+      "sv": "Nytt helskärmsläge för boarden, förlåtande bildlänkar i kommentarer och inaktiva repositories som döljs igen när du klickar vidare.",
+      "en": "New full-screen board mode, forgiving image links in comments, and inactive repositories that hide again when you click on."
     },
     "sections": [
       {
@@ -31,6 +31,15 @@
         },
         "issues": [
           470
+        ]
+      },
+      {
+        "text": {
+          "sv": "Kommentarer visar nu bilder även när en länk till en bild saknar ! eller har URL:en inlindad i backticks.",
+          "en": "Comments now show images even when an image link lacks the ! or has its URL wrapped in backticks."
+        },
+        "issues": [
+          469
         ]
       }
     ]

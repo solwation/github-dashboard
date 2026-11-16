@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it";
 import { t } from "./i18n";
+import { isDirectImageLink } from "./comment-images";
 
 // Only Markdown produces HTML: source HTML is always escaped, including inside code fences.
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
@@ -9,6 +10,32 @@ markdown.inline.ruler.before("html_inline", "hidden_comment", (state) => {
   const end = state.src.indexOf("-->", state.pos + 4);
   if (end < 0) return false;
   state.pos = end + 3;
+  return true;
+});
+// Agents sometimes write image evidence as `[alt](`` https://…/x.png) ``` or `[alt](``` https://…/x.png ```)`:
+// no `!` and the URL wrapped in backticks, balanced or not (#469). Read exactly that shape as an image
+// before code spans claim the backticks. Only absolute HTTP(S) image URLs qualify; everything else,
+// including ordinary code spans and fences, keeps standard Markdown behavior.
+const BACKTICKED_IMAGE_LINK = /^(\[([^[\]\n]*)\]\([ \t]*`+[ \t]*(https?:\/\/[^\s`()<>]+)[ \t]*(`*)[ \t]*\))([ \t]*`+[ \t]*(?=\n|$))?/;
+markdown.inline.ruler.before("backticks", "backticked_image_link", (state, silent) => {
+  if (state.src.charCodeAt(state.pos) !== 0x5b /* [ */) return false;
+  const match = BACKTICKED_IMAGE_LINK.exec(state.src.slice(state.pos, state.posMax));
+  if (!match) return false;
+  const [, link, label, rawUrl, inner, outer] = match;
+  // Backticks after `)` at the end of the line close the wrapper only when none closed it inside.
+  const length = link!.length + (outer && !inner ? outer.length : 0);
+  if (!isDirectImageLink(rawUrl!)) return false;
+  const href = state.md.normalizeLink(rawUrl!);
+  if (!state.md.validateLink(href)) return false;
+  if (!silent) {
+    const children: typeof state.tokens = [];
+    state.md.inline.parse(label!, state.md, state.env, children);
+    const token = state.push("image", "img", 0);
+    token.attrs = [["src", href], ["alt", ""]];
+    token.children = children;
+    token.content = label!;
+  }
+  state.pos += length;
   return true;
 });
 markdown.block.ruler.before("html_block", "hidden_comment", (state, start, end, silent) => {

@@ -894,3 +894,58 @@ test("escaped img text in image alt, link title and code never becomes markup (#
   await expect(markdown.locator("code").first()).toHaveText('<img src="https://e.example/a.png" width="200">');
   await expect(markdown.locator("pre code")).toHaveText('<img src="docs/shot.png" alt="Shot">');
 });
+
+test("backticked image links without ! and standalone image links render as images (#469)", async ({ page }, testInfo) => {
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const raw = "https://raw.githubusercontent.com/sample/comment-project/0123abc/docs/evidence";
+  // far.png is unreachable directly (like a private repository) and must arrive through Contents.
+  await page.route("https://raw.githubusercontent.com/**", route => route.request().url().endsWith("/far.png")
+    ? route.fulfill({ status: 404, body: "Not found" })
+    : route.fulfill({ contentType: "image/png", body: Buffer.from(png, "base64") }));
+  await connect(page, async route => {
+    await route.fulfill({
+      json: [comment(1, [
+        "**Bevis**",
+        `[66 m](\`\` ${raw}/near.png) \`\``,
+        `[89 m](\`\`\` ${raw}/far.png \`\`\`)`,
+        `[8 m natt](\`\`\`\`\`\`\` ${raw}/night.jpg \`\`\`\`\`\`\`)`,
+        "",
+        `[Översikt](${raw}/overview.png)`,
+        "",
+        `Kod: \`${raw}/code.png\` och [sida](\`\` https://example.com/page \`\`)`,
+        "",
+        "```\n[fenced](`` " + raw + "/fenced.png) ``\n```",
+      ].join("\n"))],
+    });
+  });
+  // Registered after connect() so it takes precedence over its catch-all API route.
+  await page.route("https://api.github.com/repos/sample/comment-project/contents/docs/evidence/**", route =>
+    route.fulfill({ json: { type: "file", encoding: "base64", content: png } }));
+  await page.getByRole("button", { name: "102 kommentarer", exact: true }).filter({ visible: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Kommentarer för #1", exact: true });
+  const markdown = dialog.locator(".comment-markdown").first();
+
+  for (const name of ["66 m", "89 m", "8 m natt"]) {
+    const thumb = markdown.getByRole("button", { name: `Öppna bild: ${name}`, exact: true });
+    await expect(thumb).toBeVisible();
+    await expect(thumb).toHaveAttribute("data-repository", "sample/comment-project");
+    await expect.poll(() => thumb.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  }
+  await expect(markdown.getByRole("button", { name: "Öppna bild: 89 m", exact: true })).toHaveAttribute("src", /^data:image\/png;base64,/);
+  // The standalone link stays a clickable link and gets a thumbnail beside it.
+  await expect(markdown.getByRole("link", { name: "Översikt", exact: true })).toHaveAttribute("href", `${raw}/overview.png`);
+  await expect(markdown.getByRole("button", { name: "Öppna bild: Översikt", exact: true })).toBeVisible();
+  // Real code and non-image URLs are untouched; no backtick wrappers remain around the images.
+  await expect(markdown.locator("code", { hasText: `${raw}/code.png` })).toBeVisible();
+  await expect(markdown.locator("code", { hasText: "https://example.com/page" })).toBeVisible();
+  await expect(markdown.locator("pre code")).toHaveText(`[fenced](\`\` ${raw}/fenced.png) \`\``);
+  await expect(markdown.locator("p img")).toHaveCount(4);
+  await expect(markdown.locator("p").first()).not.toContainText("`");
+
+  await markdown.getByRole("button", { name: "Öppna bild: 66 m", exact: true }).click();
+  const viewer = page.getByRole("dialog", { name: "Bildvisare", exact: true });
+  await expect(viewer.locator(".image-navigation output")).toHaveText("Bild 1 av 4");
+  await page.screenshot({ path: testInfo.outputPath("issue-469-viewer.png") });
+  await page.keyboard.press("Escape");
+  await dialog.screenshot({ path: testInfo.outputPath("issue-469-comment.png") });
+});

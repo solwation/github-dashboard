@@ -486,4 +486,20 @@ describe("comment image detection and carousel extraction (#442)", () => {
         .toBe(`<p><img src="data:d" alt="d &gt; <img src='x'>" data-repo-path="docs/d.png"></p><!-- <img src="docs/d.png"> -->`);
     });
   });
+
+  it("adds backticked image links and standalone image links without ! to the carousel (#469)", () => {
+    const url = "https://raw.githubusercontent.com/o/r/0123abc/docs/far.png";
+    const link = "https://raw.githubusercontent.com/o/r/0123abc/docs/near.jpg";
+    const html = renderMarkdown(`[89 m](\`\`\` ${url} \`\`\`)\n\n[8 m](${link})\n\n\`${link.replace("near", "code")}\``);
+    const { cleanHtml, images } = extractCommentImages(html, t);
+    expect(images.map(image => [image.alt, image.repository, image.ref, image.path])).toEqual([
+      ["8 m", "o/r", "0123abc", "docs/near.jpg"],
+      ["89 m", "o/r", "0123abc", "docs/far.png"],
+    ]);
+    // The backticked image loads through Contents like any repo image; the plain link stays clickable
+    // (its preview thumbnail is added by the browser DOM pass, covered in e2e/comments.spec.ts).
+    expect(cleanHtml).toContain(`data-repo-path="docs/far.png"`);
+    expect(cleanHtml).toContain(`href="${link}"`);
+    expect(cleanHtml).toContain(`<code>${link.replace("near", "code")}</code>`);
+  });
 });

@@ -82,3 +82,49 @@ describe("safe issue Markdown", () => {
     expect(renderMarkdown("- [x] <script>attack</script>")).not.toContain('<script>');
   });
 });
+
+describe("forgiving image links with backticked URLs (#469)", () => {
+  const png = "https://raw.githubusercontent.com/o/r/0123abc/docs/shot.png";
+  const jpg = "https://raw.githubusercontent.com/o/r/0123abc/docs/night.jpg";
+  const fence = (count: number) => "`".repeat(count);
+
+  it("renders 1–7 backticks around an image URL as an image, balanced or misplaced", () => {
+    for (let count = 1; count <= 7; count++) {
+      const ticks = fence(count);
+      for (const [source, url] of [
+        [`[${count} m](${ticks} ${png} ${ticks})`, png],
+        [`[${count} m](${ticks} ${jpg}) ${ticks}`, jpg],
+        [`[${count} m](${ticks}${png}${ticks})`, png],
+        [`[${count} m](${ticks} ${jpg})`, jpg],
+      ] as const) {
+        expect(renderMarkdown(source)).toBe(`<p class="markdown-image-block"><img src="${url}" alt="${count} m"></p>\n`);
+      }
+    }
+    // Unbalanced counts on either side are still the same mistake.
+    expect(renderMarkdown(`[a](\`\`\` ${png} \`)`)).toContain(`<img src="${png}" alt="a">`);
+    expect(renderMarkdown(`[a](\` ${png}) \`\`\`\``)).toBe(`<p class="markdown-image-block"><img src="${png}" alt="a"></p>\n`);
+  });
+
+  it("covers attachments and blob links and keeps the text around the image", () => {
+    expect(renderMarkdown("[shot](`` https://github.com/user-attachments/assets/fictional-id ``)"))
+      .toContain('<img src="https://github.com/user-attachments/assets/fictional-id" alt="shot">');
+    expect(renderMarkdown("[shot](` https://github.com/o/r/blob/main/docs/a.webp `)"))
+      .toContain('src="https://github.com/o/r/blob/main/docs/a.webp?raw=true"');
+    expect(renderMarkdown(`**Evidence**\n[66 m](\`\` ${png}) \`\`\nNext line`))
+      .toBe(`<p><strong>Evidence</strong><br>\n<img src="${png}" alt="66 m"><br>\nNext line</p>\n`);
+    expect(renderMarkdown(`[c](\`${png}) \`code\` more`)).toBe(`<p><img src="${png}" alt="c"> <code>code</code> more</p>\n`);
+  });
+
+  it("leaves ordinary code, non-image URLs and inline links untouched", () => {
+    expect(renderMarkdown("[page](`` https://example.com/page ``)")).toBe("<p>[page](<code>https://example.com/page</code>)</p>\n");
+    expect(renderMarkdown("[rel](`` docs/shot.png ``)")).not.toContain("<img");
+    expect(renderMarkdown("[js](`` javascript:alert(1)//x.png ``)")).not.toContain("<img");
+    const fenced = `\`\`\`\n[a](\`\` ${png}) \`\`\n\`\`\``;
+    expect(renderMarkdown(fenced)).toBe(`<pre><code>[a](\`\` ${png}) \`\`\n</code></pre>\n`);
+    expect(renderMarkdown(`\`[a](\`\` ${png})\``)).toContain("<code>");
+    expect(renderMarkdown(`\`[a](\`\` ${png})\``)).not.toContain("<img");
+    expect(renderMarkdown(`Use \`${png}\` here`)).toBe(`<p>Use <code>${png}</code> here</p>\n`);
+    expect(renderMarkdown(`Text [shot](${png}) mid`)).toContain(`<a href="${png}"`);
+    expect(renderMarkdown(`[a](\`\` ${png}"onerror="x) \`\``)).not.toContain("onerror=\"x");
+  });
+});
