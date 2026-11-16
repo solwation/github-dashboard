@@ -1,11 +1,12 @@
 {
   "baseCommit": "8ae4950dcb7163f9506c0c79609be540607fd03e",
   "summary": {
-    "sv": "Inaktiva repositories som du öppnar från vänstermenyn döljs igen när du klickar vidare, och hela projektkolumnen blinkar vid klick.",
-    "en": "Inactive repositories opened from the left menu hide again when you click on, and the whole project column pulses on click."
+    "sv": "Nytt helskärmsläge för boarden, inaktiva repositories döljs igen när du klickar vidare och hela projektkolumnen blinkar vid klick.",
+    "en": "New full-screen board mode; inactive repositories hide again when you click on, and the whole project column pulses on click."
   },
   "issues": [
     467,
+    468,
     470
   ]
 }
