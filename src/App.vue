@@ -59,7 +59,7 @@ import { boardNow, observeLaneTimes } from "./lib/clock";
 import SidebarRepositories from "./components/SidebarRepositories.vue";
 import { reconcileOrder, restoreLayout, moveProject } from "./lib/project-layout";
 import { inactiveAfter, normalizeInactiveGraceMinutes, parseInactiveGraceMinutes, summarizeLanes } from "./lib/sidebar";
-import { hideRepository, repositoryVisibility, restoreHiddenRepositories, showRepository, type RepositoryVisibility } from "./lib/repository-visibility";
+import { hideRepository, repositoryVisibility, restoreHiddenRepositories, showRepository, stepClickReveal, type RepositoryVisibility } from "./lib/repository-visibility";
 import ExternalRepositoryForm from "./components/ExternalRepositoryForm.vue";
 import { groupedLaneOrder, MAX_EXTERNAL_REPOSITORIES, mergeExternalRepositories, parseExternalRepositories } from "./lib/external-repositories";
 import { TimeoutTracker, normalizeTimeoutSettings, parseTimeoutOverrunPercent, nextTimeout, timeoutBases, type TimeoutEntry } from "./lib/timeouts";
@@ -200,6 +200,8 @@ const inactiveGraceMs = computed(() => inactiveGraceMinutes.value * 60_000);
 // Board visibility (#367): saved manual choices and this session's reveals of inactive repositories.
 const hiddenRepos = ref<string[]>([]);
 const revealedRepos = ref<string[]>([]);
+// #467: the inactive repository the last sidebar click revealed; it hides again on the next activation.
+const clickRevealedRepo = ref<string | null>(null);
 const layoutAnnouncement = ref("");
 /** Other people's public repositories: their own group, in their own order, below the account's projects. */
 const externalRepos = ref<Repo[]>([]);
@@ -238,6 +240,7 @@ function setHideInactiveRepos(value: boolean) {
   hideInactiveRepos.value = value;
   // A new choice applies to every inactive repository again; manual choices stay.
   revealedRepos.value = [];
+  clickRevealedRepo.value = null;
   void save();
 }
 function setInactiveGraceMinutes(value: number) {
@@ -253,6 +256,8 @@ function setRepositoryVisible(name: string, visible: boolean) {
   const next = (visible ? showRepository : hideRepository)(visibilityState(), name);
   hiddenRepos.value = next.hidden;
   revealedRepos.value = next.revealed;
+  // An explicit choice replaces a click reveal (#467).
+  if (clickRevealedRepo.value === name) clickRevealedRepo.value = null;
   if (!visible && selectedCombinedRepository.value === name) selectedCombinedRepository.value = null;
   layoutAnnouncement.value = t(visible ? "{name} visas i innehållsvyn" : "{name} dold i innehållsvyn", { name: name.split("/").pop()! });
   void save();
@@ -368,10 +373,25 @@ async function navigateToBoardStatus(key: string) {
 function activateSidebarRepository(name: string) {
   const repo = lanes.value.find(lane => lane.repo.full_name === name)?.repo;
   if (!repo) return;
+  let clickRevealed = false;
+  if (currentView.value === "overview") {
+    // #467: a click-revealed inactive repository hides again on the next sidebar activation.
+    const step = stepClickReveal(revealedRepos.value, clickRevealedRepo.value, name, repositoryVisibilities.value[name] === "inactive");
+    revealedRepos.value = step.revealed;
+    clickRevealedRepo.value = step.transient;
+    if (step.rehidden) {
+      if (selectedCombinedRepository.value === name) selectedCombinedRepository.value = null;
+      focusedSidebarRepository.value = name;
+      layoutAnnouncement.value = t("{name} dold i innehållsvyn", { name: name.split("/").pop()! });
+      return;
+    }
+    clickRevealed = step.transient === name;
+  }
   // A hidden repository is shown and expanded rather than toggled away (#367).
   const hidden = currentView.value === "overview" && hiddenFromBoard(name);
   if (hidden) setRepositoryVisible(name, true);
-  const toggle = !hidden && (currentView.value === "overview" && !groupedByRepository.value
+  else if (clickRevealed) layoutAnnouncement.value = t("{name} visas i innehållsvyn", { name: name.split("/").pop()! });
+  const toggle = !hidden && !clickRevealed && (currentView.value === "overview" && !groupedByRepository.value
     ? selectedCombinedRepository.value === name : focusedSidebarRepository.value === name);
   focusedSidebarRepository.value = name;
   const hash = (currentView.value === "statistics" ? "#statistics-repo-" : "#repo-") + repo.id;
@@ -1551,7 +1571,7 @@ function restorePreferences(available: Repo[], settings: LoadedSettings) {
     collapsedRepos.value = [];
     hideInactiveRepos.value = false;
     inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(undefined);
-    hiddenRepos.value = []; revealedRepos.value = [];
+    hiddenRepos.value = []; revealedRepos.value = []; clickRevealedRepo.value = null;
     columnLimit.value = defaultColumnLimit;
     timeoutSettings.value = normalizeTimeoutSettings({});
     repositoryColumnLimits.value = {};
@@ -2063,7 +2083,7 @@ function showDemo() {
   collapsedRepos.value = [];
   hideInactiveRepos.value = false;
   inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(undefined);
-  hiddenRepos.value = []; revealedRepos.value = [];
+  hiddenRepos.value = []; revealedRepos.value = []; clickRevealedRepo.value = null;
   lanes.value = demo();
   refreshed.value = Date.now();
   repoSyncedAt.value = {};
@@ -2130,7 +2150,7 @@ function logout() {
   collapsedRepos.value = [];
   hideInactiveRepos.value = false;
   inactiveGraceMinutes.value = normalizeInactiveGraceMinutes(undefined);
-  hiddenRepos.value = []; revealedRepos.value = [];
+  hiddenRepos.value = []; revealedRepos.value = []; clickRevealedRepo.value = null;
   layoutAnnouncement.value = "";
   rules.value = {};
   columnLimit.value = defaultColumnLimit;

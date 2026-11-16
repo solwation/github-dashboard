@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-16",
+    "summary": {
+      "sv": "Ett inaktivt repository som du öppnar från vänstermenyn döljs automatiskt igen när du klickar vidare.",
+      "en": "An inactive repository you open from the left menu hides automatically again when you click on."
+    },
+    "sections": [
+      {
+        "text": {
+          "sv": "Ett automatiskt dolt repository som visas med ett klick i vänstermenyn döljs igen vid nästa klick, på samma eller ett annat repository.",
+          "en": "An automatically hidden repository shown with a click in the left menu hides again on the next click, on it or another repository."
+        },
+        "issues": [
+          467
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-11-15",
     "summary": {
       "sv": "Underärenden visar nu också förälderns typikon, så du ser direkt om föräldern är en bugg, funktion eller något annat.",

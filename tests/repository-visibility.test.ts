@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hideRepository, repositoryVisibility, restoreHiddenRepositories, showRepository, type VisibilityState } from "../src/lib/repository-visibility";
+import { hideRepository, repositoryVisibility, restoreHiddenRepositories, showRepository, stepClickReveal, type VisibilityState } from "../src/lib/repository-visibility";
 
 const active = { fullName: "me/active", backlog: 1, progress: 0 };
 const inactive = { fullName: "me/inactive", backlog: 0, progress: 0 };
@@ -50,5 +50,21 @@ describe("repository board visibility (#367)", () => {
     expect(restoreHiddenRepositories(["me/a", "me/a", 3, "gone/x", "other/b"], ["me/a", "other/b"])).toEqual(["me/a", "other/b"]);
     expect(restoreHiddenRepositories("me/a", ["me/a"])).toEqual([]);
     expect(restoreHiddenRepositories(undefined, ["me/a"])).toEqual([]);
+  });
+});
+
+describe("click reveal of automatically hidden repositories (#467)", () => {
+  it("reveals until the next activation of the same or another repository", () => {
+    const first = stepClickReveal([], null, "me/quiet", true);
+    expect(first).toEqual({ revealed: ["me/quiet"], transient: "me/quiet", rehidden: false });
+    expect(stepClickReveal(first.revealed, first.transient, "me/quiet", false)).toEqual({ revealed: [], transient: null, rehidden: true });
+    expect(stepClickReveal(first.revealed, first.transient, "me/active", false)).toEqual({ revealed: [], transient: null, rehidden: false });
+    // Moving from one hidden repository to another swaps the reveal.
+    expect(stepClickReveal(first.revealed, first.transient, "me/idle", true)).toEqual({ revealed: ["me/idle"], transient: "me/idle", rehidden: false });
+  });
+
+  it("keeps explicit reveals and leaves manual choices to the caller", () => {
+    expect(stepClickReveal(["me/shown"], null, "me/quiet", true)).toEqual({ revealed: ["me/shown", "me/quiet"], transient: "me/quiet", rehidden: false });
+    expect(stepClickReveal(["me/shown", "me/quiet"], "me/quiet", "me/manual", false)).toEqual({ revealed: ["me/shown"], transient: null, rehidden: false });
   });
 });

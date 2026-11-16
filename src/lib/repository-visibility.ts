@@ -47,6 +47,19 @@ export function hideRepository(state: VisibilityState, name: string): { hidden: 
   };
 }
 
+/**
+ * A sidebar click on an automatically hidden repository reveals it only until the next sidebar
+ * activation (#467): clicking it again or another repository hides it automatically again.
+ * `transient` is the repository the previous click revealed; `autoHidden` says whether `name`
+ * is currently hidden by "Hide inactive repositories" (not by a manual choice).
+ */
+export function stepClickReveal(revealed: readonly string[], transient: string | null, name: string, autoHidden: boolean): { revealed: string[]; transient: string | null; rehidden: boolean } {
+  const kept = transient ? revealed.filter(repo => repo !== transient) : [...revealed];
+  if (transient === name) return { revealed: kept, transient: null, rehidden: true };
+  if (autoHidden) return { revealed: kept.includes(name) ? kept : [...kept, name], transient: name, rehidden: false };
+  return { revealed: kept, transient: null, rehidden: false };
+}
+
 /** Saved manual choices for repositories that still exist, without duplicates or junk. */
 export function restoreHiddenRepositories(saved: unknown, available: readonly string[]): string[] {
   if (!Array.isArray(saved)) return [];

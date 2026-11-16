@@ -120,6 +120,17 @@ test.describe("desktop", () => {
     await expect(page.getByRole("checkbox", { name: "Dölj inaktiva repositories" })).toBeChecked();
     await expect.poll(async () => (await boardRepositories(page)).items).toEqual(["sample/beta", "sample/quiet"]);
     if (evidence) await page.screenshot({ path: `${evidence}/combined-desktop-1600.png` });
+    // #467: the click reveal lasts until the next sidebar activation, on the same or another project.
+    await row(page, "sample/quiet").locator(".sidebar-repository").click();
+    await expect(row(page, "sample/quiet")).toHaveClass(/repository-hidden/);
+    await expect.poll(async () => (await boardRepositories(page)).items).toEqual(["sample/beta"]);
+    await row(page, "sample/quiet").locator(".sidebar-repository").click();
+    await expect(row(page, "sample/quiet")).not.toHaveClass(/repository-hidden/);
+    await expect.poll(async () => (await boardRepositories(page)).items).toEqual(["sample/beta", "sample/quiet"]);
+    await row(page, "sample/beta").locator(".sidebar-repository").click();
+    await expect(row(page, "sample/quiet")).toHaveClass(/repository-hidden/);
+    await expect(row(page, "sample/beta").locator(".sidebar-repository")).toHaveClass(/repository-selected/);
+    await expect.poll(async () => (await boardRepositories(page)).items).toEqual(["sample/beta"]);
 
     // Manual choices are encrypted per account; reveals last for the session only.
     await expect.poll(() => readSettings(page, "board-visibility").then(saved => saved?.hiddenRepos)).toEqual(["sample/alpha", "octo/hello"]);

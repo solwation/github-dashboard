@@ -1,10 +1,10 @@
 {
-  "baseCommit": "b407b10f68d0034c3c73fecd25f118738e915251",
+  "baseCommit": "8ae4950dcb7163f9506c0c79609be540607fd03e",
   "summary": {
-    "sv": "Underärenden visar nu också förälderns typikon, till exempel buggikonen när föräldern är en bugg.",
-    "en": "Sub-issues now also show their parent's type icon, for example the bug icon when the parent is a bug."
+    "sv": "Ett inaktivt repository som du öppnar från vänstermenyn döljs automatiskt igen när du klickar på det igen eller på ett annat.",
+    "en": "An inactive repository you open from the left menu hides automatically again when you click it again or another one."
   },
   "issues": [
-    465
+    467
   ]
 }
