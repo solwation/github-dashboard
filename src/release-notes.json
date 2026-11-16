@@ -35,11 +35,12 @@
       },
       {
         "text": {
-          "sv": "Kommentarer visar nu bilder även när en länk till en bild saknar ! eller har URL:en inlindad i backticks.",
-          "en": "Comments now show images even when an image link lacks the ! or has its URL wrapped in backticks."
+          "sv": "Kommentarer visar nu bilder även när en länk till en bild saknar ! eller har URL:en inlindad i backticks, och miniatyrer av privata bilder visas i stället för en platshållare.",
+          "en": "Comments now show images even when an image link lacks the ! or has its URL wrapped in backticks, and thumbnails of private images show instead of a placeholder."
         },
         "issues": [
-          469
+          469,
+          471
         ]
       }
     ]

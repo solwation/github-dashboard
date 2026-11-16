@@ -932,6 +932,11 @@ test("backticked image links without ! and standalone image links render as imag
     await expect.poll(() => thumb.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   }
   await expect(markdown.getByRole("button", { name: "Öppna bild: 89 m", exact: true })).toHaveAttribute("src", /^data:image\/png;base64,/);
+  // #471: the carousel tile of the same image waits for the Contents fallback instead of failing.
+  const farTile = dialog.locator(".carousel-thumb-button", { hasText: "far.png" });
+  await expect(farTile).toBeEnabled();
+  await expect(farTile.locator(".carousel-thumb-placeholder")).toHaveCount(0);
+  await expect.poll(() => farTile.locator("img").evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   // The standalone link stays a clickable link and gets a thumbnail beside it.
   await expect(markdown.getByRole("link", { name: "Översikt", exact: true })).toHaveAttribute("href", `${raw}/overview.png`);
   await expect(markdown.getByRole("button", { name: "Öppna bild: Översikt", exact: true })).toBeVisible();

@@ -347,6 +347,7 @@ function pointerUp(event: PointerEvent) {
 }
 
 const attemptedFallbacks = ref<Record<string, boolean>>({});
+const fallbackWaiters = new Map<string, Set<HTMLImageElement>>();
 
 function handleImageError(event: Event) {
   const target = event.target;
@@ -358,22 +359,36 @@ function handleImageError(event: Event) {
       const repoPath = target.dataset.repoPath || repoRef?.path;
       const targetRepo = target.dataset.repository || repoRef?.repository || props.repository;
       const targetRef = target.dataset.ref || repoRef?.ref;
+      // #471: another <img> of the same URL (the carousel tile or a repeated inline image) shares
+      // the fallback already started instead of being marked failed before it finishes.
+      const loaded = loadedUrls.value[rawSrc];
+      if (attemptedFallbacks.value[rawSrc] && loaded && target.getAttribute("src") !== loaded) {
+        target.src = loaded;
+        target.classList.remove("preview-failed");
+        return;
+      }
+      const waiting = fallbackWaiters.get(rawSrc);
+      if (waiting) { waiting.add(target); return; }
       if (repoPath && targetRepo && fileLoader && !attemptedFallbacks.value[rawSrc]) {
         attemptedFallbacks.value = { ...attemptedFallbacks.value, [rawSrc]: true };
+        const waiters = new Set([target]);
+        fallbackWaiters.set(rawSrc, waiters);
         fileLoader(targetRepo, repoPath, targetRef).then(res => {
           const dataUrl = typeof res === "string" ? res : res?.url;
           const error = typeof res === "object" && res ? res.error : undefined;
           if (dataUrl) {
             loadedUrls.value = { ...loadedUrls.value, [rawSrc]: dataUrl, [repoPath]: dataUrl };
-            target.src = dataUrl;
-            target.classList.remove("preview-failed");
+            for (const image of waiters) {
+              image.src = dataUrl;
+              image.classList.remove("preview-failed");
+            }
           } else {
             const reason = contentsPermissionErrorReason(error, t);
             markFailed([rawSrc, repoPath], reason);
           }
         }).catch(() => {
           markFailed([rawSrc, repoPath]);
-        });
+        }).finally(() => fallbackWaiters.delete(rawSrc));
         return;
       }
       markFailed([rawSrc, repoPath]);
