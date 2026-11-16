@@ -436,9 +436,16 @@ async function revealRepository(name: string, toggle = false) {
   if (controls) controls.open = toggle ? !controls.open : true;
   target.scrollIntoView({ block: "start" });
   // Flush removal of the previous outline so same-repository activation restarts its pulse.
-  void target.offsetWidth;
-  target.classList.add("repository-navigation-highlight");
-  highlightedRepositories = [target];
+  // #470: in Swimlanes List the target is only the column header; the whole column pulses.
+  const column = target.matches(".swimlane-table-project")
+    ? Array.from(target.closest(".swimlane-table")?.querySelectorAll<HTMLElement>("td.swimlane-table-cell") ?? [])
+        .filter(cell => cell.getAttribute("data-repository") === name)
+    : [];
+  for (const el of [target, ...column]) {
+    void el.offsetWidth;
+    el.classList.add("repository-navigation-highlight");
+  }
+  highlightedRepositories = [target, ...column];
   repositoryHighlightTimer = setTimeout(clearRepositoryHighlight, 1200);
 }
 const rules = ref<Record<string, Rules>>({});

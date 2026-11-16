@@ -2,8 +2,8 @@
   {
     "date": "2026-11-16",
     "summary": {
-      "sv": "Ett inaktivt repository som du öppnar från vänstermenyn döljs automatiskt igen när du klickar vidare.",
-      "en": "An inactive repository you open from the left menu hides automatically again when you click on."
+      "sv": "Inaktiva repositories som du öppnar från vänstermenyn döljs igen när du klickar vidare, och hela projektkolumnen blinkar vid klick.",
+      "en": "Inactive repositories opened from the left menu hide again when you click on, and the whole project column pulses on click."
     },
     "sections": [
       {
@@ -13,6 +13,15 @@
         },
         "issues": [
           467
+        ]
+      },
+      {
+        "text": {
+          "sv": "Ett klick på ett repository i vänstermenyn får hela projektets kolumn i Simbanor som lista att blinka, inte bara rubrikcellen.",
+          "en": "Clicking a repository in the left menu makes its whole column pulse in Swimlanes list view, not just the header cell."
+        },
+        "issues": [
+          470
         ]
       }
     ]

@@ -1,10 +1,11 @@
 {
   "baseCommit": "8ae4950dcb7163f9506c0c79609be540607fd03e",
   "summary": {
-    "sv": "Ett inaktivt repository som du öppnar från vänstermenyn döljs automatiskt igen när du klickar på det igen eller på ett annat.",
-    "en": "An inactive repository you open from the left menu hides automatically again when you click it again or another one."
+    "sv": "Inaktiva repositories som du öppnar från vänstermenyn döljs igen när du klickar vidare, och hela projektkolumnen blinkar vid klick.",
+    "en": "Inactive repositories opened from the left menu hide again when you click on, and the whole project column pulses on click."
   },
   "issues": [
-    467
+    467,
+    470
   ]
 }

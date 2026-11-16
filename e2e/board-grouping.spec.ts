@@ -78,6 +78,14 @@ test("Joined, Split and Swimlanes keep counts, filters and the choice across Car
   await tableSidebar.click(); await tableSidebar.click();
   await expect(table.locator(".issue-row")).toHaveCount(11);
   await page.locator(`.sidebar-repository-row[data-repository="${repos[0]!.full_name}"] .sidebar-repository`).click();
+  // #470: the whole column pulses, header and every status cell, not only the header.
+  const firstColumn = table.locator(`td.swimlane-table-cell[data-repository="${repos[0]!.full_name}"]`);
+  expect(await firstColumn.count()).toBeGreaterThan(1);
+  await expect(page.locator(`#repo-${repos[0]!.id}`)).toHaveClass(/repository-navigation-highlight/);
+  for (const cell of await firstColumn.all()) await expect(cell).toHaveClass(/repository-navigation-highlight/);
+  await expect(table.locator(`td.swimlane-table-cell[data-repository="${repos[1]!.full_name}"].repository-navigation-highlight`)).toHaveCount(0);
+  if (process.env.EVIDENCE_470) await page.screenshot({ path: `${process.env.EVIDENCE_470}/swimlane-list-column-pulse.png` });
+  await expect(firstColumn.first()).not.toHaveClass(/repository-navigation-highlight/, { timeout: 3000 });
   expect(await noPageOverflow(page)).toBe(true);
   await page.getByRole("button", { name: "Kort", exact: true }).click();
   await expect(groupingOption(page, "swimlanes")).toHaveAttribute("aria-pressed", "true");

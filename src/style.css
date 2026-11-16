@@ -666,6 +666,9 @@ h1 {
 @keyframes issue-navigation-pulse { 0%, 55% { outline-color: var(--green); } 30%, 100% { outline-color: transparent; } }
 .repository-navigation-highlight:not(.repository-selected) { outline: 2px solid var(--green); outline-offset: -2px; animation: repository-navigation-pulse 1.2s ease-out; }
 @keyframes repository-navigation-pulse { 0%, 55% { outline-color: var(--green); } 30%, 100% { outline-color: transparent; } }
+/* #470: a Swimlanes List column pulses as one, its cells tinted together with the header. */
+.swimlane-table-cell.repository-navigation-highlight { animation: repository-navigation-pulse 1.2s ease-out, swimlane-column-pulse 1.2s ease-out; }
+@keyframes swimlane-column-pulse { 0%, 55% { background-color: color-mix(in srgb, var(--green) 12%, var(--surface-sunken, var(--surface))); } 30%, 100% { background-color: var(--surface-sunken, var(--surface)); } }
 /* Selection uses a separate inner frame so status borders, unread rings and focus remain visible. */
 .sidebar-repository, .issue-card, .issue-row { --repository-indicator-color: var(--repository-color); }
 :is(.issue-card, .issue-row).repository-selected { position: relative; }
