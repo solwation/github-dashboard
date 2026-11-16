@@ -1,5 +1,5 @@
 import { t } from "./i18n";
-import { approximatePoints } from "./story-points";
+import { addStoryPoints, approximatePoints, groupStoryPoints, storyPoints, type StoryPoints } from "./story-points";
 import { activeWorkMs, activeWorkStart, awaitsIntegration, closedWorkMs, column, type Issue, type Rules } from "./model";
 
 /**
@@ -17,7 +17,9 @@ import { activeWorkMs, activeWorkStart, awaitsIntegration, closedWorkMs, column,
  *   decides. Past-due items count as zero (never negative) and unknown starts need their full
  *   point-based duration.
  * - Sub-issues (#279): an open parent in the estimated issues forms a group with its sub-issues
- *   (recursively, when `children` is supplied). The group is one item sized by the parent's points:
+ *   (recursively, when `children` is supplied). The group is one item sized by the group size (#472):
+ *   max(the parent's own points, Σ points of its counted descendants), where open descendants and
+ *   closed ones whose time is deducted count, each once, so splitting work never shrinks the estimate:
  *   spent = the parent's own in-progress time + Σ each descendant's spent time, where a running
  *   descendant counts now − its start and a closed descendant counts its positive start → close
  *   interval when closed within the window; backlog or unknown descendants count zero. So
@@ -28,7 +30,8 @@ import { activeWorkMs, activeWorkStart, awaitsIntegration, closedWorkMs, column,
  *   stays in the backlog with its spent time deducted from its backlog points. History calibration is
  *   unchanged. The parent's own card/row forecast (issueGroupEstimate, #281) applies the same rule
  *   to its own subtree once its sub-issues are loaded, and the overview story points count each
- *   group once, by its root's points, in the column the group is estimated in. Column counts
+ *   group once, by its group size, in the column the group is estimated in. The In progress timeout
+ *   and a closed parent's estimate comparison use the same group size. Column counts
  *   count the same groups (#287); a member reached through any sub-issue path is absorbed; on a
  *   combined board a walk stops at issues another repository estimates; and an unknown start
  *   with deducted sub-issue time is not reported as assuming the full estimate.
@@ -263,8 +266,8 @@ export function repositoryEstimate(
   };
   if (msPerPoint === null) return { basis, progress: null, backlog: null };
   const groups = subIssueGroups([...active, ...waiting], now, rules, windowDays, options.children, options.external);
-  const items = groups.filter(group => group.inProgress).map(({ root: issue, ownProgress, spentMs, running, descendants }): ProgressItemEstimate => {
-    const points = approximatePoints(issue), durationMs = points * msPerPoint;
+  const items = groups.filter(group => group.inProgress).map(({ root: issue, ownProgress, spentMs, running, descendants, size }): ProgressItemEstimate => {
+    const points = size.points, durationMs = points * msPerPoint;
     const own = ownWork(issue, rules, now);
     // Unknown start means the full estimate is assumed; deducted sub-issue time makes it neither full nor contradictory (#287).
     const unknownStart = ownProgress && !own.known && spentMs === 0;
@@ -275,7 +278,7 @@ export function repositoryEstimate(
       subIssueSpentMs: spentMs, subIssues: descendants, counting: left > 0 && (ownRunning || running) };
   });
   const backlogGroups = groups.filter(group => !group.inProgress);
-  const waitingPoints = backlogGroups.reduce((sum, group) => sum + Math.max(0, approximatePoints(group.root) - group.spentMs / msPerPoint), 0);
+  const waitingPoints = backlogGroups.reduce((sum, group) => sum + Math.max(0, group.size.points - group.spentMs / msPerPoint), 0);
   const progressMs = items.reduce((longest, item) => Math.max(longest, item.remainingMs), 0);
   return {
     basis,
@@ -292,7 +295,7 @@ export function repositoryEstimate(
     // The Backlog column is done when its own remaining roots and any promoted parent groups are done.
     // Count and points cover the same groups (#287): a promoted parent counts in In progress only.
     backlog: waiting.length
-      ? { count: backlogGroups.length, points: backlogGroups.reduce((sum, group) => sum + approximatePoints(group.root), 0),
+      ? { count: backlogGroups.length, points: backlogGroups.reduce((sum, group) => sum + group.size.points, 0),
           remainingMs: progressMs + (waitingPoints * msPerPoint) / basis.parallelism }
       : null,
   };
@@ -301,22 +304,28 @@ export function repositoryEstimate(
 /** Time already spent on one sub-issue: running time, or a closed interval inside the window. */
 export function subIssueSpentMs(child: SubIssueWork, fallbackRules: Rules, now: number, windowDays = ESTIMATE_WINDOW_DAYS) {
   const { issue } = child, state = column(issue, child.rules ?? fallbackRules);
-  if (issue.pull_request) return { spentMs: 0, running: false, open: false };
+  // `counted`: the sub-issue's size belongs to the group size (#472). A closed one counts only while
+  // its time is deducted, so remaining = size − spent stays consistent as closures leave the window.
+  if (issue.pull_request) return { spentMs: 0, running: false, open: false, counted: false };
   if (state === "progress") {
     const own = ownWork(issue, child.rules ?? fallbackRules, now);
-    return { spentMs: own.spentMs, running: own.running, open: true };
+    return { spentMs: own.spentMs, running: own.running, open: true, counted: true };
   }
   if (state === "closed") {
     const end = time(issue.closed_at), spent = closedWorkMs(issue);
     const valid = Number.isFinite(spent) && end <= now && end >= now - windowDays * DAY_MS;
-    return { spentMs: valid ? spent : 0, running: false, open: false };
+    return { spentMs: valid ? spent : 0, running: false, open: false, counted: valid };
   }
-  return { spentMs: 0, running: false, open: issue.state === "open" };
+  return { spentMs: 0, running: false, open: issue.state === "open", counted: issue.state === "open" };
 }
 
-export interface SubIssueGroup { root: Issue; ownProgress: boolean; inProgress: boolean; spentMs: number; running: boolean; descendants: number }
-/** Sub-issue work below one root: Σ descendant spent time, whether one runs, their count and open progress. */
-export interface SubIssueGroupWork { spentMs: number; running: boolean; descendants: number; openInProgress: boolean }
+/** `size` is the group size (#472): max(the root's own points, Σ counted descendant points). */
+export interface SubIssueGroup { root: Issue; ownProgress: boolean; inProgress: boolean; spentMs: number; running: boolean; descendants: number; size: StoryPoints }
+/**
+ * Sub-issue work below one root: Σ descendant spent time, whether one runs, their count, open progress
+ * and Σ sizes of the counted descendants (null when none counts).
+ */
+export interface SubIssueGroupWork { spentMs: number; running: boolean; descendants: number; openInProgress: boolean; size: StoryPoints | null }
 
 /**
  * Visits each descendant of `rootId` once (deduplicated by id, cycle-safe). Issues in `external` are
@@ -344,7 +353,8 @@ function eachDescendant(rootId: number, children: ReadonlyMap<number, readonly S
 export function subIssueGroupWork(root: Issue, members: ReadonlyMap<number, Issue>, now: number, rules: Rules,
   windowDays: number, children: ReadonlyMap<number, readonly SubIssueWork[]> | undefined,
   external?: ReadonlySet<number>): SubIssueGroupWork {
-  const work: SubIssueGroupWork = { spentMs: 0, running: false, descendants: 0, openInProgress: false };
+  const work: SubIssueGroupWork = { spentMs: 0, running: false, descendants: 0, openInProgress: false, size: null };
+  const sizes: StoryPoints[] = [];
   eachDescendant(root.id, children, external, child => {
     // Prefer the estimated board copy, which carries start times and the group's rules.
     const member = members.get(child.issue.id);
@@ -354,7 +364,9 @@ export function subIssueGroupWork(root: Issue, members: ReadonlyMap<number, Issu
     work.spentMs += spent.spentMs;
     work.running ||= spent.running;
     if (spent.open && column(entry.issue, entry.rules ?? rules) === "progress") work.openInProgress = true;
+    if (spent.counted) sizes.push(storyPoints(entry.issue));
   });
+  if (sizes.length) work.size = addStoryPoints(sizes);
   return work;
 }
 
@@ -400,7 +412,8 @@ function subIssueGroups(open: Issue[], now: number, rules: Rules, windowDays: nu
   return open.filter(issue => !absorbed.has(issue.id) || !reachable.has(issue.id)).map(root => {
     const ownProgress = column(root, rules) === "progress";
     const work = subIssueGroupWork(root, members, now, rules, windowDays, children, external);
-    return { root, ownProgress, inProgress: ownProgress || work.openInProgress, spentMs: work.spentMs, running: work.running, descendants: work.descendants };
+    return { root, ownProgress, inProgress: ownProgress || work.openInProgress, spentMs: work.spentMs, running: work.running,
+      descendants: work.descendants, size: issueGroupSize(root, work) };
   });
 }
 
@@ -416,10 +429,19 @@ export function ownWork(issue: Issue, rules: Rules, now: number): { spentMs: num
   return Number.isFinite(frozen) && frozen >= 0 ? { spentMs: frozen, running: false, known: true } : { spentMs: 0, running: false, known: false };
 }
 
-/** Individual forecast uses the same calibrated rate and size as column estimates. */
-export function issueEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean, rules: Rules = {}) {
+/** A parent's group size (#472), or the issue's own size when its sub-issues are not loaded. */
+export function issueGroupSize(issue: Issue, group?: Pick<SubIssueGroupWork, "size"> | null): StoryPoints {
+  return groupStoryPoints(storyPoints(issue), group?.size);
+}
+
+/**
+ * Individual forecast uses the same calibrated rate and size as column estimates. `points` overrides
+ * the issue's own size, for a parent's group size (#472).
+ */
+export function issueEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean, rules: Rules = {},
+  points = approximatePoints(issue)) {
   if (msPerPoint == null || !Number.isFinite(msPerPoint) || msPerPoint <= 0) return null;
-  const totalMs = approximatePoints(issue) * msPerPoint;
+  const totalMs = points * msPerPoint;
   if (!Number.isFinite(totalMs)) return null;
   const own = ownWork(issue, rules, now);
   // Unknown or future starts cannot justify a remaining-time countdown.
@@ -448,13 +470,13 @@ export interface IssueGroupForecast {
 
 /**
  * Per-card forecast with the column estimate's sub-issue group rule (#281): remaining =
- * max(0, estimate − own elapsed − Σ sub-issue spent). Without `group` (sub-issues not loaded,
+ * max(0, group size estimate − own elapsed − Σ sub-issue spent), sized like the group (#472). Without `group` (sub-issues not loaded,
  * or none) it equals issueEstimate. A backlog parent gets a countdown only once sub-issue work
  * has started, matching its group moving into the In progress badge.
  */
 export function issueGroupEstimate(issue: Issue, msPerPoint: number | null | undefined, now: number, inProgress: boolean,
   group?: SubIssueGroupWork | null, rules: Rules = {}): IssueGroupForecast | null {
-  const base = issueEstimate(issue, msPerPoint, now, inProgress, rules);
+  const base = issueEstimate(issue, msPerPoint, now, inProgress, rules, issueGroupSize(issue, group).points);
   if (!base) return null;
   const subIssueSpentMs = group?.spentMs ?? 0, subIssues = group?.descendants ?? 0, running = !!group?.running;
   const own = inProgress ? ownWork(issue, rules, now) : { spentMs: 0, running: false, known: false };
@@ -540,12 +562,14 @@ export function closedIssueGroupOutcome(issue: Issue, children: Issue[], history
     if (!(actualMs > 0)) return null;
     aggregation = "span";
   }
-  const outcome = outcomeForActual(issue, actualMs, history);
+  // The group is compared with its group size (#472); all its sub-issues are closed here.
+  const points = groupStoryPoints(storyPoints(issue), addStoryPoints(children.map(child => storyPoints(child)))).points;
+  const outcome = outcomeForActual(issue, actualMs, history, points);
   return outcome ? { ...outcome, aggregation } : null;
 }
 
-function outcomeForActual(issue: Issue, actualMs: number, history: HistorySample[]) {
+function outcomeForActual(issue: Issue, actualMs: number, history: HistorySample[], points = approximatePoints(issue)) {
   const others = calibrationSamples(history.filter(sample => sample.issue.id !== issue.id).slice(0, MAX_HISTORY_SAMPLES));
   const rate = others.length < MIN_SAMPLES ? null : median(others.map(sample => sample.durationMs / approximatePoints(sample.issue)));
-  return { actualMs, estimatedMs: rate === null ? null : rate * approximatePoints(issue) };
+  return { actualMs, estimatedMs: rate === null ? null : rate * points };
 }

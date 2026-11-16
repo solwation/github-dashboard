@@ -128,3 +128,11 @@ it('uses retained history for warning thresholds instead of learning interrupted
   expect(scan.active).toHaveLength(1);
   expect(scan.active[0]!.estimatedMs).toBe(30 * 60000);
 });
+it('times a parent against its group size when one is supplied (#472)', () => {
+  const tracker = makeTracker(), parent = issue(5);
+  expect(tracker.scan([lane([parent])], {}, settings, now).active.map(entry => entry.issue.id)).toEqual([5]);
+  const sizes = (_repo: string, value: Issue) => value.id === 5 ? 3 : 1;
+  expect(tracker.scan([lane([parent])], {}, settings, now, { sizes }).active).toEqual([]);
+  expect(nextTimeout([lane([parent])], {}, settings, now, undefined, sizes)).toBe(Date.parse(start) + 90 * 60000 + 1);
+});
+

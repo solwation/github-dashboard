@@ -1,6 +1,7 @@
 import { t } from "./i18n";
 import { activeWorkStart, column, duration, type Issue, type Lane, type Rules } from './model';
 import { issueEstimate, repositoryEstimate, nextHistoryExpiry, estimateLabel } from './estimates';
+import { approximatePoints } from './story-points';
 export const DEFAULT_TIMEOUT_OVERRUN_PERCENT = 25;
 export const MAX_TIMEOUT_OVERRUN_PERCENT = 1000;
 export interface TimeoutSettings { timeoutEnabled: boolean; timeoutOverrunPercent: number }
@@ -17,11 +18,17 @@ export function normalizeTimeoutSettings(value: unknown): TimeoutSettings {
     timeoutOverrunPercent: parseTimeoutOverrunPercent(settings.timeoutOverrunPercent) ?? DEFAULT_TIMEOUT_OVERRUN_PERCENT };
 }
 export type TimeoutBases = Map<string, number | null>;
+/**
+ * Story points an In progress issue is timed against: a parent's group size once its sub-issues are
+ * loaded (#472), so a parent working through its sub-issues is not timed against its own size alone.
+ */
+export type TimeoutSizes = (repo: string, issue: Issue, now: number) => number;
+const ownSize: TimeoutSizes = (_repo, issue) => approximatePoints(issue);
 export function timeoutBases(lanes: Lane[], rules: Record<string, Rules>, now: number): TimeoutBases {
   return new Map(lanes.map(lane => [lane.repo.full_name, repositoryEstimate(lane.issues, now, { rules: rules[lane.repo.full_name] }).basis.msPerPoint]));
 }
-function thresholdFor(issue: Issue, rate: number | null | undefined, settings: TimeoutSettings, now: number, rules: Rules = {}) {
-  const estimate = issueEstimate(issue, rate, now, true, rules);
+function thresholdFor(issue: Issue, rate: number | null | undefined, settings: TimeoutSettings, now: number, rules: Rules = {}, points?: number) {
+  const estimate = issueEstimate(issue, rate, now, true, rules, points);
   return estimate && estimate.remainingMs !== null ? estimate.totalMs * (1 + settings.timeoutOverrunPercent / 100) : null;
 }
 interface WorkPeriod { repo: string; issueId: number; startedAt: string }
@@ -40,7 +47,8 @@ function workPeriod(repo: string, issue: Pick<Issue, 'id' | 'startedAt'>): WorkP
 }
 function key(value: WorkPeriod) { return JSON.stringify([value.repo, value.issueId, value.startedAt]); }
 /** The next moment an in-progress work period crosses the threshold, so callers scan then instead of every second. */
-export function nextTimeout(lanes: Lane[], rules: Record<string, Rules>, settings: TimeoutSettings, now: number, bases = timeoutBases(lanes, rules, now)): number | null {
+export function nextTimeout(lanes: Lane[], rules: Record<string, Rules>, settings: TimeoutSettings, now: number, bases = timeoutBases(lanes, rules, now),
+  sizes: TimeoutSizes = ownSize): number | null {
   if (!settings.timeoutEnabled) return null;
   let next = Infinity;
   for (const lane of lanes) {
@@ -54,7 +62,7 @@ export function nextTimeout(lanes: Lane[], rules: Record<string, Rules>, setting
       const started = item ? Date.parse(activeWorkStart(issue, laneRules) ?? '') : NaN;
       const rate = bases.get(lane.repo.full_name);
       if (started > now && rate != null && Number.isFinite(rate) && rate > 0) next = Math.min(next, started);
-      const threshold = thresholdFor(issue, rate, settings, now, laneRules);
+      const threshold = thresholdFor(issue, rate, settings, now, laneRules, sizes(lane.repo.full_name, issue, now));
       const crossing = Number.isFinite(started) && threshold !== null ? Math.floor(started + threshold) + 1 : NaN;
       if (crossing > now) next = Math.min(next, crossing);
     }
@@ -71,7 +79,7 @@ export class TimeoutTracker {
   private settingsKey: string | null = null;
   private calibrationKey: string | null = null;
   clear() { this.notified.clear(); this.settingsKey = null; this.calibrationKey = null; }
-  scan(lanes: Lane[], rules: Record<string, Rules>, settings: TimeoutSettings, now: number, options: { notify?: boolean; bases?: TimeoutBases } = {}) {
+  scan(lanes: Lane[], rules: Record<string, Rules>, settings: TimeoutSettings, now: number, options: { notify?: boolean; bases?: TimeoutBases; sizes?: TimeoutSizes } = {}) {
     const active: TimeoutEntry[] = [];
     const newlyTimedOut: TimeoutEntry[] = [];
     const currentPeriods = new Set<string>();
@@ -92,7 +100,7 @@ export class TimeoutTracker {
       currentPeriods.add(period);
       const elapsedMs = now - Date.parse(activeWorkStart(issue, laneRules) ?? '');
       if (!settings.timeoutEnabled) continue;
-      const thresholdMs = thresholdFor(issue, bases.get(lane.repo.full_name), settings, now, laneRules);
+      const thresholdMs = thresholdFor(issue, bases.get(lane.repo.full_name), settings, now, laneRules, (options.sizes ?? ownSize)(lane.repo.full_name, issue, now));
       if (thresholdMs === null || !Number.isFinite(elapsedMs) || elapsedMs <= thresholdMs) continue;
       const estimatedMs = thresholdMs / (1 + settings.timeoutOverrunPercent / 100);
       const entry = { key: period, repo: lane.repo.full_name, issue, elapsedMs, estimatedMs, thresholdMs };

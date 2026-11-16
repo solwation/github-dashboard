@@ -3,7 +3,6 @@ import { computed } from "vue";
 import { useIssueForecast } from "../composables/useIssueForecast";
 import { useClosedIssueOutcome, useIssueRules } from "../composables/useIssueEstimates";
 import { useIssueClock } from "../composables/useIssueClock";
-import { storyPoints } from "../lib/story-points";
 import { estimateLabel } from "../lib/estimates";
 import { activeWorkMs, durationLabel } from "../lib/model";
 import { locale, useLanguage } from "../lib/i18n";
@@ -11,7 +10,7 @@ import type { Issue } from "../lib/model";
 
 const props = defineProps<{ issue: Issue; repository?: string; column: "backlog" | "progress" | "closed" }>();
 const { t } = useLanguage();
-const { basis, estimate } = useIssueForecast({
+const { basis, estimate, size, ownSize } = useIssueForecast({
   get issue() { return props.issue; },
   get repository() { return props.repository; },
   inProgress: props.column === "progress",
@@ -20,7 +19,8 @@ const { basis, estimate } = useIssueForecast({
 const outcome = useClosedIssueOutcome(() => props.issue, () => props.repository);
 const rules = useIssueRules(() => props.repository);
 const now = useIssueClock(() => props.issue, () => props.column, () => true, rules);
-const size = computed(() => storyPoints(props.issue));
+// A parent outweighed by its sub-issues is sized by their sum (#472).
+const summed = computed(() => size.value.points > ownSize.value.points);
 // Active working time only; integration waits are not work (#392).
 const elapsed = computed(() => {
   const ms = activeWorkMs(props.issue, now.value, rules());
@@ -48,7 +48,7 @@ const subIssueSpent = computed(() => props.column !== "closed" && estimate.value
     <summary>{{ t("Förklara tid och story points") }}</summary>
     <div class="time-explanation-body">
       <dl>
-        <div><dt>{{ t("Story points") }}</dt><dd :title="size.source === 'label' ? t('Story points från label: {points}', { points: size.points }) : undefined">{{ size.source === "local" ? "≈ " : "" }}{{ size.points }} SP</dd></div>
+        <div><dt>{{ t("Story points") }}</dt><dd :title="summed ? t('Story points summerade från underärenden: {points} (egna: {own})', { points: size.points, own: ownSize.points }) : size.source === 'label' ? t('Story points från label: {points}', { points: size.points }) : undefined">{{ size.source === "local" ? "≈ " : "" }}{{ size.points }} SP</dd></div>
         <div v-if="estimate"><dt>{{ t("Total uppskattning") }}</dt><dd>{{ estimateLabel(estimate.totalMs) }}</dd></div>
         <div v-if="column === 'progress' && elapsed"><dt>{{ t("Förfluten arbetstid") }}</dt><dd>{{ elapsed }}</dd></div>
         <div v-if="subIssueSpent"><dt>{{ t("Tid på underärenden") }}</dt><dd>{{ subIssueSpent }}</dd></div>

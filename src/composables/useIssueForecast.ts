@@ -1,5 +1,6 @@
 import { computed } from "vue";
-import { issueGroupEstimate } from "../lib/estimates";
+import { issueGroupEstimate, issueGroupSize } from "../lib/estimates";
+import { storyPoints } from "../lib/story-points";
 import type { Issue } from "../lib/model";
 import { useIssueEstimateBasis, useIssueGroupWork, useIssueRules } from "./useIssueEstimates";
 import { useNow } from "./useNow";
@@ -7,7 +8,8 @@ import { useNow } from "./useNow";
 /**
  * Repository calibration is shared; only this issue's display wakes at a rounded time change.
  * A parent's forecast deducts its sub-issues' spent time like the column badges (#281), once
- * those sub-issues have loaded; until then it shows the issue's own forecast.
+ * those sub-issues have loaded; until then it shows the issue's own forecast. `size` is the
+ * parent's group size (#472) and `ownSize` its own, which differ once the sub-issues outweigh it.
  */
 export function useIssueForecast(props: { issue: Issue; repository?: string; inProgress?: boolean; active?: boolean }) {
   const basis = useIssueEstimateBasis(() => props.repository);
@@ -21,5 +23,7 @@ export function useIssueForecast(props: { issue: Issue; repository?: string; inP
     const roundedChange = ((remaining - 30000) % 60000 + 60000) % 60000 || 60000;
     return Math.min(roundedChange, remaining || 1);
   }, { board: true, active: () => props.active !== false });
-  return { basis, estimateAt, estimate: computed(() => estimateAt(now.value)) };
+  const ownSize = computed(() => storyPoints(props.issue));
+  const size = computed(() => issueGroupSize(props.issue, groupWork(now.value)));
+  return { basis, estimateAt, estimate: computed(() => estimateAt(now.value)), size, ownSize };
 }

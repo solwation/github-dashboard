@@ -2,8 +2,8 @@
   {
     "date": "2026-11-16",
     "summary": {
-      "sv": "Nytt helskärmsläge för boarden, förlåtande bildlänkar i kommentarer och inaktiva repositories som döljs igen när du klickar vidare.",
-      "en": "New full-screen board mode, forgiving image links in comments, and inactive repositories that hide again when you click on."
+      "sv": "Nytt helskärmsläge, förlåtande bildlänkar, och huvudärenden som storleksbestäms av sina underärenden i stället för att alltid gå på timeout.",
+      "en": "New full-screen mode, forgiving image links, and parent issues sized by their sub-issues instead of always timing out."
     },
     "sections": [
       {
@@ -41,6 +41,15 @@
         "issues": [
           469,
           471
+        ]
+      },
+      {
+        "text": {
+          "sv": "Ett huvudärende får summan av underärendenas story points när den är större än dess egna, så prognos och timeout inte slår till för tidigt.",
+          "en": "A parent issue takes its sub-issues' summed story points when larger than its own, so forecasts and timeouts no longer trigger too early."
+        },
+        "issues": [
+          472
         ]
       }
     ]

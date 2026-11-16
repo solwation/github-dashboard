@@ -33,13 +33,26 @@ export function storyPoints(issue: SizedIssue): StoryPoints {
 
 /** A total is exact only when every contributing size is explicit and the sum is safely representable. */
 export function sumStoryPoints(issues: readonly SizedIssue[]): StoryPoints {
-  let points = 0, exact = issues.length > 0;
-  for (const issue of issues) {
-    const size = storyPoints(issue);
+  return addStoryPoints(issues.map(storyPoints));
+}
+
+/** Sum of already resolved sizes, exact only when every one is explicit and the sum stays safe. */
+export function addStoryPoints(sizes: readonly StoryPoints[]): StoryPoints {
+  let points = 0, exact = sizes.length > 0;
+  for (const size of sizes) {
     points += size.points;
     exact &&= size.source === "label" && Number.isSafeInteger(points);
   }
   return { points, source: exact ? "label" : "local" };
+}
+
+/**
+ * A parent's group size (#472): the larger of its own size and the sum of its sub-issues' sizes, so
+ * splitting work into sub-issues never shrinks the estimate the parent and its sub-issues share. An
+ * explicitly larger parent (an epic whose sub-issues are not all created yet) keeps its own size.
+ */
+export function groupStoryPoints(own: StoryPoints, descendants: StoryPoints | null | undefined): StoryPoints {
+  return descendants && descendants.points > own.points ? descendants : own;
 }
 
 /** Local sizing aid, not measured complexity or an AI prediction. */

@@ -1,7 +1,7 @@
 import { computed, inject, provide, shallowRef, watchEffect, type ComputedRef, type InjectionKey } from "vue";
 import { column, type Issue, type Rules } from "../lib/model";
 import { boardNow } from "../lib/clock";
-import { closedIssueGroupOutcome, closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate, subIssueGroupWork, type EstimateBasis, type HistorySample, type SubIssueGroupWork, type SubIssueWork } from "../lib/estimates";
+import { closedIssueGroupOutcome, closedIssueOutcome, ESTIMATE_WINDOW_DAYS, historySamples, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate, issueGroupSize, subIssueGroupWork, type EstimateBasis, type HistorySample, type SubIssueGroupWork, type SubIssueWork } from "../lib/estimates";
 import { useNow } from "./useNow";
 import { useSubIssues } from "./useSubIssues";
 import { provideSubIssueWork } from "./useSubIssueWork";
@@ -17,6 +17,7 @@ const issueEstimatesKey: InjectionKey<ComputedRef<Map<string, EstimateBasis>>> =
 /**
  * Shared repository calibration, refreshed with filtered data or history expiry, never per issue tick.
  * `combined` says the repositories share one board estimate, so cards cut sub-issue walks like it (#287).
+ * Returns each open estimated parent's group size at a time (#472), for the In progress timeout.
  */
 export function provideIssueEstimates(groups: () => Map<string, Group[]>, combined: () => boolean = () => false) {
   const now = useNow(at => Math.min(86400000, ...[...groups().values()].flatMap(entries => entries.map(group => {
@@ -31,7 +32,7 @@ export function provideIssueEstimates(groups: () => Map<string, Group[]>, combin
   // Sub-issues the column/overview badges already loaded, plus each repository's open estimated
   // issues, so a parent's card can apply the same group rule (#281).
   const children = provideSubIssueWork();
-  provide(groupScopeKey, computed(() => {
+  const scopes = computed(() => {
     const repositories = [...groups()];
     const external = combined() ? otherRepositoryMembers(repositories.map(([, entries]) => entries[0] ?? { issues: [] })) : [];
     return new Map(repositories.flatMap(([repository, entries], index) => {
@@ -45,11 +46,18 @@ export function provideIssueEstimates(groups: () => Map<string, Group[]>, combin
       }).map(issue => [issue.id, issue] as const));
       return [[repository, { rules, members, children: children.value, external: external[index] }] as const];
     }));
-  }));
+  });
+  provide(groupScopeKey, scopes);
   provide(outcomeKey, computed(() => ({ now: now.value, histories: new Map([...groups()].flatMap(([repo, entries]) => {
     const group = entries[0];
     return group ? [[repo, historySamples(group.issues, now.value, { rules: group.rules, sampleLimit: MAX_HISTORY_SAMPLES + 1 })] as const] : [];
   })) })));
+  return {
+    /** Changes whenever loaded sub-issues or estimated members change, so watchers can re-run. */
+    scopes,
+    groupSize: (repository: string, issue: Issue, at: number) =>
+      issueGroupSize(issue, groupWorkIn(scopes.value.get(repository), issue, at, bases.value.get(repository)?.windowDays)),
+  };
 
 }
 
@@ -71,11 +79,12 @@ export function useIssueEstimateBasis(repository: () => string | undefined) {
 export function useIssueGroupWork(issue: () => Issue, repository: () => string | undefined) {
   const scopes = inject(groupScopeKey, undefined);
   const basis = useIssueEstimateBasis(repository);
-  return (at: number): SubIssueGroupWork | null => {
-    const current = issue(), scope = scopes?.value.get(repository() ?? "");
-    if (!scope || !(current.sub_issues_summary?.total) || !scope.members.has(current.id) || !scope.children.has(current.id)) return null;
-    return subIssueGroupWork(current, scope.members, at, scope.rules, basis.value?.windowDays ?? ESTIMATE_WINDOW_DAYS, scope.children, scope.external);
-  };
+  return (at: number): SubIssueGroupWork | null => groupWorkIn(scopes?.value.get(repository() ?? ""), issue(), at, basis.value?.windowDays);
+}
+
+function groupWorkIn(scope: GroupScope | undefined, issue: Issue, at: number, windowDays = ESTIMATE_WINDOW_DAYS): SubIssueGroupWork | null {
+  if (!scope || !(issue.sub_issues_summary?.total) || !scope.members.has(issue.id) || !scope.children.has(issue.id)) return null;
+  return subIssueGroupWork(issue, scope.members, at, scope.rules, windowDays, scope.children, scope.external);
 }
 
 export function useClosedIssueOutcome(issue: () => Issue, repository: () => string | undefined) {

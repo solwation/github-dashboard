@@ -5,7 +5,7 @@ const minute = 60000, day = 86400000, base = Date.parse("2026-10-20T12:00:00Z");
 const iso = (at: number) => new Date(at).toISOString();
 const repo = { id: 2790, name: "parent-estimates", full_name: "sample/parent-estimates", private: true, html_url: "https://github.com/sample/parent-estimates", owner: { login: "sample" } };
 
-async function fixture(page: Page, parentInProgress: boolean) {
+async function fixture(page: Page, parentInProgress: boolean, { parentPoints = 5, runningPoints = 1, parentStartMinutes = 10 } = {}) {
   const item = (number: number, points: number, extra: Record<string, unknown> = {}) => ({
     id: repo.id * 100 + number, number, title: `Fixture work ${number}`, body: "", comments: 0, state: "open",
     labels: [{ name: `points: ${points}`, color: "000000" }], assignees: [], created_at: iso(base - 5 * day), updated_at: iso(base - day),
@@ -15,9 +15,9 @@ async function fixture(page: Page, parentInProgress: boolean) {
   const progress = [{ name: "in-progress", color: "000000" }];
   // History: 30 min per point. Closed child: 30 min of real work, two hours ago.
   const closedChild = closed(11, base - 2 * 60 * minute);
-  const runningChild = item(12, 1, { title: "Running sub-issue", labels: [{ name: "points: 1", color: "000000" }, ...progress] });
-  const parent = item(10, 5, { title: "Parent with sub-issues", sub_issues_summary: { total: 2, completed: 1, percent_completed: 50 },
-    labels: [{ name: "points: 5", color: "000000" }, ...(parentInProgress ? progress : [])] });
+  const runningChild = item(12, runningPoints, { title: "Running sub-issue", labels: [{ name: `points: ${runningPoints}`, color: "000000" }, ...progress] });
+  const parent = item(10, parentPoints, { title: "Parent with sub-issues", sub_issues_summary: { total: 2, completed: 1, percent_completed: 50 },
+    labels: [{ name: `points: ${parentPoints}`, color: "000000" }, ...(parentInProgress ? progress : [])] });
   const issues = [closed(1, base - day), closed(2, base - 2 * day), closed(3, base - 3 * day), closedChild, runningChild, parent];
   let subIssueRequests = 0;
   await page.route("https://api.github.com/**", async route => {
@@ -26,7 +26,7 @@ async function fixture(page: Page, parentInProgress: boolean) {
     const event = url.pathname.match(/\/issues\/(\d+)\/events$/);
     await route.fulfill({ json: url.pathname === "/user" ? { login: "sub-issue-estimate-fixture", avatar_url: "" }
       : url.pathname === "/user/repos" ? [repo]
-      : event ? [{ id: 1, event: "labeled", label: { name: "in-progress" }, created_at: iso(base - 10 * minute) }]
+      : event ? [{ id: 1, event: "labeled", label: { name: "in-progress" }, created_at: iso(base - (event[1] === "10" ? parentStartMinutes : 10) * minute) }]
       : url.pathname === `/repos/${repo.full_name}/issues` ? issues.filter(issue => url.searchParams.get("state") === "all" || issue.state === url.searchParams.get("state")) : [] });
   });
   await page.clock.install({ time: base - minute });
@@ -119,3 +119,40 @@ for (const [viewport, width, height, touch] of [["desktop", 1600, 1000, false], 
     }
   });
 }
+
+// A parent is sized by its sub-issues (#472): 1 own point, sub-issues 1 + 3 points. Timed against its
+// own 30 min (+25 %) it timed out after 50 min of work; timed against the group's 2 h it does not.
+for (const [viewport, width, height, touch] of [["desktop", 1600, 1000, false], ["phone", 390, 844, true]] as const) {
+  test(`a small parent is sized and timed by its sub-issues (${viewport})`, async ({ browser }, testInfo) => {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch, locale: "sv-SE" });
+    const page = await context.newPage();
+    try {
+      await fixture(page, true, { parentPoints: 1, runningPoints: 3, parentStartMinutes: 50 });
+      const mode = page.getByRole("group", { name: "Visningsläge för boarden", exact: true });
+      await mode.getByRole("button", { name: "Kort", exact: true }).click();
+      const card = page.locator(".issue-card").filter({ hasText: "Parent with sub-issues" });
+      const points = card.locator(".issue-points");
+      await expect(points).toHaveText("4 SP");
+      await expect(points).toHaveAttribute("data-summed", "true");
+      await expect(points).toHaveAttribute("title", /Story points summerade från underärenden: 4 \(egna: 1\)/);
+      // 4 points × 30 min − 50 min own − 10 min running child − 30 min closed child.
+      await expect(card.locator(".issue-time-remaining-label")).toHaveText("≈ 30 min kvar");
+      await expect(card).not.toHaveClass(/issue-timeout/);
+      await expect(page.locator(".issue-card.issue-timeout")).toHaveCount(0);
+      await expect(page.locator('.stats [data-stat="progress"] .overview-points')).toHaveText("4 SP");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await card.scrollIntoViewIfNeeded();
+      await card.screenshot({ path: testInfo.outputPath(`summed-card-${viewport}.png`) });
+      await mode.getByRole("button", { name: "Lista", exact: true }).click();
+      const row = page.locator(".issue-row").filter({ hasText: "Parent with sub-issues" });
+      await expect(row.locator(".issue-points")).toHaveText("4 SP");
+      await expect(row).not.toHaveClass(/issue-timeout/);
+      expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await row.scrollIntoViewIfNeeded();
+      await row.screenshot({ path: testInfo.outputPath(`summed-row-${viewport}.png`) });
+    } finally {
+      await context.close();
+    }
+  });
+}
+

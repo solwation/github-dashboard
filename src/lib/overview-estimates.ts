@@ -1,6 +1,6 @@
 import { matchesIssueFilters } from "./issue-filter";
 import { activeWorkStart, closedWorkMs, column, isCoordination, type Issue, type Lane, type Rules } from "./model";
-import { sumStoryPoints, type StoryPoints } from "./story-points";
+import { addStoryPoints, storyPoints, sumStoryPoints, type StoryPoints } from "./story-points";
 import { estimateGroups, median, otherRepositoryMembers, repositoryEstimate, type SubIssueWork } from "./estimates";
 
 export interface OverviewEstimateGroup { repository: string; issues: Issue[]; rules: Rules }
@@ -29,25 +29,25 @@ const selected = (group: OverviewEstimateGroup, key: OverviewEstimateColumn) => 
 /**
  * Story points of the selected work. With loaded sub-issues (#281) they follow the time estimate's
  * grouping: a sub-issue absorbed into an open estimated parent is not counted on its own, and the
- * group counts the parent's points in the column its time is counted in (In progress as soon as a
+ * group counts its group size (#472) in the column its time is counted in (In progress as soon as a
  * sub-issue runs), so the points and time beside each other describe the same work.
  */
 export function overviewPointSummary(groups: OverviewEstimateGroup[], key: OverviewEstimateColumn,
   children?: ReadonlyMap<number, readonly SubIssueWork[]>, now = Date.now()): StoryPoints {
   // Repositories are estimated side by side, so a sub-issue estimated in its own repository is not walked again (#287).
   const external = otherRepositoryMembers(groups);
-  const contributors = groups.flatMap((group, index) => {
+  const contributors = groups.flatMap((group, index): StoryPoints[] => {
     const issues = selected(group, key);
     if (!children?.size || repositoryEstimate(group.issues, now, { rules: group.rules, adaptiveWindow: false }).basis.msPerPoint === null)
-      return issues;
+      return issues.map(issue => storyPoints(issue));
     const grouped = estimateGroups(group.issues, now, { rules: group.rules, children, external: external[index] });
     const members = new Set(group.issues.filter(issue => { const state = column(issue, group.rules); return !issue.pull_request && (state === "progress" || state === "backlog"); }).map(issue => issue.id));
     // Open issues outside the estimated columns keep their own points; absorbed members are part of their root.
     const own = issues.filter(issue => !members.has(issue.id));
     const counted = grouped.filter(entry => key === "open" || entry.inProgress);
-    return [...own, ...counted.map(entry => entry.root)];
+    return [...own.map(issue => storyPoints(issue)), ...counted.map(entry => entry.size)];
   });
-  return sumStoryPoints(contributors);
+  return addStoryPoints(contributors);
 }
 
 /** Numeric API retained for consumers that only need the total. */

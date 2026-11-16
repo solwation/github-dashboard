@@ -30,7 +30,7 @@ const coverage = computed(() => t("Tid för {known} av {total} repos", { known: 
 const description = computed(() => [
   size.value.source === "label" ? t("Story points från labels: {points}", { points: points.value })
     : t("Uppskattade story points: cirka {points}", { points: points.value }),
-  grouped.value ? t("Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.")
+  grouped.value ? t("Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng eller underärendenas summa om den är större, i den kolumn där gruppens tid räknas.")
     : t("Poängen omfattar samma filtrerade issues som antalet."),
   ...(time.value ? [
     estimate.value.remainingMs === 0 && estimate.value.overdue ? t("Uppskattad tid kvar: över uppskattning")

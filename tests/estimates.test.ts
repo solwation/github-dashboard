@@ -18,6 +18,7 @@ import {
   typicalDuration,
 } from "../src/lib/estimates";
 import { setLanguage } from "../src/lib/i18n";
+import { addStoryPoints, groupStoryPoints } from "../src/lib/story-points";
 import type { Issue } from "../src/lib/model";
 
 const now = Date.parse("2026-10-17T12:00:00Z");
@@ -465,7 +466,8 @@ describe("parent card forecast with sub-issue groups (#281)", () => {
   });
 
   it("counts nested sub-issues once and reports overtime instead of negative time", () => {
-    const parent = sized("progress", 2, { startedAt: iso(now - hour) });
+    // Group size max(2, 3 + 1) = 4 points (#472): 3 h of own time + 70 min of sub-issue time is 10 min over.
+    const parent = sized("progress", 2, { startedAt: iso(now - 3 * hour) });
     const child = sized("progress", 3, { startedAt: iso(now - 50 * min) }), grandchild = running(20 * min);
     const children = tree([[parent, [child, child]], [child, [grandchild]]]);
     const { estimate, forecast } = card(parent, [...history(), parent, child, grandchild], children, true);
@@ -548,4 +550,64 @@ it("carries arbitrary explicit sizes into calibration, column totals and individ
   const largest = issue("backlog", { labels: [{ name: `sp-${Number.MAX_SAFE_INTEGER}`, color: "" }] });
   expect(Number.isFinite(issueEstimate(largest, hour, now, false)!.totalMs)).toBe(true);
   expect(issueEstimate(largest, Number.MAX_VALUE, now, false)).toBeNull();
+});
+
+describe("parent group size is the sum of its sub-issues (#472)", () => {
+  const history = () => [done(hour, 20 * day), done(hour, 10 * day), done(hour, 5 * day)];
+  const sized = (state: "backlog" | "progress" | "closed", points: number, extra: Partial<Issue> = {}) => issue(state, {
+    labels: [...(state === "progress" ? [{ name: "in progress", color: "" }] : []), { name: `points: ${points}`, color: "" }], ...extra,
+  });
+  const tree = (entries: [Issue, Issue[]][]) => new Map(entries.map(([parent, children]) => [parent.id, children.map(child => ({ issue: child }))]));
+
+  it("sizes a small parent by its sub-issues, so working through them is not overdue", () => {
+    const parent = sized("progress", 1, { startedAt: iso(now - 2 * hour) });
+    const first = sized("progress", 2, { startedAt: iso(now - 30 * min) }), second = sized("backlog", 2), third = sized("backlog", 2);
+    const children = tree([[parent, [first, second, third]]]);
+    const estimate = repositoryEstimate([...history(), parent, first, second, third], now, { children });
+    // Own size alone (1 point = 1 h) would already be overdue after 2 h 30 min of work.
+    expect(estimate.progress).toMatchObject({ count: 1, points: 6, overdue: 0, remainingMs: 6 * hour - 2 * hour - 30 * min });
+    expect(estimate.backlog).toMatchObject({ count: 0, points: 0 });
+    const members = new Map([parent, first, second, third].map(entry => [entry.id, entry] as const));
+    const work = subIssueGroupWork(parent, members, now, {}, 30, children);
+    expect(work.size).toEqual({ points: 6, source: "label" });
+    expect(issueGroupEstimate(parent, hour, now, true, work)).toMatchObject({ totalMs: 6 * hour, remainingMs: 3.5 * hour, overdue: false });
+    // A waiting parent counts its group size in the Backlog.
+    const waiting = sized("backlog", 1);
+    expect(repositoryEstimate([...history(), waiting, second, third], now, { children: tree([[waiting, [second, third]]]) }).backlog)
+      .toMatchObject({ count: 1, points: 4, remainingMs: 4 * hour });
+  });
+
+  it("keeps an explicitly larger parent and counts each sub-issue once", () => {
+    const epic = sized("progress", 10, { startedAt: iso(now - hour) }), child = sized("progress", 2, { startedAt: iso(now - 10 * min) });
+    const children = tree([[epic, [child, child]]]);
+    expect(repositoryEstimate([...history(), epic, child], now, { children }).progress).toMatchObject({ points: 10, remainingMs: 10 * hour - 70 * min });
+    const nested = sized("progress", 1, { startedAt: iso(now - hour) }), middle = sized("backlog", 3), leaf = sized("backlog", 4);
+    const deep = tree([[nested, [middle, leaf]], [middle, [leaf]]]);
+    expect(repositoryEstimate([...history(), nested, middle, leaf], now, { children: deep }).progress).toMatchObject({ points: 7 });
+  });
+
+  it("counts closed sub-issues only while their time is deducted", () => {
+    const parent = sized("progress", 1, { startedAt: iso(now - 30 * min) });
+    const recent = sized("closed", 3, { startedAt: iso(now - 3 * hour), closed_at: iso(now - 2 * hour) });
+    const old = sized("closed", 5, { startedAt: iso(now - 41 * day), closed_at: iso(now - 40 * day) });
+    const estimate = repositoryEstimate([...history(), parent], now, { children: tree([[parent, [recent, old]]]) });
+    expect(estimate.progress).toMatchObject({ points: 3, remainingMs: 3 * hour - 30 * min - hour });
+  });
+
+  it("is exact only when every summed size is explicit", () => {
+    expect(groupStoryPoints({ points: 1, source: "local" }, addStoryPoints([{ points: 2, source: "label" }, { points: 3, source: "label" }])))
+      .toEqual({ points: 5, source: "label" });
+    expect(groupStoryPoints({ points: 1, source: "label" }, addStoryPoints([{ points: 2, source: "label" }, { points: 3, source: "local" }])))
+      .toEqual({ points: 5, source: "local" });
+    expect(groupStoryPoints({ points: 8, source: "label" }, addStoryPoints([{ points: 3, source: "local" }]))).toEqual({ points: 8, source: "label" });
+    expect(groupStoryPoints({ points: 2, source: "local" }, null)).toEqual({ points: 2, source: "local" });
+  });
+
+  it("compares a closed parent with its group size", () => {
+    const history = [done(hour, 20 * day), done(hour, 10 * day), done(hour, 5 * day)].map(sample => ({ issue: sample, startedMs: 0, closedMs: 0, durationMs: hour }));
+    const parent = sized("closed", 1, { startedAt: iso(now - 5 * hour), closed_at: iso(now - hour) });
+    const first = sized("closed", 2, { startedAt: iso(now - 4 * hour), closed_at: iso(now - 3 * hour) });
+    const second = sized("closed", 3, { startedAt: iso(now - 3 * hour), closed_at: iso(now - 2 * hour) });
+    expect(closedIssueGroupOutcome(parent, [first, second], history, now)).toMatchObject({ estimatedMs: 5 * hour });
+  });
 });

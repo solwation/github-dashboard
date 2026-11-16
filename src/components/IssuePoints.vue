@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
-import { storyPoints } from "../lib/story-points";
 import { estimateLabel } from "../lib/estimates";
 import { useIssueForecast } from "../composables/useIssueForecast";
 import type { Issue } from "../lib/model";
 
 const props = defineProps<{ issue: Issue; repository?: string; inProgress?: boolean; active?: boolean }>();
 const { t } = useLanguage();
-const size = computed(() => storyPoints(props.issue));
-const { basis, estimate: forecast } = useIssueForecast(props);
+const { basis, estimate: forecast, size, ownSize } = useIssueForecast(props);
+// A parent outweighed by its sub-issues shows their summed size (#472).
+const summed = computed(() => size.value.points > ownSize.value.points);
 const description = computed(() => {
-  const parts = [size.value.source === "label"
+  const parts = [summed.value
+    ? t("Story points summerade från underärenden: {points} (egna: {own})", { points: size.value.points, own: ownSize.value.points })
+    : size.value.source === "label"
     ? t("Story points från label: {points}", { points: size.value.points })
     : t("Uppskattade story points: cirka {points}", { points: size.value.points })];
   const estimate = forecast.value;
@@ -25,13 +27,13 @@ const description = computed(() => {
       count: basis.value!.samples, days: basis.value!.windowDays,
     }));
   }
-  if (size.value.source === "local") parts.push(t("Grov storlek på skalan 1/2/3. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet."));
+  if (size.value.source === "local" && !summed.value) parts.push(t("Grov storlek på skalan 1/2/3. En entydig poängetikett används först, annars en lokal uppskattning från titel och beskrivning. Inte uppmätt komplexitet."));
   return parts.map(part => part.replace(/[.]$/, "")).join(". ") + ".";
 });
 </script>
 
 <template>
-  <span class="issue-points" role="img" :aria-label="description" :title="description"><span class="issue-points-value">{{ size.source === "local" ? "≈ " : "" }}{{ size.points }} SP</span></span>
+  <span class="issue-points" role="img" :data-summed="summed ? 'true' : undefined" :aria-label="description" :title="description"><span class="issue-points-value">{{ size.source === "local" ? "≈ " : "" }}{{ size.points }} SP</span></span>
 </template>
 
 <style scoped>

@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { useLanguage } from "../lib/i18n";
 import type { Issue, Rules } from "../lib/model";
 import { combinedEstimate, estimateGroups, estimateLabel, MAX_HISTORY_SAMPLES, nextHistoryExpiry, otherRepositoryMembers, repositoryEstimate } from "../lib/estimates";
-import { sumStoryPoints } from "../lib/story-points";
+import { addStoryPoints } from "../lib/story-points";
 import { useNow } from "../composables/useNow";
 import { useSubIssueWork } from "../composables/useSubIssueWork";
 
@@ -24,9 +24,10 @@ const external = computed(() => props.groups.length > 1 ? otherRepositoryMembers
 function estimateAt(at: number) {
   const repositories = props.groups.map((group, index) => repositoryEstimate(group.issues, at, { rules: group.rules, children: children.value, external: external.value[index] }));
   // Count and points describe sub-issue groups; when that differs from the cards in the column, say so.
-  const size = sumStoryPoints(props.groups.flatMap((group, index) => repositories[index]?.basis.msPerPoint == null ? []
+  // Each group counts its group size (#472).
+  const size = addStoryPoints(props.groups.flatMap((group, index) => repositories[index]?.basis.msPerPoint == null ? []
     : estimateGroups(group.issues, at, { rules: group.rules, children: children.value, external: external.value[index] })
-      .filter(entry => props.column === "progress" ? entry.inProgress : !entry.inProgress).map(entry => entry.root)));
+      .filter(entry => props.column === "progress" ? entry.inProgress : !entry.inProgress).map(entry => entry.size)));
   const grouped = () => {
     if (!children.value.size) return false;
     const plain = props.groups.map(group => repositoryEstimate(group.issues, at, { rules: group.rules }));
@@ -56,7 +57,7 @@ function estimateAt(at: number) {
 function pointBasis(points: number, grouped: boolean, exact: boolean) {
   return (exact ? t("Story points från labels: {points}", { points })
     : t("Grov storlek: cirka {points} poäng från labels eller lokal uppskattning (1/2/3 utan label, inte uppmätt komplexitet).", { points })) + " " + spentBasis()
-    + (grouped ? " " + t("Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.") : "");
+    + (grouped ? " " + t("Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng eller underärendenas summa om den är större, i den kolumn där gruppens tid räknas.") : "");
 }
 function spentBasis() {
   return t("Tid som redan lagts på pågående arbete och på underärenden (pågående eller stängda inom fönstret) dras av från huvudärendets uppskattning; underärenden räknas inte en gång till.");

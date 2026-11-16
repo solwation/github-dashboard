@@ -149,6 +149,7 @@ export const english: Record<string, string> = {
   "Story points från label: {points}": "Story points from label: {points}",
   "Story points från labels: {points}": "Story points from labels: {points}",
   "Uppskattade story points: cirka {points}": "Estimated story points: approximately {points}",
+  "Story points summerade från underärenden: {points} (egna: {own})": "Story points summed from sub-issues: {points} (own: {own})",
   "Förklara tid och story points": "Explain time and story points",
   "Story points": "Story points",
   "Total uppskattning": "Total estimate",
@@ -931,10 +932,10 @@ export const english: Record<string, string> = {
   "Tid på underärenden": "Time on sub-issues",
   "Kvar räknas för huvudärendet och dess underärenden som en grupp: tid som redan lagts på underärenden (pågående eller stängda inom fönstret) dras också av, som i kolumnens uppskattning.":
     "Remaining time covers the parent and its sub-issues as one group: time already spent on sub-issues (running or closed within the window) is also deducted, as in the column estimate.",
-  "Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.":
-    "A parent and its sub-issues count once, with the parent's points, in the column where the group's time is counted.",
-  "Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng, i den kolumn där gruppens tid räknas.":
-    "The heading count counts cards; points and time count a parent and its sub-issues once, with the parent's points, in the column where the group's time is counted.",
+  "Ett huvudärende och dess underärenden räknas en gång, med huvudärendets poäng eller underärendenas summa om den är större, i den kolumn där gruppens tid räknas.":
+    "A parent and its sub-issues count once, with the parent's points or its sub-issues' sum when larger, in the column where the group's time is counted.",
+  "Antalet i rubriken räknar kort; poäng och tid räknar ett huvudärende och dess underärenden en gång, med huvudärendets poäng eller underärendenas summa om den är större, i den kolumn där gruppens tid räknas.":
+    "The heading count counts cards; points and time count a parent and its sub-issues once, with the parent's points or its sub-issues' sum when larger, in the column where the group's time is counted.",
   "Antal": "Count",
   "Timmar": "Hours",
   "Procent": "Percent",

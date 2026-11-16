@@ -1192,14 +1192,16 @@ const combinedEstimateGroups = computed(() => contentLanes.value.filter((lane) =
 // Match the current column calibration, including filters and loading repository exclusion.
 const repositoryOwnerDisplay = ref<RepositoryOwnerDisplay>("auto");
 provideRepositoryDisplayNames(() => orderedLanes.value.map(lane => lane.repo.full_name), () => !splitByRepository.value, () => repositoryOwnerDisplay.value);
-provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
+const issueGroups = provideIssueEstimates(() => splitByRepository.value ? laneEstimateGroups.value : new Map(
   contentLanes.value.filter(lane => !lane.loading).map((lane, index) => [lane.repo.full_name, [combinedEstimateGroups.value[index]!]]),
 ), () => !splitByRepository.value);
 const timeoutCalibrationLanes = computed(() => lanes.value.filter(lane => splitByRepository.value || !lane.loading).map(lane => ({
   ...lane, issues: splitByRepository.value ? laneIssues(lane) : lane.issues.filter(issue =>
     (!hideCoordination.value || !isCoordination(issue)) && matchesIssueFilters(issue, query.value, "")),
 })));
-watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, showingCache, restoring, busy, hideCoordination], () => {
+// A parent is timed against its group size once its sub-issues are loaded (#472).
+const timeoutSizes = (repo: string, issue: Issue, at: number) => issueGroups.groupSize(repo, issue, at).points;
+watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, showingCache, restoring, busy, hideCoordination, issueGroups.scopes], () => {
   clearTimeout(timeoutTimer);
   if (!timeoutSettings.value.timeoutEnabled) {
     timedOut.value = [];
@@ -1210,10 +1212,10 @@ watch([lanes, rules, timeoutCheck, timeoutSettings, timeoutCalibrationLanes, sho
   // Board time, like the cards' timers: a slow device clock must not delay timeouts (#376).
   const at = boardNow();
   const bases = timeoutBases(timeoutCalibrationLanes.value, rules.value, at);
-  const next = nextTimeout(lanes.value, rules.value, timeoutSettings.value, at, bases);
+  const next = nextTimeout(lanes.value, rules.value, timeoutSettings.value, at, bases, timeoutSizes);
   if (next !== null) timeoutTimer = setTimeout(() => timeoutCheck.value++, Math.min(2147483647, Math.max(1, next - at)));
   const result = timeoutTracker.scan(lanes.value, rules.value, timeoutSettings.value, at,
-    { notify: !showingCache.value && !restoring.value, bases });
+    { notify: !showingCache.value && !restoring.value, bases, sizes: timeoutSizes });
   timedOut.value = result.active.filter(entry => !hideCoordination.value || !isCoordination(entry.issue));
   for (const entry of result.newlyTimedOut) {
     if ((hideCoordination.value && isCoordination(entry.issue)) || !notificationsEnabled(entry.repo)) continue;
