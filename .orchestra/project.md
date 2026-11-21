@@ -43,6 +43,12 @@ applicable [phase hooks](#project-phase-hooks) and the
   rationale under AI.md. Do not change existing priorities without user direction.
   Default missing priority to medium when ordering; high → medium → low, oldest first,
   then numeric issue number. Explicit user scope/order takes precedence.
+- Trusted issue authors and acceptance: the core default
+  ([trust](shared/ORCHESTRA.md#trust-issue-authors-and-content)): write access, i.e. GitHub
+  `OWNER`, `MEMBER` or `COLLABORATOR`; acceptance by a trusted author's comment or the
+  `accepted` label when the issue events show a trusted actor added it. The repository is
+  public and has no issue templates. An issue awaiting acceptance is unclaimed backlog:
+  it is not startable, and, like other backlog, does not block the publication gate.
 - Fetch every open-issue page before assignment, resume and integration. Read selected
   bodies/comments and current coordination claims; exclude PRs and exact `orkester`
   coordination issues, never `orkester: <id>` ownership metadata. A partial/failed fetch
@@ -246,8 +252,8 @@ Report real remaining blockers; do not close unfinished work.
 
 ## Shared version and maintenance
 
-Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.14.5**,
-commit **0e7416bcb02ed5fb40ca503c8b02ac0a58d7a338** from
+Imported as `.orchestra/shared` with Git subtree `--squash`: **v0.15.0**,
+commit **141aa62399af12b48fadd8dec38137b40d8a7be5** from
 [dirigenten-och-orkestern](https://github.com/solwation/dirigenten-och-orkestern).
 Follow its [installation/update guide](shared/INSTALL.md) and [contribution guide](shared/CONTRIBUTING.md). Keep project policy outside
 the subtree, improve generic behavior in the shared repository, and adopt
